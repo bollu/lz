@@ -383,7 +383,6 @@ struct OutlineRecursiveApEagerOfConstructorPattern
 
     std::string clonedFnName =
         called.getName().str() + "rec_construct_" +
-        constructedArgument.getDataTypeName().str() + "_" +
         constructedArgument.getDataConstructorName().str() + "_outline";
     rewriter.setInsertionPoint(ap);
 
@@ -590,7 +589,7 @@ struct PeelCommonConstructorsInCase : public mlir::OpRewritePattern<CaseOp> {
     HaskConstructOp peeledConstructor = rewriter.create<HaskConstructOp>(
         FusedLoc::get(constructorLocs, caseop.getContext()),
         retConstructs[0].getDataConstructorName(),
-        retConstructs[0].getDataTypeName(),
+        // retConstructs[0].getDataTypeName(),
         caseop.getResult());
 
 
@@ -610,7 +609,7 @@ struct PeelCommonConstructorsInCase : public mlir::OpRewritePattern<CaseOp> {
 
     ModuleOp mod = caseop.getParentOfType<ModuleOp>();
     llvm::errs() << mod << "\n";
-    assert(false && "peled common constructor");
+    // assert(false && "peled common constructor");
 
     return success();
   }

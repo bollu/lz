@@ -1,26 +1,26 @@
 
 
 module {
-  "hask.func"() ( {
-  ^bb0(%arg0: !hask.value):  // no predecessors
-    %0 = hask.caseint %arg0 [0 : i64 ->  {
-    ^bb0(%arg1: !hask.value):  // no predecessors
-      "hask.return"(%arg1) : (!hask.value) -> ()
+  "lz.func"() ( {
+  ^bb0(%arg0: !lz.value):  // no predecessors
+    %0 = lz.caseint %arg0 [0 : i64 ->  {
+    ^bb0(%arg1: !lz.value):  // no predecessors
+      "lz.return"(%arg1) : (!lz.value) -> ()
     }]
  [@default ->  {
-      %1 = "hask.make_i64"() {value = 1 : i64} : () -> !hask.value
-      %2 = hask.primop_sub(%arg0,%1)
-      "hask.return"(%2) : (!hask.value) -> ()
+      %1 = "lz.make_i64"() {value = 1 : i64} : () -> !lz.value
+      %2 = lz.primop_sub(%arg0,%1)
+      "lz.return"(%2) : (!lz.value) -> ()
     }]
 
-    "hask.return"(%0) : (!hask.value) -> ()
-  }) {retty = !hask.value, sym_name = "prec"} : () -> ()
-  "hask.func"() ( {
-    %0 = "hask.make_i64"() {value = 42 : i64} : () -> !hask.value
-    %1 = "hask.ref"() {sym_name = "prec"} : () -> !hask.fn<(!hask.value) -> !hask.value>
-    %2 = "hask.ap"(%1, %0) : (!hask.fn<(!hask.value) -> !hask.value>, !hask.value) -> !hask.thunk<!hask.value>
-    %3 = "hask.force"(%2) : (!hask.thunk<!hask.value>) -> !hask.value
-    %4 = "hask.construct"(%3) {dataconstructor = @X} : (!hask.value) -> !hask.adt<@X>
-    "hask.return"(%4) : (!hask.adt<@X>) -> ()
-  }) {retty = !hask.value, sym_name = "main"} : () -> ()
+    "lz.return"(%0) : (!lz.value) -> ()
+  }) {retty = !lz.value, sym_name = "prec"} : () -> ()
+  "lz.func"() ( {
+    %0 = "lz.make_i64"() {value = 42 : i64} : () -> !lz.value
+    %1 = "lz.ref"() {sym_name = "prec"} : () -> !lz.fn<(!lz.value) -> !lz.value>
+    %2 = "lz.ap"(%1, %0) : (!lz.fn<(!lz.value) -> !lz.value>, !lz.value) -> !lz.thunk<!lz.value>
+    %3 = "lz.force"(%2) : (!lz.thunk<!lz.value>) -> !lz.value
+    %4 = "lz.construct"(%3) {dataconstructor = @X} : (!lz.value) -> !lz.value
+    "lz.return"(%4) : (!lz.value) -> ()
+  }) {retty = !lz.value, sym_name = "main"} : () -> ()
 }

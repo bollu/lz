@@ -18,7 +18,6 @@ module {
   // or should it be Attr [Attr]? Who really knows :(
   // define the algebraic data type
   // TODO: setup constructors properly.
-  hask.adt @Maybe [#hask.data_constructor<@Just [@"Int#"]>, #hask.data_constructor<@Nothing []>]
 
   // f :: Maybe -> Maybe
   // f i = case i of Maybe i# ->
@@ -26,57 +25,57 @@ module {
   //        _ -> case f ( Maybe(i# -# 1#)) of
   //              Nothing -> Nothing
   //              Just j# -> Just (j# +# 1#)
-  hask.func @f (%i : !hask.thunk<!hask.adt<@Maybe>>) -> !hask.adt<@Maybe> {
-      %icons = hask.force(%i): !hask.adt<@Maybe>
-      %reti = hask.case @Maybe %icons 
+  lz.func @f (%i : !lz.thunk<!lz.value>) -> !lz.value {
+      %icons = lz.force(%i): !lz.value
+      %reti = lz.case @Maybe %icons 
            [@Nothing -> {
-              %nothing = hask.construct(@Nothing): !hask.adt<@Maybe>
-              hask.return (%nothing):!hask.adt<@Maybe>
+              %nothing = lz.construct(@Nothing)
+              lz.return (%nothing):!lz.value
            }
-           [@Just -> { ^entry(%ihash: !hask.value):
-              %retj = hask.caseint %ihash
+           [@Just -> { ^entry(%ihash: !lz.value):
+              %retj = lz.caseint %ihash
                   [0 -> {
-                        %five = hask.make_i64(5)
-                        %boxed = hask.construct(@Just, %five:!hask.value): !hask.adt<@Maybe>
-                        hask.return(%boxed) : !hask.adt<@Maybe>
+                        %five = lz.make_i64(5)
+                        %boxed = lz.construct(@Just, %five:!lz.value)
+                        lz.return(%boxed) : !lz.value
                   }]
                   [@default ->  {
-                        %one = hask.make_i64(1)
-                        %isub = hask.primop_sub(%ihash, %one)
-                        %boxed_isub = hask.construct(@Just, %isub: !hask.value): !hask.adt<@Maybe>
-                        %boxed_isub_t = hask.thunkify(%boxed_isub : !hask.adt<@Maybe>) : !hask.thunk<!hask.adt<@Maybe>>
-                        %f = hask.ref(@f): !hask.fn<(!hask.thunk<!hask.adt<@Maybe>>) -> !hask.adt<@Maybe>>
-                        %rec_t = hask.ap(%f : !hask.fn<(!hask.thunk<!hask.adt<@Maybe>>) -> !hask.adt<@Maybe>> , %boxed_isub_t)
-                        %rec_v = hask.force(%rec_t): !hask.adt<@Maybe>
-			%out_v = hask.case @Maybe %rec_v 
+                        %one = lz.make_i64(1)
+                        %isub = lz.primop_sub(%ihash, %one)
+                        %boxed_isub = lz.construct(@Just, %isub: !lz.value)
+                        %boxed_isub_t = lz.thunkify(%boxed_isub : !lz.value) : !lz.thunk<!lz.value>
+                        %f = lz.ref(@f): !lz.fn<(!lz.thunk<!lz.value>) -> !lz.value>
+                        %rec_t = lz.ap(%f : !lz.fn<(!lz.thunk<!lz.value>) -> !lz.value> , %boxed_isub_t)
+                        %rec_v = lz.force(%rec_t): !lz.value
+			%out_v = lz.case @Maybe %rec_v 
 			       [@Nothing -> { ^entry:
-				  %nothing = hask.construct(@Nothing): !hask.adt<@Maybe>
-				  hask.return (%nothing):!hask.adt<@Maybe>
+				  %nothing = lz.construct(@Nothing)
+				  lz.return (%nothing):!lz.value
 			       }]
 
-			       [@Just -> { ^entry(%jhash: !hask.value):
+			       [@Just -> { ^entry(%jhash: !lz.value):
 			       	  // TODO: worried about capture semantics!
-				  %one_inner = hask.make_i64(1)
-			          %jhash_incr =  hask.primop_add(%jhash, %one_inner)
-				  %boxed_jash_incr = hask.construct(@Just, %jhash_incr: !hask.value): !hask.adt<@Maybe>
-				  hask.return(%boxed_jash_incr):!hask.adt<@Maybe>
+				  %one_inner = lz.make_i64(1)
+			          %jhash_incr =  lz.primop_add(%jhash, %one_inner)
+				  %boxed_jash_incr = lz.construct(@Just, %jhash_incr: !lz.value)
+				  lz.return(%boxed_jash_incr):!lz.value
 			       }]
-                        hask.return(%out_v): !hask.adt<@Maybe>
+                        lz.return(%out_v): !lz.value
                   }]
-              hask.return(%retj):!hask.adt<@Maybe>
+              lz.return(%retj):!lz.value
            }]
-      hask.return(%reti): !hask.adt<@Maybe>
+      lz.return(%reti): !lz.value
     }
 
   // 37 + 5 = 42
-  hask.func@main () -> !hask.adt<@Maybe> {
-      %v = hask.make_i64(37)
-      %v_box = hask.construct(@Just, %v:!hask.value): !hask.adt<@Maybe>
-      %v_thunk = hask.thunkify(%v_box: !hask.adt<@Maybe>): !hask.thunk<!hask.adt<@Maybe>>
-      %f = hask.ref(@f): !hask.fn<(!hask.thunk<!hask.adt<@Maybe>>) -> !hask.adt<@Maybe>>
-      %out_t = hask.ap(%f : !hask.fn<(!hask.thunk<!hask.adt<@Maybe>>) -> !hask.adt<@Maybe>>, %v_thunk)
-      %out_v = hask.force(%out_t): !hask.adt<@Maybe>
-      hask.return(%out_v) : !hask.adt<@Maybe>
+  lz.func@main () -> !lz.value {
+      %v = lz.make_i64(37)
+      %v_box = lz.construct(@Just, %v:!lz.value)
+      %v_thunk = lz.thunkify(%v_box: !lz.value): !lz.thunk<!lz.value>
+      %f = lz.ref(@f): !lz.fn<(!lz.thunk<!lz.value>) -> !lz.value>
+      %out_t = lz.ap(%f : !lz.fn<(!lz.thunk<!lz.value>) -> !lz.value>, %v_thunk)
+      %out_v = lz.force(%out_t): !lz.value
+      lz.return(%out_v) : !lz.value
     }
 }
 

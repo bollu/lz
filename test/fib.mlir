@@ -7,69 +7,68 @@ module {
   // should it be Attr Attr, with the "list" embedded as an attribute,
   // or should it be Attr [Attr]? Who really knows :(
   // define the algebraic data type
-  hask.adt @SimpleInt [#hask.data_constructor<@SimpleInt [@"Int#"]>]
 
   // plus :: SimpleInt -> SimpleInt -> SimpleInt
   // plus i j = case i of SimpleInt ival -> case j of SimpleInt jval -> SimpleInt (ival +# jval)
-  hask.func @plus (%i : !hask.thunk<!hask.adt<@SimpleInt>>, %j: !hask.thunk<!hask.adt<@SimpleInt>>) -> !hask.adt<@SimpleInt> {
-      %icons = hask.force(%i): !hask.adt<@SimpleInt>
-      %reti = hask.case @SimpleInt %icons 
-           [@SimpleInt -> { ^entry(%ival: !hask.value):
-              %jcons = hask.force(%j):!hask.adt<@SimpleInt>
-              %retj = hask.case @SimpleInt %jcons 
-                  [@SimpleInt -> { ^entry(%jval: !hask.value):
-                        %sum_v = hask.primop_add(%ival, %jval)
-                        %boxed = hask.construct(@SimpleInt, %sum_v: !hask.value) : !hask.adt<@SimpleInt>
-                        hask.return(%boxed) : !hask.adt<@SimpleInt>
+  lz.func @plus (%i : !lz.thunk<!lz.value>, %j: !lz.thunk<!lz.value>) -> !lz.value {
+      %icons = lz.force(%i): !lz.value
+      %reti = lz.case @SimpleInt %icons 
+           [@SimpleInt -> { ^entry(%ival: !lz.value):
+              %jcons = lz.force(%j):!lz.value
+              %retj = lz.case @SimpleInt %jcons 
+                  [@SimpleInt -> { ^entry(%jval: !lz.value):
+                        %sum_v = lz.primop_add(%ival, %jval)
+                        %boxed = lz.construct(@SimpleInt, %sum_v: !lz.value)
+                        lz.return(%boxed) : !lz.value
                   }]
-              hask.return(%retj): !hask.adt<@SimpleInt>
+              lz.return(%retj): !lz.value
            }]
-      hask.return(%reti): !hask.adt<@SimpleInt>
+      lz.return(%reti): !lz.value
   }
 
   // minus :: SimpleInt -> SimpleInt -> SimpleInt
   // minus i j = case i of SimpleInt ival -> case j of SimpleInt jval -> SimpleInt (ival -# jval)
-  hask.func @minus (%i : !hask.thunk<!hask.adt<@SimpleInt>>, %j: !hask.thunk<!hask.adt<@SimpleInt>>) -> !hask.adt<@SimpleInt> {
-      %icons = hask.force(%i):!hask.adt<@SimpleInt>
-      %reti = hask.case @SimpleInt %icons 
-           [@SimpleInt -> { ^entry(%ival: !hask.value):
-              %jcons = hask.force(%j):!hask.adt<@SimpleInt>
-              %retj = hask.case @SimpleInt %jcons 
-                  [@SimpleInt -> { ^entry(%jval: !hask.value):
-                        %diff_v = hask.primop_sub(%ival, %jval)
-                        %boxed = hask.construct(@SimpleInt, %diff_v: !hask.value) :!hask.adt<@SimpleInt>
-                        hask.return(%boxed) : !hask.adt<@SimpleInt>
+  lz.func @minus (%i : !lz.thunk<!lz.value>, %j: !lz.thunk<!lz.value>) -> !lz.value {
+      %icons = lz.force(%i):!lz.value
+      %reti = lz.case @SimpleInt %icons 
+           [@SimpleInt -> { ^entry(%ival: !lz.value):
+              %jcons = lz.force(%j):!lz.value
+              %retj = lz.case @SimpleInt %jcons 
+                  [@SimpleInt -> { ^entry(%jval: !lz.value):
+                        %diff_v = lz.primop_sub(%ival, %jval)
+                        %boxed = lz.construct(@SimpleInt, %diff_v: !lz.value) 
+                        lz.return(%boxed) : !lz.value
 
                   }]
-              hask.return(%retj):!hask.adt<@SimpleInt>
+              lz.return(%retj):!lz.value
            }]
-      hask.return(%reti): !hask.adt<@SimpleInt>
+      lz.return(%reti): !lz.value
   }
 
 
-  hask.func @zero() -> !hask.adt<@SimpleInt> {
-    %v = hask.make_i64(0)
-    %boxed = hask.construct(@SimpleInt, %v:!hask.value) : !hask.adt<@SimpleInt>
-    hask.return(%boxed): !hask.adt<@SimpleInt>
+  lz.func @zero() -> !lz.value {
+    %v = lz.make_i64(0)
+    %boxed = lz.construct(@SimpleInt, %v:!lz.value)
+    lz.return(%boxed): !lz.value
   }
   
-  hask.func @one () -> !hask.adt<@SimpleInt>  {
-       %v = hask.make_i64(1)
-       %boxed = hask.construct(@SimpleInt, %v:!hask.value): !hask.adt<@SimpleInt> 
-       hask.return(%boxed): !hask.adt<@SimpleInt> 
+  lz.func @one () -> !lz.value  {
+       %v = lz.make_i64(1)
+       %boxed = lz.construct(@SimpleInt, %v:!lz.value)
+       lz.return(%boxed): !lz.value 
      }
 
 
-  hask.func @two () -> !hask.adt<@SimpleInt>  {
-     %v = hask.make_i64(2)
-     %boxed = hask.construct(@SimpleInt, %v:!hask.value) : !hask.adt<@SimpleInt> 
-     hask.return(%boxed): !hask.adt<@SimpleInt> 
+  lz.func @two () -> !lz.value  {
+     %v = lz.make_i64(2)
+     %boxed = lz.construct(@SimpleInt, %v:!lz.value) 
+     lz.return(%boxed): !lz.value 
   }
 
-  hask.func @eight () -> !hask.adt<@SimpleInt>  {
-       %v = hask.make_i64(8)
-       %boxed = hask.construct(@SimpleInt, %v:!hask.value): !hask.adt<@SimpleInt> 
-       hask.return(%boxed): !hask.adt<@SimpleInt>
+  lz.func @eight () -> !lz.value  {
+       %v = lz.make_i64(8)
+       %boxed = lz.construct(@SimpleInt, %v:!lz.value)
+       lz.return(%boxed): !lz.value
   }
 
 
@@ -81,71 +80,71 @@ module {
   //               0# -> zero
   //               1# -> one
   //               _ -> plus (fib i) (fib (minus i one))
-  hask.func @fib (%i: !hask.thunk<!hask.adt<@SimpleInt>>) -> !hask.adt<@SimpleInt>  {
-        %icons = hask.force(%i):!hask.adt<@SimpleInt>
-        %ret = hask.case @SimpleInt %icons
-               [@SimpleInt -> { ^entry(%ihash: !hask.value):
-                     %ret = hask.caseint %ihash 
+  lz.func @fib (%i: !lz.thunk<!lz.value>) -> !lz.value  {
+        %icons = lz.force(%i):!lz.value
+        %ret = lz.case @SimpleInt %icons
+               [@SimpleInt -> { ^entry(%ihash: !lz.value):
+                     %ret = lz.caseint %ihash 
                      [0 -> { ^entry:
-                                %z = hask.ref(@zero) : !hask.fn<() -> !hask.adt<@SimpleInt>>
-                                %z_t = hask.ap(%z: !hask.fn<() -> !hask.adt<@SimpleInt>>)
-                                %z_v = hask.force(%z_t): !hask.adt<@SimpleInt>
-                                hask.return (%z_v): !hask.adt<@SimpleInt>
+                                %z = lz.ref(@zero) : !lz.fn<() -> !lz.value>
+                                %z_t = lz.ap(%z: !lz.fn<() -> !lz.value>)
+                                %z_v = lz.force(%z_t): !lz.value
+                                lz.return (%z_v): !lz.value
                      }]
                      [1 -> { ^entry:
-                                %o = hask.ref(@one):!hask.fn<() -> !hask.adt<@SimpleInt>>
-                                %o_t = hask.ap(%o: !hask.fn<() -> !hask.adt<@SimpleInt>>)
-                                %o_v = hask.force(%o_t): !hask.adt<@SimpleInt>
-                                hask.return (%o_v): !hask.adt<@SimpleInt>
+                                %o = lz.ref(@one):!lz.fn<() -> !lz.value>
+                                %o_t = lz.ap(%o: !lz.fn<() -> !lz.value>)
+                                %o_v = lz.force(%o_t): !lz.value
+                                lz.return (%o_v): !lz.value
                      }]
                      [@default -> { ^entry:
-                                %fib = hask.ref(@fib):  !hask.fn<(!hask.thunk<!hask.adt<@SimpleInt>>) -> !hask.adt<@SimpleInt>>
-                                %minus = hask.ref(@minus): !hask.fn<(!hask.thunk<!hask.adt<@SimpleInt>>, !hask.thunk<!hask.adt<@SimpleInt>>) -> !hask.adt<@SimpleInt>> 
-                                %one = hask.ref(@one): !hask.fn<() -> !hask.adt<@SimpleInt>>
-                                %one_t = hask.ap(%one: !hask.fn<() -> !hask.adt<@SimpleInt>>)
+                                %fib = lz.ref(@fib):  !lz.fn<(!lz.thunk<!lz.value>) -> !lz.value>
+                                %minus = lz.ref(@minus): !lz.fn<(!lz.thunk<!lz.value>, !lz.thunk<!lz.value>) -> !lz.value> 
+                                %one = lz.ref(@one): !lz.fn<() -> !lz.value>
+                                %one_t = lz.ap(%one: !lz.fn<() -> !lz.value>)
 
-                                %i_minus_one_t = hask.ap(%minus: !hask.fn<(!hask.thunk<!hask.adt<@SimpleInt>>, !hask.thunk<!hask.adt<@SimpleInt>>) -> !hask.adt<@SimpleInt>>, %i, %one_t)
+                                %i_minus_one_t = lz.ap(%minus: !lz.fn<(!lz.thunk<!lz.value>, !lz.thunk<!lz.value>) -> !lz.value>, %i, %one_t)
 
-                                %fib_i_minus_one_t = hask.ap(%fib: !hask.fn<(!hask.thunk<!hask.adt<@SimpleInt>>) -> !hask.adt<@SimpleInt>>, %i_minus_one_t)
-                                %fib_i_minus_one_v = hask.force(%fib_i_minus_one_t) : !hask.adt<@SimpleInt>
+                                %fib_i_minus_one_t = lz.ap(%fib: !lz.fn<(!lz.thunk<!lz.value>) -> !lz.value>, %i_minus_one_t)
+                                %fib_i_minus_one_v = lz.force(%fib_i_minus_one_t) : !lz.value
 
 
-                                %two = hask.ref(@two): !hask.fn<() -> !hask.adt<@SimpleInt>>
-                                %two_t = hask.ap(%two: !hask.fn<() -> !hask.adt<@SimpleInt>>)
+                                %two = lz.ref(@two): !lz.fn<() -> !lz.value>
+                                %two_t = lz.ap(%two: !lz.fn<() -> !lz.value>)
 
-                                %i_minus_two_t = hask.ap(%minus: !hask.fn<(!hask.thunk<!hask.adt<@SimpleInt>>, !hask.thunk<!hask.adt<@SimpleInt>>) -> !hask.adt<@SimpleInt>>, 
+                                %i_minus_two_t = lz.ap(%minus: !lz.fn<(!lz.thunk<!lz.value>, !lz.thunk<!lz.value>) -> !lz.value>, 
                                    %i, %two_t)
 
-                                %fib_i_minus_two_t = hask.ap(%fib: !hask.fn<(!hask.thunk<!hask.adt<@SimpleInt>>) -> !hask.adt<@SimpleInt>>, %i_minus_two_t)
-                                %fib_i_minus_two_v = hask.force(%fib_i_minus_two_t) : !hask.adt<@SimpleInt>
+                                %fib_i_minus_two_t = lz.ap(%fib: !lz.fn<(!lz.thunk<!lz.value>) -> !lz.value>, %i_minus_two_t)
+                                %fib_i_minus_two_v = lz.force(%fib_i_minus_two_t) : !lz.value
 
-                                %fib_i_minus_one_v_t = hask.thunkify(%fib_i_minus_one_v: !hask.adt<@SimpleInt>): !hask.thunk<!hask.adt<@SimpleInt>>
-                                %fib_i_minus_two_v_t = hask.thunkify(%fib_i_minus_two_v: !hask.adt<@SimpleInt>): !hask.thunk<!hask.adt<@SimpleInt>>
+                                %fib_i_minus_one_v_t = lz.thunkify(%fib_i_minus_one_v: !lz.value): !lz.thunk<!lz.value>
+                                %fib_i_minus_two_v_t = lz.thunkify(%fib_i_minus_two_v: !lz.value): !lz.thunk<!lz.value>
 
-                                 %plus = hask.ref(@plus) : !hask.fn<(!hask.thunk<!hask.adt<@SimpleInt>>, !hask.thunk<!hask.adt<@SimpleInt>>) -> !hask.adt<@SimpleInt>>
+                                 %plus = lz.ref(@plus) : !lz.fn<(!lz.thunk<!lz.value>, !lz.thunk<!lz.value>) -> !lz.value>
                                  %sum = 
-                                     hask.ap(%plus: !hask.fn<(!hask.thunk<!hask.adt<@SimpleInt>>, !hask.thunk<!hask.adt<@SimpleInt>>) -> !hask.adt<@SimpleInt>>, 
+                                     lz.ap(%plus: !lz.fn<(!lz.thunk<!lz.value>, !lz.thunk<!lz.value>) -> !lz.value>, 
                                          %fib_i_minus_one_v_t, %fib_i_minus_two_v_t)
-                                 %sum_v = hask.force(%sum): !hask.adt<@SimpleInt>
-                                 hask.return (%sum_v): !hask.adt<@SimpleInt>
+                                 %sum_v = lz.force(%sum): !lz.value
+                                 lz.return (%sum_v): !lz.value
                      }]
-                     hask.return(%ret): !hask.adt<@SimpleInt>
+                     lz.return(%ret): !lz.value
                }]
-        hask.return (%ret):!hask.adt<@SimpleInt>
+        lz.return (%ret):!lz.value
     }
 
 
   // ix:  0 1 2 3 4 5 6
   // val: 0 1 1 2 3 5 8
-  hask.func@main () -> !hask.adt<@SimpleInt> {
-      %number = hask.make_i64(6)
-      %boxed_number = hask.construct(@SimpleInt, %number: !hask.value): !hask.adt<@SimpleInt> 
-      %thunk_number = hask.thunkify(%boxed_number: !hask.adt<@SimpleInt>) : !hask.thunk<!hask.adt<@SimpleInt>>
+  lz.func@main () -> !lz.value {
+      %number = lz.make_i64(6)
+      %boxed_number = lz.construct(@SimpleInt, %number: !lz.value)
+      %thunk_number = lz.thunkify(%boxed_number: !lz.value) : !lz.thunk<!lz.value>
 
-      %fib = hask.ref(@fib)  : !hask.fn<(!hask.thunk<!hask.adt<@SimpleInt>>) -> !hask.adt<@SimpleInt>>
-      %out_t = hask.ap(%fib : !hask.fn<(!hask.thunk<!hask.adt<@SimpleInt>>) ->  !hask.adt<@SimpleInt>>, %thunk_number)
-      %out_v = hask.force(%out_t): !hask.adt<@SimpleInt>
-      hask.return(%out_v) : !hask.adt<@SimpleInt>
+      %fib = lz.ref(@fib)  : !lz.fn<(!lz.thunk<!lz.value>) -> !lz.value>
+      %out_t = lz.ap(%fib : !lz.fn<(!lz.thunk<!lz.value>) ->  !lz.value>, %thunk_number)
+      %out_v = lz.force(%out_t): !lz.value
+      lz.return(%out_v) : !lz.value
   }
 }
 
@@ -173,6 +172,5 @@ module {
 //                              1# -> one
 //        n -> plus (fib n) (fib (minus n one))
 // 
-// main :: IO ();
-// main = let x = fib one in return ()
-
+// ma
+// main = let x = fib one in

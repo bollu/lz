@@ -7,40 +7,39 @@
 // RUN: ../build/bin/hask-opt %s  | ../build/bin/hask-opt -lower-std -lower-llvm |  FileCheck %s || true
 // CHECK: constructor(SimpleInt 42)
 module {
-  hask.adt @SimpleInt [#hask.data_constructor<@SimpleInt [@"Int#"]>]
 
-  hask.func @f(%i: !hask.thunk<!hask.adt<@SimpleInt>>) -> !hask.adt<@SimpleInt> {
-        %icons = hask.force(%i):!hask.adt<@SimpleInt>
-        %ihash = hask.defaultcase(@SimpleInt, %icons) : !hask.value
-        %ret = hask.caseint %ihash 
+  lz.func @f(%i: !lz.thunk<!lz.value>) -> !lz.value {
+        %icons = lz.force(%i):!lz.value
+        %ihash = lz.defaultcase(@SimpleInt, %icons) : !lz.value
+        %ret = lz.caseint %ihash 
             [0 -> { ^entry: 
-                      %v = hask.make_i64(42)
-                      %boxed = hask.construct(@SimpleInt, %v:!hask.value): !hask.adt<@SimpleInt> 
-                      hask.return (%boxed): !hask.adt<@SimpleInt>
+                      %v = lz.make_i64(42)
+                      %boxed = lz.construct(@SimpleInt, %v:!lz.value) 
+                      lz.return (%boxed): !lz.value
             }]
             [@default -> { ^entry:
-                       %f = hask.ref(@f):  !hask.fn<(!hask.thunk<!hask.adt<@SimpleInt>>) -> !hask.adt<@SimpleInt>>
-                       %onehash = hask.make_i64(1)
-                       %prev = hask.primop_sub(%ihash, %onehash)
-                       %box_prev_v = hask.construct(@SimpleInt, %prev: !hask.value) : !hask.adt<@SimpleInt>
-                       %box_prev_t = hask.thunkify(%box_prev_v :!hask.adt<@SimpleInt>) : !hask.thunk<!hask.adt<@SimpleInt>>
-                       %fprev_t = hask.ap(%f: !hask.fn<(!hask.thunk<!hask.adt<@SimpleInt>>) -> !hask.adt<@SimpleInt>>, 
+                       %f = lz.ref(@f):  !lz.fn<(!lz.thunk<!lz.value>) -> !lz.value>
+                       %onehash = lz.make_i64(1)
+                       %prev = lz.primop_sub(%ihash, %onehash)
+                       %box_prev_v = lz.construct(@SimpleInt, %prev: !lz.value)
+                       %box_prev_t = lz.thunkify(%box_prev_v :!lz.value) : !lz.thunk<!lz.value>
+                       %fprev_t = lz.ap(%f: !lz.fn<(!lz.thunk<!lz.value>) -> !lz.value>, 
                            %box_prev_t) 
-                       %prev_v = hask.force(%fprev_t): !hask.adt<@SimpleInt>
-                       hask.return(%prev_v): !hask.adt<@SimpleInt>
+                       %prev_v = lz.force(%fprev_t): !lz.value
+                       lz.return(%prev_v): !lz.value
             }]
-        hask.return (%ret):!hask.adt<@SimpleInt>
+        lz.return (%ret):!lz.value
     }
 
 
-  hask.func@main() -> !hask.adt<@SimpleInt> {
-      %n = hask.make_i64(6)
-      %box_n_v = hask.construct(@SimpleInt, %n: !hask.value): !hask.adt<@SimpleInt> 
-      %box_n_t = hask.thunkify(%box_n_v: !hask.adt<@SimpleInt>) : !hask.thunk<!hask.adt<@SimpleInt>>
-      %f = hask.ref(@f)  : !hask.fn<(!hask.thunk<!hask.adt<@SimpleInt>>) -> !hask.adt<@SimpleInt>>
-      %out_t = hask.ap(%f : !hask.fn<(!hask.thunk<!hask.adt<@SimpleInt>>) ->  !hask.adt<@SimpleInt>>, %box_n_t)
-      %out_v = hask.force(%out_t): !hask.adt<@SimpleInt>
-      hask.return(%out_v) : !hask.adt<@SimpleInt>
+  lz.func@main() -> !lz.value {
+      %n = lz.make_i64(6)
+      %box_n_v = lz.construct(@SimpleInt, %n: !lz.value) 
+      %box_n_t = lz.thunkify(%box_n_v: !lz.value) : !lz.thunk<!lz.value>
+      %f = lz.ref(@f)  : !lz.fn<(!lz.thunk<!lz.value>) -> !lz.value>
+      %out_t = lz.ap(%f : !lz.fn<(!lz.thunk<!lz.value>) ->  !lz.value>, %box_n_t)
+      %out_v = lz.force(%out_t): !lz.value
+      lz.return(%out_v) : !lz.value
     }
     
 }

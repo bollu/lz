@@ -343,9 +343,7 @@ ParseResult CaseOp::parse(OpAsmParser &parser, OperationState &result) {
 
   if (parser.parseOperand(scrutinee))
     return failure();
-  if (parser.resolveOperand(
-          scrutinee, parser.getBuilder().getType<ADTType>(constructorName),
-          result.operands)) {
+  if (parser.resolveOperand(scrutinee, parser.getBuilder().getType<ValueType>(), result.operands)) {
     return failure();
   }
 
@@ -441,7 +439,8 @@ ParseResult DefaultCaseOp::parse(OpAsmParser &parser, OperationState &result) {
   }
   parser.resolveOperand(
       scrutinee,
-      ADTType::get(parser.getBuilder().getContext(), constructorName),
+      ValueType::get(parser.getBuilder().getContext()),
+      // ADTType::get(parser.getBuilder().getContext(), constructorName),
       result.operands);
 
   result.addTypes(retty);
@@ -689,10 +688,10 @@ ParseResult HaskFuncOp::parse(OpAsmParser &parser, OperationState &result) {
       }
       argTys.push_back(argType);
       if (!(argType.isa<ThunkType>() || argType.isa<ValueType>() ||
-            argType.isa<HaskFnType>() || argType.isa<ADTType>())) {
+            argType.isa<HaskFnType>())) {
         return parser.emitError(arg.location,
                                 "argument must either ValueType, ThunkType, "
-                                "ADTType, or HaskFnType");
+                                "or HaskFnType");
       }
 
       if (succeeded(parser.parseOptionalRParen())) {
@@ -854,32 +853,32 @@ void ForceOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
 // === ADT OP ===
 //
 
-ParseResult HaskADTOp::parse(OpAsmParser &parser, OperationState &result) {
-  OpAsmParser::OperandType scrutinee;
-
-  SmallVector<Value, 4> results;
-  Attribute name;
-  Attribute constructors;
-  if (parser.parseAttribute(name, "name", result.attributes)) {
-    return failure();
-  }
-  if (parser.parseAttribute(name, "constructors", result.attributes)) {
-    return failure();
-  }
-
-  //    result.addAttribute("name", name);
-  //    result.addAttribute("constructors", constructors);
-  //    if(parser.parseAttribute(constructors)) { return failure(); }
-
-  llvm::errs() << "ADT: " << name << "\n"
-               << "cons: " << constructors << "\n";
-  return success();
-};
-
-void HaskADTOp::print(OpAsmPrinter &p) {
-  p << getOperationName();
-  p << " " << this->getAttr("name") << " " << this->getAttr("constructors");
-};
+// ParseResult HaskADTOp::parse(OpAsmParser &parser, OperationState &result) {
+//   OpAsmParser::OperandType scrutinee;
+// 
+//   SmallVector<Value, 4> results;
+//   Attribute name;
+//   Attribute constructors;
+//   if (parser.parseAttribute(name, "name", result.attributes)) {
+//     return failure();
+//   }
+//   if (parser.parseAttribute(name, "constructors", result.attributes)) {
+//     return failure();
+//   }
+// 
+//   //    result.addAttribute("name", name);
+//   //    result.addAttribute("constructors", constructors);
+//   //    if(parser.parseAttribute(constructors)) { return failure(); }
+// 
+//   llvm::errs() << "ADT: " << name << "\n"
+//                << "cons: " << constructors << "\n";
+//   return success();
+// };
+// 
+// void HaskADTOp::print(OpAsmPrinter &p) {
+//   p << getOperationName();
+//   p << " " << this->getAttr("name") << " " << this->getAttr("constructors");
+// };
 
 // === GLOBAL OP ===
 // === GLOBAL OP ===
@@ -959,19 +958,8 @@ ParseResult HaskConstructOp::parse(OpAsmParser &parser,
       }
     }
   }
-  // : <type>
-  Type ty;
-  if (parser.parseColon() || parser.parseType(ty)) {
-    return failure();
-  }
-  if (!ty.isa<ADTType>()) {
-    InFlightDiagnostic err = parser.emitError(parser.getCurrentLocation(),
-                                              "expected ADT type, found: [");
-    err << ty << "]";
-    return failure();
-  }
 
-  result.addTypes(ty);
+  result.addTypes(ValueType::get(parser.getBuilder().getContext()));
   return success();
 }
 
@@ -997,15 +985,14 @@ void HaskConstructOp::print(OpAsmPrinter &p) {
 
 void HaskConstructOp::build(mlir::OpBuilder &builder,
                             mlir::OperationState &state,
-                            StringRef constructorName, StringRef ADTTypeName,
+                            StringRef constructorName, 
+                            // StringRef ADTTypeName,
                             ValueRange args) {
   state.addAttribute(
       HaskConstructOp::getDataConstructorAttrName(),
       FlatSymbolRefAttr::get(constructorName, builder.getContext()));
   state.addOperands(args);
-  state.addTypes(
-      ADTType::get(builder.getContext(),
-                   FlatSymbolRefAttr::get(ADTTypeName, builder.getContext())));
+  state.addTypes(ValueType::get(builder.getContext()));
 };
 
 // === PRIMOP ADD OP ===
@@ -2227,7 +2214,7 @@ void LowerHaskToStandardPass::runOnOperation() {
 
   target.addIllegalDialect<HaskDialect>();
   // target.addLegalOp<HaskRefOp>();
-  target.addLegalOp<HaskADTOp>();
+  // target.addLegalOp<HaskADTOp>();
   // target.addLegalOp<LambdaOp>();
   // target.addLegalOp<HaskGlobalOp>();
   // target.addLegalOp<HaskReturnOp>();
@@ -2299,18 +2286,18 @@ context) {}
 };
 */
 
-class HaskADTOpConversionPattern : public ConversionPattern {
-public:
-  explicit HaskADTOpConversionPattern(MLIRContext *context)
-      : ConversionPattern(HaskADTOp::getOperationName(), 1, context) {}
-
-  LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
-                  ConversionPatternRewriter &rewriter) const override {
-    rewriter.eraseOp(op);
-    return success();
-  }
-};
+// class HaskADTOpConversionPattern : public ConversionPattern {
+// public:
+//   explicit HaskADTOpConversionPattern(MLIRContext *context)
+//       : ConversionPattern(HaskADTOp::getOperationName(), 1, context) {}
+// 
+//   LogicalResult
+//   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+//                   ConversionPatternRewriter &rewriter) const override {
+//     rewriter.eraseOp(op);
+//     return success();
+//   }
+// };
 
 namespace {
 struct LowerHaskStandardToLLVMPass : public Pass {
@@ -2333,7 +2320,6 @@ struct LowerHaskStandardToLLVMPass : public Pass {
     mlir::LLVMTypeConverter typeConverter(&getContext());
     mlir::OwningRewritePatternList patterns;
     // patterns.insert<MakeDataConstructorOpConversionPattern>(&getContext());
-    patterns.insert<HaskADTOpConversionPattern>(&getContext());
 
     mlir::populateStdToLLVMConversionPatterns(typeConverter, patterns);
     if (failed(mlir::applyFullConversion(getOperation(), target, patterns))) {

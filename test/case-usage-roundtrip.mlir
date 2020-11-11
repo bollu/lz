@@ -1,22 +1,19 @@
 
 
 module {
-  hask.func @main {
-    %0 = hask.lambda(%arg0:!hask.thunk<!hask.value>) {
-      %1 = hask.make_i64(43 : i64)
-      %2 = hask.caseint %1 [0 : i64 ->  {
-      ^bb0(%arg1: !hask.value):  // no predecessors
-        hask.return(%arg1) : !hask.value
-      }]
+  "lz.func"() ( {
+    %0 = "lz.make_i64"() {value = 43 : i64} : () -> !lz.value
+    %1 = lz.caseint %0 [0 : i64 ->  {
+    ^bb0(%arg0: !lz.value):  // no predecessors
+      "lz.return"(%arg0) : (!lz.value) -> ()
+    }]
  [@default ->  {
-        %4 = hask.make_i64(1 : i64)
-        %5 = hask.primop_sub(%1,%4)
-        hask.return(%5) : !hask.value
-      }]
+      %3 = "lz.make_i64"() {value = 1 : i64} : () -> !lz.value
+      %4 = lz.primop_sub(%0,%3)
+      "lz.return"(%4) : (!lz.value) -> ()
+    }]
 
-      %3 = hask.construct(@X, %2 : !hask.value) : !hask.adt<@X>
-      hask.return(%3) : !hask.adt<@X>
-    }
-    hask.return(%0) : !hask.fn<(!hask.thunk<!hask.value>) -> !hask.adt<@X>>
-  }
+    %2 = "lz.construct"(%1) {dataconstructor = @X} : (!lz.value) -> !lz.value
+    "lz.return"(%2) : (!lz.value) -> ()
+  }) {retty = !lz.value, sym_name = "main"} : () -> ()
 }

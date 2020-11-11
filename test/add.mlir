@@ -8,55 +8,54 @@ module {
   // or should it be Attr [Attr]? Who really knows :(
   // define the algebraic data type
   // TODO: setup constructors properly.
-  hask.adt @SimpleInt [#hask.data_constructor<@MkSimpleInt [@"Int#"]>]
 
   // plus :: SimpleInt -> SimpleInt -> SimpleInt
   // plus i j = case i of MkSimpleInt ival -> case j of MkSimpleInt jval -> MkSimpleInt (ival +# jval)
-  hask.func @plus (%i : !hask.thunk<!hask.adt<@SimpleInt>>, %j: !hask.thunk<!hask.adt<@SimpleInt>>) -> !hask.adt<@SimpleInt> {
-      %icons = hask.force(%i): !hask.adt<@SimpleInt>
-      %reti = hask.case @SimpleInt %icons 
-           [@SimpleInt -> { ^entry(%ival: !hask.value):
-              %jcons = hask.force(%j):!hask.adt<@SimpleInt>
-              %retj = hask.case @SimpleInt %jcons 
-                  [@SimpleInt -> { ^entry(%jval: !hask.value):
-                        %sum_v = hask.primop_add(%ival, %jval)
-                        %boxed = hask.construct(@SimpleInt, %sum_v:!hask.value): !hask.adt<@SimpleInt>
-                        hask.return(%boxed) : !hask.adt<@SimpleInt>
+  lz.func @plus (%i : !lz.thunk<!lz.value>, %j: !lz.thunk<!lz.value>) -> !lz.value {
+      %icons = lz.force(%i): !lz.value
+      %reti = lz.case @SimpleInt %icons 
+           [@SimpleInt -> { ^entry(%ival: !lz.value):
+              %jcons = lz.force(%j):!lz.value
+              %retj = lz.case @SimpleInt %jcons 
+                  [@SimpleInt -> { ^entry(%jval: !lz.value):
+                        %sum_v = lz.primop_add(%ival, %jval)
+                        %boxed = lz.construct(@SimpleInt, %sum_v:!lz.value)
+                        lz.return(%boxed) : !lz.value
                   }]
-              hask.return(%retj):!hask.adt<@SimpleInt>
+              lz.return(%retj):!lz.value
            }]
-      hask.return(%reti): !hask.adt<@SimpleInt>
+      lz.return(%reti): !lz.value
     }
 
   
   
-  hask.func @one () -> !hask.adt<@SimpleInt> {
-       %v = hask.make_i64(1)
-       %boxed = hask.construct(@SimpleInt, %v:!hask.value): !hask.adt<@SimpleInt>
-       hask.return(%boxed): !hask.adt<@SimpleInt>
+  lz.func @one () -> !lz.value {
+       %v = lz.make_i64(1)
+       %boxed = lz.construct(@SimpleInt, %v:!lz.value)
+       lz.return(%boxed): !lz.value
      }
 
 
-  hask.func @two () -> !hask.adt<@SimpleInt> {
-       %v = hask.make_i64(2)
-       %boxed = hask.construct(@SimpleInt, %v:!hask.value): !hask.adt<@SimpleInt>
-       hask.return(%boxed): !hask.adt<@SimpleInt>
+  lz.func @two () -> !lz.value {
+       %v = lz.make_i64(2)
+       %boxed = lz.construct(@SimpleInt, %v:!lz.value)
+       lz.return(%boxed): !lz.value
      }
 
 
   // 1 + 2 = 3
-  hask.func@main () -> !hask.adt<@SimpleInt> {
-      %input = hask.ref(@one) : !hask.fn<() -> !hask.adt<@SimpleInt>>
-      %input_t = hask.ap(%input: !hask.fn<() -> !hask.adt<@SimpleInt>>)
+  lz.func@main () -> !lz.value {
+      %input = lz.ref(@one) : !lz.fn<() -> !lz.value>
+      %input_t = lz.ap(%input: !lz.fn<() -> !lz.value>)
 
-      %input2 = hask.ref(@two) :!hask.fn<() -> !hask.adt<@SimpleInt>>
-      %input2_t = hask.ap(%input2 : !hask.fn<() -> !hask.adt<@SimpleInt>>)
+      %input2 = lz.ref(@two) :!lz.fn<() -> !lz.value>
+      %input2_t = lz.ap(%input2 : !lz.fn<() -> !lz.value>)
 
-      %plus = hask.ref(@plus)  : !hask.fn<(!hask.thunk<!hask.adt<@SimpleInt>>, !hask.thunk<!hask.adt<@SimpleInt>>) ->  !hask.adt<@SimpleInt>>
-      %out_t = hask.ap(%plus : !hask.fn<(!hask.thunk<!hask.adt<@SimpleInt>>, !hask.thunk<!hask.adt<@SimpleInt>>) -> !hask.adt<@SimpleInt>>, 
+      %plus = lz.ref(@plus)  : !lz.fn<(!lz.thunk<!lz.value>, !lz.thunk<!lz.value>) ->  !lz.value>
+      %out_t = lz.ap(%plus : !lz.fn<(!lz.thunk<!lz.value>, !lz.thunk<!lz.value>) -> !lz.value>, 
         %input_t, %input2_t)
-      %out_v = hask.force(%out_t): !hask.adt<@SimpleInt>
-      hask.return(%out_v) : !hask.adt<@SimpleInt>
+      %out_v = lz.force(%out_t): !lz.value
+      lz.return(%out_v) : !lz.value
     }
 }
 

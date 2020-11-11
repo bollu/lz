@@ -6,20 +6,20 @@
 // %x = case {.. ret }; return(%x)
 // but we have %x = case { ... ret }; %y = nontrivial(%x)
 module {
-  hask.func @main () -> !hask.adt<@X>{
-      %lit_43 = hask.make_i64(43)
-      %case_val = hask.caseint %lit_43 
-      [0 -> { ^entry(%ival: !hask.value): 
-                 hask.return (%ival): !hask.value      
+  lz.func @main () -> !lz.value {
+      %lit_43 = lz.make_i64(43)
+      %case_val = lz.caseint %lit_43 
+      [0 -> { ^entry(%ival: !lz.value): 
+                 lz.return (%ival): !lz.value      
       }]
       [@default -> { ^entry: // ... or here?
-                      %lit_one = hask.make_i64(1)
-                      %pred = hask.primop_sub(%lit_43, %lit_one)
-                      hask.return(%pred): !hask.value
+                      %lit_one = lz.make_i64(1)
+                      %pred = lz.primop_sub(%lit_43, %lit_one)
+                      lz.return(%pred): !lz.value
 
       }]
 
-      %x = hask.construct(@X, %case_val:!hask.value): !hask.adt<@X>
-      hask.return(%x) : !hask.adt<@X>
+      %x = lz.construct(@X, %case_val:!lz.value) 
+      lz.return(%x) : !lz.value
     }
 }

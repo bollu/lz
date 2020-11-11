@@ -47,11 +47,11 @@ HaskDialect::HaskDialect(mlir::MLIRContext *context)
   addOperations<HaskReturnOp, MakeI64Op,
                 // DeclareDataConstructorOp,
                 ApOp, ApEagerOp, CaseOp, DefaultCaseOp, HaskRefOp, MakeStringOp, HaskFuncOp,
-                ForceOp, HaskGlobalOp, HaskADTOp, HaskConstructOp,
+                ForceOp, HaskGlobalOp, HaskConstructOp,
                 HaskPrimopAddOp, HaskPrimopSubOp, CaseIntOp, ThunkifyOp,
                 TransmuteOp>();
-  addTypes<ThunkType, ValueType, HaskFnType, ADTType>();
-  addAttributes<DataConstructorAttr>();
+  addTypes<ThunkType, ValueType, HaskFnType>(); // , ADTType>();
+  // addAttributes<DataConstructorAttr>();
   addInterfaces<HaskInlinerInterface>();
 
 }
@@ -68,16 +68,6 @@ mlir::Type HaskDialect::parseType(mlir::DialectAsmParser &parser) const {
 
   } else if (succeeded(parser.parseOptionalKeyword("value"))) {
     return ValueType::get(parser.getBuilder().getContext());
-  } else if (succeeded(parser.parseOptionalKeyword("adt"))) {
-    FlatSymbolRefAttr name;
-    if (parser.parseLess() ||
-        parser.parseAttribute<mlir::FlatSymbolRefAttr>(name) ||
-        parser.parseGreater()) {
-      parser.emitError(parser.getCurrentLocation(),
-                       "unable to parse ADT type. Missing `<`");
-      return Type();
-    }
-    return ADTType::get(parser.getBuilder().getContext(), name);
   } else if (succeeded(parser.parseOptionalKeyword("fn"))) {
     SmallVector<Type, 4> params;
     Type res;
@@ -150,9 +140,6 @@ void HaskDialect::printType(mlir::Type type, mlir::DialectAsmPrinter &p) const {
   if (type.isa<ThunkType>()) {
     ThunkType thunk = type.cast<ThunkType>();
     p << "thunk<" << thunk.getElementType() << ">";
-  } else if (type.isa<ADTType>()) {
-    ADTType adt = type.cast<ADTType>();
-    p << "adt<@" << adt.getName().getValue() << ">";
   } else if (type.isa<ValueType>()) {
     p << "value";
   } else if (type.isa<HaskFnType>()) {
@@ -179,54 +166,14 @@ void HaskDialect::printType(mlir::Type type, mlir::DialectAsmPrinter &p) const {
 
 mlir::Attribute HaskDialect::parseAttribute(mlir::DialectAsmParser &parser,
                                             Type type) const {
-  if (succeeded(parser.parseOptionalKeyword("data_constructor"))) {
-    return parseDataConstructorAttribute(parser, type);
-  } else {
-    assert(false && "unable to parse attribute");
-  }
+  assert(false && "unable to parse attribute");
   return Attribute();
 };
 
 void HaskDialect::printAttribute(Attribute attr, DialectAsmPrinter &p) const {
   assert(attr);
-  if (attr.isa<DataConstructorAttr>()) {
-    DataConstructorAttr d = attr.cast<DataConstructorAttr>();
-    p << "data_constructor<";
-    p << *d.getName().data() << " " << *d.getArgTys().data();
-    p << ">";
-  } else {
-    assert(false && "unknown attribute");
-  }
+  assert(false && "unknown attribute");
 }
-
-// === DATA CONSTRUCTOR ATTRIBUTE ===
-// === DATA CONSTRUCTOR ATTRIBUTE ===
-// === DATA CONSTRUCTOR ATTRIBUTE ===
-// === DATA CONSTRUCTOR ATTRIBUTE ===
-// === DATA CONSTRUCTOR ATTRIBUTE ===
-
-Attribute standalone::parseDataConstructorAttribute(DialectAsmParser &parser,
-                                                    Type type) {
-  if (parser.parseLess())
-    return Attribute();
-  SymbolRefAttr name;
-  if (parser.parseAttribute<SymbolRefAttr>(name))
-    return Attribute();
-  ArrayAttr paramTys;
-  if (parser.parseAttribute<ArrayAttr>(paramTys))
-    return Attribute();
-
-  if (parser.parseGreater())
-    return Attribute();
-
-  Attribute a = DataConstructorAttr::get(parser.getBuilder().getContext(), name,
-                                         paramTys);
-  assert(a && "have valid attribute");
-  llvm::errs() << __FUNCTION__ << "\n";
-  llvm::errs() << "  attr: " << a << "\n";
-  llvm::errs() << "===\n";
-  return a;
-};
 
 void HaskInlinerInterface::handleTerminator(Operation *op,
                       ArrayRef<Value> valuesToRepl) const {

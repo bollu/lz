@@ -5,27 +5,27 @@
 // Test that case of int works.
 module {
   // strict function
-  hask.func @prec (%ihash: !hask.value) -> !hask.value {
+  lz.func @prec (%ihash: !lz.value) -> !lz.value {
      // do we know that %ihash is an int here?
-     %ret = hask.caseint %ihash 
-     [0 -> { ^entry(%ival: !hask.value): 
-                hask.return (%ival): !hask.value      
+     %ret = lz.caseint %ihash 
+     [0 -> { ^entry(%ival: !lz.value): 
+                lz.return (%ival): !lz.value      
      }]
      [@default -> { ^entry: // ... or here?
-                     %lit_one = hask.make_i64(1)
-                     %pred = hask.primop_sub(%ihash, %lit_one)
-                     hask.return(%pred): !hask.value
+                     %lit_one = lz.make_i64(1)
+                     %pred = lz.primop_sub(%ihash, %lit_one)
+                     lz.return(%pred): !lz.value
 
      }]
-     hask.return (%ret) : !hask.value
+     lz.return (%ret) : !lz.value
     }
 
-  hask.func @main () -> !hask.value {
-      %lit_42 = hask.make_i64(42)
-      %prec = hask.ref(@prec)  : !hask.fn<(!hask.value) -> !hask.value>
-      %out_v = hask.ap(%prec : !hask.fn<(!hask.value) -> !hask.value>, %lit_42)
-      %out_v_forced = hask.force(%out_v): !hask.value
-      %x = hask.construct(@X, %out_v_forced:!hask.value): !hask.adt<@X>
-      hask.return(%x) : !hask.adt<@X>
+  lz.func @main () -> !lz.value {
+      %lit_42 = lz.make_i64(42)
+      %prec = lz.ref(@prec)  : !lz.fn<(!lz.value) -> !lz.value>
+      %out_v = lz.ap(%prec : !lz.fn<(!lz.value) -> !lz.value>, %lit_42)
+      %out_v_forced = lz.force(%out_v): !lz.value
+      %x = lz.construct(@X, %out_v_forced:!lz.value)
+      lz.return(%x) : !lz.value
     }
 }

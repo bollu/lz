@@ -333,14 +333,14 @@ public:
                  &effects) {}
 };
 
-class HaskADTOp
-    : public Op<HaskADTOp, OpTrait::ZeroResult, OpTrait::ZeroOperands> {
-public:
-  using Op::Op;
-  static StringRef getOperationName() { return "lz.adt"; };
-  static ParseResult parse(OpAsmParser &parser, OperationState &result);
-  void print(OpAsmPrinter &p);
-};
+// class HaskADTOp
+//     : public Op<HaskADTOp, OpTrait::ZeroResult, OpTrait::ZeroOperands> {
+// public:
+//   using Op::Op;
+//   static StringRef getOperationName() { return "lz.adt"; };
+//   static ParseResult parse(OpAsmParser &parser, OperationState &result);
+//   void print(OpAsmPrinter &p);
+// };
 
 // do I need this? unclear.
 class HaskGlobalOp
@@ -378,11 +378,7 @@ public:
         .getValue();
   }
 
-  StringRef getDataTypeName() {
-    ADTType adtty = this->getResult().getType().cast<ADTType>();
-    return adtty.getName().getValue();
-  }
-
+//  StringRef getDataTypeName() { assert(false && "unimplemented"); return "DATATYPE"; }
   int getNumOperands() { this->getOperation()->getNumOperands(); }
   Value getOperand(int i) { return this->getOperation()->getOperand(i); }
   Operation::operand_range getOperands() { return this->getOperation()->getOperands(); }
@@ -391,7 +387,7 @@ public:
   static void build(mlir::OpBuilder &builder,
                     mlir::OperationState &state,
                     StringRef constructorName,
-                    StringRef ADTTypeName,
+                  //   StringRef ADTTypeName,
                     ValueRange args);
 
   void

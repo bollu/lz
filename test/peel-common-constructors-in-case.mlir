@@ -9,44 +9,38 @@
 // RUN: ../build/bin/hask-opt %s  | ../build/bin/hask-opt -lower-std -lower-llvm |  FileCheck %s || true
 // Check that @plus works with Maybe works.
 // CHECK-WW-IR: %1 = hask.case @Maybe %0 
-// CHECK-WW-IR: %2 = hask.construct(@Just, %1 : !hask.adt<@Maybe>) : !hask.adt<@Maybe>
+// CHECK-WW-IR: %2 = hask.construct(@Just, %1 : !lz.value) : !lz.value
 // CHECK-WW-OUTPUT: constructor(Just 0)
 // CHECK: constructor(Just 0)
 
 
 
 module {
-  // should it be Attr Attr, with the "list" embedded as an attribute,
-  // or should it be Attr [Attr]? Who really knows :(
-  // define the algebraic data type
-  // TODO: setup constructors properly.
-  hask.adt @Maybe [#hask.data_constructor<@Just [@"Int#"]>, #hask.data_constructor<@Nothing []>]
-
   // f :: Maybe -> Maybe
   // f mi = case i of Maybe _ -> Maybe 1; Nothing -> Maybe 0;
-  hask.func @f (%i : !hask.thunk<!hask.adt<@Maybe>>) -> !hask.adt<@Maybe> {
-      %icons = hask.force(%i): !hask.adt<@Maybe>
-      %reti = hask.case @Maybe %icons 
+  lz.func @f (%i : !lz.thunk<!lz.value>) -> !lz.value {
+      %icons = lz.force(%i): !lz.value
+      %reti = lz.case @Maybe %icons 
            [@Nothing -> {
-              %zero = hask.make_i64(0)
-              %just0 = hask.construct(@Just, %zero: !hask.value) : !hask.adt<@Maybe>
-              hask.return (%just0):!hask.adt<@Maybe>
+              %zero = lz.make_i64(0)
+              %just0 = lz.construct(@Just, %zero: !lz.value)
+              lz.return (%just0):!lz.value
            }]
-           [@Just -> { ^entry(%_: !hask.value):
-              %one = hask.make_i64(1)
-              %just1 = hask.construct(@Just, %one: !hask.value): !hask.adt<@Maybe>
-              hask.return (%just1):!hask.adt<@Maybe>
+           [@Just -> { ^entry(%_: !lz.value):
+              %one = lz.make_i64(1)
+              %just1 = lz.construct(@Just, %one: !lz.value)
+              lz.return (%just1):!lz.value
            }]
-      hask.return(%reti): !hask.adt<@Maybe>
+      lz.return(%reti): !lz.value
     }
 
 
-    hask.func @main() -> !hask.adt<@Maybe> {
-        %n = hask.construct(@Nothing) : !hask.adt<@Maybe>
-        %f = hask.ref(@f): !hask.fn<(!hask.thunk<!hask.adt<@Maybe>>) -> !hask.adt<@Maybe>>
-        %nt = hask.thunkify(%n : !hask.adt<@Maybe>) :!hask.thunk<!hask.adt<@Maybe>>
-        %out = hask.apEager(%f: !hask.fn<(!hask.thunk<!hask.adt<@Maybe>>) -> !hask.adt<@Maybe>>, %nt)
-        hask.return(%out) : !hask.adt<@Maybe>
+    lz.func @main() -> !lz.value {
+        %n = lz.construct(@Nothing)
+        %f = lz.ref(@f): !lz.fn<(!lz.thunk<!lz.value>) -> !lz.value>
+        %nt = lz.thunkify(%n : !lz.value) :!lz.thunk<!lz.value>
+        %out = lz.apEager(%f: !lz.fn<(!lz.thunk<!lz.value>) -> !lz.value>, %nt)
+        lz.return(%out) : !lz.value
     }
 }
 

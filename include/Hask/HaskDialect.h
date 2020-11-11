@@ -48,30 +48,30 @@ public:
 
 // Follow what ArrayAttributeStorage does:
 // https://github.com/llvm/llvm-project/blob/master/mlir/lib/IR/AttributeDetail.h#L50
-struct ADTTypeStorage : public TypeStorage {
-  ADTTypeStorage(ArrayRef<FlatSymbolRefAttr> const name) : name(name) {}
-
-  /// The hash key used for uniquing.
-  using KeyTy = ArrayRef<FlatSymbolRefAttr>;
-  bool operator==(const KeyTy &key) const { return key == name; }
-
-  /// Construction.
-  static ADTTypeStorage *construct(TypeStorageAllocator &allocator,
-                                   const KeyTy &key) {
-    return new (allocator.allocate<ADTTypeStorage>())
-        ADTTypeStorage(allocator.copyInto(key));
-  }
-  ArrayRef<FlatSymbolRefAttr> name;
-};
-
-class ADTType : public mlir::Type::TypeBase<ADTType, HaskType, ADTTypeStorage> {
-public:
-  using Base::Base;
-  static ADTType get(MLIRContext *context, FlatSymbolRefAttr name) {
-    return Base::get(context, name);
-  }
-  FlatSymbolRefAttr getName() { return this->getImpl()->name[0]; }
-};
+//! struct ADTTypeStorage : public TypeStorage {
+//!   ADTTypeStorage(ArrayRef<FlatSymbolRefAttr> const name) : name(name) {}
+//! 
+//!   /// The hash key used for uniquing.
+//!   using KeyTy = ArrayRef<FlatSymbolRefAttr>;
+//!   bool operator==(const KeyTy &key) const { return key == name; }
+//! 
+//!   /// Construction.
+//!   static ADTTypeStorage *construct(TypeStorageAllocator &allocator,
+//!                                    const KeyTy &key) {
+//!     return new (allocator.allocate<ADTTypeStorage>())
+//!         ADTTypeStorage(allocator.copyInto(key));
+//!   }
+//!   ArrayRef<FlatSymbolRefAttr> name;
+//! };
+//! 
+//! class ADTType : public mlir::Type::TypeBase<ADTType, HaskType, ADTTypeStorage> {
+//! public:
+//!   using Base::Base;
+//!   static ADTType get(MLIRContext *context, FlatSymbolRefAttr name) {
+//!     return Base::get(context, name);
+//!   }
+//!   FlatSymbolRefAttr getName() { return this->getImpl()->name[0]; }
+//! };
 
 class ValueType
     : public mlir::Type::TypeBase<ValueType, HaskType, TypeStorage> {
@@ -179,33 +179,33 @@ struct DataConstructorAttributeStorage : public AttributeStorage {
   KeyTy value;
 };
 
-class DataConstructorAttr
-    : public mlir::Attribute::AttrBase<DataConstructorAttr, mlir::Attribute,
-                                       DataConstructorAttributeStorage> {
-protected:
-public:
-  // The usual story, pull stuff from AttrBase.
-  using Base::Base;
-
-  /*
-  static bool classof(Attribute attr) {
-    llvm::errs() << __FUNCTION__ << ":" << __LINE__ << "\n";
-    const bool correct = attr.isa<DataConstructorAttr>();
-    llvm::errs() << __FUNCTION__ << ":" << __LINE__ << "\n";
-    return correct;
-  }*/
-  static DataConstructorAttr get(MLIRContext *context, SymbolRefAttr Name,
-                                 ArrayAttr ArgTys) {
-    std::pair<SymbolRefAttr, ArrayAttr> data(Name, ArgTys);
-    return Base::get(context, data);
-  }
-
-  ArrayRef<SymbolRefAttr> getName() { return this->getImpl()->value.first; }
-  ArrayRef<ArrayAttr> getArgTys() { return this->getImpl()->value.second; }
-
-  //  static UntypedType get(MLIRContext *context) { return Base::get(context);
-  //  }
-};
+// class DataConstructorAttr
+//     : public mlir::Attribute::AttrBase<DataConstructorAttr, mlir::Attribute,
+//                                        DataConstructorAttributeStorage> {
+// protected:
+// public:
+//   // The usual story, pull stuff from AttrBase.
+//   using Base::Base;
+// 
+//   /*
+//   static bool classof(Attribute attr) {
+//     llvm::errs() << __FUNCTION__ << ":" << __LINE__ << "\n";
+//     const bool correct = attr.isa<DataConstructorAttr>();
+//     llvm::errs() << __FUNCTION__ << ":" << __LINE__ << "\n";
+//     return correct;
+//   }*/
+//   static DataConstructorAttr get(MLIRContext *context, SymbolRefAttr Name,
+//                                  ArrayAttr ArgTys) {
+//     std::pair<SymbolRefAttr, ArrayAttr> data(Name, ArgTys);
+//     return Base::get(context, data);
+//   }
+// 
+//   ArrayRef<SymbolRefAttr> getName() { return this->getImpl()->value.first; }
+//   ArrayRef<ArrayAttr> getArgTys() { return this->getImpl()->value.second; }
+// 
+//   //  static UntypedType get(MLIRContext *context) { return Base::get(context);
+//   //  }
+// };
 
 Attribute parseDataConstructorAttribute(DialectAsmParser &parser, Type type);
 

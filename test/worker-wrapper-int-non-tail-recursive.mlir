@@ -18,7 +18,6 @@ module {
   // or should it be Attr [Attr]? Who really knows :(
   // define the algebraic data type
   // TODO: setup constructors properly.
-  hask.adt @SimpleInt [#hask.data_constructor<@MkSimpleInt [@"Int#"]>]
 
   // f :: SimpleInt -> SimpleInt
   // f i = case i of SimpleInt i# -> 
@@ -26,48 +25,48 @@ module {
   //            0 -> SimpleInt 5; 
   //            _ -> case f ( SimpleInt(i# -# 1#)) of
   //                  SimpleInt j# -> SimpleInt (j# +# 1)
-  hask.func @f (%i : !hask.thunk<!hask.adt<@SimpleInt>>) -> !hask.adt<@SimpleInt> {
-      %icons = hask.force(%i): !hask.adt<@SimpleInt>
-      %reti = hask.case @SimpleInt %icons 
-           [@SimpleInt -> { ^entry(%ihash: !hask.value):
-              %retj = hask.caseint %ihash
+  lz.func @f (%i : !lz.thunk<!lz.value>) -> !lz.value {
+      %icons = lz.force(%i): !lz.value
+      %reti = lz.case @SimpleInt %icons 
+           [@SimpleInt -> { ^entry(%ihash: !lz.value):
+              %retj = lz.caseint %ihash
                   [0 -> {
-                        %five = hask.make_i64(5)
-                        %boxed = hask.construct(@SimpleInt, %five:!hask.value): !hask.adt<@SimpleInt>
-                        hask.return(%boxed) : !hask.adt<@SimpleInt>
+                        %five = lz.make_i64(5)
+                        %boxed = lz.construct(@SimpleInt, %five:!lz.value)
+                        lz.return(%boxed) : !lz.value
                   }]
                   [@default ->  {
-                        %one = hask.make_i64(1)
-                        %isub = hask.primop_sub(%ihash, %one)
-                        %boxed_isub = hask.construct(@SimpleInt, %isub: !hask.value): !hask.adt<@SimpleInt>
-                        %boxed_isub_t = hask.thunkify(%boxed_isub : !hask.adt<@SimpleInt>) : !hask.thunk<!hask.adt<@SimpleInt>>
-                        %f = hask.ref(@f): !hask.fn<(!hask.thunk<!hask.adt<@SimpleInt>>) -> !hask.adt<@SimpleInt>>
-                        %rec_t = hask.ap(%f : !hask.fn<(!hask.thunk<!hask.adt<@SimpleInt>>) -> !hask.adt<@SimpleInt>> , %boxed_isub_t)
-                        %rec_v = hask.force(%rec_t): !hask.adt<@SimpleInt> 
+                        %one = lz.make_i64(1)
+                        %isub = lz.primop_sub(%ihash, %one)
+                        %boxed_isub = lz.construct(@SimpleInt, %isub: !lz.value)
+                        %boxed_isub_t = lz.thunkify(%boxed_isub : !lz.value) : !lz.thunk<!lz.value>
+                        %f = lz.ref(@f): !lz.fn<(!lz.thunk<!lz.value>) -> !lz.value>
+                        %rec_t = lz.ap(%f : !lz.fn<(!lz.thunk<!lz.value>) -> !lz.value> , %boxed_isub_t)
+                        %rec_v = lz.force(%rec_t): !lz.value 
                         // TODO: should `case` be a terminator?
-                        %out = hask.case @SimpleInt %rec_v 
-                          [@SimpleInt -> { ^entry(%jhash: !hask.value):
-                              %one_j = hask.make_i64(1)
-                              %jincr = hask.primop_add(%jhash, %one_j)
-                              %boxed_jincr = hask.construct(@SimpleInt, %jincr: !hask.value): !hask.adt<@SimpleInt>
-                              hask.return(%boxed_jincr): !hask.adt<@SimpleInt>
+                        %out = lz.case @SimpleInt %rec_v 
+                          [@SimpleInt -> { ^entry(%jhash: !lz.value):
+                              %one_j = lz.make_i64(1)
+                              %jincr = lz.primop_add(%jhash, %one_j)
+                              %boxed_jincr = lz.construct(@SimpleInt, %jincr: !lz.value)
+                              lz.return(%boxed_jincr): !lz.value
                           }]
-                        hask.return(%out): !hask.adt<@SimpleInt>
+                        lz.return(%out): !lz.value
                   }]
-              hask.return(%retj):!hask.adt<@SimpleInt>
+              lz.return(%retj):!lz.value
            }]
-      hask.return(%reti): !hask.adt<@SimpleInt>
+      lz.return(%reti): !lz.value
     }
 
   // 37 + 5 = 42
-  hask.func@main () -> !hask.adt<@SimpleInt> {
-      %v = hask.make_i64(37)
-      %v_box = hask.construct(@SimpleInt, %v:!hask.value): !hask.adt<@SimpleInt>
-      %v_thunk = hask.thunkify(%v_box: !hask.adt<@SimpleInt>): !hask.thunk<!hask.adt<@SimpleInt>>
-      %f = hask.ref(@f): !hask.fn<(!hask.thunk<!hask.adt<@SimpleInt>>) -> !hask.adt<@SimpleInt>>
-      %out_t = hask.ap(%f : !hask.fn<(!hask.thunk<!hask.adt<@SimpleInt>>) -> !hask.adt<@SimpleInt>>, %v_thunk)
-      %out_v = hask.force(%out_t): !hask.adt<@SimpleInt>
-      hask.return(%out_v) : !hask.adt<@SimpleInt>
+  lz.func@main () -> !lz.value {
+      %v = lz.make_i64(37)
+      %v_box = lz.construct(@SimpleInt, %v:!lz.value)
+      %v_thunk = lz.thunkify(%v_box: !lz.value): !lz.thunk<!lz.value>
+      %f = lz.ref(@f): !lz.fn<(!lz.thunk<!lz.value>) -> !lz.value>
+      %out_t = lz.ap(%f : !lz.fn<(!lz.thunk<!lz.value>) -> !lz.value>, %v_thunk)
+      %out_v = lz.force(%out_t): !lz.value
+      lz.return(%out_v) : !lz.value
     }
 }
 
