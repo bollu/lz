@@ -38,7 +38,7 @@ class HaskReturnOp
                 OpTrait::IsTerminator, OpTrait::OneOperand> {
 public:
   using Op::Op;
-  static StringRef getOperationName() { return "hask.return"; };
+  static StringRef getOperationName() { return "lz.return"; };
   Value getInput() { return this->getOperation()->getOperand(0); }
   Type getType() { return this->getInput().getType(); }
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
@@ -53,7 +53,7 @@ class MakeI64Op
                 MemoryEffectOpInterface::Trait> {
 public:
   using Op::Op;
-  static StringRef getOperationName() { return "hask.make_i64"; };
+  static StringRef getOperationName() { return "lz.make_i64"; };
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
 
   IntegerAttr getValue() {
@@ -70,7 +70,7 @@ class MakeStringOp
                 MemoryEffectOpInterface::Trait> {
 public:
   using Op::Op;
-  static StringRef getOperationName() { return "hask.make_string"; };
+  static StringRef getOperationName() { return "lz.make_string"; };
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
 
   Attribute getValue() { return this->getOperation()->getAttr("value"); }
@@ -84,7 +84,7 @@ class ApOp
     : public Op<ApOp, OpTrait::OneResult, MemoryEffectOpInterface::Trait> {
 public:
   using Op::Op;
-  static StringRef getOperationName() { return "hask.ap"; };
+  static StringRef getOperationName() { return "lz.ap"; };
   Value getFn() { return this->getOperation()->getOperand(0); };
   int getNumFnArguments() {
     return this->getOperation()->getNumOperands() - 1;
@@ -115,7 +115,7 @@ class ApEagerOp
     : public Op<ApEagerOp, OpTrait::OneResult, MemoryEffectOpInterface::Trait, CallOpInterface::Trait> {
 public:
   using Op::Op;
-  static StringRef getOperationName() { return "hask.apEager"; };
+  static StringRef getOperationName() { return "lz.apEager"; };
   Value getFn() { return this->getOperation()->getOperand(0); };
   int getNumFnArguments() {
     return this->getOperation()->getNumOperands() - 1;
@@ -150,7 +150,7 @@ class CaseOp
     : public Op<CaseOp, OpTrait::OneResult, MemoryEffectOpInterface::Trait> {
 public:
   using Op::Op;
-  static StringRef getOperationName() { return "hask.case"; };
+  static StringRef getOperationName() { return "lz.case"; };
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   Value getScrutinee() { this->getOperation()->getOperand(0); }
   int getNumAlts() { return this->getOperation()->getNumRegions(); }
@@ -189,7 +189,7 @@ class CaseIntOp
     : public Op<CaseIntOp, OpTrait::OneResult, MemoryEffectOpInterface::Trait> {
 public:
   using Op::Op;
-  static StringRef getOperationName() { return "hask.caseint"; };
+  static StringRef getOperationName() { return "lz.caseint"; };
   Value getScrutinee() { this->getOperation()->getOperand(0); }
   int getNumAlts() { return this->getOperation()->getNumRegions(); }
   Region &getAltRHS(int i) { return this->getOperation()->getRegion(i); }
@@ -224,7 +224,7 @@ class DefaultCaseOp : public Op<DefaultCaseOp, OpTrait::OneResult,
                                 MemoryEffectOpInterface::Trait> {
 public:
   using Op::Op;
-  static StringRef getOperationName() { return "hask.defaultcase"; };
+  static StringRef getOperationName() { return "lz.defaultcase"; };
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   static const char *getCaseTypeKey() { return "constructorName"; }
   std::string getConstructorTag() {
@@ -244,7 +244,7 @@ public:
 class LambdaOp : public Op<LambdaOp, OpTrait::OneResult, OpTrait::OneRegion> {
 public:
   using Op::Op;
-  static StringRef getOperationName() { return "hask.lambda"; };
+  static StringRef getOperationName() { return "lz.lambda"; };
   Region &getBody() {
     assert(this->getOperation()->getNumRegions() == 1);
     return this->getOperation()->getRegion(0);
@@ -268,7 +268,7 @@ class HaskRefOp
                 MemoryEffectOpInterface::Trait> {
 public:
   using Op::Op;
-  static StringRef getOperationName() { return "hask.ref"; };
+  static StringRef getOperationName() { return "lz.ref"; };
   llvm::StringRef getRef() {
     return getAttrOfType<StringAttr>(::mlir::SymbolTable::getSymbolAttrName())
         .getValue();
@@ -294,7 +294,7 @@ class HaskFuncOp : public Op<HaskFuncOp, OpTrait::ZeroOperands,
                              SymbolOpInterface::Trait> {
 public:
   using Op::Op;
-  static StringRef getOperationName() { return "hask.func"; };
+  static StringRef getOperationName() { return "lz.func"; };
   Region &getBody() { return this->getRegion(); }
 //  Block *getBodyBB() { return &this->getRegion().getBlocks().front(); }
   void print(OpAsmPrinter &p);
@@ -321,7 +321,7 @@ class ForceOp : public Op<ForceOp, OpTrait::OneResult, OpTrait::OneOperand,
                           MemoryEffectOpInterface::Trait> {
 public:
   using Op::Op;
-  static StringRef getOperationName() { return "hask.force"; };
+  static StringRef getOperationName() { return "lz.force"; };
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   Value getScrutinee() { this->getOperation()->getOperand(0); }
   void print(OpAsmPrinter &p);
@@ -337,7 +337,7 @@ class HaskADTOp
     : public Op<HaskADTOp, OpTrait::ZeroResult, OpTrait::ZeroOperands> {
 public:
   using Op::Op;
-  static StringRef getOperationName() { return "hask.adt"; };
+  static StringRef getOperationName() { return "lz.adt"; };
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   void print(OpAsmPrinter &p);
 };
@@ -349,7 +349,7 @@ class HaskGlobalOp
                 SymbolOpInterface::Trait> {
 public:
   using Op::Op;
-  static StringRef getOperationName() { return "hask.global"; };
+  static StringRef getOperationName() { return "lz.global"; };
   Region &getRegion() { return this->getOperation()->getRegion(0); };
   Type getType() {
     Region &r = getRegion();
@@ -370,7 +370,7 @@ class HaskConstructOp
                 MemoryEffectOpInterface::Trait> {
 public:
   using Op::Op;
-  static StringRef getOperationName() { return "hask.construct"; };
+  static StringRef getOperationName() { return "lz.construct"; };
   static const char *getDataConstructorAttrName() { return "dataconstructor"; }
   static const char *getDataTypeAttrName() { return "datatype"; }
   StringRef getDataConstructorName() {
@@ -404,7 +404,7 @@ class HaskPrimopAddOp
                 OpTrait::NOperands<2>::Impl, MemoryEffectOpInterface::Trait> {
 public:
   using Op::Op;
-  static StringRef getOperationName() { return "hask.primop_add"; };
+  static StringRef getOperationName() { return "lz.primop_add"; };
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   void print(OpAsmPrinter &p);
   void
@@ -417,7 +417,7 @@ class HaskPrimopSubOp
                 OpTrait::NOperands<2>::Impl, MemoryEffectOpInterface::Trait> {
 public:
   using Op::Op;
-  static StringRef getOperationName() { return "hask.primop_sub"; };
+  static StringRef getOperationName() { return "lz.primop_sub"; };
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   void print(OpAsmPrinter &p);
   void
@@ -430,7 +430,7 @@ class ThunkifyOp
                 MemoryEffectOpInterface::Trait> {
 public:
   using Op::Op;
-  static StringRef getOperationName() { return "hask.thunkify"; };
+  static StringRef getOperationName() { return "lz.thunkify"; };
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   Value getScrutinee() { this->getOperation()->getOperand(0); }
   void print(OpAsmPrinter &p);
@@ -446,7 +446,7 @@ class TransmuteOp
                 MemoryEffectOpInterface::Trait> {
 public:
   using Op::Op;
-  static StringRef getOperationName() { return "hask.transmute"; };
+  static StringRef getOperationName() { return "lz.transmute"; };
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   void print(OpAsmPrinter &p);
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
@@ -456,9 +456,9 @@ public:
                  &effects) {}
 };
 
-// lower hask to standard.
+// lower lz.to standard.
 std::unique_ptr<mlir::Pass> createLowerHaskToStandardPass();
-// lower hask+standard to LLVM by eliminating all the junk.
+// lower lz.standard to LLVM by eliminating all the junk.
 std::unique_ptr<mlir::Pass> createLowerHaskStandardToLLVMPass();
 // canonicalize, eliminating all intermediate waste.
 std::unique_ptr<mlir::Pass> createWorkerWrapperPass();

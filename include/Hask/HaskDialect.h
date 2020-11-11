@@ -27,17 +27,9 @@ public:
                                  Type type) const override;
   void printAttribute(Attribute attr,
                       DialectAsmPrinter &printer) const override;
-  static llvm::StringRef getDialectNamespace() { return "hask"; }
+  static llvm::StringRef getDialectNamespace() { return "lz"; }
 };
 
-/*
-class UntypedType : public mlir::Type::TypeBase<UntypedType, mlir::Type,
-                                               TypeStorage> {
-public:
-  using Base::Base;
-  static UntypedType get(MLIRContext *context) { return Base::get(context); }
-};
-*/
 
 class HaskType : public Type {
 public:
