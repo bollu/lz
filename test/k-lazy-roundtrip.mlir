@@ -1,29 +1,29 @@
 
 
 module {
-  "hask.func"() ( {
-  ^bb0(%arg0: !hask.thunk<!hask.value>, %arg1: !hask.thunk<!hask.value>):  // no predecessors
-    %0 = "hask.force"(%arg0) : (!hask.thunk<!hask.value>) -> !hask.value
-    "hask.return"(%0) : (!hask.value) -> ()
-  }) {retty = !hask.value, sym_name = "k"} : () -> ()
-  "hask.func"() ( {
-  ^bb0(%arg0: !hask.thunk<!hask.value>):  // no predecessors
-    %0 = "hask.ref"() {sym_name = "loop"} : () -> !hask.fn<(!hask.thunk<!hask.value>) -> !hask.value>
-    %1 = "hask.ap"(%0, %arg0) : (!hask.fn<(!hask.thunk<!hask.value>) -> !hask.value>, !hask.thunk<!hask.value>) -> !hask.thunk<!hask.value>
-    %2 = "hask.force"(%1) : (!hask.thunk<!hask.value>) -> !hask.value
-    "hask.return"(%2) : (!hask.value) -> ()
-  }) {retty = !hask.value, sym_name = "loop"} : () -> ()
-  hask.adt @X [#hask.data_constructor<@MkX []>]
-  "hask.func"() ( {
-    %0 = "hask.make_i64"() {value = 42 : i64} : () -> !hask.value
-    %1 = "hask.construct"(%0) {dataconstructor = @X} : (!hask.value) -> !hask.adt<@X>
-    %2 = hask.transmute(%1 :!hask.adt<@X>):!hask.value
-    %3 = hask.thunkify(%2 :!hask.value):!hask.thunk<!hask.value>
-    %4 = "hask.ref"() {sym_name = "loop"} : () -> !hask.fn<(!hask.thunk<!hask.value>) -> !hask.value>
-    %5 = "hask.ap"(%4, %3) : (!hask.fn<(!hask.thunk<!hask.value>) -> !hask.value>, !hask.thunk<!hask.value>) -> !hask.thunk<!hask.value>
-    %6 = "hask.ref"() {sym_name = "k"} : () -> !hask.fn<(!hask.thunk<!hask.value>, !hask.thunk<!hask.value>) -> !hask.value>
-    %7 = "hask.ap"(%6, %3, %5) : (!hask.fn<(!hask.thunk<!hask.value>, !hask.thunk<!hask.value>) -> !hask.value>, !hask.thunk<!hask.value>, !hask.thunk<!hask.value>) -> !hask.thunk<!hask.value>
-    %8 = "hask.force"(%7) : (!hask.thunk<!hask.value>) -> !hask.value
-    "hask.return"(%8) : (!hask.value) -> ()
-  }) {retty = !hask.value, sym_name = "main"} : () -> ()
+  "lz.func"() ( {
+  ^bb0(%arg0: !lz.thunk<!lz.value>, %arg1: !lz.thunk<!lz.value>):  // no predecessors
+    %0 = "lz.force"(%arg0) : (!lz.thunk<!lz.value>) -> !lz.value
+    "lz.return"(%0) : (!lz.value) -> ()
+  }) {retty = !lz.value, sym_name = "k"} : () -> ()
+  "lz.func"() ( {
+  ^bb0(%arg0: !lz.thunk<!lz.value>):  // no predecessors
+    %0 = "lz.ref"() {sym_name = "loop"} : () -> !lz.fn<(!lz.thunk<!lz.value>) -> !lz.value>
+    %1 = "lz.ap"(%0, %arg0) : (!lz.fn<(!lz.thunk<!lz.value>) -> !lz.value>, !lz.thunk<!lz.value>) -> !lz.thunk<!lz.value>
+    %2 = "lz.force"(%1) : (!lz.thunk<!lz.value>) -> !lz.value
+    "lz.return"(%2) : (!lz.value) -> ()
+  }) {retty = !lz.value, sym_name = "loop"} : () -> ()
+  lz.adt @X [#lz.data_constructor<@MkX []>]
+  "lz.func"() ( {
+    %0 = "lz.make_i64"() {value = 42 : i64} : () -> !lz.value
+    %1 = "lz.construct"(%0) {dataconstructor = @X} : (!lz.value) -> !lz.adt<@X>
+    %2 = lz.transmute(%1 :!lz.adt<@X>):!lz.value
+    %3 = lz.thunkify(%2 :!lz.value):!lz.thunk<!lz.value>
+    %4 = "lz.ref"() {sym_name = "loop"} : () -> !lz.fn<(!lz.thunk<!lz.value>) -> !lz.value>
+    %5 = "lz.ap"(%4, %3) : (!lz.fn<(!lz.thunk<!lz.value>) -> !lz.value>, !lz.thunk<!lz.value>) -> !lz.thunk<!lz.value>
+    %6 = "lz.ref"() {sym_name = "k"} : () -> !lz.fn<(!lz.thunk<!lz.value>, !lz.thunk<!lz.value>) -> !lz.value>
+    %7 = "lz.ap"(%6, %3, %5) : (!lz.fn<(!lz.thunk<!lz.value>, !lz.thunk<!lz.value>) -> !lz.value>, !lz.thunk<!lz.value>, !lz.thunk<!lz.value>) -> !lz.thunk<!lz.value>
+    %8 = "lz.force"(%7) : (!lz.thunk<!lz.value>) -> !lz.value
+    "lz.return"(%8) : (!lz.value) -> ()
+  }) {retty = !lz.value, sym_name = "main"} : () -> ()
 }
