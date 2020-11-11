@@ -17,8 +17,6 @@ module {
       lz.return(%out_v) : !lz.value
     }
 
-  lz.adt @X [#lz.data_constructor<@MkX []>]
-
   // k (x:(X 42)) (y:(loop (X 42))) = x
   // main = 
   //     let y = loop x -- builds a closure.
@@ -27,9 +25,8 @@ module {
       %lit_42 = lz.make_i64(42)
       // TODO: I need a think to transmute to different types.
       // Because we may want to "downcast" a ADT to a raw value
-      %x = lz.construct(@X, %lit_42 : !lz.value): !lz.adt<@X>
-      %x_v = lz.transmute(%x : !lz.adt<@X>): !lz.value
-      %x_t = lz.thunkify(%x_v : !lz.value) :!lz.thunk<!lz.value>
+      %xv = lz.construct(@X, %lit_42 : !lz.value)
+      %x_t = lz.thunkify(%xv : !lz.value) :!lz.thunk<!lz.value>
 
       %loop = lz.ref(@loop) :  !lz.fn<(!lz.thunk<!lz.value>) -> !lz.value>
       %y = lz.ap(%loop : !lz.fn<(!lz.thunk<!lz.value>) -> !lz.value>, %x_t)
