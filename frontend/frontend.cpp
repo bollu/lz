@@ -154,6 +154,11 @@ struct Span {
     };
 
     ll nchars() const { return end.si - begin.si; }
+
+    Span extendRight(Span rightward) const {
+      assert(this->end.si <= rightward.begin.si);
+      return Span(this->begin, rightward.end);
+    }
 };
 
 Span Loc::moveMut(Loc next) {
@@ -398,15 +403,17 @@ struct Parser {
         return parseOptionalSigil(String::copyCStr("("));
     }
 
-    void parseCloseRoundBracket(Span open) {
-        parseMatchingSigil(open, String::copyCStr(")"));
+    Span parseCloseRoundBracket(Span open) {
+        return parseMatchingSigil(open, String::copyCStr(")"));
     }
 
     bool parseOptionalCloseRoundBracket() {
         return bool(parseOptionalSigil(String::copyCStr(")")));
     }
     void parseColon() { parseSigil(String::copyCStr(":")); }
-    bool parseOptionalComma() {
+    void parseEqual() { parseSigil(String::copyCStr("=")); }
+
+  bool parseOptionalComma() {
         return bool(parseOptionalSigil(String::copyCStr(",")));
     }
     void parseComma() { parseSigil(String::copyCStr(",")); }
@@ -511,6 +518,7 @@ struct Parser {
         return span;
     }
 
+
     Identifier parseIdentifier() {
         optional<Identifier> ms = parseOptionalIdentifier();
         if (ms.has_value()) {
@@ -593,6 +601,17 @@ struct Parser {
         eatWhitespace();
         return l.si == s.nchars;
     }
+
+    // eat till newline
+    void eatTillNewline() {
+      while(1) {
+        optional<char> c = this->at(l);
+        if (!c) { return; }
+        l = l.nextc(*c);
+        if (c == '\n') { return; }
+      }
+    }
+
     Loc getCurrentLoc() { 
         eatWhitespace();
         return l; 
@@ -670,8 +689,17 @@ struct CaseLHSIdentifier : public CaseLHS {
 struct CaseLHSTupleStruct : public CaseLHS {
     const Identifier name;
     vector<CaseLHS *> fields;
-    CaseLHSTupleStruct(Span span, Identifier name) : 
-        CaseLHS(span, ECaseLHS::TupleStruct), name(name) {};
+    CaseLHSTupleStruct(Span span, Identifier name, vector<CaseLHS *> fields) :
+        CaseLHS(span, ECaseLHS::TupleStruct), name(name), fields(fields) {};
+
+    OutFile &print(OutFile &out) const override {
+      out << name << "(";
+      for(int i = 0; i < fields.size(); ++i) {
+        fields[i]->print(out);
+        if (i + 1 < fields.size()) { out << ", "; }
+      }
+      out << ")";
+    }
 };
 
 enum class ExprType { Case, Identifier, Integer, FnCall, Binop };
@@ -783,6 +811,17 @@ struct StmtReturn : public Stmt {
     }
 };
 
+struct StmtLet : public Stmt {
+  Identifier name;
+  Type type;
+  Expr *rhs;
+  StmtLet(Identifier name, Type type, Expr *rhs) : name(name), type(type), rhs(rhs) {};
+  void print(OutFile &o) const {
+    o << "let "; name.print(o); o << " : "; type.print(o); o << " = ";
+    rhs->print(o);
+  }
+};
+
 Type parseType(Parser &in) {
     Loc lbegin = in.getCurrentLoc();
     optional<Identifier> ident;
@@ -802,15 +841,32 @@ CaseLHS *parseCaseLHS(Parser &in) {
         return new CaseLHSInt(integer->first, integer->second);
     }
 
-    // it can be either <ident>, or it can be <struct-name> (<struct-fields>)
+    // <ident>  |  <struct-name> (<struct-fields>)
     optional<Identifier> ident(in.parseOptionalIdentifier());
-    if (ident) {
-
+    if (!ident) {
+        in.addErrAtCurrentLoc(String::copyCStr("expected case LHS."));
+        exit(1);
+    }
+    optional<Span> structFieldRoundOpen;
+    structFieldRoundOpen = in.parseOptionalOpenRoundBracket();
+    if (!structFieldRoundOpen) { 
         return new CaseLHSIdentifier(ident->span, ident->name);
     }
 
-    in.addErrAtCurrentLoc(String::copyCStr("expected case LHS."));
-    exit(1);
+    Span tupleStructSpan(ident->span);
+
+    vector<CaseLHS *> fields;
+
+    // parse identifiers
+    while(1) {
+        CaseLHS * field = parseCaseLHS(in); 
+        fields.push_back(field);
+        if (!in.parseOptionalComma()) {
+            tupleStructSpan.extendRight(in.parseCloseRoundBracket(*structFieldRoundOpen));
+            break;
+        }
+    }
+    return new CaseLHSTupleStruct(tupleStructSpan, *ident, fields);
 }
 
 Expr *parseExprTop(Parser &in);
@@ -900,8 +956,7 @@ Expr *parseExprTop(Parser &in) {
         return new ExprCase(Span(lbegin, in.getCurrentLoc()), scrutinee, alts);
     }
 
-    Expr *e = nullptr;
-    e = parseExprArithAddSub(in);
+    Expr *e = parseExprArithAddSub(in);
     if (e) { return e; }
 
     in.addErrAtCurrentLoc(String::copyCStr("unable to parse expression"));
@@ -911,6 +966,13 @@ Expr *parseExprTop(Parser &in) {
 Stmt *parseStmt(Parser &in) {
     if (in.parseOptionalKeyword(String::copyCStr("return"))) {
         return new StmtReturn(parseExprTop(in));
+    } else if (in.parseOptionalKeyword(String::copyCStr("let"))) {
+      Identifier name = in.parseIdentifier();
+      in.parseColon();
+      Type t = parseType(in);
+      in.parseEqual();
+      Expr *e = parseExprTop(in);
+      return new StmtLet(name, t, e);
     }
 
     in.addErrAtCurrentLoc(String::copyCStr("expected statement"));
@@ -946,7 +1008,7 @@ Block parseBlock(Parser &in) {
         //     in.parseCloseCurly();
         //     break;
         // }
-    };
+    }
     return Block(stmts);
 }
 
@@ -983,9 +1045,7 @@ Fn parseFn(Parser &in) {
         Identifier name = in.parseIdentifier();
         in.parseColon();
         Type t = parseType(in);
-        if (in.parseOptionalComma()) {
-            break;
-        }
+        if (in.parseOptionalComma()) { break; }
         params.push_back({name, t});
     }
 
@@ -1091,7 +1151,11 @@ Module parseModule(Parser &in) {
             m.structs.push_back(parseStruct(in));
         } else if (in.parseOptionalKeyword(String::copyCStr("enum"))) {
             m.enums.push_back(parseEnum(in));
-        } else {
+        }
+        else if (in.parseOptionalSigil(String::copyCStr("//"))) {
+          in.eatTillNewline();
+        }
+        else {
             in.addErrAtCurrentLoc(
                 String::copyCStr("unknown top level starter"));
             assert(false && "unknown top level form.");

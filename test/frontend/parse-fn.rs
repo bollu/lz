@@ -8,37 +8,34 @@ fn factorial(i: u64) -> u64 {
     };
 }
 
+// TODO: need to think more.
 fn fib(i: SimpleInt) -> SimpleInt {
     return match i {
-        SimpleInt(ihash) -> match ihash {
-            0 => 0,
-            1 => 1,
-            n => return fib(n-1) + fib(n-2)
-        }
-    }
+        SimpleInt(ihash) => i
+    };
 }
 
-fn main_fib() {
-    let x = SimpleInt(6);
-    return fib(6).0;
+fn main_fib() -> SimpleInt {
+    let x : SimpleInt = SimpleInt(6);
+    return fib(6);
 }
 
-fn loop<T>() -> T { return loop(); }
-fn k<T>(T x, T y) { return x; }
+fn loop() -> SimpleInt { return loop(); }
+fn k(x: SimpleInt, y: SimpleInt) { return x; }
 
-fn main_k() {
-    let x = SimpleInt(1);
+fn main_k() -> SimpleInt {
+    let x : SimpleInt = SimpleInt(1);
     let y : SimpleInt = loop();
-    return k(x, y).0;
+    return k(x, y);
 }
 
-fn plus (i: SimpleInt, j: SimpleInt) {
+fn plus (i: SimpleInt, j: SimpleInt)  -> SimpleInt {
     let SimpleInt(ihash) = i; // will force i. In a lazy language, pattern-match is 'side effecting' :]
-    let jhash = j; // will force j. In a lazy language, accessor is 'side-effecting' :]
+    let jhash = j; // will force j. In a lazy language, accessor is 'side-effecting' :)
     return ihash + jhash;
 }
 
-fn main_plus() {
+fn main_plus()  -> SimpleInt {
     let i = SimpleInt(1);
     let j = SimpleInt(2);
     return plus(i, j);
