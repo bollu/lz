@@ -416,6 +416,7 @@ struct Parser {
   bool parseOptionalComma() {
         return bool(parseOptionalSigil(String::copyCStr(",")));
     }
+
     void parseComma() { parseSigil(String::copyCStr(",")); }
     void parseSemicolon() { parseSigil(String::copyCStr(";")); }
     bool parseOptionalSemicolon() {
@@ -822,6 +823,18 @@ struct StmtLet : public Stmt {
   }
 };
 
+struct StmtLetBang : public Stmt {
+  Identifier name;
+  Type type;
+  Expr *rhs;
+  StmtLetBang(Identifier name, Type type, Expr *rhs) : name(name), type(type), rhs(rhs) {};
+  void print(OutFile &o) const {
+    o << "let! "; name.print(o); o << " : "; type.print(o); o << " = ";
+    rhs->print(o);
+  }
+};
+
+
 Type parseType(Parser &in) {
     Loc lbegin = in.getCurrentLoc();
     optional<Identifier> ident;
@@ -883,6 +896,7 @@ Expr *parseExprLeaf(Parser &in) {
                 return new ExprFnCall(Span(lbegin, in.getCurrentLoc()), *ident,
                                       {});
             }
+
             vector<Expr *> args;
             while (1) {
                 args.push_back(parseExprTop(in));
@@ -973,7 +987,15 @@ Stmt *parseStmt(Parser &in) {
       in.parseEqual();
       Expr *e = parseExprTop(in);
       return new StmtLet(name, t, e);
-    }
+    } else if (in.parseOptionalKeyword(String::copyCStr("letbang"))) {
+      Identifier name = in.parseIdentifier();
+      in.parseColon();
+      Type t = parseType(in);
+      in.parseEqual();
+      Expr *e = parseExprTop(in);
+      return new StmtLetBang(name, t, e);
+  }
+
 
     in.addErrAtCurrentLoc(String::copyCStr("expected statement"));
     exit(1);
@@ -1039,14 +1061,20 @@ struct Fn {
 Fn parseFn(Parser &in) {
     Loc lbegin = in.getCurrentLoc();
     Identifier ident = in.parseIdentifier();
-    in.parseOpenRoundBracket();
+    Span open = in.parseOpenRoundBracket();
     vector<pair<Identifier, Type>> params;
-    while (!in.parseOptionalCloseRoundBracket()) {
+    if (!in.parseOptionalCloseRoundBracket()) {
+      while (1) {
         Identifier name = in.parseIdentifier();
         in.parseColon();
         Type t = parseType(in);
-        if (in.parseOptionalComma()) { break; }
         params.push_back({name, t});
+        if (in.parseOptionalComma()) {
+          continue;
+        }
+        in.parseCloseRoundBracket(open);
+        break;
+      }
     }
 
     in.parseThinArrow();

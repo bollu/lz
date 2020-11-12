@@ -21,7 +21,7 @@ fn main_fib() -> SimpleInt {
 }
 
 fn loop() -> SimpleInt { return loop(); }
-fn k(x: SimpleInt, y: SimpleInt) { return x; }
+fn k(x: SimpleInt, y: SimpleInt) -> SimpleInt { return x; }
 
 fn main_k() -> SimpleInt {
     let x : SimpleInt = SimpleInt(1);
@@ -30,13 +30,13 @@ fn main_k() -> SimpleInt {
 }
 
 fn plus (i: SimpleInt, j: SimpleInt)  -> SimpleInt {
-    let SimpleInt(ihash) = i; // will force i. In a lazy language, pattern-match is 'side effecting' :]
-    let jhash = j; // will force j. In a lazy language, accessor is 'side-effecting' :)
-    return ihash + jhash;
+    let ihash : RawInt = match i { SimpleInt(ihash) => ihash };
+    letbang jhash : RawInt = match j { SimpleInt(jhash) => jhash };
+    return ihash - jhash;
 }
 
 fn main_plus()  -> SimpleInt {
-    let i = SimpleInt(1);
-    let j = SimpleInt(2);
+    let i : RawInt = SimpleInt(1);
+    let j : RawInt = SimpleInt(2);
     return plus(i, j);
 }
