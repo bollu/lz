@@ -1213,22 +1213,45 @@ Module parseModule(Parser &in) {
 
 
 using SymbolTable = map<std::string, mlir::Value>;
+mlir::Type mlirGenTypeOrDefault(Type t, mlir::OpBuilder &builder, mlir::Type defaultty) {
+//  return builder.getI64Type();
+
+  if (t.tyname.name.equals("i64")) {
+    return builder.getI64Type();
+  }
+  return defaultty;
+}
+
+
+mlir::Type mlirGenTypeOrThunk(Type t, mlir::OpBuilder &builder) {
+  auto valty =
+      mlir::standalone::ValueType::get(builder.getContext());
+  auto thunkty =  mlir::standalone::ThunkType::get(builder.getContext(), valty);
+
+  return mlirGenTypeOrDefault(t, builder, thunkty);
+}
+
+mlir::Type mlirGenTypeOrValue(Type t, mlir::OpBuilder &builder) {
+  auto valty =
+      mlir::standalone::ValueType::get(builder.getContext());
+  return mlirGenTypeOrDefault(t, builder, valty);
+}
+
 
 void mlirGenFn(mlir::ModuleOp &mod, mlir::OpBuilder & builder, const Fn &f, const Module &m) {
   // f.retty
   auto location = builder.getUnknownLoc(); //loc(proto.loc());
-  llvm::SmallVector<mlir::Type, 4> arg_types(f.args.size());
+  llvm::SmallVector<mlir::Type, 4> argtys;
 
   for(int i = 0; i < f.args.size(); ++i) {
-    if (f.args[i].second.tyname.name.equals("i64")) {
-
-    }
+    argtys.push_back(mlirGenTypeOrThunk(f.args[i].second, builder));
   }
-  llvm::SmallVector<mlir::Type, 4> return_types(1);
 
-//  auto func_type = builder.getFunctionType(arg_types, return_types);
-//  return mlir::FuncOp::create(location, proto.getName(), func_type);
-
+  llvm::SmallVector<mlir::Type, 4> rettys =
+      { mlirGenTypeOrValue(f.retty, builder) };
+  mlir::FuncOp fn = mlir::FuncOp::create(location, f.name.name.asCStr(),
+                              builder.getFunctionType(argtys, rettys));
+  mod.push_back(fn);
 }
 
 // https://github.com/llvm/llvm-project/blob/master/mlir/examples/toy/Ch2/mlir/MLIRGen.cpp#L57
