@@ -342,7 +342,7 @@ struct String {
         return true;
     }
 
-    bool equals(const char *c) {
+    bool equals(const char *c) const {
       if (nchars != strlen(c)) {
         return false;
       }
@@ -1224,10 +1224,10 @@ void mlirGenFn(mlir::ModuleOp &mod, mlir::OpBuilder & builder, const Fn &f, cons
 
     }
   }
-  llvm::SmallVector<mlir::Type, 4> return_types(1)
+  llvm::SmallVector<mlir::Type, 4> return_types(1);
 
-  auto func_type = builder.getFunctionType(arg_types, return_types);
-  return mlir::FuncOp::create(location, proto.getName(), func_type);
+//  auto func_type = builder.getFunctionType(arg_types, return_types);
+//  return mlir::FuncOp::create(location, proto.getName(), func_type);
 
 }
 

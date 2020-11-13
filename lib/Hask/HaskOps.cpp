@@ -461,74 +461,85 @@ void DefaultCaseOp::print(OpAsmPrinter &p) {
 // === LAMBDA OP ===
 // === LAMBDA OP ===
 
-//!  ParseResult LambdaOp::parse(OpAsmParser &parser, OperationState &result) {
-//!
-//!    if (parser.parseLParen()) {
-//!      return failure();
-//!    }
-//!
-//!    SmallVector<OpAsmParser::OperandType, 4> args;
-//!    SmallVector<Type, 4> argTys;
-//!    if (succeeded(parser.parseOptionalRParen())) {
-//!      // we have no params.
-//!    } else {
-//!      while (1) {
-//!        OpAsmParser::OperandType arg;
-//!        if (parser.parseRegionArgument(arg)) {
-//!          return failure();
-//!        };
-//!        args.push_back(arg);
-//!
-//!        if (parser.parseColon()) {
-//!          return failure();
-//!        }
-//!        Type argType;
-//!        if (parser.parseType(argType)) {
-//!          return failure();
-//!        }
-//!        argTys.push_back(argType);
-//!
-//!        if (!(argType.isa<ThunkType>() || argType.isa<ValueType>() ||
-//!              argType.isa<HaskFnType>())) {
-//!          return parser.emitError(
-//!              arg.location,
-//!              "argument must either ValueType, ThunkType, or HaskFnType");
-//!        }
-//!
-//!        if (succeeded(parser.parseOptionalRParen())) {
-//!          break;
-//!        } else if (parser.parseComma()) {
-//!          return failure();
-//!        }
-//!      }
-//!    }
-//!
-//!    Region *r = result.addRegion();
-//!    if (parser.parseRegion(*r, {args}, {argTys}))
-//!      return failure();
-//!
-//!    HaskReturnOp ret =
-//!    cast<HaskReturnOp>(r->getBlocks().front().getTerminator()); Value retval
-//!    = ret.getInput(); Type rettyy = retval.getType();
-//!
-//!    result.addTypes(parser.getBuilder().getType<HaskFnType>(argTys, rettyy));
-//!    return success();
-//!  }
-//!
-//!  void LambdaOp::print(OpAsmPrinter &p) {
-//!    p << "hask.lambda";
-//!    p << "(";
-//!    for (int i = 0; i < this->getNumInputs(); ++i) {
-//!      p << this->getInput(i);
-//!      p << ":" << this->getInput(i).getType();
-//!      if (i < this->getNumInputs() - 1) {
-//!        p << ",";
-//!      }
-//!    }
-//!    p << ")";
-//!    p.printRegion(this->getBody(), /*printEntryBlockArgs=*/false);
-//!    // p.printRegion(this->getBody(), /*printEntryBlockArgs=*/true);
-//!  }
+ParseResult HaskLambdaOp::parse(OpAsmParser &parser, OperationState &result) {
+  // hask.lambda [    ] { ... } : function-type ?
+
+//  parser.parseOperandList(operands, OpAsmParser::Delimiter::Square);
+//  parser.resolveOperands(operands,
+//                         ValueType::get(parser.getBuilder().getContext()),
+//                         result.operands);
+  if(parser.parseLSquare()) { return failure(); }
+  if (failed(parser.parseOptionalRSquare())) {
+    while(1) {
+      OpAsmParser::OperandType operand;
+      Type operandty;
+      if (parser.parseOperand(operand) ||
+          parser.parseColon() ||
+          parser.parseType(operandty) ||
+          parser.resolveOperand(operand, operandty, result.operands)) {
+        return failure();
+      }
+
+      if (succeeded(parser.parseOptionalRSquare())) { break; }
+      else if (succeeded(parser.parseComma())) { continue; }
+      else { return failure(); }
+    }
+  }
+  // ( ... )
+  if (parser.parseLParen()) { return failure(); }
+
+  SmallVector<OpAsmParser::OperandType, 4> args;
+  SmallVector<Type, 4> argTys;
+  Type retty;
+
+  if (succeeded(parser.parseOptionalRParen())) {
+    // we have no params.
+  } else {
+    while (1) {
+      OpAsmParser::OperandType arg;
+      if (parser.parseRegionArgument(arg)) {
+        return failure();
+      };
+      args.push_back(arg);
+
+      if (parser.parseColon()) {
+        return failure();
+      }
+      Type argType;
+      if (parser.parseType(argType)) {
+        return failure();
+      }
+      argTys.push_back(argType);
+      if (succeeded(parser.parseOptionalRParen())) {
+        break;
+      } else if (parser.parseComma()) {
+        return failure();
+      }
+    }
+  }
+
+  // -> retty
+  if (parser.parseArrow() || parser.parseType(retty)) {
+    return failure();
+  }
+
+  //  result.add
+  result.addAttribute(HaskFuncOp::getReturnTypeAttributeKey(),
+                      mlir::TypeAttr::get(retty));
+  // result.addTypes(
+
+  Region *r = result.addRegion();
+  if (parser.parseRegion(*r, {args}, {argTys})) {
+    return failure();
+  }
+
+  result.addTypes(parser.getBuilder().getType<HaskFnType>(argTys, retty));
+  return success();
+}
+
+void HaskLambdaOp::print(OpAsmPrinter &p) {
+  p.printGenericOp(this->getOperation());
+}
 
 // === RECURSIVEREF OP ===
 // === RECURSIVEREF OP ===
@@ -583,12 +594,12 @@ LogicalResult HaskRefOp::verify() {
     }
     llvm::errs() << "ERROR at HaskRefOp type verification:"
                  << "\n-mismatch of types at ref."
-                 << "\n-Found from function"
-                 << " " << fn.getLoc() << " "
-                 << "name:" << this->getRef() << " [" << fn.getFunctionType()
+                 << "\n-Found from function at loc["
+                 << " " << fn.getLoc() << "] "
+                 << "name:" << this->getRef() << " type[" << fn.getFunctionType()
                  << "]\n"
                     "-Declared at ref as ["
-                 << this->getLoc() << " " << *this << "]\n";
+                 << this->getLoc() << "] type[" << this->getResult().getType() << "]\n";
     return failure();
   } else if (global) {
     if (global.getType() == this->getResult().getType()) {
@@ -728,15 +739,11 @@ Type HaskFuncOp::getReturnType() {
 
 HaskFnType HaskFuncOp::getFunctionType() {
   SmallVector<Type, 4> argTys(this->getRegion().getArgumentTypes());
-  llvm::errs() << "attr: |" << this->getAttr(getReturnTypeAttributeKey())
-               << "|\n";
   Type retty = this->getReturnType();
   assert(
       this->getAttrOfType<TypeAttr>(HaskFuncOp::getReturnTypeAttributeKey()) &&
       "found return type attribute!");
   assert(retty && "found return type!");
-
-  llvm::errs() << "retty: |" << retty << "|\n";
   return HaskFnType::get(this->getContext(), argTys, retty);
 }
 

@@ -241,6 +241,7 @@ public:
 };
 
 
+// LAMBDA OP
 class HaskLambdaOp : public Op<HaskLambdaOp, OpTrait::VariadicOperands, OpTrait::OneResult, OpTrait::OneRegion> {
 public:
   using Op::Op;
@@ -257,7 +258,11 @@ public:
 
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   void print(OpAsmPrinter &p);
+  // TODO: check that we only access those values we capture
+//  void verify();
 };
+
+
 
 
 class HaskRefOp
@@ -293,7 +298,6 @@ public:
   using Op::Op;
   static StringRef getOperationName() { return "lz.func"; };
   Region &getBody() { return this->getRegion(); }
-//  Block *getBodyBB() { return &this->getRegion().getBlocks().front(); }
   void print(OpAsmPrinter &p);
   // MLIR TODO: expose this as part of the Callable interface.
   int getNumArguments() { return this->getBody().getNumArguments(); }

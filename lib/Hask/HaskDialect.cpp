@@ -49,7 +49,7 @@ HaskDialect::HaskDialect(mlir::MLIRContext *context)
                 ApOp, ApEagerOp, CaseOp, DefaultCaseOp, HaskRefOp, MakeStringOp, HaskFuncOp,
                 ForceOp, HaskGlobalOp, HaskConstructOp,
                 HaskPrimopAddOp, HaskPrimopSubOp, CaseIntOp, ThunkifyOp,
-                TransmuteOp>();
+                TransmuteOp, HaskLambdaOp>();
   addTypes<ThunkType, ValueType, HaskFnType>(); // , ADTType>();
   // addAttributes<DataConstructorAttr>();
   addInterfaces<HaskInlinerInterface>();
