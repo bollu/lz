@@ -674,10 +674,6 @@ struct Type {
 };
 
 
-struct Stmt {
-    virtual void print(OutFile &out) const = 0;
-};
-
 enum class ECaseLHS { Int, Identifier, TupleStruct };
 
 struct CaseLHS {
@@ -821,23 +817,46 @@ struct ExprFnCall : public Expr {
     }
 };
 
+enum class StmtKind {
+  Return, Let, LetBang
+};
+
+
+struct Stmt {
+  virtual void print(OutFile &out) const = 0;
+  StmtKind getKind() const { return Kind; }
+  Stmt(StmtKind Kind) : Kind(Kind) {};
+private:
+  const StmtKind Kind;
+};
+
+
 struct StmtReturn : public Stmt {
     const Expr *e;
-    StmtReturn(TAKE Expr *e) : e(e){};
+    StmtReturn(TAKE Expr *e) : Stmt(StmtKind::Return), e(e){};
 
     void print(OutFile &o) const {
         o << "return " << *e;
     }
+
+    static bool classof(const Stmt *S) {
+      return S->getKind() == StmtKind::Return;
+    }
+
 };
 
 struct StmtLet : public Stmt {
   Identifier name;
   Type type;
   Expr *rhs;
-  StmtLet(Identifier name, Type type, Expr *rhs) : name(name), type(type), rhs(rhs) {};
+  StmtLet(Identifier name, Type type, Expr *rhs) : Stmt(StmtKind::Let), name(name), type(type), rhs(rhs) {};
   void print(OutFile &o) const {
     o << "let "; name.print(o); o << " : "; type.print(o); o << " = ";
     rhs->print(o);
+  }
+
+  static bool classof(const Stmt *S) {
+    return S->getKind() == StmtKind::Let;
   }
 };
 
@@ -845,10 +864,13 @@ struct StmtLetBang : public Stmt {
   Identifier name;
   Type type;
   Expr *rhs;
-  StmtLetBang(Identifier name, Type type, Expr *rhs) : name(name), type(type), rhs(rhs) {};
+  StmtLetBang(Identifier name, Type type, Expr *rhs) : Stmt(StmtKind::LetBang), name(name), type(type), rhs(rhs) {};
   void print(OutFile &o) const {
     o << "let! "; name.print(o); o << " : "; type.print(o); o << " = ";
     rhs->print(o);
+  }
+  static bool classof(const Stmt *S) {
+    return S->getKind() == StmtKind::LetBang;
   }
 };
 
@@ -1237,6 +1259,30 @@ mlir::Type mlirGenTypeOrValue(Type t, mlir::OpBuilder &builder) {
   return mlirGenTypeOrDefault(t, builder, valty);
 }
 
+void mlirGenStmt(const Stmt *s, mlir::OpBuilder &builder) {
+  if (const StmtLet *l = mlir::dyn_cast<StmtLet>(s)) {
+    assert(false && "stmt let");
+  }
+
+  if (const StmtLetBang *l  = mlir::dyn_cast<StmtLetBang>(s)) {
+    assert(false && "stmt letbang");
+
+  }
+
+  if (const StmtReturn *r = mlir::dyn_cast<StmtReturn>(s)) {
+    assert(false && "stmt return");
+
+
+  }
+
+  assert(false && "unknown statement type");
+}
+
+void mlirGenBody(const Block &b, mlir::OpBuilder &builder) {
+  for(Stmt *s : b.stmts) {
+    mlirGenStmt(s, builder);
+  }
+}
 
 void mlirGenFn(mlir::ModuleOp &mod, mlir::OpBuilder & builder, const Fn &f, const Module &m) {
   // f.retty
@@ -1254,6 +1300,7 @@ void mlirGenFn(mlir::ModuleOp &mod, mlir::OpBuilder & builder, const Fn &f, cons
 
   fn.addEntryBlock();
   builder.setInsertionPointToStart(&fn.getRegion().front());
+  mlirGenBody(f.body, builder);
   mod.push_back(fn);
 }
 
