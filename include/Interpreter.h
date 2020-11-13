@@ -91,6 +91,26 @@ struct InterpValue {
     return closure;
   }
 
+  mlir::standalone::HaskLambdaOp closureLambdaLam() const {
+    assert(type == InterpValueType::ClosureLambda);
+    return lam;
+  }
+  int closureLambdaNumArguments() const {
+    assert(type == InterpValueType::ClosureLambda);
+    return vs_.size();
+  }
+
+  InterpValue closureLambdaArgument(int i) const {
+    assert(type == InterpValueType::ClosureLambda);
+    return vs_[i];
+  }
+  std::vector<InterpValue> closureLambdaArguments() const {
+    assert(type == InterpValueType::ClosureLambda);
+    return vs_;
+  }
+
+
+
   static InterpValue constructor(std::string tag, std::vector<InterpValue> vs) {
     InterpValue cons(InterpValueType::Constructor);
     cons.s_ = tag;

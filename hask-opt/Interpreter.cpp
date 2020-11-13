@@ -182,21 +182,56 @@ struct Interpreter {
     }
     if (ApOp ap = dyn_cast<ApOp>(op)) {
       InterpValue fn = env.lookup(ap.getLoc(), ap.getFn());
-      std::vector<InterpValue> args;
-      for (int i = 0; i < ap.getNumFnArguments(); ++i) {
-        args.push_back(env.lookup(ap.getLoc(), ap.getFnArgument(i)));
+
+      if (fn.type == InterpValueType::Ref) {
+
+        std::vector<InterpValue> args;
+        for (int i = 0; i < ap.getNumFnArguments(); ++i) {
+          args.push_back(env.lookup(ap.getLoc(), ap.getFnArgument(i)));
+        }
+        env.addNew(ap.getResult(), InterpValue::closureTopLevel(fn, args));
+
+      } else {
+        assert(fn.type == InterpValueType::ClosureLambda);
+        // [[NOTE: hacky lambda representation]]
+        // add all arguments into the closure.
+        // HACK: if we have:
+        // l = lambda [a, b] (c, d) <code>
+        // z = ap(l, v1, v2)
+
+        // [[l]] = closureLambda with pointer to l, vs: [[a]], [[b]]
+        // [[z]] = closureLambda with pointer to l, vs: [[a]], [[b]], [[v1]], [[v2]]
+        // so that upon execution, we know what `a` and `b` are, and also what
+        // `c` and `d` are.
+        std::vector<InterpValue> args;
+        for (int i = 0; i < fn.closureLambdaNumArguments(); ++i) {
+          args.push_back(fn.closureLambdaArgument(i));
+        }
+
+        for (int i = 0; i < ap.getNumFnArguments(); ++i) {
+          args.push_back(env.lookup(ap.getLoc(), ap.getFnArgument(i)));
+        }
+        env.addNew(ap.getResult(), InterpValue::closureLambda(fn.closureLambdaLam(), args));
       }
-      env.addNew(ap.getResult(), InterpValue::closureTopLevel(fn, args));
       return;
     }
     if (ForceOp force = dyn_cast<ForceOp>(op)) {
       stats.num_force_calls++;
       InterpValue scrutinee = env.lookup(force.getLoc(), force.getScrutinee());
       assert(scrutinee.type == InterpValueType::ThunkifiedValue ||
-             scrutinee.type == InterpValueType::ClosureTopLevel);
+             scrutinee.type == InterpValueType::ClosureTopLevel ||
+             scrutinee.type == InterpValueType::ClosureLambda);
       if (scrutinee.type == InterpValueType::ThunkifiedValue) {
         env.addNew(force.getResult(), scrutinee.thunkifiedValue());
-      } else {
+        return;
+      }
+      else if (scrutinee.type == InterpValueType::ClosureLambda) {
+        // see [[NOTE: hacky lambda representation]]
+        env.addNew(force.getResult(),
+                   interpretLambda(scrutinee.closureLambdaLam(), scrutinee.closureLambdaArguments()));
+        return;
+      }
+      else {
         assert(scrutinee.type == InterpValueType::ClosureTopLevel);
         InterpValue scrutineefn = scrutinee.closureTopLevelFn();
         assert(scrutineefn.type == InterpValueType::Ref);
@@ -205,8 +240,9 @@ struct Interpreter {
         std::vector<InterpValue> args(scrutinee.closureArgBegin(),
                                       scrutinee.closureArgEnd());
         env.addNew(force.getResult(), interpretFunction(func, args));
+        return;
       }
-      return;
+      assert(false && "unreachable");
     }
     if (CaseOp case_ = dyn_cast<CaseOp>(op)) {
       InterpValue scrutinee = env.lookup(case_.getLoc(), case_.getScrutinee());
@@ -373,6 +409,19 @@ struct Interpreter {
   InterpValue interpretFunction(HaskFuncOp func, ArrayRef<InterpValue> args) {
     // functions are isolated from above; create a fresh environment.
     return interpretRegion(func.getRegion(), args, Env());
+  }
+
+  InterpValue interpretLambda(HaskLambdaOp lam, ArrayRef<InterpValue> args) {
+    // see [[NOTE: hacky lambda representation]]
+
+    // bind captured variables.
+    Env env;
+    for(int i = 0; i < lam.getNumOperands(); ++i) {
+       env.addNew(lam.getOperand(i), args[i]);
+    }
+    // rest are parameters
+    SmallVector<InterpValue, 4> params(args.begin() + lam.getNumOperands(), args.end());
+    return interpretRegion(lam.getRegion(), params, env);
   }
 
   Interpreter(ModuleOp module) : module(module){};
