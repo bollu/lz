@@ -7,10 +7,12 @@
 #include <optional>
 #include <vector>
 
+
+
 // dialect includes
 #include "Hask/HaskDialect.h"
 #include "Hask/HaskOps.h"
-
+#include "Hask/Scope.h"
 
 #define GIVE
 #define TAKE
@@ -323,6 +325,7 @@ struct String {
     }
 
     const char *asCStr() const { return str; }
+    std::string asStdString() const { return std::string(asCStr()); }
 
     static String sprintf(const char *fmt, ...) {
         va_list args;
@@ -1266,6 +1269,9 @@ Module parseModule(Parser &in) {
 // == MLIR CODEGEN ==
 // == MLIR CODEGEN ==
 
+using ScopeFn = Scope<std::string, mlir::FuncOp>;
+using ScopeValue = Scope<std::string, mlir::Value>;
+
 
 using SymbolTable = map<std::string, mlir::Value>;
 mlir::Type mlirGenTypeOrDefault(Type t, mlir::OpBuilder &builder, mlir::Type defaultty) {
@@ -1291,7 +1297,7 @@ mlir::Type mlirGenTypeOrValue(Type t, mlir::OpBuilder &builder) {
   return mlirGenTypeOrDefault(t, builder, valty);
 }
 
-mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder) {
+mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder, ScopeFn scopeFn, ScopeValue scopeValue) {
   cout << __FUNCTION__ << ":" << __LINE__ << "\n"; cout.indent();
   e->print(cout);
   cout.dedent();
@@ -1302,7 +1308,7 @@ mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder) {
     cout << "\n---\n";
 
     assert(c->scrutinee);
-    mlir::Value scrutinee = mlirGenExpr(c->scrutinee, builder);
+    mlir::Value scrutinee = mlirGenExpr(c->scrutinee, builder, scopeFn, scopeValue);
     assert(false && "expression is case");
   }
 
@@ -1312,7 +1318,7 @@ mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder) {
 //  e->print(cout);
   assert(false && "unknown expression");
 }
-void mlirGenStmt(const Stmt *s, mlir::OpBuilder &builder) {
+void mlirGenStmt(const Stmt *s, mlir::OpBuilder &builder, ScopeFn scopeFn, ScopeValue scopeValue) {
   if (const StmtLet *l = mlir::dyn_cast<StmtLet>(s)) {
     assert(false && "stmt let");
   }
@@ -1323,7 +1329,7 @@ void mlirGenStmt(const Stmt *s, mlir::OpBuilder &builder) {
   }
 
   if (const StmtReturn *r = mlir::dyn_cast<StmtReturn>(s)) {
-    mlir::Value v = mlirGenExpr(r->e, builder);
+    mlir::Value v = mlirGenExpr(r->e, builder, scopeFn, scopeValue);
 
     r->print(cout);
     assert(false && "stmt return");
@@ -1332,14 +1338,13 @@ void mlirGenStmt(const Stmt *s, mlir::OpBuilder &builder) {
   assert(false && "unknown statement type");
 }
 
-void mlirGenBody(const Block &b, mlir::OpBuilder &builder) {
+void mlirGenBody(const Block &b, mlir::OpBuilder &builder, ScopeFn scopeFn, ScopeValue scopeValue) {
   for(Stmt *s : b.stmts) {
-    mlirGenStmt(s, builder);
+    mlirGenStmt(s, builder, scopeFn, scopeValue);
   }
 }
 
-void mlirGenFn(mlir::ModuleOp &mod, mlir::OpBuilder & builder, const Fn &f, const Module &m) {
-  // f.retty
+mlir::FuncOp mlirGenFnDeclaration(mlir::ModuleOp &mod, mlir::OpBuilder & builder, const Fn &f) {
   auto location = builder.getUnknownLoc(); //loc(proto.loc());
   llvm::SmallVector<mlir::Type, 4> argtys;
 
@@ -1350,21 +1355,36 @@ void mlirGenFn(mlir::ModuleOp &mod, mlir::OpBuilder & builder, const Fn &f, cons
   llvm::SmallVector<mlir::Type, 4> rettys =
       { mlirGenTypeOrValue(f.retty, builder) };
   mlir::FuncOp fn = mlir::FuncOp::create(location, f.name.name.asCStr(),
-                              builder.getFunctionType(argtys, rettys));
+                                         builder.getFunctionType(argtys, rettys));
+  return fn;
+}
 
-  fn.addEntryBlock();
-  builder.setInsertionPointToStart(&fn.getRegion().front());
-  mlirGenBody(f.body, builder);
-  mod.push_back(fn);
+void mlirGenFnBody(mlir::FuncOp &mlirfn, mlir::OpBuilder & builder, const Fn &f,
+                   ScopeFn scopeFn) {
+  mlirfn.addEntryBlock();
+  builder.setInsertionPointToStart(&mlirfn.getRegion().front());
+  ScopeValue scopeValue;
+  for(int i = 0; i < f.args.size(); ++i) {
+    scopeValue.insert(f.args[i].first.name.asStdString(), mlirfn.getArgument(i));
+  }
+  mlirGenBody(f.body, builder, scopeFn, scopeValue);
 }
 
 // https://github.com/llvm/llvm-project/blob/master/mlir/examples/toy/Ch2/mlir/MLIRGen.cpp#L57
 mlir::ModuleOp mlirGen(mlir::MLIRContext &ctx, const Module &m) {
   mlir::OpBuilder builder(&ctx);
   mlir::ModuleOp theModule = mlir::ModuleOp::create(builder.getUnknownLoc());
-
+  ScopeFn scopeFn;
   for(const Fn &f : m.fns) {
-    mlirGenFn(theModule, builder, f, m);
+    mlir::FuncOp fn =  mlirGenFnDeclaration(theModule, builder, f);
+    theModule.push_back(fn);
+    scopeFn.insert(f.name.name.asStdString(), fn);
+  }
+
+  theModule.dump();
+
+  for (const Fn &f: m.fns) {
+    mlirGenFnBody(scopeFn.lookupExisting(f.name.name.asStdString()), builder, f, scopeFn);
   }
 
   return theModule;
