@@ -1214,7 +1214,7 @@ Module parseModule(Parser &in) {
 
 using SymbolTable = map<std::string, mlir::Value>;
 mlir::Type mlirGenTypeOrDefault(Type t, mlir::OpBuilder &builder, mlir::Type defaultty) {
-//  return builder.getI64Type();
+  //  return builder.getI64Type();
 
   if (t.tyname.name.equals("i64")) {
     return builder.getI64Type();
@@ -1251,6 +1251,9 @@ void mlirGenFn(mlir::ModuleOp &mod, mlir::OpBuilder & builder, const Fn &f, cons
       { mlirGenTypeOrValue(f.retty, builder) };
   mlir::FuncOp fn = mlir::FuncOp::create(location, f.name.name.asCStr(),
                               builder.getFunctionType(argtys, rettys));
+
+  fn.addEntryBlock();
+  builder.setInsertionPointToStart(&fn.getRegion().front());
   mod.push_back(fn);
 }
 
