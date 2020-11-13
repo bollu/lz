@@ -42,7 +42,9 @@ struct OutFile {
     ~OutFile() { fflush(f); }
 
     void write(ll i) { fprintf(f, "%lld", i); }
-    void write(char c) { 
+    void write(int i) { fprintf(f, "%d", i); }
+
+    void write(char c) {
         fputc(c, f);
         if (c == '\n') {
             for(int i = 0; i < indentLevel; ++i) {
@@ -60,6 +62,11 @@ struct OutFile {
     ll indentLevel = 0;
     FILE *f;
 };
+
+OutFile &operator<<(OutFile &f, int i) {
+  f.write(i);
+  return f;
+}
 
 OutFile &operator<<(OutFile &f, ll i) {
     f.write(i);
@@ -717,12 +724,12 @@ struct CaseLHSTupleStruct : public CaseLHS {
     }
 };
 
-enum class ExprKind { Case, Identifier, Integer, FnCall, Binop };
+enum class ExprKind { Case, Identifier=42, Integer, FnCall, Binop };
 
 struct Expr {
     const Span span;
     const ExprKind kind;
-    Expr(Span span, ExprKind ty) : span(span), kind(kind){};
+    Expr(Span span, ExprKind kind) : span(span), kind(kind){};
     virtual OutFile print(OutFile &out) const = 0;
 };
 
@@ -754,6 +761,10 @@ struct ExprCase : public Expr {
     }
 
     static bool classof(const Expr *e) {
+      cout.indent();
+      cout << "Checking if |"; e->print(cout); cout << "| is a case expr[" <<
+          int(e->kind) << "] ==?" << "ExprKind::Case[" << (int)(ExprKind::Case) << "]\n";
+      cout.dedent();
       return e->kind == ExprKind::Case;
     }
 };
@@ -764,7 +775,7 @@ struct ExprIdentifier : public Expr {
         : Expr(span, ExprKind::Identifier), name(name) {}
 
     OutFile print(OutFile &out) const override {
-        return out << name; 
+        return out << "ident:" << name << "|[" << int(this->kind) << "]";
     }
 
   static bool classof(const Expr *e) {
@@ -808,6 +819,11 @@ struct ExprBinop : public Expr {
     OutFile print(OutFile &out) const override {
         left->print(out); out << binop; return right->print(out);
     }
+
+  static bool classof(const Expr *e) {
+    return e->kind == ExprKind::Binop;
+  }
+
 };
 
 
@@ -1248,6 +1264,12 @@ Module parseModule(Parser &in) {
     return m;
 }
 
+// == MLIR CODEGEN ==
+// == MLIR CODEGEN ==
+// == MLIR CODEGEN ==
+// == MLIR CODEGEN ==
+// == MLIR CODEGEN ==
+
 
 using SymbolTable = map<std::string, mlir::Value>;
 mlir::Type mlirGenTypeOrDefault(Type t, mlir::OpBuilder &builder, mlir::Type defaultty) {
@@ -1258,7 +1280,6 @@ mlir::Type mlirGenTypeOrDefault(Type t, mlir::OpBuilder &builder, mlir::Type def
   }
   return defaultty;
 }
-
 
 mlir::Type mlirGenTypeOrThunk(Type t, mlir::OpBuilder &builder) {
   auto valty =
@@ -1275,11 +1296,21 @@ mlir::Type mlirGenTypeOrValue(Type t, mlir::OpBuilder &builder) {
 }
 
 mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder) {
+  cout << __FUNCTION__ << ":" << __LINE__ << "\n"; cout.indent();
+  e->print(cout);
+  cout.dedent();
+  cout << "\n";
+
   if(const ExprCase *c = mlir::dyn_cast<ExprCase>(e)) {
+    cout << "case!\n";
+    cout << "\n---\n";
+
+    assert(c->scrutinee);
+    mlir::Value scrutinee = mlirGenExpr(c->scrutinee, builder);
     assert(false && "expression is case");
   }
 
-  e->print(cout);
+//  e->print(cout);
   assert(false && "unknown expression");
 }
 void mlirGenStmt(const Stmt *s, mlir::OpBuilder &builder) {
