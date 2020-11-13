@@ -14,12 +14,12 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &o, const InterpStats &s) {
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &o, const InterpValue &v) {
   switch (v.type) {
-  case InterpValueType::Closure: {
+  case InterpValueType::ClosureTopLevel: {
     o << "closure(";
-    o << v.closureFn() << ", ";
-    for (int i = 0; i < v.closureNumArgs(); ++i) {
+    o << v.closureTopLevelFn() << ", ";
+    for (int i = 0; i < v.closureTopLevelNumArgs(); ++i) {
       o << v.closureArg(i);
-      if (i + 1 < v.closureNumArgs()) {
+      if (i + 1 < v.closureTopLevelNumArgs()) {
         o << " ";
       }
     }
@@ -186,19 +186,19 @@ struct Interpreter {
       for (int i = 0; i < ap.getNumFnArguments(); ++i) {
         args.push_back(env.lookup(ap.getLoc(), ap.getFnArgument(i)));
       }
-      env.addNew(ap.getResult(), InterpValue::closure(fn, args));
+      env.addNew(ap.getResult(), InterpValue::closureTopLevel(fn, args));
       return;
     }
     if (ForceOp force = dyn_cast<ForceOp>(op)) {
       stats.num_force_calls++;
       InterpValue scrutinee = env.lookup(force.getLoc(), force.getScrutinee());
       assert(scrutinee.type == InterpValueType::ThunkifiedValue ||
-             scrutinee.type == InterpValueType::Closure);
+             scrutinee.type == InterpValueType::ClosureTopLevel);
       if (scrutinee.type == InterpValueType::ThunkifiedValue) {
         env.addNew(force.getResult(), scrutinee.thunkifiedValue());
       } else {
-        assert(scrutinee.type == InterpValueType::Closure);
-        InterpValue scrutineefn = scrutinee.closureFn();
+        assert(scrutinee.type == InterpValueType::ClosureTopLevel);
+        InterpValue scrutineefn = scrutinee.closureTopLevelFn();
         assert(scrutineefn.type == InterpValueType::Ref);
         HaskFuncOp func = module.lookupSymbol<HaskFuncOp>(scrutineefn.ref());
         assert(func && "unable to find function");
@@ -307,6 +307,15 @@ struct Interpreter {
       return;
     }
 
+    if (HaskLambdaOp lam = dyn_cast<HaskLambdaOp>(op)) {
+      std::vector<InterpValue> args;
+      for (int i = 0; i < lam.getNumOperands(); ++i) {
+        args.push_back(env.lookup(lam.getLoc(), lam.getOperand(i)));
+      }
+
+      env.addNew(lam.getResult(), InterpValue::closureLambda(lam, args));
+      return;
+    }
 
     InterpreterError err(op.getLoc());
     err << "INTERPRETER ERROR: unknown operation: |" << op << "|\n";

@@ -7,7 +7,8 @@
 
 enum class InterpValueType {
   I64,
-  Closure,
+  ClosureTopLevel,
+  ClosureLambda,
   Constructor,
   Ref,
   ThunkifiedValue,
@@ -48,40 +49,47 @@ struct InterpValue {
       ref.s_ = tag;
       return ref;
   }
-  static InterpValue closure(InterpValue fn, std::vector<InterpValue> args) {
-      InterpValue closure(InterpValueType::Closure);
+  static InterpValue closureTopLevel(InterpValue fn, std::vector<InterpValue> args) {
+      InterpValue closure(InterpValueType::ClosureTopLevel);
       closure.vs_.push_back(fn);
       closure.vs_.insert(closure.vs_.end(), args.begin(), args.end());
       return closure;
   }
 
-  InterpValue closureFn() const {
-    assert(type == InterpValueType::Closure);
+
+
+  InterpValue closureTopLevelFn() const {
+    assert(type == InterpValueType::ClosureTopLevel);
     return vs_[0];
   }
 
-  int closureNumArgs() const {
-    assert(type == InterpValueType::Closure);
+  int closureTopLevelNumArgs() const {
+    assert(type == InterpValueType::ClosureTopLevel);
     return vs_.size() - 1;
   }
 
   InterpValue closureArg(int i) const {
-    assert(type == InterpValueType::Closure);
+    assert(type == InterpValueType::ClosureTopLevel);
     assert(i >= 0);
-    assert(i < closureNumArgs());
+    assert(i < closureTopLevelNumArgs());
     return vs_[1 + i];
   }
 
   std::vector<InterpValue>::const_iterator closureArgBegin() const {
-    assert(type == InterpValueType::Closure);
+    assert(type == InterpValueType::ClosureTopLevel);
     return vs_.begin() + 1;
   }
 
   std::vector<InterpValue>::const_iterator closureArgEnd() const {
-    assert(type == InterpValueType::Closure);
+    assert(type == InterpValueType::ClosureTopLevel);
     return vs_.end();
   }
-
+  static InterpValue closureLambda(mlir::standalone::HaskLambdaOp lam, std::vector<InterpValue> args) {
+    InterpValue closure(InterpValueType::ClosureLambda);
+    closure.vs_.insert(closure.vs_.end(), args.begin(), args.end());
+    closure.lam = lam;
+    return closure;
+  }
 
   static InterpValue constructor(std::string tag, std::vector<InterpValue> vs) {
     InterpValue cons(InterpValueType::Constructor);
@@ -127,6 +135,7 @@ struct InterpValue {
   int i_;
   std::vector<InterpValue> vs_;
   std::string s_;
+  mlir::standalone::HaskLambdaOp lam; // ugh
 private:
   InterpValue(InterpValueType type) : type(type){};
 };
