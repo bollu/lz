@@ -24,6 +24,10 @@ Convert GHC Core to MLIR.
 
 # Log:  [newest] to [oldest]
 
+# Friday: Nov 11th
+
+- Goal: code generate examples I have, along with new `vector.rs`.
+
 # Thursday, Nov 10th
 
 - Stuff GHC could do better: Nested CPR, deeper dataflow analysis,

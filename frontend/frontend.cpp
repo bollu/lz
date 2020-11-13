@@ -717,12 +717,12 @@ struct CaseLHSTupleStruct : public CaseLHS {
     }
 };
 
-enum class ExprType { Case, Identifier, Integer, FnCall, Binop };
+enum class ExprKind { Case, Identifier, Integer, FnCall, Binop };
 
 struct Expr {
     const Span span;
-    const ExprType ty;
-    Expr(Span span, ExprType ty) : span(span), ty(ty){};
+    const ExprKind kind;
+    Expr(Span span, ExprKind ty) : span(span), kind(kind){};
     virtual OutFile print(OutFile &out) const = 0;
 };
 
@@ -730,7 +730,7 @@ struct ExprCase : public Expr {
     using Alt = pair<CaseLHS *, Expr *>;
 
     ExprCase(Span span, Expr *scrutinee, vector<Alt> alts)
-        : Expr(span, ExprType::Case), scrutinee(scrutinee), alts(alts){};
+        : Expr(span, ExprKind::Case), scrutinee(scrutinee), alts(alts){};
     const Expr *scrutinee;
     const vector<Alt> alts;
 
@@ -752,26 +752,39 @@ struct ExprCase : public Expr {
         out << "\n}";
         return out;
     }
+
+    static bool classof(const Expr *e) {
+      return e->kind == ExprKind::Case;
+    }
 };
 
 struct ExprIdentifier : public Expr {
     const String name;
     ExprIdentifier(Span span, String name)
-        : Expr(span, ExprType::Identifier), name(name) {}
+        : Expr(span, ExprKind::Identifier), name(name) {}
 
     OutFile print(OutFile &out) const override {
         return out << name; 
     }
+
+  static bool classof(const Expr *e) {
+    return e->kind == ExprKind::Identifier;
+  }
+
 };
 
 struct ExprInteger : public Expr {
     const ll value;
     ExprInteger(Span span, ll value)
-        : Expr(span, ExprType::Integer), value(value) {}
+        : Expr(span, ExprKind::Integer), value(value) {}
 
     OutFile print(OutFile &out) const override {
         return out << value; 
     }
+
+  static bool classof(const Expr *e) {
+    return e->kind == ExprKind::Integer;
+  }
 };
 
 enum class Binop { Mul, Sub };
@@ -790,7 +803,7 @@ struct ExprBinop : public Expr {
     Expr *right;
     const Binop binop;
     ExprBinop(Span span, Expr *left, Binop binop, Expr *right)
-        : Expr(span, ExprType::Binop), left(left), right(right), binop(binop){};
+        : Expr(span, ExprKind::Binop), left(left), right(right), binop(binop){};
 
     OutFile print(OutFile &out) const override {
         left->print(out); out << binop; return right->print(out);
@@ -803,7 +816,7 @@ struct ExprFnCall : public Expr {
     vector<Expr *> args;
 
     ExprFnCall(Span span, Identifier fnname, vector<Expr *> args)
-        : Expr(span, ExprType::FnCall), fnname(fnname), args(args){};
+        : Expr(span, ExprKind::FnCall), fnname(fnname), args(args){};
 
     OutFile print(OutFile &out) const override {
         out << fnname.name;
@@ -815,6 +828,10 @@ struct ExprFnCall : public Expr {
         out << ")";
         return out;
     }
+
+  static bool classof(const Expr *e) {
+    return e->kind == ExprKind::FnCall;
+  }
 };
 
 enum class StmtKind {
@@ -824,9 +841,7 @@ enum class StmtKind {
 
 struct Stmt {
   virtual void print(OutFile &out) const = 0;
-  StmtKind getKind() const { return Kind; }
   Stmt(StmtKind Kind) : Kind(Kind) {};
-private:
   const StmtKind Kind;
 };
 
@@ -840,7 +855,7 @@ struct StmtReturn : public Stmt {
     }
 
     static bool classof(const Stmt *S) {
-      return S->getKind() == StmtKind::Return;
+      return S->Kind == StmtKind::Return;
     }
 
 };
@@ -856,7 +871,7 @@ struct StmtLet : public Stmt {
   }
 
   static bool classof(const Stmt *S) {
-    return S->getKind() == StmtKind::Let;
+    return S->Kind == StmtKind::Let;
   }
 };
 
@@ -870,7 +885,7 @@ struct StmtLetBang : public Stmt {
     rhs->print(o);
   }
   static bool classof(const Stmt *S) {
-    return S->getKind() == StmtKind::LetBang;
+    return S->Kind == StmtKind::LetBang;
   }
 };
 
@@ -1259,6 +1274,14 @@ mlir::Type mlirGenTypeOrValue(Type t, mlir::OpBuilder &builder) {
   return mlirGenTypeOrDefault(t, builder, valty);
 }
 
+mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder) {
+  if(const ExprCase *c = mlir::dyn_cast<ExprCase>(e)) {
+    assert(false && "expression is case");
+  }
+
+  e->print(cout);
+  assert(false && "unknown expression");
+}
 void mlirGenStmt(const Stmt *s, mlir::OpBuilder &builder) {
   if (const StmtLet *l = mlir::dyn_cast<StmtLet>(s)) {
     assert(false && "stmt let");
@@ -1270,9 +1293,10 @@ void mlirGenStmt(const Stmt *s, mlir::OpBuilder &builder) {
   }
 
   if (const StmtReturn *r = mlir::dyn_cast<StmtReturn>(s)) {
+    mlir::Value v = mlirGenExpr(r->e, builder);
+
+    r->print(cout);
     assert(false && "stmt return");
-
-
   }
 
   assert(false && "unknown statement type");
