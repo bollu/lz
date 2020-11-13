@@ -761,10 +761,6 @@ struct ExprCase : public Expr {
     }
 
     static bool classof(const Expr *e) {
-      cout.indent();
-      cout << "Checking if |"; e->print(cout); cout << "| is a case expr[" <<
-          int(e->kind) << "] ==?" << "ExprKind::Case[" << (int)(ExprKind::Case) << "]\n";
-      cout.dedent();
       return e->kind == ExprKind::Case;
     }
 };
@@ -1310,6 +1306,9 @@ mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder) {
     assert(false && "expression is case");
   }
 
+  if (const ExprIdentifier *id = mlir::dyn_cast<ExprIdentifier>(id)) {
+    assert(false && "expression is identifier");
+  }
 //  e->print(cout);
   assert(false && "unknown expression");
 }
