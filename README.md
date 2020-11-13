@@ -8,14 +8,10 @@ Convert GHC Core to MLIR.
 
 # Notes on GHC
 
-- Argument order matters for worker/wrapper, because GHC can only partially
-  apply functions in the worker/wrapper, and not reorder parameters. So if we
-  have `f x y` where `x` is reused, we can worker/wrapper around `y`.
-
 - smallest size is `32` bit word. Can't pack stuff!
 - GHC plugin that strictifies/unboxes most things and prints out the new
   file.
-- IORefs are bad.
+- IORefs are bad
 
 
 
@@ -27,6 +23,20 @@ Convert GHC Core to MLIR.
 
 
 # Log:  [newest] to [oldest]
+
+# Thursday, Nov 10th
+
+- Stuff GHC could do better: Nested CPR, deeper dataflow analysis,
+  data parallel haskell (Manuel Charkravarty, Jeff Mainland) : Stream fusion with
+  packetization, optimizing using laziness. Refcounting?
+  For debugging, can compile in slow path; due to purity, allows for
+  precise effect tracking. Stream fusion was important.
+  What do I call my semantics? There's no easy way to defined the semantics
+  that we have in mind, we can only provide an /operational/ description.
+
+- Argument order matters for worker/wrapper, because GHC can only partially
+  apply functions in the worker/wrapper, and not reorder parameters. So if we
+  have `f x y` where `x` is reused, we can worker/wrapper around `y`.
 
 # Friday. Nov 6th
 
@@ -46,6 +56,8 @@ foo x = case x of X1 i -> X1 (i * 2); X2 c = X2 (c + 'a')
 %y2 = lz.construct(@X2, %x2_plus_a)
 %out = lz.union(%y1, %y2)
 ```
+
+
 
 # Monday, Nov 2nd
 

@@ -7,17 +7,26 @@
 #include <optional>
 #include <vector>
 
+// dialect includes
+#include "Hask/HaskDialect.h"
+#include "Hask/HaskOps.h"
+
+
 #define GIVE
 #define TAKE
 #define KEEP
 
 #define debug_assert assert
 
+
 using namespace std;
 
 extern "C" {
 const char *__asan_default_options() { return "detect_leaks=0"; }
 };
+
+bool G_PRETTY_PRINT = false;
+bool G_DUMP_MLIR = false;
 
 // https://github.com/jorendorff/rust-grammar/blob/master/Rust.g4
 // https://github.com/harpocrates/language-rust/blob/master/src/Language/Rust/Parser/Internal.y
@@ -333,6 +342,15 @@ struct String {
         return true;
     }
 
+    bool equals(const char *c) {
+      if (nchars != strlen(c)) {
+        return false;
+      }
+      for (ll i = 0; i < nchars; ++i) {
+        if (str[i] != c[i]) { return false; }
+      }
+      return true;
+    }
    private:
     // does not expect `buf` to be null-terminated.
     const char *str;
@@ -651,7 +669,7 @@ struct Type {
     Type(Span span, Identifier tyname) : span(span), tyname(tyname) {}
 
     void print(OutFile &out) const {
-        out << tyname; 
+        out << tyname;
     }
 };
 
@@ -1193,10 +1211,49 @@ Module parseModule(Parser &in) {
     return m;
 }
 
+
+using SymbolTable = map<std::string, mlir::Value>;
+
+void mlirGenFn(mlir::ModuleOp &mod, mlir::OpBuilder & builder, const Fn &f, const Module &m) {
+  // f.retty
+  auto location = builder.getUnknownLoc(); //loc(proto.loc());
+  llvm::SmallVector<mlir::Type, 4> arg_types(f.args.size());
+
+  for(int i = 0; i < f.args.size(); ++i) {
+    if (f.args[i].second.tyname.name.equals("i64")) {
+
+    }
+  }
+  llvm::SmallVector<mlir::Type, 4> return_types(1)
+
+  auto func_type = builder.getFunctionType(arg_types, return_types);
+  return mlir::FuncOp::create(location, proto.getName(), func_type);
+
+}
+
+// https://github.com/llvm/llvm-project/blob/master/mlir/examples/toy/Ch2/mlir/MLIRGen.cpp#L57
+mlir::ModuleOp mlirGen(mlir::MLIRContext &ctx, const Module &m) {
+  mlir::OpBuilder builder(&ctx);
+  mlir::ModuleOp theModule = mlir::ModuleOp::create(builder.getUnknownLoc());
+
+  for(const Fn &f : m.fns) {
+    mlirGenFn(theModule, builder, f, m);
+  }
+
+  return theModule;
+}
+
 int main(int argc, const char *const *argv) {
-    // assert_err(argc > 1 && "usage: %s <path-to-file>", argv[0]);
+    // assert_err(argc > 1 && "usage: %s <path-to-file> [-dump-mlir] [-dump-pretty]", argv[0]);
     assert(argc > 1 && "expected path to input file");
-    FILE *f = fopen(argv[1], "rb");
+
+    for(int i = 1; i < argc; ++i) {
+      G_DUMP_MLIR |= !strcmp(argv[i], "-dump-mlir");
+      G_PRETTY_PRINT |= !strcmp(argv[i], "-dump-pretty");
+    }
+
+  FILE *f = fopen(argv[1], "rb");
+
     fseek(f, 0, SEEK_END);
     ll len = ftell(f);
     rewind(f);
@@ -1207,7 +1264,22 @@ int main(int argc, const char *const *argv) {
 
     Parser s(argv[1], buf);
     Module mod = parseModule(s);
+    if (G_PRETTY_PRINT) {
+      mod.print(cerr);
+    }
 
-    mod.print(cerr);
+    // == MLIR ==
+    // == MLIR ==
+    // == MLIR ==
+    mlir::MLIRContext context;
+    // Load our Dialect in this MLIR Context.
+    // https://github.com/llvm/llvm-project/blob/79105e464429d2220c81b38bf5339b9c41da1d21/mlir/examples/toy/Ch2/toyc.cpp#L70
+    context.getOrLoadDialect<mlir::standalone::HaskDialect>();
+    mlir::OwningModuleRef mlirmod = mlirGen(context, mod);
+    if (!mlirmod) { assert(false && "unable to codegen module"); }
+    mlirmod->print(llvm::outs());
+    llvm::outs() << "\n";
+
+    // == TODO: steal code for codegen ==
     return 0;
 }

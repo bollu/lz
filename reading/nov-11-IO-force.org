@@ -1,0 +1,82 @@
+
+#+BEGIN_SRC c++ :tangle nov-11-IO-force.cpp
+#include <stdio.h>
+#include <functional>
+#include <optional>
+#include <assert.h>
+
+int g_count = 0;
+
+struct SimpleInt {
+  int v;
+  SimpleInt(int v) : v(v) {
+    printf("- building SimpleInt(%d): #%d\n", v, ++g_count);
+  };
+
+  operator int() { return v; }
+};
+int casedefault(SimpleInt s) {
+  static int count = 0;
+  return s.v;
+}
+
+
+
+template<typename T>
+struct Thunk {
+  Thunk(std::function<T()> lzf) : lzf(lzf) {
+    printf("- thunking: #%d\n", ++g_count);
+  }
+
+  T v() {
+    if(!cached) {
+      printf("- forcing: #%d\n", ++g_count);
+      cached = lzf();
+    }
+    assert(cached);
+    return *cached;
+  }
+
+private:
+  std::optional<T> cached;
+  std::function<T()> lzf;
+};
+
+
+template<typename T>
+T force(Thunk<T> thnk) { return thnk.v(); }
+
+template<typename T>
+Thunk<T> thunkify(T v) { return Thunk<T>([v]() { return v; }); }
+
+template<typename R, typename... Args> 
+Thunk<R> ap(std::function<R(Args...)> f, Args... args) { 
+  return Thunk<R>([=]() { return f(args...); });
+}
+
+template<typename R, typename... Args> 
+Thunk<R> ap(R(*f)(Args...), Args... args) { 
+  return Thunk<R>([=]() { return f(args...); });
+}
+
+template<typename R, typename... Args> 
+R apStrict(std::function<R(Args...)> f, Args... args) { 
+  return f(args...); 
+}
+
+// function arguments and real arguments can be mismatched,
+// since function can take a Force instead of a Thunk ?
+template<typename R, typename... FArgs, typename... Args> 
+R apStrict(R(*f)(FArgs...), Args... args) { 
+  return f(args...);
+}
+
+struct IO {};
+
+// forever a   = let a' = a *> a' in a'
+pair<StateToken, ()> putChar(StateToken f) {
+};
+
+struct 
+
+#+END_SRC

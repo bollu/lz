@@ -370,6 +370,7 @@ struct OutlineRecursiveApEagerOfConstructorPattern
 
     assert(parentfn.getNumArguments() == 1);
 
+
     BlockArgument arg = parentfn.getBody().getArgument(0);
     // has multiple uses, we can't use this for our purposes.
     if (!arg.hasOneUse()) {

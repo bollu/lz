@@ -240,28 +240,25 @@ public:
                  &effects) {}
 };
 
-/*
-class LambdaOp : public Op<LambdaOp, OpTrait::OneResult, OpTrait::OneRegion> {
+
+class HaskLambdaOp : public Op<HaskLambdaOp, OpTrait::VariadicOperands, OpTrait::OneResult, OpTrait::OneRegion> {
 public:
   using Op::Op;
   static StringRef getOperationName() { return "lz.lambda"; };
-  Region &getBody() {
-    assert(this->getOperation()->getNumRegions() == 1);
-    return this->getOperation()->getRegion(0);
-  }
-  Block &getBodyBB() { return this->getBody().front(); }
+  Block &getEntryBlock() { return this->getRegion().front(); }
   Block::BlockArgListType inputRange() {
-    this->getBody().begin()->getArguments();
+    this->getEntryBlock().getArguments();
   }
-  int getNumInputs() { this->getBody().begin()->getNumArguments(); }
+  int getNumInputs() { this->getEntryBlock().getNumArguments(); }
   mlir::BlockArgument getInput(int i) {
     assert(i < getNumInputs());
-    return this->getBody().begin()->getArgument(i);
+    return this->getEntryBlock().getArgument(i);
   }
+
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   void print(OpAsmPrinter &p);
 };
-*/
+
 
 class HaskRefOp
     : public Op<HaskRefOp, OpTrait::OneResult, OpTrait::ZeroOperands,
