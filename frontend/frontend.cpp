@@ -12,6 +12,11 @@
 #include "Hask/HaskOps.h"
 #include "Hask/Scope.h"
 
+// more MLIR includes...
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/IR/StandardTypes.h"
+
+
 #define GIVE
 #define TAKE
 #define KEEP
@@ -1406,9 +1411,8 @@ void mlirGenStmt(const Stmt *s, mlir::OpBuilder &builder, ScopeFn scopeFn, Scope
 
   if (const StmtReturn *r = mlir::dyn_cast<StmtReturn>(s)) {
     mlir::Value v = mlirGenExpr(r->e, builder, scopeFn, scopeValue);
-
     r->print(cout);
-    assert(false && "stmt return");
+     builder.create<mlir::ReturnOp>(builder.getUnknownLoc(), v);
   }
 
   assert(false && "unknown statement type");
