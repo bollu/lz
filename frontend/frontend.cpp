@@ -1410,11 +1410,14 @@ void mlirGenStmt(const Stmt *s, mlir::OpBuilder &builder, ScopeFn scopeFn, Scope
   }
 
   if (const StmtReturn *r = mlir::dyn_cast<StmtReturn>(s)) {
-    mlir::Value v = mlirGenExpr(r->e, builder, scopeFn, scopeValue);
-    r->print(cout);
-     builder.create<mlir::ReturnOp>(builder.getUnknownLoc(), v);
+      mlir::Value v = mlirGenExpr(r->e, builder, scopeFn, scopeValue);
+      builder.create<mlir::ReturnOp>(builder.getUnknownLoc(), v);
+      return;
   }
 
+  cout << "\n===\n";
+  s->print(cout);
+  cout << "\n===\n";
   assert(false && "unknown statement type");
 }
 
@@ -1502,7 +1505,9 @@ int main(int argc, const char *const *argv) {
     // Load our Dialect in this MLIR Context.
     // https://github.com/llvm/llvm-project/blob/79105e464429d2220c81b38bf5339b9c41da1d21/mlir/examples/toy/Ch2/toyc.cpp#L70
     context.getOrLoadDialect<mlir::standalone::HaskDialect>();
-    mlir::OwningModuleRef mlirmod = mlirGen(context, mod);
+    context.getOrLoadDialect<mlir::StandardOpsDialect>();
+
+  mlir::OwningModuleRef mlirmod = mlirGen(context, mod);
     if (!mlirmod) { assert(false && "unable to codegen module"); }
     mlirmod->print(llvm::outs());
     llvm::outs() << "\n";
