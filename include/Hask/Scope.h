@@ -1,6 +1,6 @@
 #pragma once
 #include <map>
-
+#include <stdio.h>
 
 template <typename K, typename V> class Scope {
 public:
@@ -21,9 +21,13 @@ public:
       assert(m.find(k) != m.end());
       m[k] = v;
   }
-  V &lookupExisting(K k) {
+  V lookupExisting(K k) {
+    printf("%s:%d\n", __FILE__, __LINE__);
     auto it = m.find(k);
+    printf("%s:%d\n", __FILE__, __LINE__);
     assert(it != m.end());
+    if (it == m.end()) { printf("it was not found"); exit(1); }
+    printf("%s:%d\n", __FILE__, __LINE__);
     return it->second;
   }
 

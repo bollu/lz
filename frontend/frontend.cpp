@@ -7,8 +7,6 @@
 #include <optional>
 #include <vector>
 
-
-
 // dialect includes
 #include "Hask/HaskDialect.h"
 #include "Hask/HaskOps.h"
@@ -25,7 +23,7 @@ using namespace std;
 
 extern "C" {
 const char *__asan_default_options() { return "detect_leaks=0"; }
-};
+}
 
 bool G_PRETTY_PRINT = false;
 bool G_DUMP_MLIR = false;
@@ -34,12 +32,12 @@ bool G_DUMP_MLIR = false;
 // https://github.com/harpocrates/language-rust/blob/master/src/Language/Rust/Parser/Internal.y
 using ll = long long;
 
-struct String;
+
+// struct string;
 struct Span;
 
 struct OutFile {
    public:
-    OutFile(const char *path) { f = fopen(path, "w"); }
     OutFile(FILE *f) : f(f){};
     ~OutFile() { fflush(f); }
 
@@ -74,15 +72,22 @@ OutFile &operator<<(OutFile &f, ll i) {
     f.write(i);
     return f;
 }
-OutFile &operator<<(OutFile &f, const char *s) {
+OutFile &operator<<(OutFile &f, const char *const s) {
     f.write(s);
     return f;
+}
+OutFile &operator<<(OutFile &f, char *s) {
+  f.write(s);
+  return f;
 }
 
-OutFile &operator<<(OutFile &f, char *s) {
-    f.write(s);
-    return f;
+
+OutFile &operator<<(OutFile &f, const std::string s) {
+  f.write(s.c_str());
+  return f;
 }
+
+
 OutFile &operator<<(OutFile &f, char c) {
     f.write(c);
     return f;
@@ -120,7 +125,7 @@ struct Loc {
         }
     }
 
-    Loc nextstr(const String &s) const;
+    Loc nextstr(const string &s) const;
 
     Loc prev(char c) const {
         if (c == '\n') {
@@ -184,7 +189,7 @@ Span Loc::moveMut(Loc next) {
     Span s(*this, next);
     *this = next;
     return s;
-};
+}
 
 OutFile &operator<<(OutFile &o, const Span &s) {
     return cout << s.begin << " - " << s.end;
@@ -284,50 +289,55 @@ bool isReservedSigil(char c) {
         c == ';' || c == '[' || c == ']' || c == ':';
 }
 
-struct String;
+/*
+ * struct string;
 
-struct StringView {
-    friend struct String;
+struct stringView {
+    friend struct string;
 
     char operator[](int ix);
 
     ll nchars() const { return sp.nchars(); }
 
    private:
-    StringView(String &str, Span sp) : str(str), sp(sp){};
-    String &str;
+    stringView(string &str, Span sp) : str(str), sp(sp){};
+    string &str;
     Span sp;
 };
 
 // representation of string as str+number of characters.
-struct String {
+struct string {
     const ll nchars;
 
-    String substring(Span span) const {
+    string substring(Span span) const {
         assert(span.begin.si <= nchars);
         assert(span.end.si <= nchars);
-        return String::copyBuf(this->str + span.begin.si, span.nchars());
+        return string::copyBuf(this->str + span.begin.si, span.nchars());
     }
 
-    static String copyBuf(KEEP const char *buf, int len) {
+    static string copyBuf(KEEP const char *buf, int len) {
         char *s = (char *)malloc(len + 1);
         memcpy(s, buf, len);
         s[len] = 0;
-        return String(s, len);
+        return string(s, len);
     }
 
-    static String copyCStr(KEEP const char *str) {
+    static string copyCStr(KEEP const char *str) {
         const ll len = strlen(str);
-        char *out = (char *)malloc(len + 1);
-        memcpy(out, str, len);
+        char *out = strdup(str);
         out[len] = 0;
-        return String(out, len);
+        return string(out, len);
     }
 
     const char *asCStr() const { return str; }
-    std::string asStdString() const { return std::string(asCStr()); }
+    std::string const {
 
-    static String sprintf(const char *fmt, ...) {
+      cout << __FILE__ << ":" << __LINE__ << "\n";
+      cout << str << "\n";
+      std::string s; s = str; return s;
+    }
+
+    static string sprintf(const char *fmt, ...) {
         va_list args;
         va_start(args, fmt);
         return sprintf_(fmt, args);
@@ -340,7 +350,7 @@ struct String {
         return str[ix];
     }
 
-    bool operator==(const String &other) {
+    bool operator==(const string &other) {
         if (nchars != other.nchars) {
             return false;
         }
@@ -362,49 +372,61 @@ struct String {
       return true;
     }
    private:
-    // does not expect `buf` to be null-terminated.
+    // str is null terminated
     const char *str;
 
-    String(TAKE const char *str, int nchars) : nchars(nchars), str(str) {}
+    string(TAKE const char *str, int nchars) : nchars(nchars), str(str) {
+      assert(str[nchars] == '\0');
+      assert(strlen(str) == nchars);
+    }
 
-    static String sprintf_(const char *fmt, va_list args) {
+    static string sprintf_(const char *fmt, va_list args) {
         char *str;
         ll len = vasprintf(&str, fmt, args);
         debug_assert(len == (ll)strlen(str));
-        return String(str, len);
+        return string(str, len);
     }
 };
 
-OutFile & operator << (OutFile &o, const String &s) {
+OutFile & operator << (OutFile &o, const string &s) {
     o << s.asCStr(); return o;
 }
 
-char StringView::operator[](int ix) {
+
+char stringView::operator[](int ix) {
     debug_assert(ix < this->sp.nchars());
     debug_assert(ix >= 0);
     return (this->str[ix]);
 };
 
-Loc Loc::nextstr(const String &s) const {
+Loc Loc::nextstr(const string &s) const {
     Loc cur = *this;
     for (int i = 0; i < s.nchars; ++i) {
         cur = cur.nextc(s[i]);
     }
     return cur;
 }
-
+*/
 struct Error {
-    String errmsg;
+    std::string errmsg;
     Loc loc;
 
-    Error(Loc loc, String errmsg) : errmsg(errmsg), loc(loc){};
+    Error(Loc loc, std::string errmsg) : errmsg(errmsg), loc(loc){};
 };
+
+std::string substring(const std::string &s, Span span) {
+  assert(span.end.si - span.begin.si >= 0);
+  std::string sub = s.substr(span.begin.si,
+                             span.end.si - span.begin.si);
+  cout << "substring: |" << sub << "|\n";
+  return sub;
+}
 
 struct Identifier {
     const Span span;
-    const String name;
+    const std::string name;
     Identifier(const Identifier &other) = default;
-    Identifier(Span span, String name) : span(span), name(name){};
+    Identifier(Span span, std::string name) : span(span), name(name){};
 
     Identifier operator = (const Identifier &other) {
         return Identifier(other);
@@ -417,45 +439,45 @@ struct Identifier {
 
 struct Parser {
     Parser(const char *filename, const char *raw)
-        : s(String::copyBuf(raw, strlen(raw))), l(filename, 0, 1, 1){};
+        : s(raw), l(filename, 0, 1, 1){};
 
-    void parseOpenCurly() { parseSigil(String::copyCStr("{")); }
-    void parseCloseCurly() { parseSigil(String::copyCStr("}")); }
-    void parseFatArrow() { parseSigil(String::copyCStr("=>")); }
+    void parseOpenCurly() { parseSigil("{"); }
+    void parseCloseCurly() { parseSigil("}"); }
+    void parseFatArrow() { parseSigil("=>"); }
     bool parseOptionalCloseCurly() {
-        return bool(parseOptionalSigil(String::copyCStr("}")));
+        return bool(parseOptionalSigil("}"));
     }
-    Span parseOpenRoundBracket() { return parseSigil(String::copyCStr("(")); }
+    Span parseOpenRoundBracket() { return parseSigil("("); }
     
     optional<Span> parseOptionalOpenRoundBracket() {
-        return parseOptionalSigil(String::copyCStr("("));
+        return parseOptionalSigil("(");
     }
 
     Span parseCloseRoundBracket(Span open) {
-        return parseMatchingSigil(open, String::copyCStr(")"));
+        return parseMatchingSigil(open, ")");
     }
 
     bool parseOptionalCloseRoundBracket() {
-        return bool(parseOptionalSigil(String::copyCStr(")")));
+        return bool(parseOptionalSigil(")"));
     }
-    void parseColon() { parseSigil(String::copyCStr(":")); }
-    void parseEqual() { parseSigil(String::copyCStr("=")); }
+    void parseColon() { parseSigil(":"); }
+    void parseEqual() { parseSigil("="); }
 
   bool parseOptionalComma() {
-        return bool(parseOptionalSigil(String::copyCStr(",")));
+        return bool(parseOptionalSigil(","));
     }
 
-    void parseComma() { parseSigil(String::copyCStr(",")); }
-    void parseSemicolon() { parseSigil(String::copyCStr(";")); }
+    void parseComma() { parseSigil(","); }
+    void parseSemicolon() { parseSigil(";"); }
     bool parseOptionalSemicolon() {
-        return bool(parseOptionalSigil(String::copyCStr(";")));
+        return bool(parseOptionalSigil(";"));
     }
-    void parseThinArrow() { parseSigil(String::copyCStr("->")); }
+    void parseThinArrow() { parseSigil("->"); }
 
     pair<Span, ll> parseInteger() {
         optional<pair<Span, ll>> out = parseOptionalInteger();
         if (!out) {
-            this->addErr(Error(l, String::copyCStr("unble to find integer")));
+            this->addErr(Error(l, "unble to find integer"));
             exit(1);
         }
         return *out;
@@ -495,48 +517,47 @@ struct Parser {
         }
         if (negate) {
             number *= -1;
-        };
+        }
 
         return {{span, number}};
     }
 
-    Span parseSigil(const String sigil) {
+    Span parseSigil(const string sigil) {
         optional<Span> span = parseOptionalSigil(sigil);
         if (span) {
             return *span;
         }
 
-        addErr(
-            Error(l, String::sprintf("expected sigil: |%s|", sigil.asCStr())));
+        addErr(Error(l, "expected sigil> |" + sigil + "|"));
         exit(1);
     }
 
-    Span parseMatchingSigil(Span open, const String sigil) {
+    Span parseMatchingSigil(Span open, const string sigil) {
         optional<Span> span = parseOptionalSigil(sigil);
         if (span) {
             return *span;
         }
 
         addErr(
-            Error(l, String::sprintf("expected sigil: |%s|", sigil.asCStr())));
+            Error(l, "expected sigil: |" +  sigil + "|"));
         exit(1);
     }
 
     // difference is that a sigil needs no whitespace after it, unlike
     // a keyword.
-    optional<Span> parseOptionalSigil(const String sigil) {
-        cerr << __FUNCTION__ << "|" << sigil.asCStr() << "|\n";
+    optional<Span> parseOptionalSigil(const string sigil) {
+//        cerr << __FUNCTION__ << "|" << sigil << "|\n";
         optional<char> ccur;
         eatWhitespace();
         Loc lcur = l;
         // <sigil>
 
-        for (ll i = 0; i < sigil.nchars; ++i) {
+        for (ll i = 0; i < sigil.size(); ++i) {
             ccur = this->at(lcur);
             if (!ccur) {
                 return {};
             }
-            cerr << "-sigil: |" << ccur << "|\n";
+//            cerr << "-sigil: |" << ccur << "|\n";
             if (*ccur != sigil[i]) {
                 return {};
             }
@@ -553,11 +574,12 @@ struct Parser {
         if (ms.has_value()) {
             return *ms;
         }
-        addErr(Error(l, String::copyCStr("expected identifier")));
+        addErr(Error(l, "expected identifier"));
         exit(1);
     }
 
     optional<Identifier> parseOptionalIdentifier() {
+
         eatWhitespace();
         Loc lcur = l;
 
@@ -582,14 +604,14 @@ struct Parser {
         }
 
         const Span span = l.moveMut(lcur);
-        return Identifier(span, s.substring(span));
+        return Identifier(span, substring(s, span));
     }
 
-    optional<Span> parseOptionalKeyword(const String keyword) {
+    optional<Span> parseOptionalKeyword(const string keyword) {
         eatWhitespace();
         // <keyword><non-alpha-numeric>
         Loc lcur = l;
-        for (int i = 0; i < keyword.nchars; ++i) {
+        for (int i = 0; i < keyword.size(); ++i) {
             optional<char> c = this->at(lcur);
             if (!c) {
                 return {};
@@ -605,30 +627,30 @@ struct Parser {
         }
         if (isalnum(*c)) {
             return {};
-        };
+        }
 
         return l.moveMut(lcur);
     };
 
-    Span parseKeyword(const String keyword) {
+    Span parseKeyword(const string keyword) {
         optional<Span> ms = parseOptionalKeyword(keyword);
         if (ms) {
             return *ms;
         }
-        addErr(Error(l, String::sprintf("expected |%s|", keyword.asCStr())));
+        addErr(Error(l, "expected |" + keyword + "|"));
         exit(1);
     }
 
     void addErr(Error e) {
         errs.push_back(e);
-        printferr(e.loc, s.asCStr(), e.errmsg.asCStr());
+        printferr(e.loc, s.c_str(), e.errmsg.c_str());
     }
 
-    void addErrAtCurrentLoc(String err) { addErr(Error(l, err)); }
+    void addErrAtCurrentLoc(string err) { addErr(Error(l, err)); }
 
     bool eof() {
         eatWhitespace();
-        return l.si == s.nchars;
+        return l.si == s.size();
     }
 
     // eat till newline
@@ -647,12 +669,12 @@ struct Parser {
     }
 
    private:
-    const String s;
+    const string s;
     Loc l;
     vector<Error> errs;
 
     optional<char> at(Loc loc) {
-        if (loc.si >= s.nchars) {
+        if (loc.si >= s.size()) {
             return optional<char>();
         }
         return s[loc.si];
@@ -684,13 +706,13 @@ struct Type {
 };
 
 
-enum class ECaseLHS { Int, Identifier, TupleStruct };
+enum class CaseLHSKind { Int, Identifier, TupleStruct };
 
 struct CaseLHS {
     const Span span;
-    const ECaseLHS ty;
+    const CaseLHSKind kind;
 
-    CaseLHS(Span span, ECaseLHS ty) : span(span), ty(ty) {}
+    CaseLHS(Span span, CaseLHSKind kind) : span(span), kind(kind) {}
     virtual OutFile &print(OutFile &o) const = 0;
 };
 
@@ -698,24 +720,33 @@ struct CaseLHSInt : public CaseLHS {
     const ll value;
 
     CaseLHSInt(Span span, ll value)
-        : CaseLHS(span, ECaseLHS::Int), value(value) {}
+        : CaseLHS(span, CaseLHSKind::Int), value(value) {}
 
     OutFile &print(OutFile &out) const override  { return out << value; }
+
+  static bool classof(const CaseLHS *e) {
+    return e->kind == CaseLHSKind::Int;
+  }
+
 };
 
 struct CaseLHSIdentifier : public CaseLHS {
-    const String ident;
-    CaseLHSIdentifier(Span span, String ident)
-        : CaseLHS(span, ECaseLHS::Identifier), ident(ident){};
+    const string ident;
+    CaseLHSIdentifier(Span span, string ident)
+        : CaseLHS(span, CaseLHSKind::Identifier), ident(ident){};
 
     OutFile &print(OutFile &out) const override { return out << ident; }
+
+    static bool classof(const CaseLHS *e) {
+      return e->kind == CaseLHSKind::Identifier;
+    }
 };
 
 struct CaseLHSTupleStruct : public CaseLHS {
     const Identifier name;
     vector<CaseLHS *> fields;
     CaseLHSTupleStruct(Span span, Identifier name, vector<CaseLHS *> fields) :
-        CaseLHS(span, ECaseLHS::TupleStruct), name(name), fields(fields) {};
+        CaseLHS(span, CaseLHSKind::TupleStruct), name(name), fields(fields) {};
 
     OutFile &print(OutFile &out) const override {
       out << name << "(";
@@ -724,10 +755,15 @@ struct CaseLHSTupleStruct : public CaseLHS {
         if (i + 1 < fields.size()) { out << ", "; }
       }
       out << ")";
+      return out;
+    }
+
+    static bool classof(const CaseLHS *e) {
+      return e->kind == CaseLHSKind::TupleStruct;
     }
 };
 
-enum class ExprKind { Case, Identifier=42, Integer, FnCall, Binop };
+enum class ExprKind { Case, Identifier, Integer, FnCall, Binop };
 
 struct Expr {
     const Span span;
@@ -769,12 +805,13 @@ struct ExprCase : public Expr {
 };
 
 struct ExprIdentifier : public Expr {
-    const String name;
-    ExprIdentifier(Span span, String name)
+    const string name;
+    ExprIdentifier(Span span, string name)
         : Expr(span, ExprKind::Identifier), name(name) {}
 
     OutFile print(OutFile &out) const override {
-        return out << "ident:" << name << "|[" << int(this->kind) << "]";
+      return out << name;
+      //        return out << "ident:" << name << "|[" << int(this->kind) << "]";
     }
 
   static bool classof(const Expr *e) {
@@ -911,10 +948,10 @@ Type parseType(Parser &in) {
     if ((ident = in.parseOptionalIdentifier())) {
         return Type(Span(lbegin, in.getCurrentLoc()), *ident);
     } else {
-        in.addErrAtCurrentLoc(String::copyCStr("expected type."));
+        in.addErrAtCurrentLoc("expected type.");
         exit(1);
     }
-};
+}
 
 
 CaseLHS *parseCaseLHS(Parser &in) {
@@ -927,7 +964,7 @@ CaseLHS *parseCaseLHS(Parser &in) {
     // <ident>  |  <struct-name> (<struct-fields>)
     optional<Identifier> ident(in.parseOptionalIdentifier());
     if (!ident) {
-        in.addErrAtCurrentLoc(String::copyCStr("expected case LHS."));
+        in.addErrAtCurrentLoc("expected case LHS.");
         exit(1);
     }
     optional<Span> structFieldRoundOpen;
@@ -990,7 +1027,7 @@ Expr *parseExprLeaf(Parser &in) {
         return new ExprInteger(integer->first, integer->second);
     }
 
-    in.addErrAtCurrentLoc(String::copyCStr("expected expression"));
+    in.addErrAtCurrentLoc("expected expression");
     exit(1);
 }
 
@@ -998,7 +1035,7 @@ Expr *parseExprLeaf(Parser &in) {
 Expr *parseExprArithMulDiv(Parser &in) {
     Loc lbegin = in.getCurrentLoc();
     Expr *left = parseExprLeaf(in);
-    if (in.parseOptionalSigil(String::copyCStr("*"))) {
+    if (in.parseOptionalSigil("*")) {
         Expr *right = parseExprTop(in);
         return new ExprBinop(Span(lbegin, in.getCurrentLoc()), left, Binop::Mul,
                              right);
@@ -1010,7 +1047,7 @@ Expr *parseExprArithMulDiv(Parser &in) {
 Expr *parseExprArithAddSub(Parser &in) {
     Loc lbegin = in.getCurrentLoc();
     Expr *left = parseExprArithMulDiv(in);
-    if (in.parseOptionalSigil(String::copyCStr("-"))) {
+    if (in.parseOptionalSigil("-")) {
         Expr *right = parseExprTop(in);
         return new ExprBinop(Span(lbegin, in.getCurrentLoc()), left, Binop::Sub,
                              right);
@@ -1021,7 +1058,7 @@ Expr *parseExprArithAddSub(Parser &in) {
 Expr *parseExprTop(Parser &in) {
     const Loc lbegin = in.getCurrentLoc();
 
-    if (in.parseOptionalKeyword(String::copyCStr("match"))) {
+    if (in.parseOptionalKeyword("match")) {
         Expr *scrutinee = parseExprTop(in);
         in.parseOpenCurly();
         vector<pair<CaseLHS *, Expr *>> alts;
@@ -1043,21 +1080,21 @@ Expr *parseExprTop(Parser &in) {
     Expr *e = parseExprArithAddSub(in);
     if (e) { return e; }
 
-    in.addErrAtCurrentLoc(String::copyCStr("unable to parse expression"));
+    in.addErrAtCurrentLoc("unable to parse expression");
     exit(1);
-};
+}
 
 Stmt *parseStmt(Parser &in) {
-    if (in.parseOptionalKeyword(String::copyCStr("return"))) {
+    if (in.parseOptionalKeyword("return")) {
         return new StmtReturn(parseExprTop(in));
-    } else if (in.parseOptionalKeyword(String::copyCStr("let"))) {
+    } else if (in.parseOptionalKeyword("let")) {
       Identifier name = in.parseIdentifier();
       in.parseColon();
       Type t = parseType(in);
       in.parseEqual();
       Expr *e = parseExprTop(in);
       return new StmtLet(name, t, e);
-    } else if (in.parseOptionalKeyword(String::copyCStr("letbang"))) {
+    } else if (in.parseOptionalKeyword("letbang")) {
       Identifier name = in.parseIdentifier();
       in.parseColon();
       Type t = parseType(in);
@@ -1067,7 +1104,7 @@ Stmt *parseStmt(Parser &in) {
   }
 
 
-    in.addErrAtCurrentLoc(String::copyCStr("expected statement"));
+    in.addErrAtCurrentLoc("expected statement");
     exit(1);
 }
 
@@ -1151,7 +1188,7 @@ Fn parseFn(Parser &in) {
     Type retty = parseType(in);
     Block b = parseBlock(in);
     return Fn(Span(lbegin, in.getCurrentLoc()), ident, params, retty, b);
-};
+}
 
 enum class StructFieldsType { Tuple };
 struct StructFields {
@@ -1243,19 +1280,19 @@ struct Module {
 Module parseModule(Parser &in) {
     Module m;
     while (!in.eof()) {
-        if (in.parseOptionalKeyword(String::copyCStr("fn"))) {
+        if (in.parseOptionalKeyword("fn")) {
             m.fns.push_back(parseFn(in));
-        } else if (in.parseOptionalKeyword(String::copyCStr("struct"))) {
+        } else if (in.parseOptionalKeyword("struct")) {
             m.structs.push_back(parseStruct(in));
-        } else if (in.parseOptionalKeyword(String::copyCStr("enum"))) {
+        } else if (in.parseOptionalKeyword("enum")) {
             m.enums.push_back(parseEnum(in));
         }
-        else if (in.parseOptionalSigil(String::copyCStr("//"))) {
+        else if (in.parseOptionalSigil("//")) {
           in.eatTillNewline();
         }
         else {
             in.addErrAtCurrentLoc(
-                String::copyCStr("unknown top level starter"));
+                "unknown top level starter");
             assert(false && "unknown top level form.");
         }
     }
@@ -1277,7 +1314,7 @@ using SymbolTable = map<std::string, mlir::Value>;
 mlir::Type mlirGenTypeOrDefault(Type t, mlir::OpBuilder &builder, mlir::Type defaultty) {
   //  return builder.getI64Type();
 
-  if (t.tyname.name.equals("i64")) {
+  if (t.tyname.name == ("i64")) {
     return builder.getI64Type();
   }
   return defaultty;
@@ -1297,6 +1334,8 @@ mlir::Type mlirGenTypeOrValue(Type t, mlir::OpBuilder &builder) {
   return mlirGenTypeOrDefault(t, builder, valty);
 }
 
+
+
 mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder, ScopeFn scopeFn, ScopeValue scopeValue) {
   cout << __FUNCTION__ << ":" << __LINE__ << "\n"; cout.indent();
   e->print(cout);
@@ -1304,18 +1343,55 @@ mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder, ScopeFn scopeFn
   cout << "\n";
 
   if(const ExprCase *c = mlir::dyn_cast<ExprCase>(e)) {
-    cout << "case!\n";
-    cout << "\n---\n";
-
     assert(c->scrutinee);
     mlir::Value scrutinee = mlirGenExpr(c->scrutinee, builder, scopeFn, scopeValue);
-    assert(false && "expression is case");
-  }
+    llvm::SmallVector<mlir::Attribute, 4> lhss;
+    llvm::SmallVector<mlir::Region*, 4> rhss;
 
-  if (const ExprIdentifier *id = mlir::dyn_cast<ExprIdentifier>(id)) {
-    assert(false && "expression is identifier");
+    mlir::Type scrutineety = builder.getI64Type();
+    mlir::Type retty = builder.getI64Type();
+
+    for(ExprCase::Alt a : c->alts) {
+      mlir::Attribute lhs;
+      mlir::Region *r = nullptr;
+
+
+      if (CaseLHSInt *i = llvm::dyn_cast<CaseLHSInt>(a.first)) {
+        cout << "CaseInt\n";
+        lhs = builder.getI64IntegerAttr(i->value);
+        r = new mlir::Region();
+        builder.createBlock(r, r->begin(), {scrutineety});
+      }
+
+      if (CaseLHSIdentifier *id = llvm::dyn_cast<CaseLHSIdentifier>(a.first)) {
+        lhs = builder.getSymbolRefAttr(id->ident);
+        r = new mlir::Region();
+        builder.createBlock(r, r->begin(), {scrutineety});
+        // builder.createBlock(r, r->begin(), { });
+        cout << "caseLHSIdentifier\n";
+      }
+
+      if (CaseLHSTupleStruct *str = llvm::dyn_cast<CaseLHSTupleStruct>(a.first)) {
+        cout << "caseLHSTupleStruct\n";
+        assert(false && "tuple struct");
+      }
+
+      assert(lhs && "unable to generate LHS of case");
+      lhss.push_back(lhs);
+      rhss.push_back(r);
+      }
+      return builder.create<mlir::standalone::CaseIntOp>(
+          builder.getUnknownLoc(), scrutinee, lhss, rhss, retty);
   }
-//  e->print(cout);
+  if (const ExprIdentifier *id = mlir::dyn_cast<ExprIdentifier>(e)) {
+    mlir::Value identVal = scopeValue.lookupExisting(id->name);
+    llvm::outs() << "ident: |" << identVal << "|\n";
+
+    return identVal;
+  }
+  llvm::outs() << "\n====\n";
+  e->print(cout);
+  llvm::outs() << "\n====\n";
   assert(false && "unknown expression");
 }
 void mlirGenStmt(const Stmt *s, mlir::OpBuilder &builder, ScopeFn scopeFn, ScopeValue scopeValue) {
@@ -1354,18 +1430,18 @@ mlir::FuncOp mlirGenFnDeclaration(mlir::ModuleOp &mod, mlir::OpBuilder & builder
 
   llvm::SmallVector<mlir::Type, 4> rettys =
       { mlirGenTypeOrValue(f.retty, builder) };
-  mlir::FuncOp fn = mlir::FuncOp::create(location, f.name.name.asCStr(),
+  mlir::FuncOp fn = mlir::FuncOp::create(location, f.name.name,
                                          builder.getFunctionType(argtys, rettys));
   return fn;
 }
 
-void mlirGenFnBody(mlir::FuncOp &mlirfn, mlir::OpBuilder & builder, const Fn &f,
+void mlirGenFnBody(mlir::FuncOp mlirfn, mlir::OpBuilder & builder, const Fn &f,
                    ScopeFn scopeFn) {
   mlirfn.addEntryBlock();
   builder.setInsertionPointToStart(&mlirfn.getRegion().front());
   ScopeValue scopeValue;
   for(int i = 0; i < f.args.size(); ++i) {
-    scopeValue.insert(f.args[i].first.name.asStdString(), mlirfn.getArgument(i));
+    scopeValue.insert(f.args[i].first.name, mlirfn.getArgument(i));
   }
   mlirGenBody(f.body, builder, scopeFn, scopeValue);
 }
@@ -1378,13 +1454,13 @@ mlir::ModuleOp mlirGen(mlir::MLIRContext &ctx, const Module &m) {
   for(const Fn &f : m.fns) {
     mlir::FuncOp fn =  mlirGenFnDeclaration(theModule, builder, f);
     theModule.push_back(fn);
-    scopeFn.insert(f.name.name.asStdString(), fn);
+    scopeFn.insert(f.name.name, fn);
   }
 
   theModule.dump();
 
   for (const Fn &f: m.fns) {
-    mlirGenFnBody(scopeFn.lookupExisting(f.name.name.asStdString()), builder, f, scopeFn);
+    mlirGenFnBody(scopeFn.lookupExisting(f.name.name), builder, f, scopeFn);
   }
 
   return theModule;

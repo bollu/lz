@@ -218,6 +218,10 @@ public:
   void
   getEffects(SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
                  &effects) {}
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                    Value scrutinee,
+                    SmallVectorImpl<mlir::Attribute>  &lhss,
+                    SmallVectorImpl<mlir::Region*> &rhss, mlir::Type retty);
 };
 
 class DefaultCaseOp : public Op<DefaultCaseOp, OpTrait::OneResult,

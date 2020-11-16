@@ -27,6 +27,10 @@ Convert GHC Core to MLIR.
 # Friday: Nov 11th
 
 - Goal: code generate examples I have, along with new `vector.rs`.
+- What do we do with mutually recursive lambdas? x( This kind of thing is annoying.
+- Make strictness annotations "less strict". Strictness annotations have
+  a side-effect. We don't have side effects on strictness. They have an 
+  effect on performance. 
 
 # Thursday, Nov 10th
 
