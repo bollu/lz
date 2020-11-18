@@ -1347,6 +1347,11 @@ mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder, ScopeFn scopeFn
   cout.dedent();
   cout << "\n";
 
+  if (const ExprInteger *i = mlir::dyn_cast<ExprInteger>(e)) {
+    return builder.create<mlir::ConstantIntOp>(builder.getUnknownLoc(),
+                                               i->value, builder.getI64Type());
+  }
+
   if(const ExprCase *c = mlir::dyn_cast<ExprCase>(e)) {
     assert(c->scrutinee);
     mlir::Value scrutinee = mlirGenExpr(c->scrutinee, builder, scopeFn, scopeValue);
@@ -1393,6 +1398,33 @@ mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder, ScopeFn scopeFn
     llvm::outs() << "ident: |" << identVal << "|\n";
 
     return identVal;
+  }
+
+  if (const ExprFnCall *call = mlir::dyn_cast<ExprFnCall>(e)) {
+    cout << "call :" << *call << "\n";
+    llvm::SmallVector<mlir::Value, 4> args;
+    for(Expr *e : call->args) {
+      args.push_back(mlirGenExpr(e, builder, scopeFn, scopeValue));
+    }
+
+    llvm::SmallVector<mlir::Type, 4> argTys;
+    for(int i = 0; i < call->args.size(); ++i) {
+//      argTys.push_back(mlir::standalone::ValueType::get(builder.getContext()));
+      argTys.push_back(builder.getI64Type());
+    }
+
+    assert(args.size() == argTys.size() && "mismatched argument value and type list");
+
+//    mlir::Type retty = mlir::standalone::ValueType::get(builder.getContext());
+    mlir::Type retty = builder.getI64Type();
+    mlir::standalone::HaskFnType fnty =
+        mlir::standalone::HaskFnType::get(builder.getContext(), argTys, retty);
+    mlir::Value vf =
+        builder.create<mlir::standalone::HaskRefOp>(builder.getUnknownLoc(),
+                                                    call->fnname.name, fnty);
+
+
+    return builder.create<mlir::standalone::ApOp>(builder.getUnknownLoc(), vf, args);
   }
   llvm::outs() << "\n====\n";
   e->print(cout);
@@ -1507,11 +1539,11 @@ int main(int argc, const char *const *argv) {
     context.getOrLoadDialect<mlir::standalone::HaskDialect>();
     context.getOrLoadDialect<mlir::StandardOpsDialect>();
 
-  mlir::OwningModuleRef mlirmod = mlirGen(context, mod);
+    mlir::OwningModuleRef mlirmod = mlirGen(context, mod);
     if (!mlirmod) { assert(false && "unable to codegen module"); }
     mlirmod->print(llvm::outs());
     llvm::outs() << "\n";
-
+    exit(0);
     // == TODO: steal code for codegen ==
     return 0;
 }

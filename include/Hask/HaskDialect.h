@@ -140,9 +140,9 @@ class HaskFnType
     : public mlir::Type::TypeBase<HaskFnType, HaskType, HaskFnTypeStorage> {
 public:
   using Base::Base;
-  static HaskFnType get(MLIRContext *context, ArrayRef<Type> argTy,
+  static HaskFnType get(MLIRContext *context, ArrayRef<Type> argTys,
                         ArrayRef<Type> resultTy) {
-    std::pair<ArrayRef<Type>, ArrayRef<Type>> data(argTy, resultTy);
+    std::pair<ArrayRef<Type>, ArrayRef<Type>> data(argTys, resultTy);
     return Base::get(context, data);
   }
 

@@ -228,12 +228,17 @@ void ApOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
   assert(fn.getType().isa<HaskFnType>());
   HaskFnType fnty = fn.getType().cast<HaskFnType>();
 
-  std::vector<Type> paramtys;
-  Type retty;
+  std::vector<Type> paramtys = fnty.getInputTypes();
+  Type retty = fnty.getResultType();
 
   assert(params.size() == paramtys.size());
 
   for (int i = 0; i < params.size(); ++i) {
+    if (paramtys[i] != params[i].getType()) {
+      llvm::errs() << "type mismatch at parameter (" << i << ").\n"
+        << "function parameter type: (" << paramtys[i] << ")\n"
+        << "argument type: (" << params[i].getType() << ")\n";
+    }
     assert(paramtys[i] == params[i].getType());
   }
 
