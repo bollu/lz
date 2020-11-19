@@ -11,6 +11,7 @@
 #include "Hask/HaskDialect.h"
 #include "Hask/HaskOps.h"
 #include "Hask/Scope.h"
+#include "Interpreter.h"
 
 // more MLIR includes...
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
@@ -1550,7 +1551,15 @@ int main(int argc, const char *const *argv) {
     if (!mlirmod) { assert(false && "unable to codegen module"); }
     mlirmod->print(llvm::outs());
     llvm::outs() << "\n";
-    exit(0);
-    // == TODO: steal code for codegen ==
-    return 0;
+    if(mlir::failed(mlirmod->verify())) {
+      llvm::outs() << "ERROR: module fails verification\n";
+      exit(1);
+    } else {
+      llvm::outs() << "module succeeded verification!\n";
+    }
+
+  std::pair<InterpValue, InterpStats> interpOut = interpretModule(mlirmod.get());
+  llvm::errs() << interpOut.first;
+  llvm::errs() << "value: " << interpOut.second;
+  return 0;
 }

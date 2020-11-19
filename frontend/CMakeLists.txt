@@ -12,7 +12,7 @@ set(LLVM_LINK_COMPONENTS
 
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 get_property(conversion_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
-add_llvm_executable(frontend frontend.cpp)
+add_llvm_executable(frontend frontend.cpp ../hask-opt/Interpreter.cpp ../hask-opt/Runtime.cpp)
 
 llvm_update_compile_flags(frontend)
 target_link_libraries(frontend PRIVATE
