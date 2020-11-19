@@ -1,6 +1,8 @@
 #pragma once
 
 #include "Interpreter.h"
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/IR/StandardTypes.h"
 #include <map>
 
 using namespace mlir;
@@ -284,10 +286,13 @@ struct Interpreter {
       for (int i = 0; i < caseInt.getNumAlts(); ++i) {
 
         // skip default case
+        llvm::errs() << "caseInt.getDefaultAltIndex(): " << caseInt.getDefaultAltIndex() << "\n";
+
         if (caseInt.getDefaultAltIndex().getValueOr(-1) == i) {
           continue;
         }
         // no match
+        llvm::errs() << "getAltLhs(i=" << i << "): " << caseInt.getAltLHS(i) << "\n";
         if (caseInt.getAltLHS(i)->getInt() != scrutinee.i()) {
           continue;
         }
@@ -353,6 +358,12 @@ struct Interpreter {
       return;
     }
 
+    if (mlir::ConstantIntOp cint = mlir::dyn_cast<mlir::ConstantIntOp>(op)) {
+      llvm::errs() << "constant int op: " << op << "\n";
+      env.addNew(cint.getResult(), InterpValue::i(cint.getValue()));
+      return;
+    }
+
     InterpreterError err(op.getLoc());
     err << "INTERPRETER ERROR: unknown operation: |" << op << "|\n";
 
@@ -386,6 +397,7 @@ struct Interpreter {
           r.getLoc(), DiagnosticSeverity::Error);
       diag << "incorrect number of arguments. Given: |" << args.size() << "|\n";
       diag.report();
+      assert(false && "unable to interpret region");
       exit(1);
     }
 

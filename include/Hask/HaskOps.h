@@ -206,6 +206,7 @@ public:
   }
   Optional<IntegerAttr> getAltLHS(int i) {
     Attribute lhs = getAltLHSs().get("alt" + std::to_string(i));
+    llvm::errs() << "getAltLHS(i=" << i << "): "<< lhs << "\n";
     if (lhs.isa<IntegerAttr>()) {
       return {lhs.cast<IntegerAttr>()};
     }

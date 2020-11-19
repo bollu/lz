@@ -1125,6 +1125,7 @@ void CaseIntOp::print(OpAsmPrinter &p) {
 llvm::Optional<int> CaseIntOp::getDefaultAltIndex() {
   for (int i = 0; i < getNumAlts(); ++i) {
     Attribute ai = this->getAltLHSRaw(i);
+    llvm::errs() << "getDefaultAltIndex() i=" << i << " |ai=" << ai << "\n";
     FlatSymbolRefAttr sai = ai.dyn_cast<FlatSymbolRefAttr>();
     if (sai && sai.getValue() == "default") {
       return i;
@@ -1147,7 +1148,7 @@ void CaseIntOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
     state.addRegion(std::move(pr));
   }
   for(int i = 0; i < lhss.size(); ++i) {
-    state.addAttribute("lhs" + std::to_string(i), lhss[i]);
+    state.addAttribute("alt" + std::to_string(i), lhss[i]);
   }
   state.addTypes(retty);
 }

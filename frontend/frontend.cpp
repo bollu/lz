@@ -1377,8 +1377,10 @@ mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder, ScopeFn scopeFn
         bodyBlock.addArgument({scrutineety});
       }
 
+
+      // TODO: differentiate of if we are caseing on an int or something else
       if (CaseLHSIdentifier *id = llvm::dyn_cast<CaseLHSIdentifier>(a.first)) {
-        lhs = builder.getSymbolRefAttr(id->ident);
+        lhs = mlir::FlatSymbolRefAttr::get("default", builder.getContext());
         r = new mlir::Region();
         r->push_back(new mlir::Block);
         mlir::Block &bodyBlock = r->front();
@@ -1523,40 +1525,43 @@ int main(int argc, const char *const *argv) {
     }
 
   FILE *f = fopen(argv[1], "rb");
+  if (f == nullptr) {
+    cout << "unable to open file: |" << argv[1] << "|\n";
+    return 1;
+  }
+  fseek(f, 0, SEEK_END);
+  ll len = ftell(f);
+  rewind(f);
+  char *buf = (char *)malloc(len + 1);
+  ll nread = fread(buf, 1, len, f);
+  assert(nread == len);
+  buf[nread] = 0;
 
-    fseek(f, 0, SEEK_END);
-    ll len = ftell(f);
-    rewind(f);
-    char *buf = (char *)malloc(len + 1);
-    ll nread = fread(buf, 1, len, f);
-    assert(nread == len);
-    buf[nread] = 0;
+  Parser s(argv[1], buf);
+  Module mod = parseModule(s);
+  if (G_PRETTY_PRINT) {
+    mod.print(cerr);
+  }
 
-    Parser s(argv[1], buf);
-    Module mod = parseModule(s);
-    if (G_PRETTY_PRINT) {
-      mod.print(cerr);
-    }
+  // == MLIR ==
+  // == MLIR ==
+  // == MLIR ==
+  mlir::MLIRContext context;
+  // Load our Dialect in this MLIR Context.
+  // https://github.com/llvm/llvm-project/blob/79105e464429d2220c81b38bf5339b9c41da1d21/mlir/examples/toy/Ch2/toyc.cpp#L70
+  context.getOrLoadDialect<mlir::standalone::HaskDialect>();
+  context.getOrLoadDialect<mlir::StandardOpsDialect>();
 
-    // == MLIR ==
-    // == MLIR ==
-    // == MLIR ==
-    mlir::MLIRContext context;
-    // Load our Dialect in this MLIR Context.
-    // https://github.com/llvm/llvm-project/blob/79105e464429d2220c81b38bf5339b9c41da1d21/mlir/examples/toy/Ch2/toyc.cpp#L70
-    context.getOrLoadDialect<mlir::standalone::HaskDialect>();
-    context.getOrLoadDialect<mlir::StandardOpsDialect>();
-
-    mlir::OwningModuleRef mlirmod = mlirGen(context, mod);
-    if (!mlirmod) { assert(false && "unable to codegen module"); }
-    mlirmod->print(llvm::outs());
-    llvm::outs() << "\n";
-    if(mlir::failed(mlirmod->verify())) {
-      llvm::outs() << "ERROR: module fails verification\n";
-      exit(1);
-    } else {
-      llvm::outs() << "module succeeded verification!\n";
-    }
+  mlir::OwningModuleRef mlirmod = mlirGen(context, mod);
+  if (!mlirmod) { assert(false && "unable to codegen module"); }
+  mlirmod->print(llvm::outs());
+  llvm::outs() << "\n";
+  if(mlir::failed(mlirmod->verify())) {
+    llvm::outs() << "ERROR: module fails verification\n";
+    exit(1);
+  } else {
+    llvm::outs() << "module succeeded verification!\n";
+  }
 
   std::pair<InterpValue, InterpStats> interpOut = interpretModule(mlirmod.get());
   llvm::errs() << interpOut.first;
