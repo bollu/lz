@@ -1111,6 +1111,8 @@ ParseResult CaseIntOp::parse(OpAsmParser &parser, OperationState &result) {
 };
 
 void CaseIntOp::print(OpAsmPrinter &p) {
+  p.printGenericOp(this->getOperation());
+  return;
   p << getOperationName() << " ";
   p << this->getScrutinee();
   for (int i = 0; i < this->getNumAlts(); ++i) {
@@ -1135,6 +1137,8 @@ void CaseIntOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
                   Value scrutinee,
                   SmallVectorImpl<mlir::Attribute>  &lhss,
                   SmallVectorImpl<mlir::Region*> &rhss, mlir::Type retty) {
+
+
   state.addOperands(scrutinee);
   assert(lhss.size() == rhss.size() );
 

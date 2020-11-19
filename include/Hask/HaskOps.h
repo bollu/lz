@@ -190,7 +190,10 @@ class CaseIntOp
 public:
   using Op::Op;
   static StringRef getOperationName() { return "lz.caseint"; };
-  Value getScrutinee() { this->getOperation()->getOperand(0); }
+  Value getScrutinee() {
+    llvm::errs() << "this->numOperands: " << this->getOperation()->getNumOperands() << "\n";
+    return this->getOperation()->getOperand(0);
+  }
   int getNumAlts() { return this->getOperation()->getNumRegions(); }
   Region &getAltRHS(int i) { return this->getOperation()->getRegion(i); }
   Region &getDefaultRHS() {

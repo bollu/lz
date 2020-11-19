@@ -1341,6 +1341,7 @@ mlir::Type mlirGenTypeOrValue(Type t, mlir::OpBuilder &builder) {
 
 
 
+// https://github.com/llvm/llvm-project/blob/76257422378e54dc2b59ff034e2955e9518e6c99/mlir/lib/Dialect/SCF/SCF.cpp
 mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder, ScopeFn scopeFn, ScopeValue scopeValue) {
   cout << __FUNCTION__ << ":" << __LINE__ << "\n"; cout.indent();
   e->print(cout);
@@ -1370,14 +1371,17 @@ mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder, ScopeFn scopeFn
         cout << "CaseInt\n";
         lhs = builder.getI64IntegerAttr(i->value);
         r = new mlir::Region();
-        builder.createBlock(r, r->begin(), {scrutineety});
+        r->push_back(new mlir::Block);
+        mlir::Block &bodyBlock = r->front();
+        bodyBlock.addArgument({scrutineety});
       }
 
       if (CaseLHSIdentifier *id = llvm::dyn_cast<CaseLHSIdentifier>(a.first)) {
         lhs = builder.getSymbolRefAttr(id->ident);
         r = new mlir::Region();
-        builder.createBlock(r, r->begin(), {scrutineety});
-        // builder.createBlock(r, r->begin(), { });
+        r->push_back(new mlir::Block);
+        mlir::Block &bodyBlock = r->front();
+        bodyBlock.addArgument({scrutineety});
         cout << "caseLHSIdentifier\n";
       }
 
@@ -1390,13 +1394,14 @@ mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder, ScopeFn scopeFn
       lhss.push_back(lhs);
       rhss.push_back(r);
       }
-      return builder.create<mlir::standalone::CaseIntOp>(
+
+      mlir::standalone::CaseIntOp case_ =  builder.create<mlir::standalone::CaseIntOp>(
           builder.getUnknownLoc(), scrutinee, lhss, rhss, retty);
+      return case_;
   }
   if (const ExprIdentifier *id = mlir::dyn_cast<ExprIdentifier>(e)) {
     mlir::Value identVal = scopeValue.lookupExisting(id->name);
     llvm::outs() << "ident: |" << identVal << "|\n";
-
     return identVal;
   }
 
@@ -1409,13 +1414,11 @@ mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder, ScopeFn scopeFn
 
     llvm::SmallVector<mlir::Type, 4> argTys;
     for(int i = 0; i < call->args.size(); ++i) {
-//      argTys.push_back(mlir::standalone::ValueType::get(builder.getContext()));
       argTys.push_back(builder.getI64Type());
     }
 
     assert(args.size() == argTys.size() && "mismatched argument value and type list");
 
-//    mlir::Type retty = mlir::standalone::ValueType::get(builder.getContext());
     mlir::Type retty = builder.getI64Type();
     mlir::standalone::HaskFnType fnty =
         mlir::standalone::HaskFnType::get(builder.getContext(), argTys, retty);
@@ -1431,14 +1434,15 @@ mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder, ScopeFn scopeFn
   llvm::outs() << "\n====\n";
   assert(false && "unknown expression");
 }
-void mlirGenStmt(const Stmt *s, mlir::OpBuilder &builder, ScopeFn scopeFn, ScopeValue scopeValue) {
+void mlirGenStmt(const Stmt *s, mlir::OpBuilder &builder, ScopeFn scopeFn, ScopeValue &scopeValue) {
   if (const StmtLet *l = mlir::dyn_cast<StmtLet>(s)) {
-    assert(false && "stmt let");
+    mlir::Value v = mlirGenExpr(l->rhs, builder, scopeFn, scopeValue);
+    scopeValue.insert(l->name.name, v);
+    return;
   }
 
   if (const StmtLetBang *l  = mlir::dyn_cast<StmtLetBang>(s)) {
     assert(false && "stmt letbang");
-
   }
 
   if (const StmtReturn *r = mlir::dyn_cast<StmtReturn>(s)) {
@@ -1482,7 +1486,10 @@ void mlirGenFnBody(mlir::FuncOp mlirfn, mlir::OpBuilder & builder, const Fn &f,
   for(int i = 0; i < f.args.size(); ++i) {
     scopeValue.insert(f.args[i].first.name, mlirfn.getArgument(i));
   }
+
+  cout << "====f:" << "\n" << f << "\n";
   mlirGenBody(f.body, builder, scopeFn, scopeValue);
+  llvm::errs() << "function body:\n" << mlirfn << "\n===\n";
 }
 
 // https://github.com/llvm/llvm-project/blob/master/mlir/examples/toy/Ch2/mlir/MLIRGen.cpp#L57
