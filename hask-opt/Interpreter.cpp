@@ -235,7 +235,7 @@ struct Interpreter {
         assert(scrutinee.type == InterpValueType::ClosureTopLevel);
         InterpValue scrutineefn = scrutinee.closureTopLevelFn();
         assert(scrutineefn.type == InterpValueType::Ref);
-        HaskFuncOp func = module.lookupSymbol<HaskFuncOp>(scrutineefn.ref());
+        FuncOp func = module.lookupSymbol<FuncOp>(scrutineefn.ref());
         assert(func && "unable to find function");
         std::vector<InterpValue> args(scrutinee.closureArgBegin(),
                                       scrutinee.closureArgEnd());
@@ -332,7 +332,7 @@ struct Interpreter {
     if (ApEagerOp ap = dyn_cast<ApEagerOp>(op)) {
       InterpValue fnval = env.lookup(ap.getLoc(), ap.getFn());
       assert(fnval.type == InterpValueType::Ref);
-      HaskFuncOp func = module.lookupSymbol<HaskFuncOp>(fnval.ref());
+      FuncOp func = module.lookupSymbol<FuncOp>(fnval.ref());
       assert(func && "unable to find function");
 
       std::vector<InterpValue> args;
@@ -406,7 +406,7 @@ struct Interpreter {
     }
   }
 
-  InterpValue interpretFunction(HaskFuncOp func, ArrayRef<InterpValue> args) {
+  InterpValue interpretFunction(mlir::FuncOp func, ArrayRef<InterpValue> args) {
     // functions are isolated from above; create a fresh environment.
     return interpretRegion(func.getRegion(), args, Env());
   }
@@ -435,8 +435,8 @@ private:
 
 // interpret a module, and interpret the result as an integer. print it out.
 std::pair<InterpValue, InterpStats> interpretModule(ModuleOp module) {
-  standalone::HaskFuncOp main =
-      module.lookupSymbol<standalone::HaskFuncOp>("main");
+  mlir::FuncOp main =
+      module.lookupSymbol<mlir::FuncOp>("main");
   assert(main && "unable to find main!");
   Interpreter I(module);
   InterpValue val = I.interpretFunction(main, {});
