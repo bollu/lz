@@ -701,14 +701,15 @@ struct Parser {
     }
 };
 
+
 struct Type {
     const Span span;
     const Identifier tyname;
-
-    Type(Span span, Identifier tyname) : span(span), tyname(tyname) {}
-
+    bool forced; // tracks if type is thunk or forced.
+    Type(Span span, Identifier tyname, bool forced)
+        : span(span), tyname(tyname), forced(forced) {}
     void print(OutFile &out) const {
-        out << tyname;
+        out << " !"[forced] << tyname;
     }
 };
 
@@ -954,8 +955,10 @@ struct StmtLetBang : public Stmt {
 Type parseType(Parser &in) {
     Loc lbegin = in.getCurrentLoc();
     optional<Identifier> ident;
+    bool forced = false;
+    if (in.parseOptionalSigil("!")) { forced = true; }
     if ((ident = in.parseOptionalIdentifier())) {
-        return Type(Span(lbegin, in.getCurrentLoc()), *ident);
+        return Type(Span(lbegin, in.getCurrentLoc()), *ident, forced);
     } else {
         in.addErrAtCurrentLoc("expected type.");
         exit(1);
