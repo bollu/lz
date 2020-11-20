@@ -1592,7 +1592,10 @@ int main(int argc, const char *const *argv) {
   }
 
   std::pair<InterpValue, InterpStats> interpOut = interpretModule(mlirmod.get());
-  llvm::errs() << interpOut.first;
-  llvm::errs() << "value: " << interpOut.second;
+  llvm::errs() << "===running program===\n";
+  llvm::errs() << "value: " << interpOut.first << "\n";
+  llvm::errs() << "statistics:\n" << interpOut.second;
+  llvm::errs() << "\n";
+  llvm::errs().flush();
   return 0;
 }
