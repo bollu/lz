@@ -372,6 +372,9 @@ struct Interpreter {
   TerminatorResult interpretTerminator(Operation &op, Env &env) {
     if (HaskReturnOp ret = dyn_cast<HaskReturnOp>(op)) {
       return TerminatorResult(env.lookup(ret.getLoc(), ret.getOperand()));
+    } else if (ReturnOp ret = dyn_cast<ReturnOp>(op)) {
+      // TODO: we assume we have only one return value
+      return TerminatorResult(env.lookup(ret.getLoc(), ret.getOperand(0)));
     } else {
       InterpreterError err(op.getLoc());
       err << "unknown terminator: |" << op << "|\n";
@@ -387,6 +390,7 @@ struct Interpreter {
         return interpretTerminator(op, env);
       }
     }
+    assert(false && "unreachable location in InterpretBlock");
   }
 
   InterpValue interpretRegion(Region &r, ArrayRef<InterpValue> args, Env env) {

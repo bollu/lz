@@ -25,6 +25,7 @@ Convert GHC Core to MLIR.
 # Log:  [newest] to [oldest]
 
 # Friday: Nov 11th
+- https://dl.acm.org/doi/abs/10.1145/99583.99590
 
 - Goal: code generate examples I have, along with new `vector.rs`.
 - What do we do with mutually recursive lambdas? x( This kind of thing is annoying.

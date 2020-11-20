@@ -292,7 +292,8 @@ void printferr(Loc loc, const char *raw_input, const char *fmt, ...) {
 bool isWhitespace(char c) { return c == ' ' || c == '\n' || c == '\t'; }
 bool isReservedSigil(char c) {
     return c == '(' || c == ')' || c == '{' || c == '}' || c == ',' || 
-        c == ';' || c == '[' || c == ']' || c == ':';
+        c == ';' || c == '[' || c == ']' || c == ':' || c == '-' || c == '*'
+      || c == '+' || c == '/';
 }
 
 /*
@@ -859,7 +860,10 @@ struct ExprBinop : public Expr {
         : Expr(span, ExprKind::Binop), left(left), right(right), binop(binop){};
 
     OutFile print(OutFile &out) const override {
-        left->print(out); out << binop; return right->print(out);
+        out << "[bop " << binop; out << " ";
+        left->print(out); out << " ";
+        right->print(out); out << "]";
+        return out;
     }
 
   static bool classof(const Expr *e) {
@@ -877,13 +881,12 @@ struct ExprFnCall : public Expr {
         : Expr(span, ExprKind::FnCall), fnname(fnname), args(args){};
 
     OutFile print(OutFile &out) const override {
-        out << fnname.name;
-        out <<"(";
+        out << "[call "; out <<  fnname.name  << " ";
         for(int i = 0; i  < (ll)args.size(); ++i) {
             args[i]->print(out);
             if (i + 1 < (ll)args.size()) out << ", ";
         }
-        out << ")";
+        out << " ]";
         return out;
     }
 
@@ -1348,10 +1351,22 @@ mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder, ScopeFn scopeFn
   e->print(cout);
   cout.dedent();
   cout << "\n";
-
   if (const ExprInteger *i = mlir::dyn_cast<ExprInteger>(e)) {
     return builder.create<mlir::ConstantIntOp>(builder.getUnknownLoc(),
                                                i->value, builder.getI64Type());
+  }
+
+  if (const ExprBinop *bop = mlir::dyn_cast<ExprBinop>(e)) {
+    mlir::Value l = mlirGenExpr(bop->left, builder, scopeFn, scopeValue);
+    mlir::Value r= mlirGenExpr(bop->right, builder, scopeFn, scopeValue);
+    switch (bop->binop) {
+    case Binop::Sub:
+      return builder.create<mlir::SubIOp>(builder.getUnknownLoc(), l, r);
+    case Binop::Mul:
+      return builder.create<mlir::MulIOp>(builder.getUnknownLoc(), l, r);
+    };
+
+    assert(false && "unreachable codegen expr binop");
   }
 
   if(const ExprCase *c = mlir::dyn_cast<ExprCase>(e)) {
@@ -1375,6 +1390,12 @@ mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder, ScopeFn scopeFn
         r->push_back(new mlir::Block);
         mlir::Block &bodyBlock = r->front();
         bodyBlock.addArgument({scrutineety});
+        {
+          mlir::OpBuilder nestedBuilder = builder;
+          nestedBuilder.setInsertionPointToEnd(&bodyBlock);
+          mlir::Value rhsval =  mlirGenExpr(a.second, nestedBuilder, scopeFn, scopeValue);
+          nestedBuilder.create<mlir::ReturnOp>(builder.getUnknownLoc(), rhsval);
+        }
       }
 
 
@@ -1384,8 +1405,15 @@ mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder, ScopeFn scopeFn
         r = new mlir::Region();
         r->push_back(new mlir::Block);
         mlir::Block &bodyBlock = r->front();
-        bodyBlock.addArgument({scrutineety});
         cout << "caseLHSIdentifier\n";
+        {
+          mlir::OpBuilder nestedBuilder = builder;
+          ScopeValue  nestedScopeValue = scopeValue;
+          nestedScopeValue.insert(id->ident, scrutinee);
+          nestedBuilder.setInsertionPointToEnd(&bodyBlock);
+          mlir::Value rhsval =  mlirGenExpr(a.second, nestedBuilder, scopeFn, nestedScopeValue);
+          nestedBuilder.create<mlir::ReturnOp>(builder.getUnknownLoc(), rhsval);
+        }
       }
 
       if (CaseLHSTupleStruct *str = llvm::dyn_cast<CaseLHSTupleStruct>(a.first)) {
