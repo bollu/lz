@@ -1411,7 +1411,7 @@ mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder, ScopeFn scopeFn
         r = new mlir::Region();
         r->push_back(new mlir::Block);
         mlir::Block &bodyBlock = r->front();
-        bodyBlock.addArgument({scrutineety});
+        // bodyBlock.addArgument({scrutineety});
         {
           mlir::OpBuilder nestedBuilder = builder;
           nestedBuilder.setInsertionPointToEnd(&bodyBlock);
