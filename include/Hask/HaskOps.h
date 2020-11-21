@@ -332,7 +332,9 @@ public:
   using Op::Op;
   static StringRef getOperationName() { return "lz.force"; };
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
-  Value getScrutinee() { this->getOperation()->getOperand(0); }
+  Value getScrutinee() {
+    return this->getOperation()->getOperand(0);
+  }
   void print(OpAsmPrinter &p);
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
                     Value scrutinee);

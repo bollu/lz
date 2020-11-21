@@ -188,6 +188,12 @@ struct Span {
       assert(this->end.si <= rightward.begin.si);
       return Span(this->begin, rightward.end);
     }
+
+    Span extendRight(Loc rightward) const {
+      assert(this->end.si <= rightward.si);
+      return Span(this->begin, rightward);
+    }
+
 };
 
 Span Loc::moveMut(Loc next) {
@@ -455,7 +461,8 @@ struct Parser {
         return bool(parseOptionalSigil("}"));
     }
     Span parseOpenRoundBracket() { return parseSigil("("); }
-    
+    optional<Span> parseOptionalOpenCurly() { return parseOptionalSigil("{"); }
+
     optional<Span> parseOptionalOpenRoundBracket() {
         return parseOptionalSigil("(");
     }
@@ -777,35 +784,19 @@ struct Expr {
     const Span span;
     const ExprKind kind;
     Expr(Span span, ExprKind kind) : span(span), kind(kind){};
-    virtual OutFile print(OutFile &out) const = 0;
+    virtual OutFile &print(OutFile &out) const = 0;
 };
 
+struct Block;
 struct ExprCase : public Expr {
-    using Alt = pair<CaseLHS *, Expr *>;
+    using Alt = pair<CaseLHS *, Block*>;
 
     ExprCase(Span span, Expr *scrutinee, vector<Alt> alts)
         : Expr(span, ExprKind::Case), scrutinee(scrutinee), alts(alts){};
     const Expr *scrutinee;
     const vector<Alt> alts;
 
-    OutFile print(OutFile &out) const override {
-        out << "match ";
-        scrutinee->print(out);
-        out.indent();
-        out << " {\n";
-
-        for(int i = 0; i < (ll)alts.size(); ++i) {
-            alts[i].first->print(out);
-            out << " => ";
-            alts[i].second->print(out);
-            if (i + 1 < (ll)alts.size()) { out << ",\n"; }
-        }
-
-        
-        out.dedent();
-        out << "\n}";
-        return out;
-    }
+    OutFile &print(OutFile &out) const override;
 
     static bool classof(const Expr *e) {
       return e->kind == ExprKind::Case;
@@ -817,7 +808,7 @@ struct ExprIdentifier : public Expr {
     ExprIdentifier(Span span, string name)
         : Expr(span, ExprKind::Identifier), name(name) {}
 
-    OutFile print(OutFile &out) const override {
+    OutFile &print(OutFile &out) const override {
       return out << name;
       //        return out << "ident:" << name << "|[" << int(this->kind) << "]";
     }
@@ -833,7 +824,7 @@ struct ExprInteger : public Expr {
     ExprInteger(Span span, ll value)
         : Expr(span, ExprKind::Integer), value(value) {}
 
-    OutFile print(OutFile &out) const override {
+    OutFile &print(OutFile &out) const override {
         return out << value; 
     }
 
@@ -860,7 +851,7 @@ struct ExprBinop : public Expr {
     ExprBinop(Span span, Expr *left, Binop binop, Expr *right)
         : Expr(span, ExprKind::Binop), left(left), right(right), binop(binop){};
 
-    OutFile print(OutFile &out) const override {
+    OutFile &print(OutFile &out) const override {
         out << "[bop " << binop; out << " ";
         left->print(out); out << " ";
         right->print(out); out << "]";
@@ -881,7 +872,7 @@ struct ExprFnCall : public Expr {
     ExprFnCall(Span span, Identifier fnname, vector<Expr *> args)
         : Expr(span, ExprKind::FnCall), fnname(fnname), args(args){};
 
-    OutFile print(OutFile &out) const override {
+    OutFile &print(OutFile &out) const override {
         out << "[call "; out <<  fnname.name  << " ";
         for(int i = 0; i  < (ll)args.size(); ++i) {
             args[i]->print(out);
@@ -895,6 +886,8 @@ struct ExprFnCall : public Expr {
     return e->kind == ExprKind::FnCall;
   }
 };
+
+
 
 enum class StmtKind {
   Return, Let, LetBang
@@ -951,6 +944,24 @@ struct StmtLetBang : public Stmt {
   }
 };
 
+struct Block {
+  const vector<Stmt*> stmts;
+  Span span;
+
+  Block(Span span, vector<Stmt*> stmts) : span(span), stmts(stmts) {};
+
+  OutFile &print(OutFile &out) const {
+    out.indent();
+    out << "{\n";
+    for(const Stmt *s : stmts) {
+      s->print(out);
+      out << "\n";
+    }
+    out.dedent();
+    out << "\n}";
+    return out;
+  }
+};
 
 Type parseType(Parser &in) {
     Loc lbegin = in.getCurrentLoc();
@@ -963,6 +974,25 @@ Type parseType(Parser &in) {
         in.addErrAtCurrentLoc("expected type.");
         exit(1);
     }
+}
+
+OutFile &ExprCase::print(OutFile &out) const  {
+  out << "match ";
+  scrutinee->print(out);
+  out.indent();
+  out << " {\n";
+
+  for(int i = 0; i < (ll)alts.size(); ++i) {
+  alts[i].first->print(out);
+  out << " => ";
+  alts[i].second->print(out);
+  if (i + 1 < (ll)alts.size()) { out << ",\n"; }
+  }
+
+
+  out.dedent();
+  out << "\n}";
+  return out;
 }
 
 
@@ -1067,17 +1097,22 @@ Expr *parseExprArithAddSub(Parser &in) {
     return left;
 }
 
+// forward declaration.
+optional<Block> parseOptionalBlock(Parser &in);
+
+Block *parseBlock(Parser &in);
 Expr *parseExprTop(Parser &in) {
     const Loc lbegin = in.getCurrentLoc();
 
     if (in.parseOptionalKeyword("match")) {
         Expr *scrutinee = parseExprTop(in);
         in.parseOpenCurly();
-        vector<pair<CaseLHS *, Expr *>> alts;
+        vector<pair<CaseLHS *, Block*>> alts;
         while (1) {
             CaseLHS *lhs = parseCaseLHS(in);
             in.parseFatArrow();
-            Expr *rhs = parseExprTop(in);
+            Block *rhs = parseBlock(in);
+            // Expr *rhs = parseExprTop(in);
             alts.push_back({lhs, rhs});
 
             if (in.parseOptionalCloseCurly()) {
@@ -1120,38 +1155,21 @@ Stmt *parseStmt(Parser &in) {
     exit(1);
 }
 
-struct Block {
-    const vector<Stmt*> stmts;
-    Block(vector<Stmt*> stmts) : stmts(stmts) {};
 
-    void print(OutFile &out) const {
-        out.indent();
-        out << "{\n";
-        for(const Stmt *s : stmts) {
-            s->print(out);
-            out << "\n";
-        }
-        out.dedent();
-        out << "\n}";
-    }
-    
-};
 
-Block parseBlock(Parser &in) {
-    vector<Stmt*> stmts;
-    in.parseOpenCurly();
-    while (!in.parseOptionalCloseCurly()) {
-        stmts.push_back(parseStmt(in));
-        in.parseSemicolon();
-        // if (!in.parseOptionalSemicolon()) {
-        //     // we allow the last 'statement' to end without a semicolon
-        //     // to indicate return
-        //     in.parseCloseCurly();
-        //     break;
-        // }
-    }
-    return Block(stmts);
+
+Block *parseBlock(Parser &in) {
+  vector<Stmt*> stmts;
+  Loc lbegin = in.getCurrentLoc();
+  in.parseOpenCurly();
+
+  while (!in.parseOptionalCloseCurly()) {
+    stmts.push_back(parseStmt(in));
+    in.parseSemicolon();
+  }
+  return new Block(Span(lbegin, in.getCurrentLoc()), stmts);
 }
+
 
 struct Fn {
     using Argument = std::pair<Identifier, Type>;
@@ -1159,10 +1177,10 @@ struct Fn {
     const Identifier name;
     const vector<Argument> args;
     Type retty;
-    const Block body;
+    const Block *body;
 
     Fn(Span span, Identifier name, vector<Argument> args, Type retty,
-       Block body)
+       Block *body)
         : span(span), name(name), args(args), retty(retty), body(body){};
 
     OutFile &print(OutFile &out) const {
@@ -1172,7 +1190,7 @@ struct Fn {
             if (i + 1 < (ll)args.size()) { out << ", "; }
         }
         out << ")";
-        out << body;
+        body->print(out);
         return out;
     }
 };
@@ -1198,7 +1216,7 @@ Fn parseFn(Parser &in) {
 
     in.parseThinArrow();
     Type retty = parseType(in);
-    Block b = parseBlock(in);
+    Block *b = parseBlock(in);
     return Fn(Span(lbegin, in.getCurrentLoc()), ident, params, retty, b);
 }
 
@@ -1349,6 +1367,7 @@ mlir::Type mlirGenTypeOrValue(Type t, mlir::OpBuilder &builder) {
 
 
 // https://github.com/llvm/llvm-project/blob/76257422378e54dc2b59ff034e2955e9518e6c99/mlir/lib/Dialect/SCF/SCF.cpp
+void mlirGenBlock(const Block *b, mlir::OpBuilder &builder, ScopeFn scopeFn, ScopeValue scopeValue);
 mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder, ScopeFn scopeFn, ScopeValue scopeValue) {
   cout << __FUNCTION__ << ":" << __LINE__ << "\n"; cout.indent();
   e->print(cout);
@@ -1396,8 +1415,9 @@ mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder, ScopeFn scopeFn
         {
           mlir::OpBuilder nestedBuilder = builder;
           nestedBuilder.setInsertionPointToEnd(&bodyBlock);
-          mlir::Value rhsval =  mlirGenExpr(a.second, nestedBuilder, scopeFn, scopeValue);
-          nestedBuilder.create<mlir::ReturnOp>(builder.getUnknownLoc(), rhsval);
+          //  mlir::Value rhsval =  mlirGenExpr(a.second, nestedBuilder, scopeFn, scopeValue);
+          mlirGenBlock(a.second, nestedBuilder, scopeFn, scopeValue);
+          //  nestedBuilder.create<mlir::ReturnOp>(builder.getUnknownLoc(), rhsval);
         }
       }
 
@@ -1414,8 +1434,9 @@ mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder, ScopeFn scopeFn
           ScopeValue  nestedScopeValue = scopeValue;
           nestedScopeValue.insert(id->ident, scrutinee);
           nestedBuilder.setInsertionPointToEnd(&bodyBlock);
-          mlir::Value rhsval =  mlirGenExpr(a.second, nestedBuilder, scopeFn, nestedScopeValue);
-          nestedBuilder.create<mlir::ReturnOp>(builder.getUnknownLoc(), rhsval);
+          // mlir::Value rhsval =  mlirGenExpr(a.second, nestedBuilder, scopeFn, nestedScopeValue);
+          // nestedBuilder.create<mlir::ReturnOp>(builder.getUnknownLoc(), rhsval);
+          mlirGenBlock(a.second, nestedBuilder, scopeFn, scopeValue);
         }
       }
 
@@ -1463,6 +1484,7 @@ mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder, ScopeFn scopeFn
 
     return builder.create<mlir::standalone::ApOp>(builder.getUnknownLoc(), vf, args);
   }
+
   llvm::outs() << "\n====\n";
   e->print(cout);
   llvm::outs() << "\n====\n";
@@ -1471,6 +1493,12 @@ mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder, ScopeFn scopeFn
 void mlirGenStmt(const Stmt *s, mlir::OpBuilder &builder, ScopeFn scopeFn, ScopeValue &scopeValue) {
   if (const StmtLet *l = mlir::dyn_cast<StmtLet>(s)) {
     mlir::Value v = mlirGenExpr(l->rhs, builder, scopeFn, scopeValue);
+    // generate a force expression if need be.
+    if (l->type.forced) {
+      v = builder.create<mlir::standalone::ForceOp>(builder.getUnknownLoc(), v);
+//      llvm::errs() << "Forced value: |" << v << "|\n";
+//      assert(false);
+    }
     scopeValue.insert(l->name.name, v);
     return;
   }
@@ -1491,8 +1519,8 @@ void mlirGenStmt(const Stmt *s, mlir::OpBuilder &builder, ScopeFn scopeFn, Scope
   assert(false && "unknown statement type");
 }
 
-void mlirGenBody(const Block &b, mlir::OpBuilder &builder, ScopeFn scopeFn, ScopeValue scopeValue) {
-  for(Stmt *s : b.stmts) {
+void mlirGenBlock(const Block *b, mlir::OpBuilder &builder, ScopeFn scopeFn, ScopeValue scopeValue) {
+  for(Stmt *s : b->stmts) {
     mlirGenStmt(s, builder, scopeFn, scopeValue);
   }
 }
@@ -1522,7 +1550,7 @@ void mlirGenFnBody(mlir::FuncOp mlirfn, mlir::OpBuilder & builder, const Fn &f,
   }
 
   cout << "====f:" << "\n" << f << "\n";
-  mlirGenBody(f.body, builder, scopeFn, scopeValue);
+  mlirGenBlock(f.body, builder, scopeFn, scopeValue);
   llvm::errs() << "function body:\n" << mlirfn << "\n===\n";
 }
 

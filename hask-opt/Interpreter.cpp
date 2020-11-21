@@ -325,6 +325,25 @@ struct Interpreter {
       return;
     }
 
+    if (SubIOp sub = dyn_cast<SubIOp>(op)) {
+      InterpValue a = env.lookup(sub.getLoc(), sub.getOperand(0));
+      InterpValue b = env.lookup(sub.getLoc(), sub.getOperand(1));
+      assert(a.type == InterpValueType::I64);
+      assert(b.type == InterpValueType::I64);
+      env.addNew(sub.getResult(), InterpValue::i(a.i() - b.i()));
+      return;
+    }
+    if (MulIOp mul = dyn_cast<MulIOp>(op)) {
+      InterpValue a = env.lookup(mul.getLoc(), mul.getOperand(0));
+      InterpValue b = env.lookup(mul.getLoc(), mul.getOperand(1));
+      assert(a.type == InterpValueType::I64);
+      assert(b.type == InterpValueType::I64);
+      env.addNew(mul.getResult(), InterpValue::i(a.i() * b.i()));
+      return;
+    }
+
+
+
     if (HaskPrimopAddOp add = dyn_cast<HaskPrimopAddOp>(op)) {
       InterpValue a = env.lookup(add.getLoc(), add.getOperand(0));
       InterpValue b = env.lookup(add.getLoc(), add.getOperand(1));
