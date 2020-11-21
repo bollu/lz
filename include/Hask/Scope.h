@@ -1,6 +1,8 @@
 #pragma once
 #include <map>
 #include <stdio.h>
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
+
 
 template <typename K, typename V> class Scope {
 public:
@@ -22,12 +24,13 @@ public:
       m[k] = v;
   }
   V lookupExisting(K k) {
-    printf("%s:%d\n", __FILE__, __LINE__);
     auto it = m.find(k);
-    printf("%s:%d\n", __FILE__, __LINE__);
+    if (it == m.end()) {
+      llvm::errs() << "|" << k << "| was not found in map.\n";
+      assert(false && "unable to find key");
+    }
     assert(it != m.end());
-    if (it == m.end()) { printf("it was not found"); exit(1); }
-    printf("%s:%d\n", __FILE__, __LINE__);
+
     return it->second;
   }
 

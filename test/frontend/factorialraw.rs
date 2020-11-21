@@ -5,7 +5,7 @@ fn factorialRaw(i: i64) -> i64 {
     return match i {
         0 => { return 1; },
         n => {
-            let rec : !i64 = factorial(n - 1);
+            let rec : !i64 = factorialRaw(n - 1);
             return n * rec;
         }
     };

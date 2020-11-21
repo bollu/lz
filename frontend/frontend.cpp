@@ -1436,7 +1436,7 @@ mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder, ScopeFn scopeFn
           nestedBuilder.setInsertionPointToEnd(&bodyBlock);
           // mlir::Value rhsval =  mlirGenExpr(a.second, nestedBuilder, scopeFn, nestedScopeValue);
           // nestedBuilder.create<mlir::ReturnOp>(builder.getUnknownLoc(), rhsval);
-          mlirGenBlock(a.second, nestedBuilder, scopeFn, scopeValue);
+          mlirGenBlock(a.second, nestedBuilder, scopeFn, nestedScopeValue);
         }
       }
 
