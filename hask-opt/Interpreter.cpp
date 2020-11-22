@@ -155,7 +155,10 @@ private:
 struct Interpreter {
   // dispatch the correct interpret function.
   void interpretOperation(Operation &op, Env &env) {
-    fprintf(stderr, "interpreting operation:\n");
+    llvm::errs().changeColor(llvm::raw_fd_ostream::GREEN);
+    llvm::errs() << "--interpreting operation:--\n";
+    llvm::errs().changeColor(llvm::raw_fd_ostream::BLACK);
+
     op.print(llvm::errs());
     fprintf(stderr, "\n"); fflush(stdout);
 
@@ -413,6 +416,12 @@ struct Interpreter {
   }
 
   TerminatorResult interpretBlock(Block &block, Env &env) {
+    llvm::errs().changeColor(llvm::raw_fd_ostream::GREEN);
+    llvm::errs() << "--interpreting Block:--\n";
+    llvm::errs().changeColor(llvm::raw_fd_ostream::BLACK);
+    block.print(llvm::errs());
+    llvm::errs() << "\n";
+
     for (Operation &op : block) {
       if (op.isKnownNonTerminator()) {
         interpretOperation(op, env);
@@ -454,8 +463,9 @@ struct Interpreter {
 
   InterpValue interpretFunction(mlir::FuncOp func, ArrayRef<InterpValue> args) {
     std::string funcName = func.getName().str();
-    fprintf(stderr, "interpreting function |%10s|\n", funcName.c_str() );
-    fflush(stderr);
+    llvm::errs().changeColor(llvm::raw_fd_ostream::GREEN);
+    llvm::errs() << "--interpreting function:|" << funcName.c_str() << "|--\n";
+    llvm::errs().changeColor(llvm::raw_fd_ostream::BLACK);
     // functions are isolated from above; create a fresh environment.
     return interpretRegion(func.getRegion(), args, Env());
   }

@@ -1479,18 +1479,11 @@ mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder,
         r->push_back(new mlir::Block);
         mlir::Block &bodyBlock = r->front();
         cout << "caseLHSIdentifier\n";
-        {
-          mlir::OpBuilder nestedBuilder = builder;
-          ScopeValue nestedScopeValue = scopeValue;
-          nestedScopeValue.insert(id->ident, scrutinee);
-          nestedBuilder.setInsertionPointToEnd(&bodyBlock);
-          // mlir::Value rhsval =  mlirGenExpr(a.second, nestedBuilder, scopeFn,
-          // nestedScopeValue);
-          // nestedBuilder.create<mlir::ReturnOp>(builder.getUnknownLoc(),
-          // rhsval);
-          mlirGenBlock(alt.second, nestedBuilder, scopeFn, nestedScopeValue,
-                       tc);
-        }
+        mlir::OpBuilder nestedBuilder = builder;
+        ScopeValue nestedScopeValue = scopeValue;
+        nestedScopeValue.insert(id->ident, scrutinee);
+        nestedBuilder.setInsertionPointToEnd(&bodyBlock);
+        mlirGenBlock(alt.second, nestedBuilder, scopeFn, nestedScopeValue, tc);
       }
 
       if (auto tuplestruct = llvm::dyn_cast<CaseLHSTupleStruct>(alt.first)) {
@@ -1515,6 +1508,8 @@ mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder,
           mlir::BlockArgument arg = bodyBlock.addArgument(mlirFieldTy);
           nestedScopeValue.insert(lhsFieldCase->ident, arg);
         }
+        
+        nestedBuilder.setInsertionPointToEnd(&bodyBlock);
         mlirGenBlock(alt.second, nestedBuilder, scopeFn, nestedScopeValue, tc);
       }
 
