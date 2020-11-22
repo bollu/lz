@@ -1098,9 +1098,7 @@ Expr *parseExprArithAddSub(Parser &in) {
 }
 
 // forward declaration.
-optional<Block> parseOptionalBlock(Parser &in);
-
-Block *parseBlock(Parser &in);
+Block *parseBlockOrStmt(Parser &in);
 Expr *parseExprTop(Parser &in) {
     const Loc lbegin = in.getCurrentLoc();
 
@@ -1111,15 +1109,16 @@ Expr *parseExprTop(Parser &in) {
         while (1) {
             CaseLHS *lhs = parseCaseLHS(in);
             in.parseFatArrow();
-            Block *rhs = parseBlock(in);
+            Block *rhs = parseBlockOrStmt(in);
             // Expr *rhs = parseExprTop(in);
             alts.push_back({lhs, rhs});
 
             if (in.parseOptionalCloseCurly()) {
                 break;
-            } else {
-                in.parseComma();
             }
+            // } else {
+            //     in.parseComma();
+            // }
         }
         return new ExprCase(Span(lbegin, in.getCurrentLoc()), scrutinee, alts);
     }
@@ -1155,8 +1154,23 @@ Stmt *parseStmt(Parser &in) {
     exit(1);
 }
 
-
-
+// parse either a block, or a single statement
+Block *parseBlockOrStmt(Parser &in) {
+    Loc lbegin = in.getCurrentLoc();
+    if (in.parseOptionalOpenCurly()) {
+        vector<Stmt *> stmts;
+    
+        while (!in.parseOptionalCloseCurly()) {
+            stmts.push_back(parseStmt(in));
+            in.parseSemicolon();
+        }   
+        return new Block(Span(lbegin, in.getCurrentLoc()), stmts);
+    } else {
+        vector<Stmt *> stmts = { parseStmt(in)};
+        in.parseSemicolon();
+        return new Block(Span(lbegin, in.getCurrentLoc()), stmts);
+    }
+}
 
 Block *parseBlock(Parser &in) {
   vector<Stmt*> stmts;
