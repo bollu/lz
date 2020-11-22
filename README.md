@@ -76,6 +76,13 @@ owning op:
   generate an identifier for the case value. However, the fact that this
   region argument is not printed now worries me.
 
+- FIXED! wasn't moving builder to the correct location.
+
+- TODO: 0. add a custom `caseint` into the surface lang to quickly check that our
+           codegen *actually* works.
+- TODO: 1. get type info to decide if I need a `caseint` or a `caseconstrcutor`.
+- TODO: 2. Track types in the surface lang to have enough info to deduce this.
+
 
 # Friday: Nov 11th
 - https://dl.acm.org/doi/abs/10.1145/99583.99590
