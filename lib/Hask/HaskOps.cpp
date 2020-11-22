@@ -1113,6 +1113,7 @@ ParseResult CaseIntOp::parse(OpAsmParser &parser, OperationState &result) {
 void CaseIntOp::print(OpAsmPrinter &p) {
   p.printGenericOp(this->getOperation());
   return;
+  
   p << getOperationName() << " ";
   p << this->getScrutinee();
   for (int i = 0; i < this->getNumAlts(); ++i) {

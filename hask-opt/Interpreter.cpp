@@ -100,7 +100,14 @@ public:
       llvm::errs() << "unable to find key: |";
       k.print(llvm::errs());
       llvm::errs() << "|\n";
+      llvm::errs() << "owning block:\n";
+      k.getParentBlock()->print(llvm::errs());
+      llvm::errs() << "owning op:\n";
+      k.getParentBlock()->getParentOp()->print(llvm::errs());
+
+      llvm::errs() << "\n";
       err << "unable to find key";
+      assert(false && "unable to find key in the interpreter");
     }
     return it.getValue();
   }
@@ -148,6 +155,10 @@ private:
 struct Interpreter {
   // dispatch the correct interpret function.
   void interpretOperation(Operation &op, Env &env) {
+    fprintf(stderr, "interpreting operation:\n");
+    op.print(llvm::errs());
+    fprintf(stderr, "\n"); fflush(stdout);
+
     if (MakeI64Op mi64 = dyn_cast<MakeI64Op>(op)) {
       env.addNew(mi64.getResult(), InterpValue::i(mi64.getValue().getInt()));
       return;
@@ -442,6 +453,9 @@ struct Interpreter {
   }
 
   InterpValue interpretFunction(mlir::FuncOp func, ArrayRef<InterpValue> args) {
+    std::string funcName = func.getName().str();
+    fprintf(stderr, "interpreting function |%10s|\n", funcName.c_str() );
+    fflush(stderr);
     // functions are isolated from above; create a fresh environment.
     return interpretRegion(func.getRegion(), args, Env());
   }

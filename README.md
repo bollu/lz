@@ -24,6 +24,59 @@ Convert GHC Core to MLIR.
 
 # Log:  [newest] to [oldest]
 
+# Mon, Nov 23
+
+- Function body: see that `%arg0` v/s `%arg1`:
+
+```
+  func @factorial(%arg0: !lz.thunk<!lz.value>) -> !lz.value {
+    %0 = "lz.caseint"(%arg1) ( {
+      %c1_i64 = constant 1 : i64
+      %2 = "lz.construct"(%c1_i64) {dataconstructor = @SimpleInt} : (i64) -> !lz.value
+      return %2 : !lz.value
+    },  {
+      %c1_i64 = constant 1 : i64
+      %2 = subi %arg1, %c1_i64 : i64
+      %3 = "lz.ref"() {sym_name = "factorial"} : () -> !lz.fn<(i64) -> i64>
+      %4 = "lz.ap"(%3, %2) : (!lz.fn<(i64) -> i64>, i64) -> !lz.thunk<i64>
+      %5 = "lz.force"(%4) : (!lz.thunk<i64>) -> i64
+      %6 = "lz.ref"() {sym_name = "mulSimpleInt"} : () -> !lz.fn<(i64, i64) -> i64>
+      %7 = "lz.ap"(%6, %arg1, %5) : (!lz.fn<(i64, i64) -> i64>, i64, i64) -> !lz.thunk<i64>
+      return %7 : !lz.thunk<i64>
+    }) {alt0 = 0 : i64, alt1 = @default} : (i64) -> i64
+    return %0 : i64
+    %1 = "lz.caseint"(%arg0) ( {
+    ^bb0(%arg1: i64):  // no predecessors
+    }) {alt0 = @SimpleInt} : (!lz.thunk<!lz.value>) -> i64
+    return %1 : i64
+}
+```
+
+```
+unable to find key: |<block argument>|
+```
+
+```
+owning block:
+^bb0(%arg1: i64):  // no predecessors
+```
+
+```
+owning op:
+%1 = "lz.caseint"(%arg0) ( {
+^bb0(%arg1: i64):  // no predecessors
+}) {alt0 = @SimpleInt} : (!lz.thunk<!lz.value>) -> i64
+```
+
+- I have no idea where it hallucinates a `%arg1` attached to the basic block?
+  Why does it do this?
+
+- I suspect it's because it comes from a `match fc of SimpleInt(..) => ... `
+  which means that we have a `SimpleInt` we are matching on, which tries to
+  generate an identifier for the case value. However, the fact that this
+  region argument is not printed now worries me.
+
+
 # Friday: Nov 11th
 - https://dl.acm.org/doi/abs/10.1145/99583.99590
 
