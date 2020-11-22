@@ -3,16 +3,38 @@ struct SimpleInt(i64);
 
 fn factorialRaw(i: i64) -> i64 {
     return match i {
-        0 => 1,
-        n => n * factorial(n-1)
+        0 => { return 1; },
+        n => {
+            let rec : !i64 = factorialRaw(n - 1);
+            return n * rec;
+        }
     };
 }
 
+// TODO: add syntactic sugar for unwraps.
+fn mulSimpleInt(i: SimpleInt, j: SimpleInt) -> SimpleInt {
+    return match i {
+        SimpleInt(ihash) => {
+            return match j {
+                SimpleInt(jash) => {
+                    return SimpleInt(i * j);
+                }
+            };
+        }
+    };
+}
+
+
 fn factorial(i: SimpleInt) -> SimpleInt {
-    let x : SimpleInt = match i {
-       SimpleInt(ihash) => match ihash {
-            0 => SimpleInt(1),
-            n => SimpleInt(n * factorial(n - 1))
+    return match i {
+       SimpleInt(ihash) => { 
+           return match ihash {
+                0 => { return SimpleInt(1); },
+                n => {
+                    let rec : !SimpleInt = factorial(ihash - 1);
+                    return mulSimpleInt(n, rec);
+                }
+            };
         }
     };
 }
@@ -20,5 +42,4 @@ fn factorial(i: SimpleInt) -> SimpleInt {
 fn main() -> SimpleInt {
     let x : SimpleInt = SimpleInt(5);
     return factorial(5);
-
 }
