@@ -42,13 +42,15 @@ using ll = long long;
 // struct string;
 struct Span;
 
+// HACK: useful for debugging! flushes after *each character write*. Of course
+// this is fucking stupid.
 struct OutFile {
    public:
     OutFile(FILE *f) : f(f){};
     ~OutFile() { fflush(f); }
 
-    void write(ll i) { fprintf(f, "%lld", i); }
-    void write(int i) { fprintf(f, "%d", i); }
+    void write(ll i) { fprintf(f, "%lld", i); fflush(f); }
+    void write(int i) { fprintf(f, "%d", i); fflush(f); }
 
     void write(char c) {
         fputc(c, f);
@@ -58,8 +60,9 @@ struct OutFile {
                 // fputc('|', f);
             }
         }
+        fflush(f);
     }
-    void write(const char *s) { while(*s != '\0') { write(*s++); } }
+    void write(const char *s) { while(*s != '\0') { write(*s++); }; fflush(f); }
 
     void indent() { indentLevel++; }
     void dedent() { indentLevel--; assert(indentLevel >= 0); }
@@ -778,7 +781,7 @@ struct CaseLHSTupleStruct : public CaseLHS {
     }
 };
 
-enum class ExprKind { Case, Identifier, Integer, FnCall, Binop };
+enum class ExprKind { Case, Identifier, Integer, FnCall, Binop, Construct };
 
 struct Expr {
     const Span span;
@@ -864,6 +867,27 @@ struct ExprBinop : public Expr {
 
 };
 
+struct ExprConstruct : public Expr {
+    Identifier constructorName;
+    vector<Expr *> args;
+
+    ExprConstruct(Span span, Identifier constructorName, vector<Expr *> args)
+        : Expr(span, ExprKind::Construct), constructorName(constructorName), args(args){};
+
+    OutFile &print(OutFile &out) const override {
+        out << "[construct "; out <<  constructorName.name  << " ";
+        for(int i = 0; i  < (ll)args.size(); ++i) {
+            args[i]->print(out);
+            if (i + 1 < (ll)args.size()) out << ", ";
+        }
+        out << " ]";
+        return out;
+    }
+
+  static bool classof(const Expr *e) {
+    return e->kind == ExprKind::Construct;
+  }
+};
 
 struct ExprFnCall : public Expr {
     Identifier fnname;
@@ -1038,7 +1062,7 @@ Expr *parseExprLeaf(Parser &in) {
     Loc lbegin = in.getCurrentLoc();
     std::optional<Identifier> ident = in.parseOptionalIdentifier();
     if (ident) {
-        // function call!
+        // function call or constructor!
         optional<Span> open;
         if ((open = in.parseOptionalOpenRoundBracket())) {
             if (in.parseOptionalCloseRoundBracket()) {
@@ -1056,8 +1080,14 @@ Expr *parseExprLeaf(Parser &in) {
                     break;
                 }
             }
-            return new ExprFnCall(Span(lbegin, in.getCurrentLoc()), *ident,
-                                  args);
+
+            if (islower(ident->name[0])) {
+                return new ExprFnCall(Span(lbegin, in.getCurrentLoc()), *ident,
+                                    args);
+            } else {
+                return new ExprConstruct(Span(lbegin, in.getCurrentLoc()), *ident,
+                                    args);
+            }
 
         } else {
             return new ExprIdentifier(ident->span, ident->name);
@@ -1344,6 +1374,18 @@ Module parseModule(Parser &in) {
     return m;
 }
 
+
+// == TYPE CHECKING / TYPE INFO GATHERING ==
+// == TYPE CHECKING / TYPE INFO GATHERING ==
+// == TYPE CHECKING / TYPE INFO GATHERING ==
+// == TYPE CHECKING / TYPE INFO GATHERING ==
+// == TYPE CHECKING / TYPE INFO GATHERING ==
+// == TYPE CHECKING / TYPE INFO GATHERING ==
+
+struct TypeContext  {
+    std::map<string, Constructor> constructors;
+};
+
 // == MLIR CODEGEN ==
 // == MLIR CODEGEN ==
 // == MLIR CODEGEN ==
@@ -1381,8 +1423,8 @@ mlir::Type mlirGenTypeOrValue(Type t, mlir::OpBuilder &builder) {
 
 
 // https://github.com/llvm/llvm-project/blob/76257422378e54dc2b59ff034e2955e9518e6c99/mlir/lib/Dialect/SCF/SCF.cpp
-void mlirGenBlock(const Block *b, mlir::OpBuilder &builder, ScopeFn scopeFn, ScopeValue scopeValue);
-mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder, ScopeFn scopeFn, ScopeValue scopeValue) {
+void mlirGenBlock(const Block *b, mlir::OpBuilder &builder, ScopeFn scopeFn, ScopeValue scopeValue, const TypeContext &tc);
+mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder, ScopeFn scopeFn, ScopeValue scopeValue, const TypeContext &tc) {
   cout << __FUNCTION__ << ":" << __LINE__ << "\n"; cout.indent();
   e->print(cout);
   cout.dedent();
@@ -1393,8 +1435,8 @@ mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder, ScopeFn scopeFn
   }
 
   if (const ExprBinop *bop = mlir::dyn_cast<ExprBinop>(e)) {
-    mlir::Value l = mlirGenExpr(bop->left, builder, scopeFn, scopeValue);
-    mlir::Value r= mlirGenExpr(bop->right, builder, scopeFn, scopeValue);
+    mlir::Value l = mlirGenExpr(bop->left, builder, scopeFn, scopeValue, tc);
+    mlir::Value r= mlirGenExpr(bop->right, builder, scopeFn, scopeValue, tc);
     switch (bop->binop) {
     case Binop::Sub:
       return builder.create<mlir::SubIOp>(builder.getUnknownLoc(), l, r);
@@ -1407,37 +1449,37 @@ mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder, ScopeFn scopeFn
 
   if(const ExprCase *c = mlir::dyn_cast<ExprCase>(e)) {
     assert(c->scrutinee);
-    mlir::Value scrutinee = mlirGenExpr(c->scrutinee, builder, scopeFn, scopeValue);
+    mlir::Value scrutinee = mlirGenExpr(c->scrutinee, builder, scopeFn, scopeValue, tc);
     llvm::SmallVector<mlir::Attribute, 4> lhss;
     llvm::SmallVector<mlir::Region*, 4> rhss;
 
     mlir::Type scrutineety = builder.getI64Type();
     mlir::Type retty = builder.getI64Type();
 
-    for(ExprCase::Alt a : c->alts) {
+    for(ExprCase::Alt alt : c->alts) {
       mlir::Attribute lhs;
       mlir::Region *r = nullptr;
 
 
-      if (CaseLHSInt *i = llvm::dyn_cast<CaseLHSInt>(a.first)) {
+      if (CaseLHSInt *i = llvm::dyn_cast<CaseLHSInt>(alt.first)) {
         cout << "CaseInt\n";
         lhs = builder.getI64IntegerAttr(i->value);
         r = new mlir::Region();
         r->push_back(new mlir::Block);
         mlir::Block &bodyBlock = r->front();
-        // bodyBlock.addArgument({scrutineety});
+        // ps.cpbodyBlock.addArgument({scrutineety});
         {
           mlir::OpBuilder nestedBuilder = builder;
           nestedBuilder.setInsertionPointToEnd(&bodyBlock);
           //  mlir::Value rhsval =  mlirGenExpr(a.second, nestedBuilder, scopeFn, scopeValue);
-          mlirGenBlock(a.second, nestedBuilder, scopeFn, scopeValue);
+          mlirGenBlock(alt.second, nestedBuilder, scopeFn, scopeValue, tc);
           //  nestedBuilder.create<mlir::ReturnOp>(builder.getUnknownLoc(), rhsval);
         }
       }
 
 
       // TODO: differentiate of if we are caseing on an int or something else
-      if (CaseLHSIdentifier *id = llvm::dyn_cast<CaseLHSIdentifier>(a.first)) {
+      if (CaseLHSIdentifier *id = llvm::dyn_cast<CaseLHSIdentifier>(alt.first)) {
         lhs = mlir::FlatSymbolRefAttr::get("default", builder.getContext());
         r = new mlir::Region();
         r->push_back(new mlir::Block);
@@ -1450,13 +1492,30 @@ mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder, ScopeFn scopeFn
           nestedBuilder.setInsertionPointToEnd(&bodyBlock);
           // mlir::Value rhsval =  mlirGenExpr(a.second, nestedBuilder, scopeFn, nestedScopeValue);
           // nestedBuilder.create<mlir::ReturnOp>(builder.getUnknownLoc(), rhsval);
-          mlirGenBlock(a.second, nestedBuilder, scopeFn, nestedScopeValue);
+          mlirGenBlock(alt.second, nestedBuilder, scopeFn, nestedScopeValue, tc);
         }
       }
 
-      if (CaseLHSTupleStruct *str = llvm::dyn_cast<CaseLHSTupleStruct>(a.first)) {
+      if (auto tuplestruct = llvm::dyn_cast<CaseLHSTupleStruct>(alt.first)) {
         cout << "caseLHSTupleStruct\n";
-        assert(false && "tuple struct");
+        lhs = mlir::FlatSymbolRefAttr::get(tuplestruct->name.name, 
+            builder.getContext());
+        r = new mlir::Region();
+        r->push_back(new mlir::Block);
+        mlir::Block &bodyBlock = r->front();
+        {
+            mlir::OpBuilder nestedBuilder = builder;
+            ScopeValue nestedScopeValue = scopeValue;
+            for(CaseLHS *lhs : tuplestruct->fields) {
+                assert(lhs->kind == CaseLHSKind::Identifier &&
+                    "unhandled case where tuple struct matches on a non-field. TODO: implement recursive caseing");
+                CaseLHSIdentifier *lhsFieldCase = llvm::cast<CaseLHSIdentifier>(lhs);
+                mlir::Type mlirFieldTy = builder.getI64Type(); // TODO: find out what the type of the field is.
+                mlir::BlockArgument arg = bodyBlock.addArgument(mlirFieldTy);
+                nestedScopeValue.insert(lhsFieldCase->ident, arg);
+            }
+            mlirGenBlock(alt.second, nestedBuilder, scopeFn, nestedScopeValue, tc);
+        }
       }
 
       assert(lhs && "unable to generate LHS of case");
@@ -1478,7 +1537,7 @@ mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder, ScopeFn scopeFn
     cout << "call :" << *call << "\n";
     llvm::SmallVector<mlir::Value, 4> args;
     for(Expr *e : call->args) {
-      args.push_back(mlirGenExpr(e, builder, scopeFn, scopeValue));
+      args.push_back(mlirGenExpr(e, builder, scopeFn, scopeValue, tc));
     }
 
     llvm::SmallVector<mlir::Type, 4> argTys;
@@ -1499,14 +1558,42 @@ mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder, ScopeFn scopeFn
     return builder.create<mlir::standalone::ApOp>(builder.getUnknownLoc(), vf, args);
   }
 
+if (auto *construct = mlir::dyn_cast<ExprConstruct>(e)) {
+    cout << "construct :" << *construct << "\n";
+    llvm::SmallVector<mlir::Value, 4> args;
+    for(Expr *arg : construct->args) {
+      args.push_back(mlirGenExpr(arg, builder, scopeFn, scopeValue, tc));
+    }
+
+    // need to lookup context.
+    llvm::SmallVector<mlir::Type, 4> argTys;
+    for(int i = 0; i < construct->args.size(); ++i) {
+      argTys.push_back(builder.getI64Type());
+    }
+
+    assert(args.size() == argTys.size() && "mismatched argument value and type list");
+    // creates an lz.value
+    return builder.create<mlir::standalone::HaskConstructOp>(builder.getUnknownLoc(),
+        construct->constructorName.name, args);
+    assert(false && "construct");
+    // assert(false && "Construct");
+    // mlir::Value vf =
+    //     builder.create<mlir::standalone::HaskRefOp>(builder.getUnknownLoc(),
+    //                                                 construct->constructorName.name,
+    //                                                 fnty);
+
+
+    // return builder.create<mlir::standalone::ApOp>(builder.getUnknownLoc(), vf, args);
+  }
+
   llvm::outs() << "\n====\n";
   e->print(cout);
   llvm::outs() << "\n====\n";
   assert(false && "unknown expression");
 }
-void mlirGenStmt(const Stmt *s, mlir::OpBuilder &builder, ScopeFn scopeFn, ScopeValue &scopeValue) {
+void mlirGenStmt(const Stmt *s, mlir::OpBuilder &builder, ScopeFn scopeFn, ScopeValue &scopeValue, const TypeContext &tc) {
   if (const StmtLet *l = mlir::dyn_cast<StmtLet>(s)) {
-    mlir::Value v = mlirGenExpr(l->rhs, builder, scopeFn, scopeValue);
+    mlir::Value v = mlirGenExpr(l->rhs, builder, scopeFn, scopeValue, tc);
     // generate a force expression if need be.
     if (l->type.forced) {
       v = builder.create<mlir::standalone::ForceOp>(builder.getUnknownLoc(), v);
@@ -1522,7 +1609,7 @@ void mlirGenStmt(const Stmt *s, mlir::OpBuilder &builder, ScopeFn scopeFn, Scope
   }
 
   if (const StmtReturn *r = mlir::dyn_cast<StmtReturn>(s)) {
-      mlir::Value v = mlirGenExpr(r->e, builder, scopeFn, scopeValue);
+      mlir::Value v = mlirGenExpr(r->e, builder, scopeFn, scopeValue, tc);
       builder.create<mlir::ReturnOp>(builder.getUnknownLoc(), v);
       return;
   }
@@ -1533,9 +1620,9 @@ void mlirGenStmt(const Stmt *s, mlir::OpBuilder &builder, ScopeFn scopeFn, Scope
   assert(false && "unknown statement type");
 }
 
-void mlirGenBlock(const Block *b, mlir::OpBuilder &builder, ScopeFn scopeFn, ScopeValue scopeValue) {
+void mlirGenBlock(const Block *b, mlir::OpBuilder &builder, ScopeFn scopeFn, ScopeValue scopeValue, const TypeContext &tc) {
   for(Stmt *s : b->stmts) {
-    mlirGenStmt(s, builder, scopeFn, scopeValue);
+    mlirGenStmt(s, builder, scopeFn, scopeValue, tc);
   }
 }
 
@@ -1555,7 +1642,7 @@ mlir::FuncOp mlirGenFnDeclaration(mlir::ModuleOp &mod, mlir::OpBuilder & builder
 }
 
 void mlirGenFnBody(mlir::FuncOp mlirfn, mlir::OpBuilder & builder, const Fn &f,
-                   ScopeFn scopeFn) {
+                   ScopeFn scopeFn, const TypeContext &tc) {
   mlirfn.addEntryBlock();
   builder.setInsertionPointToStart(&mlirfn.getRegion().front());
   ScopeValue scopeValue;
@@ -1564,7 +1651,7 @@ void mlirGenFnBody(mlir::FuncOp mlirfn, mlir::OpBuilder & builder, const Fn &f,
   }
 
   cout << "====f:" << "\n" << f << "\n";
-  mlirGenBlock(f.body, builder, scopeFn, scopeValue);
+  mlirGenBlock(f.body, builder, scopeFn, scopeValue, tc);
   llvm::errs() << "function body:\n" << mlirfn << "\n===\n";
 }
 
@@ -1580,9 +1667,10 @@ mlir::ModuleOp mlirGen(mlir::MLIRContext &ctx, const Module &m) {
   }
 
   theModule.dump();
-
+  TypeContext tc;
+  
   for (const Fn &f: m.fns) {
-    mlirGenFnBody(scopeFn.lookupExisting(f.name.name), builder, f, scopeFn);
+    mlirGenFnBody(scopeFn.lookupExisting(f.name.name), builder, f, scopeFn, tc);
   }
 
   return theModule;

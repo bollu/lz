@@ -235,7 +235,7 @@ void ApOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
 
   for (int i = 0; i < params.size(); ++i) {
     if (paramtys[i] != params[i].getType()) {
-      llvm::errs() << "type mismatch at parameter (" << i << ").\n"
+      llvm::errs() << "ERROR: type mismatch at parameter (" << i << ").\n"
         << "function parameter type: (" << paramtys[i] << ")\n"
         << "argument type: (" << params[i].getType() << ")\n";
     }

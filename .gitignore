@@ -87,4 +87,4 @@ build
 
 # CCLS cache for emacs LSP
 .ccls-cache
-
+.gdb_history
