@@ -1627,7 +1627,7 @@ public:
     IRType* surfaceToIRType(SurfaceType t) {
         auto it =  surface2ty.find(t.tyname.name);
         if (it == surface2ty.end()) {
-            llvm::errs() << "ERROR: unable to find type named: |" << t.tyname.name << "|\n";
+            printferr(t.span.begin, raw_input, "unable to find type named: |%s|", t.tyname.name.c_str());
             // TODO: find some way to smuggle |raw_input| here.
             // raw_input? from where the fuck am I supposed to get that to print an error? smh.
             assert(false && "unable to find type");
@@ -1635,9 +1635,9 @@ public:
         return it->second;
     }
 
-    void insertIRType(SurfaceType surfacet, IRType *t) {
-        assert(surface2ty.find(surfacet.tyname.name) == surface2ty.end());
-        surface2ty.insert({surfacet.tyname.name, t});
+    void insertIRType(std::string name, IRType *t) {
+        assert(surface2ty.find(name) == surface2ty.end());
+        surface2ty.insert({name, t});
     }
 
     void insertIdentifier(std::string name, IRType *t) {
@@ -1739,6 +1739,8 @@ void typeCheckBlock(TypeContext &tc, Block *b, IRType *retty) {
 
 TypeContext typeCheckModule(const char *raw_input, Module m) {
     TypeContext tcGlobal(raw_input);
+    tcGlobal.insertIRType("i64", new IRTypeInt(true));
+
     // insert all structs as single constructor enums
     for (Struct s : m.structs) {
         StructFieldsTuple *fields = mlir::cast<StructFieldsTuple>(s.fields);
