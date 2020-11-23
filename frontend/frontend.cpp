@@ -555,6 +555,8 @@ struct IRTypeTuple : public IRType {
 
 };
 
+// an enum is NOT A type, it's a *description* of a type. So it doesn't have a notion of
+// strictness (?)
 struct IRTypeEnum : public IRType {
     string name;
     map<string, IRTypeTuple> constructors;
@@ -1407,7 +1409,7 @@ struct Fn {
   const Identifier name;
   const vector<Argument> args;
   SurfaceType retty;
-  const Block *body;
+  Block *body;
 
   Fn(Span span, Identifier name, vector<Argument> args, SurfaceType retty, Block *body)
       : span(span), name(name), args(args), retty(retty), body(body){};
@@ -1451,17 +1453,21 @@ Fn parseFn(Parser &in) {
   return Fn(Span(lbegin, in.getCurrentLoc()), ident, params, retty, b);
 }
 
-enum class StructFieldsType { Tuple };
+enum class StructFieldsKind { Tuple };
 struct StructFields {
   Span span;
-  StructFieldsType type;
-  StructFields(Span span, StructFieldsType type) : span(span), type(type){};
+  const StructFieldsKind kind;
+  StructFields(Span span, StructFieldsKind kind) : span(span), kind(kind){};
 };
 
 struct StructFieldsTuple : public StructFields {
   StructFieldsTuple(Span span, vector<SurfaceType> types)
-      : StructFields(span, StructFieldsType::Tuple), types(types){};
+      : StructFields(span, StructFieldsKind::Tuple), types(types){};
   const vector<SurfaceType> types;
+
+  static bool classof(const StructFields *base) {
+      return base->kind == StructFieldsKind::Tuple;
+  }
 };
 
 StructFields *parseStructFields(Parser &in) {
@@ -1618,7 +1624,7 @@ public:
         return new IRTypeInt(strict);
     }
 
-    IRType* surfaceToIRType(SurfaceType t, bool forced) {
+    IRType* surfaceToIRType(SurfaceType t) {
         auto it =  surface2ty.find(t.tyname.name);
         if (it == surface2ty.end()) {
             llvm::errs() << "ERROR: unable to find type named: |" << t.tyname.name << "|\n";
@@ -1696,7 +1702,7 @@ void typeCheckExpr(TypeContext &tc, Expr *e) {
         // TODO: find better way to do this.
         IRTypeTuple *callArgTys = new IRTypeTuple(argTys, true);
         tc.assertTypeEquality(&defFnTy->argTys, callArgTys, fncall->span);
-        delete(callArgTys);        
+        delete(callArgTys);
         fncall->type = defFnTy->retty;
     }
 
@@ -1714,29 +1720,65 @@ void typeCheckExpr(TypeContext &tc, Expr *e) {
     assert(false && "unkown expression type");
 }
 
-TypeContext typeCheckModule(const char *raw_input, Module m) {
-    TypeContext tc(raw_input);
-    for (Struct s : m.structs) {
-
-    }
-    for(Fn f : m.fns) {
-        Scope<std::string, SurfaceType> name2ty;
-        for(Fn::Argument arg : f.args ) { name2ty.insert(arg.first.name, arg.second); }
-
-        // TODO: each block should have a scope; For now, fuck it.
-        for(Stmt *s : f.body->stmts) {
-            if (auto let = mlir::dyn_cast<StmtLet>(s)) {
-                typeCheckExpr(tc, let->rhs);
-            }
-
-            if (auto letbang = mlir::dyn_cast<StmtLetBang>(s)) {
-                typeCheckExpr(tc, letbang->rhs);
-                tc.insertIdentifier(letbang->name.name, letbang->rhs->type);
-            }
-            if (auto ret = mlir::dyn_cast<StmtReturn>(s)) {
-                typeCheckExpr(tc, ret->e);
-            }
+// type check a block, and ensure that all the returns have type retty
+void typeCheckBlock(TypeContext &tc, Block *b, IRType *retty) {
+    for(Stmt *s : b->stmts) {
+        if (auto let = mlir::dyn_cast<StmtLet>(s)) {
+            typeCheckExpr(tc, let->rhs);
         }
+
+        if (auto letbang = mlir::dyn_cast<StmtLetBang>(s)) {
+            typeCheckExpr(tc, letbang->rhs);
+            tc.insertIdentifier(letbang->name.name, letbang->rhs->type);
+        }
+        if (auto ret = mlir::dyn_cast<StmtReturn>(s)) {
+            typeCheckExpr(tc, ret->e);
+        }
+    }
+};
+
+TypeContext typeCheckModule(const char *raw_input, Module m) {
+    TypeContext tcGlobal(raw_input);
+    // insert all structs as single constructor enums
+    for (Struct s : m.structs) {
+        StructFieldsTuple *fields = mlir::cast<StructFieldsTuple>(s.fields);
+        vector<IRType *> fieldTys;
+        for(SurfaceType t : fields->types) {
+            fieldTys.push_back(tcGlobal.surfaceToIRType(t));
+        }
+
+        // a struct is an enum with a single constructor whose constructor
+        // name is the same as the type name.
+        map<string, IRTypeTuple> constructor2Type;
+        constructor2Type.insert({s.name.name, IRTypeTuple(fieldTys, true) });
+        // TODO: asking for strictness on Enum is sort of nonsensical?
+        tcGlobal.insertIdentifier(s.name.name, 
+            new IRTypeEnum(s.name.name, constructor2Type, true));
+    }
+
+    // insert all function types.
+    for(Fn f : m.fns) {
+        vector<IRType *> argTys;
+        for(Fn::Argument arg : f.args) {
+            argTys.push_back(tcGlobal.surfaceToIRType(arg.second));
+        }
+        IRType *retty = tcGlobal.surfaceToIRType(f.retty);
+        // global *functions* are indeed values, not thunks (?)
+        // Once again, we need a distinction between "types of stuff" and
+        // "types of values?"
+        tcGlobal.insertIdentifier(f.name.name, new IRTypeFn(IRTypeTuple(argTys, true), retty, true));
+    }
+
+    for(Fn f : m.fns) {
+        TypeContext tc = tcGlobal;
+        for(Fn::Argument arg : f.args) { 
+            tc.insertIdentifier(arg.first.name, tc.surfaceToIRType(arg.second));
+        }
+    
+        // TODO: each block should have a scope; For now, fuck it.
+        // we are in WHNF, so return type will always be a value.
+        IRType *retty = tc.surfaceToIRType(f.retty);
+        typeCheckBlock(tc, f.body, retty);
     }
 }
 
