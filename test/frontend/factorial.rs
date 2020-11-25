@@ -45,8 +45,10 @@ fn factorial(fac: SimpleInt) -> SimpleInt {
     };
 }
 
-fn main() -> SimpleInt {
+fn main() -> !i64 {
     let five : !SimpleInt = SimpleInt(5);
     let z : SimpleInt =  factorial(five);
-    return z;
+    return match z {
+        SimpleInt(zhash) => return zhash;
+    };
 }
