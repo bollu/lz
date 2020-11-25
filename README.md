@@ -28,6 +28,13 @@ Convert GHC Core to MLIR.
 
 - I need to allow my `Identifier` to keep pointers to values...
 
+OK, I'm using the program
+
+```hs
+module Main where (main)
+main = print (sum ([1..4040] :: [Int]))
+```
+
 # Mon, Nov 23
 
 - Function body: see that `%arg0` v/s `%arg1`:

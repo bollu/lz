@@ -1183,17 +1183,18 @@ struct ExprFnCall : public Expr {
   static bool classof(const Expr *e) { return e->kind == ExprKind::FnCall; }
 };
 
-enum class StmtKind { Return, Let }; //, LetBang };
+enum class StmtKind { Return, Let };
 
 struct Stmt {
   virtual void print(OutFile &out) const = 0;
-  Stmt(StmtKind Kind) : Kind(Kind){};
+  Stmt(Span span, StmtKind Kind) : span(span), Kind(Kind){};
   const StmtKind Kind;
+  Span span;
 };
 
 struct StmtReturn : public Stmt {
   Expr *e;
-  StmtReturn(TAKE Expr *e) : Stmt(StmtKind::Return), e(e){};
+  StmtReturn(Span span, TAKE Expr *e) : Stmt(span, StmtKind::Return), e(e){};
 
   void print(OutFile &o) const { o << "return " << *e; }
 
@@ -1204,8 +1205,8 @@ struct StmtLet : public Stmt {
   Identifier name;
   SurfaceType type;
   Expr *rhs;
-  StmtLet(Identifier name, SurfaceType type, Expr *rhs)
-      : Stmt(StmtKind::Let), name(name), type(type), rhs(rhs){};
+  StmtLet(Span span, Identifier name, SurfaceType type, TAKE Expr *rhs)
+      : Stmt(span, StmtKind::Let), name(name), type(type), rhs(rhs){};
   void print(OutFile &o) const {
     o << "let ";
     name.print(o);
@@ -1217,23 +1218,6 @@ struct StmtLet : public Stmt {
 
   static bool classof(const Stmt *S) { return S->Kind == StmtKind::Let; }
 };
-
-// struct StmtLetBang : public Stmt {
-//   Identifier name;
-//   SurfaceType type;
-//   Expr *rhs;
-//   StmtLetBang(Identifier name, SurfaceType type, Expr *rhs)
-//       : Stmt(StmtKind::LetBang), name(name), type(type), rhs(rhs){};
-//   void print(OutFile &o) const {
-//     o << "let! ";
-//     name.print(o);
-//     o << " : ";
-//     type.print(o);
-//     o << " = ";
-//     rhs->print(o);
-//   }
-//   static bool classof(const Stmt *S) { return S->Kind == StmtKind::LetBang; }
-// };
 
 struct Block {
   const vector<Stmt *> stmts;
@@ -1430,25 +1414,19 @@ Expr *parseExprTop(Parser &in) {
 }
 
 Stmt *parseStmt(Parser &in) {
+  Loc begin = in.getCurrentLoc();
   if (in.parseOptionalKeyword("return")) {
-    return new StmtReturn(parseExprTop(in));
+    Expr *e = parseExprTop(in);
+    return new StmtReturn(Span(begin, e->span.end), e);
   } else if (in.parseOptionalKeyword("let")) {
     Identifier name = in.parseIdentifier();
     in.parseColon();
     SurfaceType t = parseType(in);
     in.parseEqual();
     Expr *e = parseExprTop(in);
-    return new StmtLet(name, t, e);
+    return new StmtLet(Span(begin, e->span.end), name, t, e);
   }
-  //  else if (in.parseOptionalKeyword("letbang")) {
-  //   Identifier name = in.parseIdentifier();
-  //   in.parseColon();
-  //   SurfaceType t = parseType(in);
-  //   in.parseEqual();
-  //   Expr *e = parseExprTop(in);
-  //   return new StmtLetBang(name, t, e);
-  // }
-
+  
   in.addErrAtCurrentLoc("expected statement");
   exit(1);
 }
@@ -1969,17 +1947,12 @@ void typeCheckBlock(TypeContext tc, Block *b) {
       } else {
         tc.assertNonStrict(let->rhs->type, let->rhs->span);
       }
+      IRType *declaredty = tc.lookupTypeName(let->type.tyname);
+      tc.assertTypeEquality(declaredty, let->rhs->type, let->span);
       tc.insertIdentifier(let->name, let->rhs->type);
       continue;
     }
 
-    // if (auto letbang = mlir::dyn_cast<StmtLetBang>(s)) {
-    //   typeCheckExpr(tc, letbang->rhs);
-    //   tc.insertIdentifier(letbang->name, letbang->rhs->type);
-    //   tc.assertStrict(letbang->rhs->type, letbang->rhs->span);
-    //   continue;
-
-    // }
     if (auto ret = mlir::dyn_cast<StmtReturn>(s)) {
       typeCheckExpr(tc, ret->e);
       assert(ret->e->type);
@@ -2352,10 +2325,6 @@ void mlirGenStmt(const Stmt *s, mlir::OpBuilder &builder, ScopeFn scopeFn,
     scopeValue.insert(l->name.name, v);
     return;
   }
-
-  // if (const StmtLetBang *l = mlir::dyn_cast<StmtLetBang>(s)) {
-  //   assert(false && "stmt letbang");
-  // }
 
   if (const StmtReturn *r = mlir::dyn_cast<StmtReturn>(s)) {
     mlir::Value v = mlirGenExpr(r->e, builder, scopeFn, scopeValue, tc);
