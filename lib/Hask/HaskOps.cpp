@@ -225,25 +225,29 @@ void ApOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
 
   // hack! we need to construct the type properly.
   state.addOperands(fn);
-  assert(fn.getType().isa<HaskFnType>());
-  HaskFnType fnty = fn.getType().cast<HaskFnType>();
+  assert(fn.getType().isa<FunctionType>());
+  FunctionType fnty = fn.getType().cast<FunctionType>();
 
-  std::vector<Type> paramtys = fnty.getInputTypes();
-  Type retty = fnty.getResultType();
-
-  assert(params.size() == paramtys.size());
+  assert(params.size() == fnty.getNumInputs());
+  assert(fnty.getNumResults() == 1);
 
   for (int i = 0; i < params.size(); ++i) {
-    if (paramtys[i] != params[i].getType()) {
+    if (fnty.getInput(i) != params[i].getType()) {
       llvm::errs() << "ERROR: type mismatch at parameter (" << i << ").\n"
-        << "function parameter type: (" << paramtys[i] << ")\n"
+        << "function parameter type: (" << fnty.getInput(i) << ")\n"
         << "argument type: (" << params[i].getType() << ")\n";
+      llvm::errs() << "function: " << fn << "\n";
+      llvm::errs() << "arguments: (";
+      for(Value p : params) {
+        llvm::errs() << p << " ";
+      }
+      llvm::errs() << ")";
     }
-    assert(paramtys[i] == params[i].getType());
+    assert(fnty.getInput(i) == params[i].getType());
   }
 
   state.addOperands(params);
-  state.addTypes(builder.getType<ThunkType>(fnty.getResultType()));
+  state.addTypes(builder.getType<ThunkType>(fnty.getResult(0)));
 };
 
 // === APEAGEROP OP ===

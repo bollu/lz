@@ -5,7 +5,6 @@
 #include <string.h>
 
 #include <optional>
-#include <vector>
 
 // dialect includes
 #include "Hask/HaskDialect.h"
@@ -445,7 +444,6 @@ struct Error {
 std::string substring(const std::string &s, Span span) {
   assert(span.end.si - span.begin.si >= 0);
   std::string sub = s.substr(span.begin.si, span.end.si - span.begin.si);
-  cout << "substring: |" << sub << "|\n";
   return sub;
 }
 
@@ -461,6 +459,9 @@ enum class IRTypeKind { Int, Enum, Tuple, Fn };
 struct IRType {
   IRType(IRTypeKind kind, bool strict) : kind(kind), strict(strict){};
   const IRTypeKind kind;
+  // TODO: convert into a virtual method. Derived classes can choose
+  // if they want to expose a lazy version of their type or not.
+  // Tbh this whole thing is unclear if it's correct or not.
   bool strict;
 
   virtual void print(OutFile &f) const = 0;
@@ -1280,7 +1281,7 @@ CaseLHS *parseCaseLHS(Parser &in) {
   }
 
   // <ident>  |  <struct-name> (<struct-fields>)
-  
+
   Identifier ident = in.parseIdentifier();
   optional<Span> structFieldRoundOpen;
   structFieldRoundOpen = in.parseOptionalOpenRoundBracket();
@@ -1472,10 +1473,11 @@ struct Fn {
   const vector<Argument> args;
   SurfaceType retty;
   Block *body;
+  IRTypeFn *type;
 
   Fn(Span span, Identifier name, vector<Argument> args, SurfaceType retty,
      Block *body)
-      : span(span), name(name), args(args), retty(retty), body(body){};
+      : span(span), name(name), args(args), retty(retty), body(body), type(nullptr) {};
 
   OutFile &print(OutFile &out) const {
     out << name.name << "(";
@@ -1486,6 +1488,7 @@ struct Fn {
       }
     }
     out << ")";
+    out << " -> "; this->retty.print(out); out << " ";
     body->print(out);
     return out;
   }
@@ -1558,6 +1561,7 @@ struct Struct {
   const Identifier name;
   StructFields *fields;
 
+  // IRTypeEnum *type = nullptr;
   Struct(Span span, Identifier name, StructFields *fields)
       : span(span), name(name), fields(fields){};
 };
@@ -1726,7 +1730,7 @@ public:
     assert(false && "expected integer type");
    }
 
-  IRType *lookupValue(Identifier ident) {
+  IRType *lookupValue(Identifier ident) const {
     auto it = ident2ty.find(ident.name);
 
     if (it == ident2ty.end()) {
@@ -1738,14 +1742,14 @@ public:
   }
 
   template <typename T>
-  T *lookupValueOfType(Identifier ident, std::string error) {
+  T *lookupValueOfType(Identifier ident, std::string error) const {
     IRType *t = lookupValue(ident);
     return this->cast<T>(t, ident.span, error);
   }
 
   IRTypeInt *getIntType(bool strict) { return new IRTypeInt(strict); }
 
-  IRType *lookupTypeName(Identifier typenam) {
+  IRType *lookupTypeName(Identifier typenam) const {
     auto it = surface2ty.find(typenam.name);
     if (it == surface2ty.end()) {
       printferr(typenam.span.begin, raw_input, "unable to find type named: |%s|\n",
@@ -1759,7 +1763,7 @@ public:
   }
 
     template<typename T>
-    T *lookupTypeNameOfType(Identifier typenam) {
+    T *lookupTypeNameOfType(Identifier typenam) const {
       T* result = mlir::dyn_cast<T>(lookupTypeName(typenam));
       if (result) { return result; }
       assert(false && "unable to cast type to expected type");
@@ -1778,10 +1782,10 @@ public:
 
     assert(ident2ty.find(name.name) == ident2ty.end());
     ident2ty.insert({name.name, t});
-    
+
   }
 
-  template <typename T> T *cast(IRType *base, Span span, std::string error) {
+  template <typename T> T *cast(IRType *base, Span span, std::string error) const {
     if (T::classof(base)) {
       return (T *)base;
     }
@@ -1808,7 +1812,7 @@ void typeCheckExpr(TypeContext &tc, Expr *e) {
     e->type = tc.getIntType(true);
     return;
   }
-  
+
   if (auto case_ = mlir::dyn_cast<ExprCase>(e)) {
     typeCheckExpr(tc, case_->scrutinee);
 
@@ -1879,9 +1883,8 @@ void typeCheckExpr(TypeContext &tc, Expr *e) {
       for (Expr *arg : construct->args) {
         typeCheckExpr(tc, arg);
       }
-      cerr << "Type checking: |"; construct->print(cerr); cerr << "|\n";
       IRTypeEnum *enumty = tc.lookupTypeNameOfType<IRTypeEnum>(construct->constructorName);
-      // IRTypeEnum *enumty = tc.lookupValueOfType<IRTypeEnum>(construct->constructorName, 
+      // IRTypeEnum *enumty = tc.lookupValueOfType<IRTypeEnum>(construct->constructorName,
       //                           "expected constructor to be an enumeration type");
 
       auto it = enumty->constructors.find(construct->constructorName.name);
@@ -1963,7 +1966,7 @@ void typeCheckBlock(TypeContext tc, Block *b) {
       assert(ret->e->type);
       if (b->type) {
         tc.assertTypeEquality(b->type, ret->e->type, ret->e->span);
-      } else {  
+      } else {
         b->type = ret->e->type;
         assert(b->type);
       }
@@ -1976,7 +1979,8 @@ void typeCheckBlock(TypeContext tc, Block *b) {
   if (!b->type) { tc.assertVoidBlock(b->span); }
 };
 
-TypeContext typeCheckModule(const char *raw_input, Module m) {
+// NOTE: this MUTATES THE MODULE! by changing `Fn.type` and `Expr.type` fields.-
+TypeContext typeCheckModule(const char *raw_input, Module &m) {
   TypeContext tcGlobal(raw_input);
   tcGlobal.insertIRType("i64", new IRTypeInt(true));
 
@@ -1998,22 +2002,23 @@ TypeContext typeCheckModule(const char *raw_input, Module m) {
     // add all constructors into the scope of the typechecker.
   }
 
-  // insert all function types.
-  for (Fn f : m.fns) {
+  // generate  all function types.
+  for (Fn &f : m.fns) {
     vector<IRType *> argTys;
     for (Fn::Argument arg : f.args) {
       argTys.push_back(tcGlobal.lookupTypeName(arg.second.tyname));
     }
-    IRType *retty = tcGlobal.lookupTypeName(f.retty.tyname)->clone(false);
+    IRType *retty = tcGlobal.lookupTypeName(f.retty.tyname);
 
     // global *functions* are indeed values, not thunks (?)
     // Once again, we need a distinction between "types of stuff" and
     // "types of values?"
-    tcGlobal.insertIdentifier(
-        f.name, new IRTypeFn(IRTypeTuple(argTys, true), retty, true));
+    IRTypeFn *fnty =  new IRTypeFn(IRTypeTuple(argTys, true), retty, true);
+    f.type = fnty;
+    tcGlobal.insertIdentifier(f.name, fnty);
   }
 
-  for (Fn f : m.fns) {
+  for (Fn &f : m.fns) {
     TypeContext tc = tcGlobal;
     for (Fn::Argument arg : f.args) {
       tc.insertIdentifier(arg.first, tc.lookupTypeName(arg.second.tyname));
@@ -2038,39 +2043,71 @@ using ScopeFn = Scope<std::string, mlir::FuncOp>;
 using ScopeValue = Scope<std::string, mlir::Value>;
 
 using SymbolTable = map<std::string, mlir::Value>;
-mlir::Type mlirGenTypeOrDefault(SurfaceType t, mlir::OpBuilder &builder,
-                                mlir::Type defaultty) {
-  //  return builder.getI64Type();
+// mlir::Type mlirGenTypeOrDefault(SurfaceType t, mlir::OpBuilder &builder,
+//                                 mlir::Type defaultty) {
+//   //  return builder.getI64Type();
 
-  if (t.tyname.name == ("i64")) {
-    return builder.getI64Type();
+//   if (t.tyname.name == ("i64")) {
+//     return builder.getI64Type();
+//   }
+//   return defaultty;
+// }
+
+// mlir::Type mlirGenTypeOrThunk(SurfaceType t, mlir::OpBuilder &builder) {
+//   auto valty = mlir::standalone::ValueType::get(builder.getContext());
+//   auto thunkty = mlir::standalone::ThunkType::get(builder.getContext(), valty);
+
+//   return mlirGenTypeOrDefault(t, builder, thunkty);
+// }
+
+// mlir::Type mlirGenTypeOrValue(SurfaceType t, mlir::OpBuilder &builder) {
+//   auto valty = mlir::standalone::ValueType::get(builder.getContext());
+//   return mlirGenTypeOrDefault(t, builder, valty);
+// }
+mlir::Type mlirGenType(mlir::OpBuilder &builder, const IRType *ty);
+
+
+mlir::FunctionType mlirGenTypeFn(mlir::OpBuilder &builder, const IRTypeFn *fnty) {
+  vector<mlir::Type> argtys;
+  for(IRType *argty : fnty->argTys.types) {
+    argtys.push_back(mlirGenType(builder, argty));
   }
-  return defaultty;
+
+  mlir::FunctionType out =  builder.getFunctionType(argtys,
+      mlirGenType(builder, fnty->retty));
+  assert(fnty->strict && "cannot handle lazy function");
+  return out;
 }
 
-mlir::Type mlirGenTypeOrThunk(SurfaceType t, mlir::OpBuilder &builder) {
-  auto valty = mlir::standalone::ValueType::get(builder.getContext());
-  auto thunkty = mlir::standalone::ThunkType::get(builder.getContext(), valty);
+mlir::Type mlirGenType(mlir::OpBuilder &builder, const IRType *ty) {
+  mlir::Type out;
+  if (const IRTypeFn *fnty = mlir::dyn_cast<IRTypeFn>(ty)) {
+    return mlirGenTypeFn(builder, fnty);
+  }
+  if (const IRTypeInt *i = mlir::dyn_cast<IRTypeInt>(ty)) {
+    out = builder.getI64Type();
+    if (!ty->strict) { out = mlir::standalone::ThunkType::get(builder.getContext(), out); }
+    return out;
+  }
 
-  return mlirGenTypeOrDefault(t, builder, thunkty);
+  if (const IRTypeEnum *enumty = mlir::dyn_cast<IRTypeEnum>(ty)) {
+    out = mlir::standalone::ValueType::get(builder.getContext());
+    if (!ty->strict) { out = mlir::standalone::ThunkType::get(builder.getContext(), out); }
+    return out;
+  }
+
+  if (const IRTypeTuple *tuplety = mlir::dyn_cast<IRTypeTuple>(ty)) {
+    assert(false && "cannot code generate tuples.");
+  }
+
+  assert(false && "unknown type");
 }
-
-mlir::Type mlirGenTypeOrValue(SurfaceType t, mlir::OpBuilder &builder) {
-  auto valty = mlir::standalone::ValueType::get(builder.getContext());
-  return mlirGenTypeOrDefault(t, builder, valty);
-}
-
 // https://github.com/llvm/llvm-project/blob/76257422378e54dc2b59ff034e2955e9518e6c99/mlir/lib/Dialect/SCF/SCF.cpp
 void mlirGenBlock(const Block *b, mlir::OpBuilder &builder, ScopeFn scopeFn,
                   ScopeValue &scopeValue, const TypeContext &tc);
 mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder,
                         ScopeFn scopeFn, ScopeValue &scopeValue,
                         const TypeContext &tc) {
-  cout << __FUNCTION__ << ":" << __LINE__ << "\n";
-  cout.indent();
-  e->print(cout);
-  cout.dedent();
-  cout << "\n";
   if (const ExprInteger *i = mlir::dyn_cast<ExprInteger>(e)) {
     return builder.create<mlir::ConstantIntOp>(builder.getUnknownLoc(),
                                                i->value, builder.getI64Type());
@@ -2104,7 +2141,6 @@ mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder,
       mlir::Region *r = nullptr;
 
       if (CaseLHSInt *i = llvm::dyn_cast<CaseLHSInt>(alt.first)) {
-        cout << "CaseInt\n";
         lhs = builder.getI64IntegerAttr(i->value);
         r = new mlir::Region();
         r->push_back(new mlir::Block);
@@ -2112,11 +2148,7 @@ mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder,
         {
           mlir::OpBuilder nestedBuilder = builder;
           nestedBuilder.setInsertionPointToEnd(&bodyBlock);
-          //  mlir::Value rhsval =  mlirGenExpr(a.second, nestedBuilder,
-          //  scopeFn, scopeValue);
           mlirGenBlock(alt.second, nestedBuilder, scopeFn, scopeValue, tc);
-          //  nestedBuilder.create<mlir::ReturnOp>(builder.getUnknownLoc(),
-          //  rhsval);
         }
       }
 
@@ -2127,7 +2159,6 @@ mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder,
         r = new mlir::Region();
         r->push_back(new mlir::Block);
         mlir::Block &bodyBlock = r->front();
-        cout << "caseLHSIdentifier\n";
         mlir::OpBuilder nestedBuilder = builder;
         ScopeValue nestedScopeValue = scopeValue;
         nestedScopeValue.insert(id->ident.name, scrutinee);
@@ -2136,7 +2167,6 @@ mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder,
       }
 
       if (auto tuplestruct = llvm::dyn_cast<CaseLHSTupleStruct>(alt.first)) {
-        cout << "caseLHSTupleStruct\n";
         lhs = mlir::FlatSymbolRefAttr::get(tuplestruct->name.name,
                                            builder.getContext());
         r = new mlir::Region();
@@ -2174,67 +2204,50 @@ mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder,
   }
   if (const ExprIdentifier *id = mlir::dyn_cast<ExprIdentifier>(e)) {
     mlir::Value identVal = scopeValue.lookupExisting(id->name);
-    llvm::outs() << "ident: |" << identVal << "|\n";
     return identVal;
   }
 
   if (const ExprFnCall *call = mlir::dyn_cast<ExprFnCall>(e)) {
-    cout << "call :" << *call << "\n";
-    llvm::SmallVector<mlir::Value, 4> args;
-    for (Expr *e : call->args) {
-      args.push_back(mlirGenExpr(e, builder, scopeFn, scopeValue, tc));
+    llvm::SmallVector<mlir::Value, 4>  args;
+    for(Expr *arg : call->args) {
+      args.push_back(mlirGenExpr(arg, builder, scopeFn, scopeValue, tc));
     }
-
-    llvm::SmallVector<mlir::Type, 4> argTys;
-    for (int i = 0; i < call->args.size(); ++i) {
-      argTys.push_back(builder.getI64Type());
-    }
-
-    assert(args.size() == argTys.size() &&
-           "mismatched argument value and type list");
 
     mlir::Type retty = builder.getI64Type();
-    mlir::standalone::HaskFnType fnty =
-        mlir::standalone::HaskFnType::get(builder.getContext(), argTys, retty);
-    mlir::Value vf = builder.create<mlir::standalone::HaskRefOp>(
-        builder.getUnknownLoc(), call->fnname.name, fnty);
 
-    return builder.create<mlir::standalone::ApOp>(builder.getUnknownLoc(), vf,
-                                                  args);
+    IRTypeFn *fnty = tc.lookupValueOfType<IRTypeFn>(call->fnname,
+      "expected function to have function type");
+    mlir::FunctionType mlirfnty = mlirGenTypeFn(builder, fnty);
+    mlir::Value vf = builder.create<mlir::standalone::HaskRefOp>(
+        builder.getUnknownLoc(), call->fnname.name, mlirfnty);
+    mlir::Value out =  builder.create<mlir::standalone::ApOp>(builder.getUnknownLoc(), vf, args);
+    if (call->strict) {
+       out = builder.create<mlir::standalone::ForceOp>(builder.getUnknownLoc(), out);
+    }
+    return out;
   }
 
   if (auto *construct = mlir::dyn_cast<ExprConstruct>(e)) {
-    cout << "construct :" << *construct << "\n";
     llvm::SmallVector<mlir::Value, 4> args;
     for (Expr *arg : construct->args) {
       args.push_back(mlirGenExpr(arg, builder, scopeFn, scopeValue, tc));
     }
 
     // need to lookup context.
-    llvm::SmallVector<mlir::Type, 4> argTys;
-    for (int i = 0; i < construct->args.size(); ++i) {
-      argTys.push_back(builder.getI64Type());
-    }
+    // llvm::SmallVector<mlir::Type, 4> argTys;
+    // for (int i = 0; i < construct->args.size(); ++i) {
+    //   argTys.push_back(mlirGenType(builder, construct->args[i]->type));
+    // }
 
-    assert(args.size() == argTys.size() &&
-           "mismatched argument value and type list");
     // creates an lz.value
     return builder.create<mlir::standalone::HaskConstructOp>(
         builder.getUnknownLoc(), construct->constructorName.name, args);
     assert(false && "construct");
-    // assert(false && "Construct");
-    // mlir::Value vf =
-    //     builder.create<mlir::standalone::HaskRefOp>(builder.getUnknownLoc(),
-    //                                                 construct->constructorName.name,
-    //                                                 fnty);
-
-    // return builder.create<mlir::standalone::ApOp>(builder.getUnknownLoc(),
-    // vf, args);
   }
 
-  llvm::outs() << "\n====\n";
-  e->print(cout);
-  llvm::outs() << "\n====\n";
+  llvm::errs() << "\n====\n";
+  e->print(cerr);
+  llvm::errs() << "\n====\n";
   assert(false && "unknown expression");
 }
 void mlirGenStmt(const Stmt *s, mlir::OpBuilder &builder, ScopeFn scopeFn,
@@ -2242,9 +2255,6 @@ void mlirGenStmt(const Stmt *s, mlir::OpBuilder &builder, ScopeFn scopeFn,
   if (const StmtLet *l = mlir::dyn_cast<StmtLet>(s)) {
     mlir::Value v = mlirGenExpr(l->rhs, builder, scopeFn, scopeValue, tc);
     // generate a force expression if need be.
-    if (l->type.strict) {
-      v = builder.create<mlir::standalone::ForceOp>(builder.getUnknownLoc(), v);
-    }
     scopeValue.insert(l->name.name, v);
     return;
   }
@@ -2259,9 +2269,9 @@ void mlirGenStmt(const Stmt *s, mlir::OpBuilder &builder, ScopeFn scopeFn,
     return;
   }
 
-  cout << "\n===\n";
-  s->print(cout);
-  cout << "\n===\n";
+  cerr << "\n===\n";
+  s->print(cerr);
+  cerr << "\n===\n";
   assert(false && "unknown statement type");
 }
 
@@ -2272,19 +2282,14 @@ void mlirGenBlock(const Block *b, mlir::OpBuilder &builder, ScopeFn scopeFn,
   }
 }
 
-mlir::FuncOp mlirGenFnDeclaration(mlir::ModuleOp &mod, mlir::OpBuilder &builder,
+mlir::FuncOp mlirGenFnDeclaration(const TypeContext &tc, mlir::ModuleOp &mod, mlir::OpBuilder &builder,
                                   const Fn &f) {
   auto location = builder.getUnknownLoc(); // loc(proto.loc());
   llvm::SmallVector<mlir::Type, 4> argtys;
 
-  for (int i = 0; i < f.args.size(); ++i) {
-    argtys.push_back(mlirGenTypeOrThunk(f.args[i].second, builder));
-  }
 
-  llvm::SmallVector<mlir::Type, 4> rettys = {
-      mlirGenTypeOrValue(f.retty, builder)};
   mlir::FuncOp fn = mlir::FuncOp::create(
-      location, f.name.name, builder.getFunctionType(argtys, rettys));
+      location, f.name.name, mlirGenTypeFn(builder, f.type));
   return fn;
 }
 
@@ -2297,11 +2302,7 @@ void mlirGenFnBody(mlir::FuncOp mlirfn, mlir::OpBuilder &builder, const Fn &f,
     scopeValue.insert(f.args[i].first.name, mlirfn.getArgument(i));
   }
 
-  cout << "====f:"
-       << "\n"
-       << f << "\n";
   mlirGenBlock(f.body, builder, scopeFn, scopeValue, tc);
-  llvm::errs() << "function body:\n" << mlirfn << "\n===\n";
 }
 
 // https://github.com/llvm/llvm-project/blob/master/mlir/examples/toy/Ch2/mlir/MLIRGen.cpp#L57
@@ -2310,8 +2311,9 @@ mlir::ModuleOp mlirGen(mlir::MLIRContext &ctx, const TypeContext &tc,
   mlir::OpBuilder builder(&ctx);
   mlir::ModuleOp theModule = mlir::ModuleOp::create(builder.getUnknownLoc());
   ScopeFn scopeFn;
+
   for (const Fn &f : m.fns) {
-    mlir::FuncOp fn = mlirGenFnDeclaration(theModule, builder, f);
+    mlir::FuncOp fn = mlirGenFnDeclaration(tc, theModule, builder, f);
     theModule.push_back(fn);
     scopeFn.insert(f.name.name, fn);
   }
@@ -2337,7 +2339,7 @@ int main(int argc, const char *const *argv) {
 
   FILE *f = fopen(argv[1], "rb");
   if (f == nullptr) {
-    cout << "unable to open file: |" << argv[1] << "|\n";
+    cerr << "unable to open file: |" << argv[1] << "|\n";
     return 1;
   }
   fseek(f, 0, SEEK_END);

@@ -24,6 +24,10 @@ Convert GHC Core to MLIR.
 
 # Log:  [newest] to [oldest]
 
+# Wednesday, Nov 25
+
+- I need to allow my `Identifier` to keep pointers to values...
+
 # Mon, Nov 23
 
 - Function body: see that `%arg0` v/s `%arg1`:
