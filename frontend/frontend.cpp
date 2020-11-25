@@ -261,7 +261,7 @@ void vprintferrspan(Span span, const char *raw_input, const char *fmt, va_list a
         ll i = 0;
         while(1) {
           if(span.begin.si - i == 0) { break; }      
-          if(raw_input[span.begin.si - i] == '\n') { break; }      
+          if(raw_input[span.begin.si - i] == '\n') { i--; break; }      
           if (i > CONTEXTLEN) { break; }
           i++;
         }
@@ -271,8 +271,8 @@ void vprintferrspan(Span span, const char *raw_input, const char *fmt, va_list a
       const ll nchars_fwd = ({
         ll i = 0;
         while(1) {
-          if(span.begin.si + i == 0) { break; }      
-          if(raw_input[span.begin.si + i] == '\n') { break; }      
+          if(raw_input[span.begin.si + i] == 0) { break; }      
+          if(raw_input[span.begin.si + i] == '\n') { i--; break; }      
           if (i > CONTEXTLEN) { break; }
           i++;
         }
@@ -284,11 +284,16 @@ void vprintferrspan(Span span, const char *raw_input, const char *fmt, va_list a
     }
 
 
-    cursorstr += std::string(raw_input+span.begin.si-nchars_back, raw_input+span.end.si+nchars_fwd);
-    errstr += std::string('^', span.end.si+nchars_fwd - (span.begin.si-nchars_back));
+    errstr += std::string(raw_input+span.begin.si-nchars_back, raw_input+span.end.si+nchars_fwd);
+    cursorstr += std::string(nchars_back, ' ');
+    cursorstr += std::string(span.end.si - span.begin.si, '^');
+    cursorstr += std::string(nchars_fwd, ' ');
+
+    
     if (nchars_fwd > CONTEXTLEN) {
       cursorstr += "..."; errstr += "...";
     }
+
     cerr << "\n==\n"
        << outstr << "\n"
        << span.begin.filename << span << "\n"
@@ -366,10 +371,10 @@ void vprintferr(Loc loc, const char *raw_input, const char *fmt, va_list args) {
   free(outstr);
 }
 
-void printferr(Loc loc, const char *raw_input, const char *fmt, ...) {
+void printferr(Span span, const char *raw_input, const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
-  vprintferr(loc, raw_input, fmt, args);
+  vprintferrspan(span, raw_input, fmt, args);
   va_end(args);
 }
 
@@ -498,11 +503,11 @@ Loc Loc::nextstr(const string &s) const {
     return cur;
 }
 */
-struct Error {
+struct ParseError {
   std::string errmsg;
-  Loc loc;
+  Span span;
 
-  Error(Loc loc, std::string errmsg) : errmsg(errmsg), loc(loc){};
+  ParseError(Span span, std::string errmsg) : errmsg(errmsg), span(span){};
 };
 
 std::string substring(const std::string &s, Span span) {
@@ -551,7 +556,7 @@ struct IRTypeErrorKindMismatch : public IRTypeError {
   IRTypeErrorKindMismatch(const IRType *defn, const IRType *use)
       : IRTypeError(defn, use){};
   virtual void print(const char *raw_input, Span span) {
-    printferr(span.begin, raw_input, "type kind mismatch\n");
+    printferr(span, raw_input, "type kind mismatch\n");
     cerr << "expected: ";
     defn->print(cerr);
     cerr << "\n";
@@ -565,7 +570,7 @@ struct IRTypeErrorTupleArityMismatch : public IRTypeError {
   IRTypeErrorTupleArityMismatch(const IRType *defn, const IRType *use)
       : IRTypeError(defn, use){};
   virtual void print(const char *raw_input, Span span) {
-    printferr(span.begin, raw_input, "tuple arity mismatch\n");
+    printferr(span, raw_input, "tuple arity mismatch\n");
     cerr << "expected: ";
     defn->print(cerr);
     cerr << "\n";
@@ -582,7 +587,7 @@ struct IRTypeErrorEnumMissingConstructor : public IRTypeError {
   std::string name;
 
   virtual void print(const char *raw_input, Span span) {
-    printferr(span.begin, raw_input, "enum missing constructor: |%s|\n",
+    printferr(span, raw_input, "enum missing constructor: |%s|\n",
               name.c_str());
     cerr << "expected: ";
     defn->print(cerr);
@@ -599,7 +604,7 @@ struct IRTypeErrorEnumExtraConstructor : public IRTypeError {
   std::string name;
 
   virtual void print(const char *raw_input, Span span) {
-    printferr(span.begin, raw_input, "enum has extra constructor: |%s|\n",
+    printferr(span, raw_input, "enum has extra constructor: |%s|\n",
               name.c_str());
     cerr << "expected: ";
     defn->print(cerr);
@@ -828,7 +833,7 @@ struct Parser {
   pair<Span, ll> parseInteger() {
     optional<pair<Span, ll>> out = parseOptionalInteger();
     if (!out) {
-      this->addErr(Error(l, "unble to find integer"));
+      this->addErr(ParseError(Span(l, l), "unble to find integer"));
       exit(1);
     }
     return *out;
@@ -879,7 +884,7 @@ struct Parser {
       return *span;
     }
 
-    addErr(Error(l, "expected sigil> |" + sigil + "|"));
+    addErr(ParseError(Span(l, l), "expected sigil> |" + sigil + "|"));
     exit(1);
   }
 
@@ -889,7 +894,7 @@ struct Parser {
       return *span;
     }
 
-    addErr(Error(l, "expected sigil: |" + sigil + "|"));
+    addErr(ParseError(Span(l, l), "expected sigil: |" + sigil + "|"));
     exit(1);
   }
 
@@ -923,7 +928,7 @@ struct Parser {
     if (ms.has_value()) {
       return *ms;
     }
-    addErr(Error(l, "expected identifier"));
+    addErr(ParseError(Span(l, l), "expected identifier"));
     exit(1);
   }
 
@@ -986,16 +991,16 @@ struct Parser {
     if (ms) {
       return *ms;
     }
-    addErr(Error(l, "expected |" + keyword + "|"));
+    addErr(ParseError(Span(l, l), "expected |" + keyword + "|"));
     exit(1);
   }
 
-  void addErr(Error e) {
+  void addErr(ParseError e) {
     errs.push_back(e);
-    printferr(e.loc, s.c_str(), e.errmsg.c_str());
+    printferr(e.span, s.c_str(), e.errmsg.c_str());
   }
 
-  void addErrAtCurrentLoc(string err) { addErr(Error(l, err)); }
+  void addErrAtCurrentLoc(string err) { addErr(ParseError(Span(l, l), err)); }
 
   bool eof() {
     eatWhitespace();
@@ -1024,7 +1029,7 @@ struct Parser {
 private:
   const string s;
   Loc l;
-  vector<Error> errs;
+  vector<ParseError> errs;
 
   optional<char> at(Loc loc) {
     if (loc.si >= s.size()) {
@@ -1711,14 +1716,14 @@ public:
 
   void assertNonStrict(const IRType *t, Span span) {
     if (!t->strict) return;
-    printferr(span.begin, raw_input, "expected lazy type, found strict type:\n");
+    printferr(span, raw_input, "expected lazy type, found strict type:\n");
     t->print(cerr); cerr << "\n";
     assert(false && "expected lazy type");
   }
 
   void assertStrict(const IRType *t, Span span) {
     if (t->strict) return;
-    printferr(span.begin, raw_input, "expected strict type, found lazy type:\n");
+    printferr(span, raw_input, "expected strict type, found lazy type:\n");
     t->print(cerr); cerr << "\n";
     assert(false && "expected strict type");
   }
@@ -1729,7 +1734,7 @@ public:
       return;
     }
     (*err)->print(this->raw_input, span);
-    printferr(span.begin, raw_input,
+    printferr(span, raw_input,
               "type error mismatch generated from def/use:\n", span.begin);
     cerr << "defn: ";
     defn->print(cerr);
@@ -1744,7 +1749,7 @@ public:
     if (fnty->argTys.size() == nargs) {
       return;
     }
-    printferr(span.begin, raw_input,
+    printferr(span, raw_input,
               "mismatched number of arguments at call site: ");
     cerr << "function type:\n";
     fnty->print(cerr);
@@ -1753,7 +1758,7 @@ public:
   };
 
   void assertVoidBlock(Span span) {
-    printferr(span.begin, raw_input, "block has no return instruction\n");
+    printferr(span, raw_input, "block has no return instruction\n");
     assert(false && "found block with no return");
   }
 
@@ -1764,14 +1769,14 @@ public:
                                               int size) {
     auto it = enumty->constructors.find(constructor.name);
     if (it == enumty->constructors.end()) {
-      printferr(constructor.span.begin, raw_input,
+      printferr(constructor.span, raw_input,
                 "unable to find constructor |%s| in enum |%s|\n",
                 constructor.name.c_str(), enumty->name.c_str());
       assert(false && "unknown constructor for type");
     }
 
     if (it->second->size() != size) {
-      printferr(constructor.span.begin, raw_input,
+      printferr(constructor.span, raw_input,
                 "expected |%d| fields in constructor |%s| of enum |%s|, found "
                 "|%d| fields\n",
                 size, constructor.name.c_str(), enumty->name.c_str(),
@@ -1784,7 +1789,7 @@ public:
 
   void assertInteger(const IRType *user, Span span) {
     if (user->kind == IRTypeKind::Int) { return; }
-    printferr(span.begin, raw_input, "expected integer type. found:\n");
+    printferr(span, raw_input, "expected integer type. found:\n");
     user->print(cerr); cerr << "\n";
     assert(false && "expected integer type");
    }
@@ -1793,7 +1798,7 @@ public:
     auto it = ident2ty.find(ident.name);
 
     if (it == ident2ty.end()) {
-      printferr(ident.span.begin, raw_input,
+      printferr(ident.span, raw_input,
                 "unable to find value |%s| during type checking!\n", ident.name.c_str());
       assert(false && "unable to find value");
     }
@@ -1811,7 +1816,7 @@ public:
   IRType *lookupTypeName(Identifier typenam) const {
     auto it = surface2ty.find(typenam.name);
     if (it == surface2ty.end()) {
-      printferr(typenam.span.begin, raw_input, "unable to find type named: |%s|\n",
+      printferr(typenam.span, raw_input, "unable to find type named: |%s|\n",
                 typenam.name.c_str());
       // TODO: find some way to smuggle |raw_input| here.
       // raw_input? from where the fuck am I supposed to get that to print an
@@ -1836,7 +1841,7 @@ public:
 
   void insertIdentifier(Identifier name, IRType *t) {
     if (ident2ty.find(name.name) != ident2ty.end()) {
-      printferr(name.span.begin, raw_input, "identifier |%s| already present in scope during type checking", name.name.c_str());
+      printferr(name.span, raw_input, "identifier |%s| already present in scope during type checking", name.name.c_str());
     };
 
     assert(ident2ty.find(name.name) == ident2ty.end());
@@ -1848,7 +1853,7 @@ public:
     if (T::classof(base)) {
       return (T *)base;
     }
-    printferr(span.begin, raw_input, error.c_str());
+    printferr(span, raw_input, error.c_str());
     assert(false && "mismatched types");
   }
 
