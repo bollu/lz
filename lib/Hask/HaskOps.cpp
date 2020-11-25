@@ -419,6 +419,27 @@ llvm::Optional<int> CaseOp::getDefaultAltIndex() {
   return llvm::Optional<int>();
 }
 
+void CaseOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                  Value scrutinee,
+                  SmallVectorImpl<mlir::Attribute>  &lhss,
+                  SmallVectorImpl<mlir::Region*> &rhss, mlir::Type retty) {
+
+  assert(scrutinee.getType().isa<ValueType>());
+  state.addOperands(scrutinee);
+  assert(lhss.size() == rhss.size() );
+
+  for(Region *r : rhss) {
+    std::unique_ptr<mlir::Region> pr(r);
+    state.addRegion(std::move(pr));
+  }
+  for(int i = 0; i < lhss.size(); ++i) {
+    state.addAttribute("alt" + std::to_string(i), lhss[i]);
+  }
+  state.addTypes(retty);
+};
+
+
+
 // === DEFAULTCASE OP ===
 // === DEFAULTCASE OP ===
 // === DEFAULTCASE OP ===
@@ -1144,7 +1165,7 @@ void CaseIntOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
                   SmallVectorImpl<mlir::Attribute>  &lhss,
                   SmallVectorImpl<mlir::Region*> &rhss, mlir::Type retty) {
 
-
+  assert(scrutinee.getType().isInteger(64));
   state.addOperands(scrutinee);
   assert(lhss.size() == rhss.size() );
 

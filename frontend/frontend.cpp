@@ -574,7 +574,15 @@ struct IRTypeTuple : public IRType {
     return new IRTypeTuple(types, forced);
   };
 
-  const vector<IRType *> types;
+  using iterator = std::vector<IRType *>::iterator;
+  using const_iterator = std::vector<IRType *>::const_iterator;
+
+  iterator begin() { return this->types.begin(); }
+  iterator end() { return this->types.end(); }
+
+  const_iterator begin() const { return this->types.begin(); }
+  const_iterator end() const { return this->types.end(); }
+
   void print(OutFile &f) const {
     f << "[";
     f << (strict ? "!" : "~");
@@ -589,6 +597,10 @@ struct IRTypeTuple : public IRType {
     return ty->kind == IRTypeKind::Tuple;
   }
 
+  int size() const { return this->types.size(); }
+  IRType *get(int i) { return this->types[i]; }
+  const IRType *get(int i) const { return this->types[i]; }
+  
   optional<IRTypeError *> mismatch(const IRType *other) const {
     auto otherTuple = mlir::dyn_cast<IRTypeTuple>(other);
     if (!otherTuple) {
@@ -606,15 +618,18 @@ struct IRTypeTuple : public IRType {
     }
     return {};
   }
+  private:
+    vector<IRType *> types;
+
 };
 
 // an enum is NOT A type, it's a *description* of a type. So it doesn't have a
 // notion of strictness (?)
 struct IRTypeEnum : public IRType {
   string name;
-  map<string, IRTypeTuple> constructors;
+  map<string, IRTypeTuple*> constructors;
 
-  IRTypeEnum(string name, map<string, IRTypeTuple> constructors, bool strict)
+  IRTypeEnum(string name, map<string, IRTypeTuple*> constructors, bool strict)
       : IRType(IRTypeKind::Enum, strict), name(name),
         constructors(constructors) {}
 
@@ -628,7 +643,7 @@ struct IRTypeEnum : public IRType {
     f << "t-enum";
     for (auto it : constructors) {
       f << "[struct" << it.first << " ";
-      it.second.print(f);
+      it.second->print(f);
       f << "]";
     }
 
@@ -666,7 +681,6 @@ struct IRTypeFn : public IRType {
 
   IRTypeTuple argTys;
   IRType *retty;
-
   virtual void print(OutFile &f) const {
     f << "[";
     f << (strict ? "!" : "~");
@@ -1005,6 +1019,7 @@ struct CaseLHSIdentifier : public CaseLHS {
   const Identifier ident;
   CaseLHSIdentifier(Span span, Identifier ident)
       : CaseLHS(span, CaseLHSKind::Identifier), ident(ident){};
+  IRType *type;
 
   OutFile &print(OutFile &out) const override { return out << ident; }
 
@@ -1015,14 +1030,16 @@ struct CaseLHSIdentifier : public CaseLHS {
 
 struct CaseLHSTupleStruct : public CaseLHS {
   const Identifier name;
-  vector<CaseLHS *> fields;
-  CaseLHSTupleStruct(Span span, Identifier name, vector<CaseLHS *> fields)
-      : CaseLHS(span, CaseLHSKind::TupleStruct), name(name), fields(fields){};
+  vector<Identifier > fields;
+  IRTypeTuple *type;
+
+  CaseLHSTupleStruct(Span span, Identifier name, vector<Identifier> fields)
+      : CaseLHS(span, CaseLHSKind::TupleStruct), name(name), fields(fields), type(nullptr) {};
 
   OutFile &print(OutFile &out) const override {
     out << name << "(";
     for (int i = 0; i < fields.size(); ++i) {
-      fields[i]->print(out);
+      out << fields[i];
       if (i + 1 < fields.size()) {
         out << ", ";
       }
@@ -1053,7 +1070,7 @@ struct ExprCase : public Expr {
   ExprCase(Span span, Expr *scrutinee, vector<Alt> alts)
       : Expr(span, ExprKind::Case), scrutinee(scrutinee), alts(alts){};
   Expr *scrutinee;
-  const vector<Alt> alts;
+  vector<Alt> alts;
 
   OutFile &print(OutFile &out) const override;
 
@@ -1291,11 +1308,11 @@ CaseLHS *parseCaseLHS(Parser &in) {
 
   Span tupleStructSpan(ident.span);
 
-  vector<CaseLHS *> fields;
+  vector<Identifier> fields;
 
   // parse identifiers
   while (1) {
-    CaseLHS *field = parseCaseLHS(in);
+    Identifier field = in.parseIdentifier();
     fields.push_back(field);
     if (!in.parseOptionalComma()) {
       tupleStructSpan.extendRight(
@@ -1682,7 +1699,7 @@ public:
   };
 
   void assertFntyNArgs(const IRTypeFn *fnty, int nargs, Span span) {
-    if (fnty->argTys.types.size() == nargs) {
+    if (fnty->argTys.size() == nargs) {
       return;
     }
     printferr(span.begin, raw_input,
@@ -1700,7 +1717,7 @@ public:
 
   // check that enum has the constructor and return the corresponding tuple,
   // or error out.
-  IRTypeTuple assertExpectedConstructorInEnum(IRTypeEnum *enumty,
+  IRTypeTuple *assertExpectedConstructorInEnum(IRTypeEnum *enumty,
                                               Identifier constructor,
                                               int size) {
     auto it = enumty->constructors.find(constructor.name);
@@ -1711,12 +1728,12 @@ public:
       assert(false && "unknown constructor for type");
     }
 
-    if (it->second.types.size() != size) {
+    if (it->second->size() != size) {
       printferr(constructor.span.begin, raw_input,
                 "expected |%d| fields in constructor |%s| of enum |%s|, found "
                 "|%d| fields\n",
                 size, constructor.name.c_str(), enumty->name.c_str(),
-                it->second.types.size());
+                it->second->size());
       assert(false && "incorrect number of args to tuple type");
     }
 
@@ -1818,23 +1835,23 @@ void typeCheckExpr(TypeContext &tc, Expr *e) {
 
     if (IRTypeEnum *scrutineety =
             mlir::dyn_cast<IRTypeEnum>(case_->scrutinee->type)) {
-      for (ExprCase::Alt a : case_->alts) {
+      for (ExprCase::Alt &a : case_->alts) {
         if (auto lhsIdentifier = mlir::dyn_cast<CaseLHSIdentifier>(a.first)) {
           TypeContext inner = tc;
           inner.insertIdentifier(lhsIdentifier->ident, case_->scrutinee->type);
+          lhsIdentifier->type = case_->scrutinee->type;
           typeCheckBlock(inner, a.second);
           continue;
         } // end identifier alt.
 
         if (auto lhsTuple = mlir::dyn_cast<CaseLHSTupleStruct>(a.first)) {
-          IRTypeTuple tuplety = tc.assertExpectedConstructorInEnum(
+          IRTypeTuple *tuplety = tc.assertExpectedConstructorInEnum(
               scrutineety, lhsTuple->name, lhsTuple->fields.size());
+          lhsTuple->type = tuplety;
           TypeContext inner = tc;
           for (int i = 0; i < lhsTuple->fields.size(); ++i) {
             // TODO: actually handle recursive pattern matching.
-            CaseLHSIdentifier *field =
-                mlir::cast<CaseLHSIdentifier>(lhsTuple->fields[i]);
-            inner.insertIdentifier(field->ident, tuplety.types[i]);
+            inner.insertIdentifier(lhsTuple->fields[i], tuplety->get(i));
             typeCheckBlock(inner, a.second);
           }
           continue;
@@ -1889,13 +1906,14 @@ void typeCheckExpr(TypeContext &tc, Expr *e) {
 
       auto it = enumty->constructors.find(construct->constructorName.name);
       assert(it != enumty->constructors.end());
-      IRTypeTuple constructorty = it->second;
+      IRTypeTuple *constructorty = it->second;
 
       // TODO: convert to a type error.
-      assert(constructorty.types.size() == construct->args.size());
+      assert(constructorty->size() == construct->args.size());
 
       for(int i = 0; i < construct->args.size(); ++i) {
-        tc.assertTypeEquality(constructorty.types[i], construct->args[i]->type, construct->args[i]->span);
+        tc.assertTypeEquality(constructorty->get(i), 
+          construct->args[i]->type, construct->args[i]->span);
       }
 
       construct->type = enumty;
@@ -1916,7 +1934,7 @@ void typeCheckExpr(TypeContext &tc, Expr *e) {
     tc.assertFntyNArgs(fnty, fncall->args.size(), fncall->span);
     for (int i = 0; i < fncall->args.size(); ++i) {
       typeCheckExpr(tc, fncall->args[i]);
-      tc.assertTypeEquality(fnty->argTys.types[i], fncall->args[i]->type,
+      tc.assertTypeEquality(fnty->argTys.get(i), fncall->args[i]->type,
                             fncall->args[i]->span);
     }
     // set strictness info here.
@@ -1994,8 +2012,8 @@ TypeContext typeCheckModule(const char *raw_input, Module &m) {
 
     // a struct is an enum with a single constructor whose constructor
     // name is the same as the type name.
-    map<string, IRTypeTuple> constructor2Type;
-    constructor2Type.insert({s.name.name, IRTypeTuple(fieldTys, true)});
+    map<string, IRTypeTuple*> constructor2Type;
+    constructor2Type.insert({s.name.name, new IRTypeTuple(fieldTys, true)});
     // TODO: asking for strictness on Enum is sort of nonsensical?
     tcGlobal.insertIRType(s.name.name,
                           new IRTypeEnum(s.name.name, constructor2Type, true));
@@ -2069,7 +2087,7 @@ mlir::Type mlirGenType(mlir::OpBuilder &builder, const IRType *ty);
 
 mlir::FunctionType mlirGenTypeFn(mlir::OpBuilder &builder, const IRTypeFn *fnty) {
   vector<mlir::Type> argtys;
-  for(IRType *argty : fnty->argTys.types) {
+  for(IRType *argty : fnty->argTys) {
     argtys.push_back(mlirGenType(builder, argty));
   }
 
@@ -2102,9 +2120,68 @@ mlir::Type mlirGenType(mlir::OpBuilder &builder, const IRType *ty) {
 
   assert(false && "unknown type");
 }
-// https://github.com/llvm/llvm-project/blob/76257422378e54dc2b59ff034e2955e9518e6c99/mlir/lib/Dialect/SCF/SCF.cpp
+
 void mlirGenBlock(const Block *b, mlir::OpBuilder &builder, ScopeFn scopeFn,
                   ScopeValue &scopeValue, const TypeContext &tc);
+
+
+std::pair<mlir::Attribute, mlir::Region*>
+mlirGenCaseAlt(mlir::Value scrutinee, const ExprCase::Alt alt, mlir::OpBuilder builder,
+                        ScopeFn scopeFn, ScopeValue scopeValue,
+                        const TypeContext &tc) {
+
+  if (CaseLHSInt *i = llvm::dyn_cast<CaseLHSInt>(alt.first)) {
+    mlir::Region *r = new mlir::Region();
+    r->push_back(new mlir::Block);
+    mlir::Block &bodyBlock = r->front();
+    {
+      mlir::OpBuilder nestedBuilder = builder;
+      nestedBuilder.setInsertionPointToEnd(&bodyBlock);
+      mlirGenBlock(alt.second, nestedBuilder, scopeFn, scopeValue, tc);
+    }
+
+    return {builder.getI64IntegerAttr(i->value), r};
+  }
+
+  // TODO: differentiate of if we are caseing on an int or something else
+  if (CaseLHSIdentifier *id =
+          llvm::dyn_cast<CaseLHSIdentifier>(alt.first)) {
+    mlir::Region *r = new mlir::Region();
+    r->push_back(new mlir::Block);
+    mlir::Block &bodyBlock = r->front();
+    mlir::OpBuilder nestedBuilder = builder;
+    ScopeValue nestedScopeValue = scopeValue;
+    nestedScopeValue.insert(id->ident.name, scrutinee);
+    nestedBuilder.setInsertionPointToEnd(&bodyBlock);
+    mlirGenBlock(alt.second, nestedBuilder, scopeFn, nestedScopeValue, tc);
+    mlir::Attribute  lhs = mlir::FlatSymbolRefAttr::get("default", builder.getContext());
+    return {lhs, r};
+  }
+
+  if (auto tuplestruct = llvm::dyn_cast<CaseLHSTupleStruct>(alt.first)) {
+    mlir::Region *r = new mlir::Region();
+    r->push_back(new mlir::Block);
+    mlir::Block &bodyBlock = r->front();
+
+    mlir::OpBuilder nestedBuilder = builder;
+    ScopeValue nestedScopeValue = scopeValue;
+
+    for (int i = 0; i< tuplestruct->fields.size(); ++ i) {
+      mlir::BlockArgument arg = bodyBlock.addArgument(mlirGenType(builder, tuplestruct->type->get(i)));
+      nestedScopeValue.insert(tuplestruct->fields[i].name, arg);
+    }
+
+    nestedBuilder.setInsertionPointToEnd(&bodyBlock);
+    mlirGenBlock(alt.second, nestedBuilder, scopeFn, nestedScopeValue, tc);
+    mlir::Attribute lhs = mlir::FlatSymbolRefAttr::get(tuplestruct->name.name,
+                                        builder.getContext());
+    return {lhs, r};
+  }
+
+  assert(false && "unknown case alt");
+}
+
+// https://github.com/llvm/llvm-project/blob/76257422378e54dc2b59ff034e2955e9518e6c99/mlir/lib/Dialect/SCF/SCF.cpp
 mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder,
                         ScopeFn scopeFn, ScopeValue &scopeValue,
                         const TypeContext &tc) {
@@ -2127,14 +2204,36 @@ mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder,
   }
 
   if (const ExprCase *c = mlir::dyn_cast<ExprCase>(e)) {
-    assert(c->scrutinee);
+    mlir::Value scrutinee = mlirGenExpr(c->scrutinee, builder, scopeFn, scopeValue, tc);
+    mlir::SmallVector<mlir::Attribute, 4> lhss;
+    mlir::SmallVector<mlir::Region *, 4> rhss;
+    for(ExprCase::Alt alt : c->alts) {
+      mlir::Attribute lhs;
+      mlir::Region *rhs;
+      std::tie(lhs, rhs) = mlirGenCaseAlt(scrutinee, alt, builder, scopeFn, scopeValue, tc);
+      lhss.push_back(lhs);
+      rhss.push_back(rhs);
+    }
+
+    if (mlir::isa<IRTypeInt>(c->scrutinee->type)) {
+      return builder.create<mlir::standalone::CaseIntOp>(
+             builder.getUnknownLoc(), scrutinee, lhss, rhss, mlirGenType(builder, c->type));
+    } else {
+      assert(mlir::isa<IRTypeEnum>(c->scrutinee->type));
+      return builder.create<mlir::standalone::CaseOp>(
+             builder.getUnknownLoc(), scrutinee, lhss, rhss, mlirGenType(builder, c->type));
+    }
+
+
+
+    /*
     mlir::Value scrutinee =
         mlirGenExpr(c->scrutinee, builder, scopeFn, scopeValue, tc);
     llvm::SmallVector<mlir::Attribute, 4> lhss;
     llvm::SmallVector<mlir::Region *, 4> rhss;
 
-    mlir::Type scrutineety = builder.getI64Type();
-    mlir::Type retty = builder.getI64Type();
+    // mlir::Type scrutineety = builder.getI64Type();
+    // mlir::Type retty = builder.getI64Type();
 
     for (ExprCase::Alt alt : c->alts) {
       mlir::Attribute lhs;
@@ -2181,9 +2280,8 @@ mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder,
                  "unhandled case where tuple struct matches on a non-field. "
                  "TODO: implement recursive caseing");
           CaseLHSIdentifier *lhsFieldCase = llvm::cast<CaseLHSIdentifier>(lhs);
-          mlir::Type mlirFieldTy =
-              builder.getI64Type(); // TODO: find out what the type of the field
-                                    // is.
+          // mlir::Type mlirFieldTy =
+
           mlir::BlockArgument arg = bodyBlock.addArgument(mlirFieldTy);
           nestedScopeValue.insert(lhsFieldCase->ident.name, arg);
         }
@@ -2201,6 +2299,7 @@ mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder,
         builder.create<mlir::standalone::CaseIntOp>(
             builder.getUnknownLoc(), scrutinee, lhss, rhss, retty);
     return case_;
+    */
   }
   if (const ExprIdentifier *id = mlir::dyn_cast<ExprIdentifier>(e)) {
     mlir::Value identVal = scopeValue.lookupExisting(id->name);
@@ -2232,12 +2331,6 @@ mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder,
     for (Expr *arg : construct->args) {
       args.push_back(mlirGenExpr(arg, builder, scopeFn, scopeValue, tc));
     }
-
-    // need to lookup context.
-    // llvm::SmallVector<mlir::Type, 4> argTys;
-    // for (int i = 0; i < construct->args.size(); ++i) {
-    //   argTys.push_back(mlirGenType(builder, construct->args[i]->type));
-    // }
 
     // creates an lz.value
     return builder.create<mlir::standalone::HaskConstructOp>(
