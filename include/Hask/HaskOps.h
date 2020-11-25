@@ -26,7 +26,6 @@
 
 #include "HaskDialect.h"
 
-
 namespace mlir {
 namespace standalone {
 
@@ -112,7 +111,8 @@ public:
 
 // https://mlir.llvm.org/docs/Interfaces/
 class ApEagerOp
-    : public Op<ApEagerOp, OpTrait::OneResult, MemoryEffectOpInterface::Trait, CallOpInterface::Trait> {
+    : public Op<ApEagerOp, OpTrait::OneResult, MemoryEffectOpInterface::Trait,
+                CallOpInterface::Trait> {
 public:
   using Op::Op;
   static StringRef getOperationName() { return "lz.apEager"; };
@@ -140,10 +140,15 @@ public:
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   void print(OpAsmPrinter &p);
 
-  CallInterfaceCallable getCallableForCallee() {assert(false && "unimplement getCallableForCallee"); };
-  Operation::operand_range getArgOperands() { assert(false && "unimplemented getArgOperands"); };
-  Operation *resolveCallable() { assert(false &&  "unimplemented resolveCallable"); }
-
+  CallInterfaceCallable getCallableForCallee() {
+    assert(false && "unimplement getCallableForCallee");
+  };
+  Operation::operand_range getArgOperands() {
+    assert(false && "unimplemented getArgOperands");
+  };
+  Operation *resolveCallable() {
+    assert(false && "unimplemented resolveCallable");
+  }
 };
 
 class CaseOp
@@ -170,12 +175,13 @@ public:
   }
 
   Optional<int> getAltIndexForConstructor(llvm::StringRef constructorName) {
-      for(int i = 0; i < this->getNumAlts(); ++i) {
-        if(this->getAltLHS(i).getValue() == constructorName) { return i; }
+    for (int i = 0; i < this->getNumAlts(); ++i) {
+      if (this->getAltLHS(i).getValue() == constructorName) {
+        return i;
       }
-      return {};
+    }
+    return {};
   };
-
 
   static const char *getCaseTypeKey() { return "constructorName"; }
   void print(OpAsmPrinter &p);
@@ -191,7 +197,8 @@ public:
   using Op::Op;
   static StringRef getOperationName() { return "lz.caseint"; };
   Value getScrutinee() {
-    llvm::errs() << "this->numOperands: " << this->getOperation()->getNumOperands() << "\n";
+    llvm::errs() << "this->numOperands: "
+                 << this->getOperation()->getNumOperands() << "\n";
     return this->getOperation()->getOperand(0);
   }
   int getNumAlts() { return this->getOperation()->getNumRegions(); }
@@ -206,7 +213,7 @@ public:
   }
   Optional<IntegerAttr> getAltLHS(int i) {
     Attribute lhs = getAltLHSs().get("alt" + std::to_string(i));
-    llvm::errs() << "getAltLHS(i=" << i << "): "<< lhs << "\n";
+    llvm::errs() << "getAltLHS(i=" << i << "): " << lhs << "\n";
     if (lhs.isa<IntegerAttr>()) {
       return {lhs.cast<IntegerAttr>()};
     }
@@ -223,9 +230,8 @@ public:
   getEffects(SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
                  &effects) {}
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                    Value scrutinee,
-                    SmallVectorImpl<mlir::Attribute>  &lhss,
-                    SmallVectorImpl<mlir::Region*> &rhss, mlir::Type retty);
+                    Value scrutinee, SmallVectorImpl<mlir::Attribute> &lhss,
+                    SmallVectorImpl<mlir::Region *> &rhss, mlir::Type retty);
 };
 
 class DefaultCaseOp : public Op<DefaultCaseOp, OpTrait::OneResult,
@@ -248,16 +254,14 @@ public:
                  &effects) {}
 };
 
-
 // LAMBDA OP
-class HaskLambdaOp : public Op<HaskLambdaOp, OpTrait::VariadicOperands, OpTrait::OneResult, OpTrait::OneRegion> {
+class HaskLambdaOp : public Op<HaskLambdaOp, OpTrait::VariadicOperands,
+                               OpTrait::OneResult, OpTrait::OneRegion> {
 public:
   using Op::Op;
   static StringRef getOperationName() { return "lz.lambda"; };
   Block &getEntryBlock() { return this->getRegion().front(); }
-  Block::BlockArgListType inputRange() {
-    this->getEntryBlock().getArguments();
-  }
+  Block::BlockArgListType inputRange() { this->getEntryBlock().getArguments(); }
   int getNumInputs() { this->getEntryBlock().getNumArguments(); }
   mlir::BlockArgument getInput(int i) {
     assert(i < getNumInputs());
@@ -267,11 +271,8 @@ public:
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   void print(OpAsmPrinter &p);
   // TODO: check that we only access those values we capture
-//  void verify();
+  //  void verify();
 };
-
-
-
 
 class HaskRefOp
     : public Op<HaskRefOp, OpTrait::OneResult, OpTrait::ZeroOperands,
@@ -284,10 +285,8 @@ public:
         .getValue();
   }
 
-  static void build(mlir::OpBuilder &builder,
-                    mlir::OperationState &state,
-                    std::string refname,
-                    Type retty);
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                    std::string refname, Type retty);
 
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   void print(OpAsmPrinter &p);
@@ -297,11 +296,11 @@ public:
                  &effects) {}
 };
 
-class HaskFuncOp : public Op<HaskFuncOp, OpTrait::ZeroOperands,
-                             OpTrait::ZeroResult, OpTrait::OneRegion,
-                             // OpTrait::AffineScope,
-                             CallableOpInterface::Trait,
-                             SymbolOpInterface::Trait> {
+class HaskFuncOp
+    : public Op<HaskFuncOp, OpTrait::ZeroOperands, OpTrait::ZeroResult,
+                OpTrait::OneRegion,
+                // OpTrait::AffineScope,
+                CallableOpInterface::Trait, SymbolOpInterface::Trait> {
 public:
   using Op::Op;
   static StringRef getOperationName() { return "lz.func"; };
@@ -319,10 +318,8 @@ public:
   Region *getCallableRegion() { return &this->getRegion(); };
   ArrayRef<Type> getCallableResults() { return this->getReturnType(); };
 
-  static void build(mlir::OpBuilder &builder,
-                    mlir::OperationState &state,
-                    std::string FuncName,
-                    HaskFnType fnty);
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                    std::string FuncName, HaskFnType fnty);
 };
 
 // replace case x of name { default -> ... } with name = force(x);
@@ -332,9 +329,7 @@ public:
   using Op::Op;
   static StringRef getOperationName() { return "lz.force"; };
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
-  Value getScrutinee() {
-    return this->getOperation()->getOperand(0);
-  }
+  Value getScrutinee() { return this->getOperation()->getOperand(0); }
   void print(OpAsmPrinter &p);
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
                     Value scrutinee);
@@ -389,16 +384,18 @@ public:
         .getValue();
   }
 
-//  StringRef getDataTypeName() { assert(false && "unimplemented"); return "DATATYPE"; }
+  //  StringRef getDataTypeName() { assert(false && "unimplemented"); return
+  //  "DATATYPE"; }
   int getNumOperands() { return this->getOperation()->getNumOperands(); }
   Value getOperand(int i) { return this->getOperation()->getOperand(i); }
-  Operation::operand_range getOperands() { return this->getOperation()->getOperands(); }
+  Operation::operand_range getOperands() {
+    return this->getOperation()->getOperands();
+  }
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   void print(OpAsmPrinter &p);
-  static void build(mlir::OpBuilder &builder,
-                    mlir::OperationState &state,
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
                     StringRef constructorName,
-                  //   StringRef ADTTypeName,
+                    //   StringRef ADTTypeName,
                     ValueRange args);
 
   void

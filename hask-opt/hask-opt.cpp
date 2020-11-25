@@ -60,11 +60,12 @@ static llvm::cl::opt<bool>
 static llvm::cl::opt<bool> jit("jit",
                                llvm::cl::desc("Enable lowering to LLVM"));
 
-static llvm::cl::opt<bool> optWorkerWrapper("worker-wrapper",
-                                        llvm::cl::desc("Enable woker-wrapper passes in the IR"));
+static llvm::cl::opt<bool>
+    optWorkerWrapper("worker-wrapper",
+                     llvm::cl::desc("Enable woker-wrapper passes in the IR"));
 
-static llvm::cl::opt<bool> optInterpret("interpret",
-                                     llvm::cl::desc("Enable interpreting IR"));
+static llvm::cl::opt<bool>
+    optInterpret("interpret", llvm::cl::desc("Enable interpreting IR"));
 
 // 0 static llvm::cl::opt<std::string>
 // 0     outputFilename("o", llvm::cl::desc("Output filename"),
@@ -101,7 +102,6 @@ static llvm::cl::opt<bool> optInterpret("interpret",
 using namespace llvm;
 using namespace llvm::orc;
 ExitOnError ExitOnErr;
-
 
 // code stolen from:
 // https://github.com/llvm/llvm-project/blob/80d7ac3bc7c04975fd444e9f2806e4db224f2416/mlir/examples/toy/Ch3/toyc.cpp
@@ -144,7 +144,6 @@ int main(int argc, char **argv) {
 
   llvm::errs() << "=====Module: simplification =====\n";
 
-
   if (optWorkerWrapper) {
     mlir::PassManager pm(&context);
     // Apply any generic pass manager command line options and run the pipeline.
@@ -163,7 +162,8 @@ int main(int argc, char **argv) {
 
   module->print(llvm::errs());
   llvm::errs() << "\n------\n";
-  llvm::errs() << "interpreted value: " << interpretModule(module.get()).first << "\n";
+  llvm::errs() << "interpreted value: " << interpretModule(module.get()).first
+               << "\n";
 
   {
 
@@ -181,16 +181,17 @@ int main(int argc, char **argv) {
     llvm::errs() << "===Module===\n";
     module->print(llvm::errs());
     llvm::errs() << "\n------\n";
-    llvm::errs() << "interpreted value: " << interpretModule(module.get()).first;
+    llvm::errs() << "interpreted value: "
+                 << interpretModule(module.get()).first;
     llvm::errs() << "\n===\n";
   }
 
   if (optInterpret) {
-      std::pair<InterpValue, InterpStats> interpretOut =
+    std::pair<InterpValue, InterpStats> interpretOut =
         interpretModule(module.get());
-      llvm::outs() << interpretOut.first  << "\n" << interpretOut.second << "\n";
-      llvm::outs().flush();
-      return 0;
+    llvm::outs() << interpretOut.first << "\n" << interpretOut.second << "\n";
+    llvm::outs().flush();
+    return 0;
   }
 
   // Lowering code to standard (?) Do I even need to (?)
@@ -381,4 +382,3 @@ int main(int argc, char **argv) {
   printf("%d\n", result2int);
   return 0;
 }
-

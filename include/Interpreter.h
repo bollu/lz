@@ -3,8 +3,6 @@
 #include "Hask/HaskDialect.h"
 #include "Hask/HaskOps.h"
 
-
-
 enum class InterpValueType {
   I64,
   ClosureTopLevel,
@@ -43,20 +41,18 @@ struct InterpValue {
     return vs_[0];
   }
 
-
   static InterpValue ref(std::string tag) {
-      InterpValue ref(InterpValueType::Ref);
-      ref.s_ = tag;
-      return ref;
+    InterpValue ref(InterpValueType::Ref);
+    ref.s_ = tag;
+    return ref;
   }
-  static InterpValue closureTopLevel(InterpValue fn, std::vector<InterpValue> args) {
-      InterpValue closure(InterpValueType::ClosureTopLevel);
-      closure.vs_.push_back(fn);
-      closure.vs_.insert(closure.vs_.end(), args.begin(), args.end());
-      return closure;
+  static InterpValue closureTopLevel(InterpValue fn,
+                                     std::vector<InterpValue> args) {
+    InterpValue closure(InterpValueType::ClosureTopLevel);
+    closure.vs_.push_back(fn);
+    closure.vs_.insert(closure.vs_.end(), args.begin(), args.end());
+    return closure;
   }
-
-
 
   InterpValue closureTopLevelFn() const {
     assert(type == InterpValueType::ClosureTopLevel);
@@ -84,7 +80,8 @@ struct InterpValue {
     assert(type == InterpValueType::ClosureTopLevel);
     return vs_.end();
   }
-  static InterpValue closureLambda(mlir::standalone::HaskLambdaOp lam, std::vector<InterpValue> args) {
+  static InterpValue closureLambda(mlir::standalone::HaskLambdaOp lam,
+                                   std::vector<InterpValue> args) {
     InterpValue closure(InterpValueType::ClosureLambda);
     closure.vs_.insert(closure.vs_.end(), args.begin(), args.end());
     closure.lam = lam;
@@ -109,15 +106,12 @@ struct InterpValue {
     return vs_;
   }
 
-
-
   static InterpValue constructor(std::string tag, std::vector<InterpValue> vs) {
     InterpValue cons(InterpValueType::Constructor);
     cons.s_ = tag;
     cons.vs_ = vs;
     return cons;
   }
-
 
   int constructorNumArgs() const {
     assert(type == InterpValueType::Constructor);
@@ -146,7 +140,6 @@ struct InterpValue {
     return s_;
   }
 
-
   std::vector<InterpValue> constructorArgs() const {
     assert(type == InterpValueType::Constructor);
     return vs_;
@@ -160,7 +153,6 @@ private:
   InterpValue(InterpValueType type) : type(type){};
 };
 
-
 struct InterpStats {
   // number of times a thunk has been created
   int num_thunkify_calls = 0;
@@ -170,9 +162,8 @@ struct InterpStats {
   int num_construct_calls = 0;
 };
 
-
-llvm::raw_ostream &operator << (llvm::raw_ostream &o, const InterpStats &s);
-llvm::raw_ostream &operator << (llvm::raw_ostream &o, const InterpValue &v);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &o, const InterpStats &s);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &o, const InterpValue &v);
 
 // interpret a module, and interpret the result as an integer. print it out.
 std::pair<InterpValue, InterpStats> interpretModule(mlir::ModuleOp module);

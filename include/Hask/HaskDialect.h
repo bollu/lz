@@ -30,7 +30,6 @@ public:
   static llvm::StringRef getDialectNamespace() { return "lz"; }
 };
 
-
 class HaskType : public Type {
 public:
   /// Inherit base constructors.
@@ -50,11 +49,11 @@ public:
 // https://github.com/llvm/llvm-project/blob/master/mlir/lib/IR/AttributeDetail.h#L50
 //! struct ADTTypeStorage : public TypeStorage {
 //!   ADTTypeStorage(ArrayRef<FlatSymbolRefAttr> const name) : name(name) {}
-//! 
+//!
 //!   /// The hash key used for uniquing.
 //!   using KeyTy = ArrayRef<FlatSymbolRefAttr>;
 //!   bool operator==(const KeyTy &key) const { return key == name; }
-//! 
+//!
 //!   /// Construction.
 //!   static ADTTypeStorage *construct(TypeStorageAllocator &allocator,
 //!                                    const KeyTy &key) {
@@ -63,9 +62,9 @@ public:
 //!   }
 //!   ArrayRef<FlatSymbolRefAttr> name;
 //! };
-//! 
-//! class ADTType : public mlir::Type::TypeBase<ADTType, HaskType, ADTTypeStorage> {
-//! public:
+//!
+//! class ADTType : public mlir::Type::TypeBase<ADTType, HaskType,
+//! ADTTypeStorage> { public:
 //!   using Base::Base;
 //!   static ADTType get(MLIRContext *context, FlatSymbolRefAttr name) {
 //!     return Base::get(context, name);
@@ -186,7 +185,7 @@ struct DataConstructorAttributeStorage : public AttributeStorage {
 // public:
 //   // The usual story, pull stuff from AttrBase.
 //   using Base::Base;
-// 
+//
 //   /*
 //   static bool classof(Attribute attr) {
 //     llvm::errs() << __FUNCTION__ << ":" << __LINE__ << "\n";
@@ -199,11 +198,12 @@ struct DataConstructorAttributeStorage : public AttributeStorage {
 //     std::pair<SymbolRefAttr, ArrayAttr> data(Name, ArgTys);
 //     return Base::get(context, data);
 //   }
-// 
+//
 //   ArrayRef<SymbolRefAttr> getName() { return this->getImpl()->value.first; }
 //   ArrayRef<ArrayAttr> getArgTys() { return this->getImpl()->value.second; }
-// 
-//   //  static UntypedType get(MLIRContext *context) { return Base::get(context);
+//
+//   //  static UntypedType get(MLIRContext *context) { return
+//   Base::get(context);
 //   //  }
 // };
 
@@ -223,7 +223,7 @@ struct HaskInlinerInterface : public DialectInlinerInterface {
 
   virtual bool isLegalToInline(Region *dest, Region *src,
                                BlockAndValueMapping &valueMapping) const {
-//     assert(false && "being asked if legal to inline");
+    //     assert(false && "being asked if legal to inline");
     return true;
   }
   /// This hook is invoked on an operation that contains regions. It should
@@ -231,7 +231,7 @@ struct HaskInlinerInterface : public DialectInlinerInterface {
   /// operation when computing legality and cost, false otherwise. The default
   /// implementation returns true.
   virtual bool shouldAnalyzeRecursively(Operation *op) const {
-//    assert(false && "being asked if recursively analyze2");
+    //    assert(false && "being asked if recursively analyze2");
     return true;
   }
 

@@ -8,7 +8,7 @@
 using namespace mlir;
 using namespace standalone;
 llvm::raw_ostream &operator<<(llvm::raw_ostream &o, const InterpStats &s) {
-  o << "num_thunkify_calls(" << s.num_thunkify_calls <<  ")\n";
+  o << "num_thunkify_calls(" << s.num_thunkify_calls << ")\n";
   o << "num_force_calls(" << s.num_force_calls << ")\n";
   o << "num_construct_calls(" << s.num_construct_calls << ")\n";
   return o;
@@ -160,7 +160,8 @@ struct Interpreter {
     llvm::errs().changeColor(llvm::raw_fd_ostream::BLACK);
 
     op.print(llvm::errs());
-    fprintf(stderr, "\n"); fflush(stdout);
+    fprintf(stderr, "\n");
+    fflush(stdout);
 
     if (MakeI64Op mi64 = dyn_cast<MakeI64Op>(op)) {
       env.addNew(mi64.getResult(), InterpValue::i(mi64.getValue().getInt()));
@@ -216,9 +217,9 @@ struct Interpreter {
         // z = ap(l, v1, v2)
 
         // [[l]] = closureLambda with pointer to l, vs: [[a]], [[b]]
-        // [[z]] = closureLambda with pointer to l, vs: [[a]], [[b]], [[v1]], [[v2]]
-        // so that upon execution, we know what `a` and `b` are, and also what
-        // `c` and `d` are.
+        // [[z]] = closureLambda with pointer to l, vs: [[a]], [[b]], [[v1]],
+        // [[v2]] so that upon execution, we know what `a` and `b` are, and also
+        // what `c` and `d` are.
         std::vector<InterpValue> args;
         for (int i = 0; i < fn.closureLambdaNumArguments(); ++i) {
           args.push_back(fn.closureLambdaArgument(i));
@@ -227,7 +228,8 @@ struct Interpreter {
         for (int i = 0; i < ap.getNumFnArguments(); ++i) {
           args.push_back(env.lookup(ap.getLoc(), ap.getFnArgument(i)));
         }
-        env.addNew(ap.getResult(), InterpValue::closureLambda(fn.closureLambdaLam(), args));
+        env.addNew(ap.getResult(),
+                   InterpValue::closureLambda(fn.closureLambdaLam(), args));
       }
       return;
     }
@@ -240,14 +242,13 @@ struct Interpreter {
       if (scrutinee.type == InterpValueType::ThunkifiedValue) {
         env.addNew(force.getResult(), scrutinee.thunkifiedValue());
         return;
-      }
-      else if (scrutinee.type == InterpValueType::ClosureLambda) {
+      } else if (scrutinee.type == InterpValueType::ClosureLambda) {
         // see [[NOTE: hacky lambda representation]]
         env.addNew(force.getResult(),
-                   interpretLambda(scrutinee.closureLambdaLam(), scrutinee.closureLambdaArguments()));
+                   interpretLambda(scrutinee.closureLambdaLam(),
+                                   scrutinee.closureLambdaArguments()));
         return;
-      }
-      else {
+      } else {
         assert(scrutinee.type == InterpValueType::ClosureTopLevel);
         InterpValue scrutineefn = scrutinee.closureTopLevelFn();
         assert(scrutineefn.type == InterpValueType::Ref);
@@ -300,13 +301,15 @@ struct Interpreter {
       for (int i = 0; i < caseInt.getNumAlts(); ++i) {
 
         // skip default case
-        llvm::errs() << "caseInt.getDefaultAltIndex(): " << caseInt.getDefaultAltIndex() << "\n";
+        llvm::errs() << "caseInt.getDefaultAltIndex(): "
+                     << caseInt.getDefaultAltIndex() << "\n";
 
         if (caseInt.getDefaultAltIndex().getValueOr(-1) == i) {
           continue;
         }
         // no match
-        llvm::errs() << "getAltLhs(i=" << i << "): " << caseInt.getAltLHS(i) << "\n";
+        llvm::errs() << "getAltLhs(i=" << i << "): " << caseInt.getAltLHS(i)
+                     << "\n";
         if (caseInt.getAltLHS(i)->getInt() != scrutinee.i()) {
           continue;
         }
@@ -322,7 +325,8 @@ struct Interpreter {
 
     if (DefaultCaseOp default_ = dyn_cast<DefaultCaseOp>(op)) {
       // TODO: check that this has only 1 constructor!
-      InterpValue scrutinee = env.lookup(default_.getLoc(), default_.getScrutinee());
+      InterpValue scrutinee =
+          env.lookup(default_.getLoc(), default_.getScrutinee());
       assert(scrutinee.type == InterpValueType::Constructor);
       assert(scrutinee.constructorTag() == default_.getConstructorTag());
       assert(scrutinee.constructorNumArgs() == 1);
@@ -355,8 +359,6 @@ struct Interpreter {
       env.addNew(mul.getResult(), InterpValue::i(a.i() * b.i()));
       return;
     }
-
-
 
     if (HaskPrimopAddOp add = dyn_cast<HaskPrimopAddOp>(op)) {
       InterpValue a = env.lookup(add.getLoc(), add.getOperand(0));
@@ -399,7 +401,6 @@ struct Interpreter {
 
     InterpreterError err(op.getLoc());
     err << "INTERPRETER ERROR: unknown operation: |" << op << "|\n";
-
   };
 
   TerminatorResult interpretTerminator(Operation &op, Env &env) {
@@ -475,30 +476,29 @@ struct Interpreter {
 
     // bind captured variables.
     Env env;
-    for(int i = 0; i < lam.getNumOperands(); ++i) {
-       env.addNew(lam.getOperand(i), args[i]);
+    for (int i = 0; i < lam.getNumOperands(); ++i) {
+      env.addNew(lam.getOperand(i), args[i]);
     }
     // rest are parameters
-    SmallVector<InterpValue, 4> params(args.begin() + lam.getNumOperands(), args.end());
+    SmallVector<InterpValue, 4> params(args.begin() + lam.getNumOperands(),
+                                       args.end());
     return interpretRegion(lam.getRegion(), params, env);
   }
 
   Interpreter(ModuleOp module) : module(module){};
 
   InterpStats getStats() const { return stats; }
+
 private:
   ModuleOp module;
   InterpStats stats;
 };
 
-
 // interpret a module, and interpret the result as an integer. print it out.
 std::pair<InterpValue, InterpStats> interpretModule(ModuleOp module) {
-  mlir::FuncOp main =
-      module.lookupSymbol<mlir::FuncOp>("main");
+  mlir::FuncOp main = module.lookupSymbol<mlir::FuncOp>("main");
   assert(main && "unable to find main!");
   Interpreter I(module);
   InterpValue val = I.interpretFunction(main, {});
-  return { val, I.getStats() };
+  return {val, I.getStats()};
 };
-

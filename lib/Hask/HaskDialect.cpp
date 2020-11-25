@@ -40,20 +40,19 @@ HaskDialect &HaskType::getDialect() {
 
 HaskDialect::HaskDialect(mlir::MLIRContext *context)
     : Dialect(getDialectNamespace(), context, TypeID::get<HaskDialect>()) {
-//   addOperations<
-// #define GET_OP_LIST
-// #include "Hask/HaskOps.cpp.inc"
-//       >();
+  //   addOperations<
+  // #define GET_OP_LIST
+  // #include "Hask/HaskOps.cpp.inc"
+  //       >();
   addOperations<HaskReturnOp, MakeI64Op,
                 // DeclareDataConstructorOp,
-                ApOp, ApEagerOp, CaseOp, DefaultCaseOp, HaskRefOp, MakeStringOp, HaskFuncOp,
-                ForceOp, HaskGlobalOp, HaskConstructOp,
+                ApOp, ApEagerOp, CaseOp, DefaultCaseOp, HaskRefOp, MakeStringOp,
+                HaskFuncOp, ForceOp, HaskGlobalOp, HaskConstructOp,
                 HaskPrimopAddOp, HaskPrimopSubOp, CaseIntOp, ThunkifyOp,
                 TransmuteOp, HaskLambdaOp>();
   addTypes<ThunkType, ValueType, HaskFnType>(); // , ADTType>();
   // addAttributes<DataConstructorAttr>();
   addInterfaces<HaskInlinerInterface>();
-
 }
 
 mlir::Type HaskDialect::parseType(mlir::DialectAsmParser &parser) const {
@@ -175,19 +174,18 @@ void HaskDialect::printAttribute(Attribute attr, DialectAsmPrinter &p) const {
   assert(false && "unknown attribute");
 }
 
-void HaskInlinerInterface::handleTerminator(Operation *op,
-                      ArrayRef<Value> valuesToRepl) const {
-    llvm::errs() << "handleTerminator(" << *op << ", " << valuesToRepl[0] << ")\n";
-//    assert(false);
-//    assert(false && "handling terminator in HaskInliner...");
-    // Only "toy.return" needs to be handled here.
-    auto returnOp = cast<HaskReturnOp>(op);
-    // Replace the values directly with the return operands.
-//    assert(1 == valuesToRepl.size());
-    valuesToRepl[0].replaceAllUsesWith(returnOp.getOperand());
-    // https://github.com/llvm/llvm-project/blob/1b012a9146b85d30083a47d4929e86f843a5938d/mlir/docs/Tutorials/Toy/Ch-4.md
+void HaskInlinerInterface::handleTerminator(
+    Operation *op, ArrayRef<Value> valuesToRepl) const {
+  llvm::errs() << "handleTerminator(" << *op << ", " << valuesToRepl[0]
+               << ")\n";
+  //    assert(false);
+  //    assert(false && "handling terminator in HaskInliner...");
+  // Only "toy.return" needs to be handled here.
+  auto returnOp = cast<HaskReturnOp>(op);
+  // Replace the values directly with the return operands.
+  //    assert(1 == valuesToRepl.size());
+  valuesToRepl[0].replaceAllUsesWith(returnOp.getOperand());
+  // https://github.com/llvm/llvm-project/blob/1b012a9146b85d30083a47d4929e86f843a5938d/mlir/docs/Tutorials/Toy/Ch-4.md
 }
 
-
 // === LOWERING ===
-

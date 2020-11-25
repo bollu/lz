@@ -553,9 +553,7 @@ struct IRTypeInt : public IRType {
   }
   static bool classof(const IRType *ty) { return ty->kind == IRTypeKind::Int; }
 
-  IRType *clone(bool forced) const override {
-    return new IRTypeInt(forced);
-  };
+  IRType *clone(bool forced) const override { return new IRTypeInt(forced); };
 
   optional<IRTypeError *> mismatch(const IRType *other) const {
     if (other->kind == IRTypeKind::Int) {
@@ -1146,7 +1144,8 @@ struct ExprFnCall : public Expr {
   bool strict;
 
   ExprFnCall(Span span, Identifier fnname, vector<Expr *> args, bool strict)
-      : Expr(span, ExprKind::FnCall), fnname(fnname), args(args), strict(strict) {};
+      : Expr(span, ExprKind::FnCall), fnname(fnname), args(args),
+        strict(strict){};
 
   OutFile &print(OutFile &out) const override {
     out << "[call ";
@@ -1280,7 +1279,7 @@ CaseLHS *parseCaseLHS(Parser &in) {
   }
 
   // <ident>  |  <struct-name> (<struct-fields>)
-  
+
   Identifier ident = in.parseIdentifier();
   optional<Span> structFieldRoundOpen;
   structFieldRoundOpen = in.parseOptionalOpenRoundBracket();
@@ -1317,7 +1316,8 @@ Expr *parseExprLeaf(Parser &in) {
     optional<Span> open;
     if ((open = in.parseOptionalOpenRoundBracket())) {
       if (in.parseOptionalCloseRoundBracket()) {
-        return new ExprFnCall(Span(lbegin, in.getCurrentLoc()), *ident, {}, bool(strict));
+        return new ExprFnCall(Span(lbegin, in.getCurrentLoc()), *ident, {},
+                              bool(strict));
       }
 
       vector<Expr *> args;
@@ -1332,7 +1332,8 @@ Expr *parseExprLeaf(Parser &in) {
       }
 
       if (islower(ident->name[0])) {
-        return new ExprFnCall(Span(lbegin, in.getCurrentLoc()), *ident, args, bool(strict));
+        return new ExprFnCall(Span(lbegin, in.getCurrentLoc()), *ident, args,
+                              bool(strict));
       } else {
         return new ExprConstruct(Span(lbegin, in.getCurrentLoc()), *ident,
                                  args);
@@ -1647,16 +1648,22 @@ public:
   TypeContext(const char *raw_input) : raw_input(raw_input){};
 
   void assertNonStrict(const IRType *t, Span span) {
-    if (!t->strict) return;
-    printferr(span.begin, raw_input, "expected lazy type, found strict type:\n");
-    t->print(cerr); cerr << "\n";
+    if (!t->strict)
+      return;
+    printferr(span.begin, raw_input,
+              "expected lazy type, found strict type:\n");
+    t->print(cerr);
+    cerr << "\n";
     assert(false && "expected lazy type");
   }
 
   void assertStrict(const IRType *t, Span span) {
-    if (t->strict) return;
-    printferr(span.begin, raw_input, "expected strict type, found found type:\n");
-    t->print(cerr); cerr << "\n";
+    if (t->strict)
+      return;
+    printferr(span.begin, raw_input,
+              "expected strict type, found found type:\n");
+    t->print(cerr);
+    cerr << "\n";
     assert(false && "expected strict type");
   }
 
@@ -1720,18 +1727,22 @@ public:
   }
 
   void assertInteger(const IRType *user, Span span) {
-    if (user->kind == IRTypeKind::Int) { return; }
+    if (user->kind == IRTypeKind::Int) {
+      return;
+    }
     printferr(span.begin, raw_input, "expected integer type. found:\n");
-    user->print(cerr); cerr << "\n";
+    user->print(cerr);
+    cerr << "\n";
     assert(false && "expected integer type");
-   }
+  }
 
   IRType *lookupValue(Identifier ident) {
     auto it = ident2ty.find(ident.name);
 
     if (it == ident2ty.end()) {
       printferr(ident.span.begin, raw_input,
-                "unable to find value |%s| during type checking!\n", ident.name.c_str());
+                "unable to find value |%s| during type checking!\n",
+                ident.name.c_str());
       assert(false && "unable to find value");
     }
     return it->second;
@@ -1748,8 +1759,8 @@ public:
   IRType *lookupTypeName(Identifier typenam) {
     auto it = surface2ty.find(typenam.name);
     if (it == surface2ty.end()) {
-      printferr(typenam.span.begin, raw_input, "unable to find type named: |%s|\n",
-                typenam.name.c_str());
+      printferr(typenam.span.begin, raw_input,
+                "unable to find type named: |%s|\n", typenam.name.c_str());
       // TODO: find some way to smuggle |raw_input| here.
       // raw_input? from where the fuck am I supposed to get that to print an
       // error? smh.
@@ -1758,13 +1769,13 @@ public:
     return it->second;
   }
 
-    template<typename T>
-    T *lookupTypeNameOfType(Identifier typenam) {
-      T* result = mlir::dyn_cast<T>(lookupTypeName(typenam));
-      if (result) { return result; }
-      assert(false && "unable to cast type to expected type");
+  template <typename T> T *lookupTypeNameOfType(Identifier typenam) {
+    T *result = mlir::dyn_cast<T>(lookupTypeName(typenam));
+    if (result) {
+      return result;
+    }
+    assert(false && "unable to cast type to expected type");
   }
-
 
   void insertIRType(std::string name, IRType *t) {
     assert(surface2ty.find(name) == surface2ty.end());
@@ -1773,12 +1784,13 @@ public:
 
   void insertIdentifier(Identifier name, IRType *t) {
     if (ident2ty.find(name.name) != ident2ty.end()) {
-      printferr(name.span.begin, raw_input, "identifier |%s| already present in scope during type checking", name.name.c_str());
+      printferr(name.span.begin, raw_input,
+                "identifier |%s| already present in scope during type checking",
+                name.name.c_str());
     };
 
     assert(ident2ty.find(name.name) == ident2ty.end());
     ident2ty.insert({name.name, t});
-    
   }
 
   template <typename T> T *cast(IRType *base, Span span, std::string error) {
@@ -1803,12 +1815,14 @@ void typeCheckExpr(TypeContext &tc, Expr *e) {
   if (auto binop = mlir::dyn_cast<ExprBinop>(e)) {
     typeCheckExpr(tc, binop->left);
     typeCheckExpr(tc, binop->right);
-    tc.assertTypeEquality(binop->left->type, tc.getIntType(true), binop->left->span);
-    tc.assertTypeEquality(binop->right->type, tc.getIntType(true), binop->right->span);
+    tc.assertTypeEquality(binop->left->type, tc.getIntType(true),
+                          binop->left->span);
+    tc.assertTypeEquality(binop->right->type, tc.getIntType(true),
+                          binop->right->span);
     e->type = tc.getIntType(true);
     return;
   }
-  
+
   if (auto case_ = mlir::dyn_cast<ExprCase>(e)) {
     typeCheckExpr(tc, case_->scrutinee);
 
@@ -1862,42 +1876,47 @@ void typeCheckExpr(TypeContext &tc, Expr *e) {
         assert(false &&
                "unreachable: should have handled all types of alternatives");
       } // end alts loop for int scurtinee.
-    } // end int scrutinee
+    }   // end int scrutinee
 
     // check that all alts have the same type.
     assert(case_->alts.size() > 0);
     case_->type = case_->alts[0].second->type;
     for (int i = 1; i < case_->alts.size(); ++i) {
-      tc.assertTypeEquality(case_->type,
-                            case_->alts[i].second->type,
+      tc.assertTypeEquality(case_->type, case_->alts[i].second->type,
                             case_->alts[i].second->span);
     }
     return;
   } // end case.
 
   if (auto construct = mlir::dyn_cast<ExprConstruct>(e)) {
-      for (Expr *arg : construct->args) {
-        typeCheckExpr(tc, arg);
-      }
-      cerr << "Type checking: |"; construct->print(cerr); cerr << "|\n";
-      IRTypeEnum *enumty = tc.lookupTypeNameOfType<IRTypeEnum>(construct->constructorName);
-      // IRTypeEnum *enumty = tc.lookupValueOfType<IRTypeEnum>(construct->constructorName, 
-      //                           "expected constructor to be an enumeration type");
+    for (Expr *arg : construct->args) {
+      typeCheckExpr(tc, arg);
+    }
+    cerr << "Type checking: |";
+    construct->print(cerr);
+    cerr << "|\n";
+    IRTypeEnum *enumty =
+        tc.lookupTypeNameOfType<IRTypeEnum>(construct->constructorName);
+    // IRTypeEnum *enumty =
+    // tc.lookupValueOfType<IRTypeEnum>(construct->constructorName,
+    //                           "expected constructor to be an enumeration
+    //                           type");
 
-      auto it = enumty->constructors.find(construct->constructorName.name);
-      assert(it != enumty->constructors.end());
-      IRTypeTuple constructorty = it->second;
+    auto it = enumty->constructors.find(construct->constructorName.name);
+    assert(it != enumty->constructors.end());
+    IRTypeTuple constructorty = it->second;
 
-      // TODO: convert to a type error.
-      assert(constructorty.types.size() == construct->args.size());
+    // TODO: convert to a type error.
+    assert(constructorty.types.size() == construct->args.size());
 
-      for(int i = 0; i < construct->args.size(); ++i) {
-        tc.assertTypeEquality(constructorty.types[i], construct->args[i]->type, construct->args[i]->span);
-      }
+    for (int i = 0; i < construct->args.size(); ++i) {
+      tc.assertTypeEquality(constructorty.types[i], construct->args[i]->type,
+                            construct->args[i]->span);
+    }
 
-      construct->type = enumty;
-      return;
-      // assert(false && "unimplemented");
+    construct->type = enumty;
+    return;
+    // assert(false && "unimplemented");
 
   } // end constructor.
 
@@ -1963,7 +1982,7 @@ void typeCheckBlock(TypeContext tc, Block *b) {
       assert(ret->e->type);
       if (b->type) {
         tc.assertTypeEquality(b->type, ret->e->type, ret->e->span);
-      } else {  
+      } else {
         b->type = ret->e->type;
         assert(b->type);
       }
@@ -1973,7 +1992,9 @@ void typeCheckBlock(TypeContext tc, Block *b) {
     assert(false && "unknown type of statment");
   }
 
-  if (!b->type) { tc.assertVoidBlock(b->span); }
+  if (!b->type) {
+    tc.assertVoidBlock(b->span);
+  }
 };
 
 TypeContext typeCheckModule(const char *raw_input, Module m) {

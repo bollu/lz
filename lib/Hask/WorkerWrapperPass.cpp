@@ -370,7 +370,6 @@ struct OutlineRecursiveApEagerOfConstructorPattern
 
     assert(parentfn.getNumArguments() == 1);
 
-
     BlockArgument arg = parentfn.getBody().getArgument(0);
     // has multiple uses, we can't use this for our purposes.
     if (!arg.hasOneUse()) {
@@ -508,22 +507,27 @@ struct CaseOfBoxedRecursiveApWithFinalConstruct
 
     // figure out if the return value is always a `hask.construct(...)`
     // TODO: generalize
-    if (fn.getBody().getBlocks().size() != 1)  { return failure(); }
+    if (fn.getBody().getBlocks().size() != 1) {
+      return failure();
+    }
 
     // find the return operations
-    HaskReturnOp ret = dyn_cast<HaskReturnOp>(fn.getBody().getBlocks().front().getTerminator());
-    if (!ret) { return failure(); }
+    HaskReturnOp ret = dyn_cast<HaskReturnOp>(
+        fn.getBody().getBlocks().front().getTerminator());
+    if (!ret) {
+      return failure();
+    }
 
-    HaskConstructOp construct = ret.getOperand().getDefiningOp<HaskConstructOp>();
-    if (!construct) { return failure(); }
-
-
+    HaskConstructOp construct =
+        ret.getOperand().getDefiningOp<HaskConstructOp>();
+    if (!construct) {
+      return failure();
+    }
 
     ModuleOp mod = fn.getParentOfType<ModuleOp>();
     llvm::errs() << "\n=====\n";
     llvm::errs() << mod;
     llvm::errs() << "\n=====\n";
-
 
     assert(false);
 
@@ -593,19 +597,19 @@ struct PeelCommonConstructorsInCase : public mlir::OpRewritePattern<CaseOp> {
         // retConstructs[0].getDataTypeName(),
         caseop.getResult());
 
-
     llvm::errs() << caseop << "\n";
     llvm::errs() << caseop.getType() << "\n";
     llvm::errs() << caseop.getResult().getType() << "\n";
     llvm::errs() << peeledConstructor << "\n";
-    
+
     // Now walk all the uses of case other than the peeledConstructor
     // and replace it with peeledConstructor
     for (OpOperand &u : caseop.getResult().getUses()) {
       if (u.getOwner() == peeledConstructor.getOperation()) {
         continue;
       }
-      u.getOwner()->replaceUsesOfWith(caseop.getResult(), peeledConstructor.getResult());
+      u.getOwner()->replaceUsesOfWith(caseop.getResult(),
+                                      peeledConstructor.getResult());
     }
 
     ModuleOp mod = caseop.getParentOfType<ModuleOp>();

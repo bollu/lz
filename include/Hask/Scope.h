@@ -1,8 +1,7 @@
 #pragma once
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include <map>
 #include <stdio.h>
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
-
 
 template <typename K, typename V> class Scope {
 public:
@@ -14,14 +13,12 @@ private:
   MapTy m;
 
 public:
-  Scope() {};
+  Scope(){};
 
-  void insert(K k, V v) {
-      m.insert({k, v});
-  }
+  void insert(K k, V v) { m.insert({k, v}); }
   void replace(K k, V v) {
-      assert(m.find(k) != m.end());
-      m[k] = v;
+    assert(m.find(k) != m.end());
+    m[k] = v;
   }
   V lookupExisting(K k) {
     auto it = m.find(k);
@@ -36,7 +33,4 @@ public:
 
   iterator end() { return m.end(); }
   const_iterator end() const { return m.end(); }
-
 };
-
-

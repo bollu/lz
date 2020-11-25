@@ -236,8 +236,8 @@ void ApOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
   for (int i = 0; i < params.size(); ++i) {
     if (paramtys[i] != params[i].getType()) {
       llvm::errs() << "ERROR: type mismatch at parameter (" << i << ").\n"
-        << "function parameter type: (" << paramtys[i] << ")\n"
-        << "argument type: (" << params[i].getType() << ")\n";
+                   << "function parameter type: (" << paramtys[i] << ")\n"
+                   << "argument type: (" << params[i].getType() << ")\n";
     }
     assert(paramtys[i] == params[i].getType());
   }
@@ -348,7 +348,8 @@ ParseResult CaseOp::parse(OpAsmParser &parser, OperationState &result) {
 
   if (parser.parseOperand(scrutinee))
     return failure();
-  if (parser.resolveOperand(scrutinee, parser.getBuilder().getType<ValueType>(), result.operands)) {
+  if (parser.resolveOperand(scrutinee, parser.getBuilder().getType<ValueType>(),
+                            result.operands)) {
     return failure();
   }
 
@@ -443,8 +444,7 @@ ParseResult DefaultCaseOp::parse(OpAsmParser &parser, OperationState &result) {
     return failure();
   }
   parser.resolveOperand(
-      scrutinee,
-      ValueType::get(parser.getBuilder().getContext()),
+      scrutinee, ValueType::get(parser.getBuilder().getContext()),
       // ADTType::get(parser.getBuilder().getContext(), constructorName),
       result.operands);
 
@@ -469,29 +469,36 @@ void DefaultCaseOp::print(OpAsmPrinter &p) {
 ParseResult HaskLambdaOp::parse(OpAsmParser &parser, OperationState &result) {
   // hask.lambda [    ] { ... } : function-type ?
 
-//  parser.parseOperandList(operands, OpAsmParser::Delimiter::Square);
-//  parser.resolveOperands(operands,
-//                         ValueType::get(parser.getBuilder().getContext()),
-//                         result.operands);
-  if(parser.parseLSquare()) { return failure(); }
+  //  parser.parseOperandList(operands, OpAsmParser::Delimiter::Square);
+  //  parser.resolveOperands(operands,
+  //                         ValueType::get(parser.getBuilder().getContext()),
+  //                         result.operands);
+  if (parser.parseLSquare()) {
+    return failure();
+  }
   if (failed(parser.parseOptionalRSquare())) {
-    while(1) {
+    while (1) {
       OpAsmParser::OperandType operand;
       Type operandty;
-      if (parser.parseOperand(operand) ||
-          parser.parseColon() ||
+      if (parser.parseOperand(operand) || parser.parseColon() ||
           parser.parseType(operandty) ||
           parser.resolveOperand(operand, operandty, result.operands)) {
         return failure();
       }
 
-      if (succeeded(parser.parseOptionalRSquare())) { break; }
-      else if (succeeded(parser.parseComma())) { continue; }
-      else { return failure(); }
+      if (succeeded(parser.parseOptionalRSquare())) {
+        break;
+      } else if (succeeded(parser.parseComma())) {
+        continue;
+      } else {
+        return failure();
+      }
     }
   }
   // ( ... )
-  if (parser.parseLParen()) { return failure(); }
+  if (parser.parseLParen()) {
+    return failure();
+  }
 
   SmallVector<OpAsmParser::OperandType, 4> args;
   SmallVector<Type, 4> argTys;
@@ -601,10 +608,12 @@ LogicalResult HaskRefOp::verify() {
                  << "\n-mismatch of types at ref."
                  << "\n-Found from function at loc["
                  << " " << fn.getLoc() << "] "
-                 << "name:" << this->getRef() << " type[" << fn.getFunctionType()
+                 << "name:" << this->getRef() << " type["
+                 << fn.getFunctionType()
                  << "]\n"
                     "-Declared at ref as ["
-                 << this->getLoc() << "] type[" << this->getResult().getType() << "]\n";
+                 << this->getLoc() << "] type[" << this->getResult().getType()
+                 << "]\n";
     return failure();
   } else if (global) {
     if (global.getType() == this->getResult().getType()) {
@@ -867,7 +876,7 @@ void ForceOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
 
 // ParseResult HaskADTOp::parse(OpAsmParser &parser, OperationState &result) {
 //   OpAsmParser::OperandType scrutinee;
-// 
+//
 //   SmallVector<Value, 4> results;
 //   Attribute name;
 //   Attribute constructors;
@@ -877,16 +886,16 @@ void ForceOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
 //   if (parser.parseAttribute(name, "constructors", result.attributes)) {
 //     return failure();
 //   }
-// 
+//
 //   //    result.addAttribute("name", name);
 //   //    result.addAttribute("constructors", constructors);
 //   //    if(parser.parseAttribute(constructors)) { return failure(); }
-// 
+//
 //   llvm::errs() << "ADT: " << name << "\n"
 //                << "cons: " << constructors << "\n";
 //   return success();
 // };
-// 
+//
 // void HaskADTOp::print(OpAsmPrinter &p) {
 //   p << getOperationName();
 //   p << " " << this->getAttr("name") << " " << this->getAttr("constructors");
@@ -997,7 +1006,7 @@ void HaskConstructOp::print(OpAsmPrinter &p) {
 
 void HaskConstructOp::build(mlir::OpBuilder &builder,
                             mlir::OperationState &state,
-                            StringRef constructorName, 
+                            StringRef constructorName,
                             // StringRef ADTTypeName,
                             ValueRange args) {
   state.addAttribute(
@@ -1113,7 +1122,7 @@ ParseResult CaseIntOp::parse(OpAsmParser &parser, OperationState &result) {
 void CaseIntOp::print(OpAsmPrinter &p) {
   p.printGenericOp(this->getOperation());
   return;
-  
+
   p << getOperationName() << " ";
   p << this->getScrutinee();
   for (int i = 0; i < this->getNumAlts(); ++i) {
@@ -1136,24 +1145,21 @@ llvm::Optional<int> CaseIntOp::getDefaultAltIndex() {
 }
 
 void CaseIntOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                  Value scrutinee,
-                  SmallVectorImpl<mlir::Attribute>  &lhss,
-                  SmallVectorImpl<mlir::Region*> &rhss, mlir::Type retty) {
-
+                      Value scrutinee, SmallVectorImpl<mlir::Attribute> &lhss,
+                      SmallVectorImpl<mlir::Region *> &rhss, mlir::Type retty) {
 
   state.addOperands(scrutinee);
-  assert(lhss.size() == rhss.size() );
+  assert(lhss.size() == rhss.size());
 
-  for(Region *r : rhss) {
+  for (Region *r : rhss) {
     std::unique_ptr<mlir::Region> pr(r);
     state.addRegion(std::move(pr));
   }
-  for(int i = 0; i < lhss.size(); ++i) {
+  for (int i = 0; i < lhss.size(); ++i) {
     state.addAttribute("alt" + std::to_string(i), lhss[i]);
   }
   state.addTypes(retty);
 }
-
 
 // === THUNKIFY OP ===
 // === THUNKIFY OP ===
@@ -2279,7 +2285,8 @@ void LowerHaskToStandardPass::runOnOperation() {
   // llvm::errs() << "===Enabling Debugging...===\n";
   //::llvm::DebugFlag = true;
 
-  if (failed(applyPartialConversion(this->getOperation(), target, patterns))) {
+  if (failed(applyPartialConversion(this->getOperation(), target,
+                                    std::move(patterns)))) {
     llvm::errs() << "===Partial conversion failed===\n";
     getOperation()->print(llvm::errs());
     llvm::errs() << "\n===\n";
@@ -2326,7 +2333,7 @@ context) {}
 // public:
 //   explicit HaskADTOpConversionPattern(MLIRContext *context)
 //       : ConversionPattern(HaskADTOp::getOperationName(), 1, context) {}
-// 
+//
 //   LogicalResult
 //   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
 //                   ConversionPatternRewriter &rewriter) const override {
