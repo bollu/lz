@@ -245,6 +245,70 @@ void printfspan(Span span, const char *raw_input, const char *fmt, ...) {
   va_end(args);
 }
 
+
+void vprintferrspan(Span span, const char *raw_input, const char *fmt, va_list args) {
+  const int CONTEXTLEN = 25;
+  const int LINELEN = 80;
+
+  char *outstr = nullptr;
+  vasprintf(&outstr, fmt, args);
+  assert(outstr);
+
+
+  if (span.begin.line == span.end.line) {
+      std::string errstr, cursorstr;
+      const ll nchars_back = ({
+        ll i = 0;
+        while(1) {
+          if(span.begin.si - i == 0) { break; }      
+          if(raw_input[span.begin.si - i] == '\n') { break; }      
+          if (i > CONTEXTLEN) { break; }
+          i++;
+        }
+        i;
+      });
+
+      const ll nchars_fwd = ({
+        ll i = 0;
+        while(1) {
+          if(span.begin.si + i == 0) { break; }      
+          if(raw_input[span.begin.si + i] == '\n') { break; }      
+          if (i > CONTEXTLEN) { break; }
+          i++;
+        }
+        i;
+      });
+
+    if (nchars_back > CONTEXTLEN) { 
+      cursorstr += "..."; errstr += "...";
+    }
+
+
+    cursorstr += std::string(raw_input+span.begin.si-nchars_back, raw_input+span.end.si+nchars_fwd);
+    errstr += std::string('^', span.end.si+nchars_fwd - (span.begin.si-nchars_back));
+    if (nchars_fwd > CONTEXTLEN) {
+      cursorstr += "..."; errstr += "...";
+    }
+    cerr << "\n==\n"
+       << outstr << "\n"
+       << span.begin.filename << span << "\n"
+       << errstr.c_str() << "\n"
+       << cursorstr.c_str() << "\n==\n";
+  } else {
+    // multi-line error.
+    std::string errstr = "";
+    for(int i = span.begin.si; i != span.end.si; ++i) {
+        errstr += raw_input[i];
+        if (raw_input[i] == '\n') {errstr += '>'; }
+    }
+    cerr << "\n==\n"
+       << outstr << "\n"
+       << span.begin.filename << span << "\n"
+       << errstr << "\n==\n";
+  }
+}
+
+
 void vprintferr(Loc loc, const char *raw_input, const char *fmt, va_list args) {
   char *outstr = nullptr;
   vasprintf(&outstr, fmt, args);
@@ -1426,7 +1490,7 @@ Stmt *parseStmt(Parser &in) {
     Expr *e = parseExprTop(in);
     return new StmtLet(Span(begin, e->span.end), name, t, e);
   }
-  
+
   in.addErrAtCurrentLoc("expected statement");
   exit(1);
 }
