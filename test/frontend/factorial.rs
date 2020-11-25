@@ -39,7 +39,7 @@ fn factorial(fac: SimpleInt) -> SimpleInt {
                 0 => return SimpleInt(1);
                 n => {
                     let n_minus_1 : !i64 = n - 1;
-                    return fac;
+                    return mulSimpleInt!(fac, factorial!(SimpleInt(n-1)));
                 }
             };
     };
@@ -47,7 +47,7 @@ fn factorial(fac: SimpleInt) -> SimpleInt {
 
 fn main() -> !i64 {
     let five : !SimpleInt = SimpleInt(5);
-    let z : SimpleInt =  factorial(five);
+    let z : !SimpleInt =  factorial!(five);
     return match z {
         SimpleInt(zhash) => return zhash;
     };

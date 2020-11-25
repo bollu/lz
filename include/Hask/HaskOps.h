@@ -152,7 +152,7 @@ public:
   using Op::Op;
   static StringRef getOperationName() { return "lz.case"; };
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
-  Value getScrutinee() { this->getOperation()->getOperand(0); }
+  Value getScrutinee() { return this->getOperation()->getOperand(0); }
   int getNumAlts() { return this->getOperation()->getNumRegions(); }
 
   Region &getAltRHS(int i) { return this->getOperation()->getRegion(i); }

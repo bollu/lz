@@ -1676,7 +1676,7 @@ public:
 
   void assertStrict(const IRType *t, Span span) {
     if (t->strict) return;
-    printferr(span.begin, raw_input, "expected strict type, found found type:\n");
+    printferr(span.begin, raw_input, "expected strict type, found lazy type:\n");
     t->print(cerr); cerr << "\n";
     assert(false && "expected strict type");
   }
@@ -1830,16 +1830,17 @@ void typeCheckExpr(TypeContext &tc, Expr *e) {
     return;
   }
 
-  if (auto case_ = mlir::dyn_cast<ExprCase>(e)) {
-    typeCheckExpr(tc, case_->scrutinee);
+  if (auto ecase = mlir::dyn_cast<ExprCase>(e)) {
+    typeCheckExpr(tc, ecase->scrutinee);
+    tc.assertStrict(ecase->scrutinee->type, ecase->scrutinee->span);
 
     if (IRTypeEnum *scrutineety =
-            mlir::dyn_cast<IRTypeEnum>(case_->scrutinee->type)) {
-      for (ExprCase::Alt &a : case_->alts) {
+            mlir::dyn_cast<IRTypeEnum>(ecase->scrutinee->type)) {
+      for (ExprCase::Alt &a : ecase->alts) {
         if (auto lhsIdentifier = mlir::dyn_cast<CaseLHSIdentifier>(a.first)) {
           TypeContext inner = tc;
-          inner.insertIdentifier(lhsIdentifier->ident, case_->scrutinee->type);
-          lhsIdentifier->type = case_->scrutinee->type;
+          inner.insertIdentifier(lhsIdentifier->ident, ecase->scrutinee->type);
+          lhsIdentifier->type = ecase->scrutinee->type;
           typeCheckBlock(inner, a.second);
           continue;
         } // end identifier alt.
@@ -1863,19 +1864,19 @@ void typeCheckExpr(TypeContext &tc, Expr *e) {
       } // end alts loop for constructor scrutinee.
     }   // end constructor scrutinee.
 
-    if (IRTypeInt *intty = mlir::dyn_cast<IRTypeInt>(case_->scrutinee->type)) {
-      for (ExprCase::Alt a : case_->alts) {
+    if (IRTypeInt *intty = mlir::dyn_cast<IRTypeInt>(ecase->scrutinee->type)) {
+      for (ExprCase::Alt a : ecase->alts) {
         if (auto lhsInt = mlir::dyn_cast<CaseLHSInt>(a.first)) {
           // TODO: add error saying *why* we exepect int type.
-          tc.assertTypeEquality(tc.getIntType(true), case_->scrutinee->type,
-                                case_->scrutinee->span);
+          tc.assertTypeEquality(tc.getIntType(true), ecase->scrutinee->type,
+                                ecase->scrutinee->span);
           TypeContext inner = tc;
           typeCheckBlock(inner, a.second);
           continue;
         }
         if (auto lhsIdentifier = mlir::dyn_cast<CaseLHSIdentifier>(a.first)) {
           TypeContext inner = tc;
-          inner.insertIdentifier(lhsIdentifier->ident, case_->scrutinee->type);
+          inner.insertIdentifier(lhsIdentifier->ident, ecase->scrutinee->type);
           typeCheckBlock(inner, a.second);
           continue;
         } // end identifier alt.
@@ -1886,12 +1887,12 @@ void typeCheckExpr(TypeContext &tc, Expr *e) {
     } // end int scrutinee
 
     // check that all alts have the same type.
-    assert(case_->alts.size() > 0);
-    case_->type = case_->alts[0].second->type;
-    for (int i = 1; i < case_->alts.size(); ++i) {
-      tc.assertTypeEquality(case_->type,
-                            case_->alts[i].second->type,
-                            case_->alts[i].second->span);
+    assert(ecase->alts.size() > 0);
+    ecase->type = ecase->alts[0].second->type;
+    for (int i = 1; i < ecase->alts.size(); ++i) {
+      tc.assertTypeEquality(ecase->type,
+                            ecase->alts[i].second->type,
+                            ecase->alts[i].second->span);
     }
     return;
   } // end case.
