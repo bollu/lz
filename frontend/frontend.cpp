@@ -2480,10 +2480,10 @@ int main(int argc, const char *const *argv) {
 
   std::pair<InterpValue, InterpStats> interpOut =
       interpretModule(mlirmod.get());
-  llvm::errs() << "===running program===\n";
-  llvm::errs() << "value: " << interpOut.first << "\n";
-  llvm::errs() << "statistics:\n" << interpOut.second;
-  llvm::errs() << "\n";
+  llvm::outs() << "===running program===\n";
+  llvm::outs() << "value: " << interpOut.first << "\n";
+  llvm::outs() << "statistics:\n" << interpOut.second;
+  llvm::outs() << "\n";
   llvm::errs().flush();
   return 0;
 }

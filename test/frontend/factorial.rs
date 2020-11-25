@@ -1,3 +1,5 @@
+// RUN: ../../build/bin/frontend %s  -interpret | FileCheck %s
+// CHECK: value: constructor(SimpleInt 120)
 struct SimpleInt(i64);
 
 
@@ -45,10 +47,7 @@ fn factorial(fac: SimpleInt) -> SimpleInt {
     };
 }
 
-fn main() -> !i64 {
+fn main() -> !SimpleInt {
     let five : !SimpleInt = SimpleInt(5);
-    let z : !SimpleInt =  factorial!(five);
-    return match z {
-        SimpleInt(zhash) => return zhash;
-    };
+    return factorial!(five);
 }
