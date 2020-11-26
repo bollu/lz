@@ -1,3 +1,5 @@
+// RUN: ../../build/bin/frontend %s  -interpret | FileCheck %s
+// CHECK: value: constructor(SimpleInt 120)
 struct SimpleInt(i64);
 
 
@@ -39,14 +41,13 @@ fn factorial(fac: SimpleInt) -> SimpleInt {
                 0 => return SimpleInt(1);
                 n => {
                     let n_minus_1 : !i64 = n - 1;
-                    return fac;
+                    return mulSimpleInt!(fac, factorial!(SimpleInt(n-1)));
                 }
             };
     };
 }
 
-fn main() -> SimpleInt {
+fn main() -> !SimpleInt {
     let five : !SimpleInt = SimpleInt(5);
-    let z : SimpleInt =  factorial(five);
-    return z;
+    return factorial!(five);
 }

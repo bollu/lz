@@ -24,6 +24,19 @@ Convert GHC Core to MLIR.
 
 # Log:  [newest] to [oldest]
 
+# Wednesday, Nov 25
+
+- I need to allow my `Identifier` to keep pointers to values...
+- I want to read the rust implementation of [pretty error message printing](https://github.com/rust-lang/rust/blob/master/compiler/rustc_errors/src/emitter.rs)
+- And the [Elm error reporting code](https://github.com/elm/compiler/blob/master/compiler/src/Reporting/Error/Main.hs)
+
+OK, I'm using the program
+
+```hs
+module Main where (main)
+main = print (sum ([1..4040] :: [Int]))
+```
+
 # Mon, Nov 23
 
 - Function body: see that `%arg0` v/s `%arg1`:

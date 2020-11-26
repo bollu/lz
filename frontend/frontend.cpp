@@ -5,7 +5,6 @@
 #include <string.h>
 
 #include <optional>
-#include <vector>
 
 // dialect includes
 #include "Hask/HaskDialect.h"
@@ -246,6 +245,75 @@ void printfspan(Span span, const char *raw_input, const char *fmt, ...) {
   va_end(args);
 }
 
+
+void vprintferrspan(Span span, const char *raw_input, const char *fmt, va_list args) {
+  const int CONTEXTLEN = 25;
+  const int LINELEN = 80;
+
+  char *outstr = nullptr;
+  vasprintf(&outstr, fmt, args);
+  assert(outstr);
+
+
+  if (span.begin.line == span.end.line) {
+      std::string errstr, cursorstr;
+      const ll nchars_back = ({
+        ll i = 0;
+        while(1) {
+          if(span.begin.si - i == 0) { break; }      
+          if(raw_input[span.begin.si - i] == '\n') { i--; break; }      
+          if (i > CONTEXTLEN) { break; }
+          i++;
+        }
+        i;
+      });
+
+      const ll nchars_fwd = ({
+        ll i = 0;
+        while(1) {
+          if(raw_input[span.begin.si + i] == 0) { break; }      
+          if(raw_input[span.begin.si + i] == '\n') { i--; break; }      
+          if (i > CONTEXTLEN) { break; }
+          i++;
+        }
+        i;
+      });
+
+    if (nchars_back > CONTEXTLEN) { 
+      cursorstr += "..."; errstr += "...";
+    }
+
+
+    errstr += std::string(raw_input+span.begin.si-nchars_back, raw_input+span.end.si+nchars_fwd);
+    cursorstr += std::string(nchars_back, ' ');
+    cursorstr += std::string(span.end.si - span.begin.si, '^');
+    cursorstr += std::string(nchars_fwd, ' ');
+
+    
+    if (nchars_fwd > CONTEXTLEN) {
+      cursorstr += "..."; errstr += "...";
+    }
+
+    cerr << "\n==\n"
+       << outstr << "\n"
+       << span.begin.filename << span << "\n"
+       << errstr.c_str() << "\n"
+       << cursorstr.c_str() << "\n==\n";
+  } else {
+    // multi-line error.
+    std::string errstr = "";
+    for(int i = span.begin.si; i != span.end.si; ++i) {
+        errstr += raw_input[i];
+        if (raw_input[i] == '\n') {errstr += '>'; }
+    }
+    cerr << "\n==\n"
+       << outstr << "\n"
+       << span.begin.filename << span << "\n"
+       << errstr << "\n==\n";
+  }
+}
+
+
 void vprintferr(Loc loc, const char *raw_input, const char *fmt, va_list args) {
   char *outstr = nullptr;
   vasprintf(&outstr, fmt, args);
@@ -303,10 +371,10 @@ void vprintferr(Loc loc, const char *raw_input, const char *fmt, va_list args) {
   free(outstr);
 }
 
-void printferr(Loc loc, const char *raw_input, const char *fmt, ...) {
+void printferr(Span span, const char *raw_input, const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
-  vprintferr(loc, raw_input, fmt, args);
+  vprintferrspan(span, raw_input, fmt, args);
   va_end(args);
 }
 
@@ -435,17 +503,16 @@ Loc Loc::nextstr(const string &s) const {
     return cur;
 }
 */
-struct Error {
+struct ParseError {
   std::string errmsg;
-  Loc loc;
+  Span span;
 
-  Error(Loc loc, std::string errmsg) : errmsg(errmsg), loc(loc){};
+  ParseError(Span span, std::string errmsg) : errmsg(errmsg), span(span){};
 };
 
 std::string substring(const std::string &s, Span span) {
   assert(span.end.si - span.begin.si >= 0);
   std::string sub = s.substr(span.begin.si, span.end.si - span.begin.si);
-  cout << "substring: |" << sub << "|\n";
   return sub;
 }
 
@@ -461,6 +528,9 @@ enum class IRTypeKind { Int, Enum, Tuple, Fn };
 struct IRType {
   IRType(IRTypeKind kind, bool strict) : kind(kind), strict(strict){};
   const IRTypeKind kind;
+  // TODO: convert into a virtual method. Derived classes can choose
+  // if they want to expose a lazy version of their type or not.
+  // Tbh this whole thing is unclear if it's correct or not.
   bool strict;
 
   virtual void print(OutFile &f) const = 0;
@@ -486,7 +556,7 @@ struct IRTypeErrorKindMismatch : public IRTypeError {
   IRTypeErrorKindMismatch(const IRType *defn, const IRType *use)
       : IRTypeError(defn, use){};
   virtual void print(const char *raw_input, Span span) {
-    printferr(span.begin, raw_input, "type kind mismatch\n");
+    printferr(span, raw_input, "type kind mismatch\n");
     cerr << "expected: ";
     defn->print(cerr);
     cerr << "\n";
@@ -500,7 +570,7 @@ struct IRTypeErrorTupleArityMismatch : public IRTypeError {
   IRTypeErrorTupleArityMismatch(const IRType *defn, const IRType *use)
       : IRTypeError(defn, use){};
   virtual void print(const char *raw_input, Span span) {
-    printferr(span.begin, raw_input, "tuple arity mismatch\n");
+    printferr(span, raw_input, "tuple arity mismatch\n");
     cerr << "expected: ";
     defn->print(cerr);
     cerr << "\n";
@@ -517,7 +587,7 @@ struct IRTypeErrorEnumMissingConstructor : public IRTypeError {
   std::string name;
 
   virtual void print(const char *raw_input, Span span) {
-    printferr(span.begin, raw_input, "enum missing constructor: |%s|\n",
+    printferr(span, raw_input, "enum missing constructor: |%s|\n",
               name.c_str());
     cerr << "expected: ";
     defn->print(cerr);
@@ -534,7 +604,7 @@ struct IRTypeErrorEnumExtraConstructor : public IRTypeError {
   std::string name;
 
   virtual void print(const char *raw_input, Span span) {
-    printferr(span.begin, raw_input, "enum has extra constructor: |%s|\n",
+    printferr(span, raw_input, "enum has extra constructor: |%s|\n",
               name.c_str());
     cerr << "expected: ";
     defn->print(cerr);
@@ -571,7 +641,15 @@ struct IRTypeTuple : public IRType {
     return new IRTypeTuple(types, forced);
   };
 
-  const vector<IRType *> types;
+  using iterator = std::vector<IRType *>::iterator;
+  using const_iterator = std::vector<IRType *>::const_iterator;
+
+  iterator begin() { return this->types.begin(); }
+  iterator end() { return this->types.end(); }
+
+  const_iterator begin() const { return this->types.begin(); }
+  const_iterator end() const { return this->types.end(); }
+
   void print(OutFile &f) const {
     f << "[";
     f << (strict ? "!" : "~");
@@ -586,6 +664,10 @@ struct IRTypeTuple : public IRType {
     return ty->kind == IRTypeKind::Tuple;
   }
 
+  int size() const { return this->types.size(); }
+  IRType *get(int i) { return this->types[i]; }
+  const IRType *get(int i) const { return this->types[i]; }
+  
   optional<IRTypeError *> mismatch(const IRType *other) const {
     auto otherTuple = mlir::dyn_cast<IRTypeTuple>(other);
     if (!otherTuple) {
@@ -603,15 +685,18 @@ struct IRTypeTuple : public IRType {
     }
     return {};
   }
+  private:
+    vector<IRType *> types;
+
 };
 
 // an enum is NOT A type, it's a *description* of a type. So it doesn't have a
 // notion of strictness (?)
 struct IRTypeEnum : public IRType {
   string name;
-  map<string, IRTypeTuple> constructors;
+  map<string, IRTypeTuple*> constructors;
 
-  IRTypeEnum(string name, map<string, IRTypeTuple> constructors, bool strict)
+  IRTypeEnum(string name, map<string, IRTypeTuple*> constructors, bool strict)
       : IRType(IRTypeKind::Enum, strict), name(name),
         constructors(constructors) {}
 
@@ -625,7 +710,7 @@ struct IRTypeEnum : public IRType {
     f << "t-enum";
     for (auto it : constructors) {
       f << "[struct" << it.first << " ";
-      it.second.print(f);
+      it.second->print(f);
       f << "]";
     }
 
@@ -663,7 +748,6 @@ struct IRTypeFn : public IRType {
 
   IRTypeTuple argTys;
   IRType *retty;
-
   virtual void print(OutFile &f) const {
     f << "[";
     f << (strict ? "!" : "~");
@@ -747,7 +831,7 @@ struct Parser {
   pair<Span, ll> parseInteger() {
     optional<pair<Span, ll>> out = parseOptionalInteger();
     if (!out) {
-      this->addErr(Error(l, "unble to find integer"));
+      this->addErr(ParseError(Span(l, l), "unble to find integer"));
       exit(1);
     }
     return *out;
@@ -798,7 +882,7 @@ struct Parser {
       return *span;
     }
 
-    addErr(Error(l, "expected sigil> |" + sigil + "|"));
+    addErr(ParseError(Span(l, l), "expected sigil> |" + sigil + "|"));
     exit(1);
   }
 
@@ -808,7 +892,7 @@ struct Parser {
       return *span;
     }
 
-    addErr(Error(l, "expected sigil: |" + sigil + "|"));
+    addErr(ParseError(Span(l, l), "expected sigil: |" + sigil + "|"));
     exit(1);
   }
 
@@ -842,7 +926,7 @@ struct Parser {
     if (ms.has_value()) {
       return *ms;
     }
-    addErr(Error(l, "expected identifier"));
+    addErr(ParseError(Span(l, l), "expected identifier"));
     exit(1);
   }
 
@@ -905,16 +989,16 @@ struct Parser {
     if (ms) {
       return *ms;
     }
-    addErr(Error(l, "expected |" + keyword + "|"));
+    addErr(ParseError(Span(l, l), "expected |" + keyword + "|"));
     exit(1);
   }
 
-  void addErr(Error e) {
+  void addErr(ParseError e) {
     errs.push_back(e);
-    printferr(e.loc, s.c_str(), e.errmsg.c_str());
+    printferr(e.span, s.c_str(), e.errmsg.c_str());
   }
 
-  void addErrAtCurrentLoc(string err) { addErr(Error(l, err)); }
+  void addErrAtCurrentLoc(string err) { addErr(ParseError(Span(l, l), err)); }
 
   bool eof() {
     eatWhitespace();
@@ -943,7 +1027,7 @@ struct Parser {
 private:
   const string s;
   Loc l;
-  vector<Error> errs;
+  vector<ParseError> errs;
 
   optional<char> at(Loc loc) {
     if (loc.si >= s.size()) {
@@ -1002,6 +1086,7 @@ struct CaseLHSIdentifier : public CaseLHS {
   const Identifier ident;
   CaseLHSIdentifier(Span span, Identifier ident)
       : CaseLHS(span, CaseLHSKind::Identifier), ident(ident){};
+  IRType *type;
 
   OutFile &print(OutFile &out) const override { return out << ident; }
 
@@ -1012,14 +1097,16 @@ struct CaseLHSIdentifier : public CaseLHS {
 
 struct CaseLHSTupleStruct : public CaseLHS {
   const Identifier name;
-  vector<CaseLHS *> fields;
-  CaseLHSTupleStruct(Span span, Identifier name, vector<CaseLHS *> fields)
-      : CaseLHS(span, CaseLHSKind::TupleStruct), name(name), fields(fields){};
+  vector<Identifier > fields;
+  IRTypeTuple *type;
+
+  CaseLHSTupleStruct(Span span, Identifier name, vector<Identifier> fields)
+      : CaseLHS(span, CaseLHSKind::TupleStruct), name(name), fields(fields), type(nullptr) {};
 
   OutFile &print(OutFile &out) const override {
     out << name << "(";
     for (int i = 0; i < fields.size(); ++i) {
-      fields[i]->print(out);
+      out << fields[i];
       if (i + 1 < fields.size()) {
         out << ", ";
       }
@@ -1050,7 +1137,7 @@ struct ExprCase : public Expr {
   ExprCase(Span span, Expr *scrutinee, vector<Alt> alts)
       : Expr(span, ExprKind::Case), scrutinee(scrutinee), alts(alts){};
   Expr *scrutinee;
-  const vector<Alt> alts;
+  vector<Alt> alts;
 
   OutFile &print(OutFile &out) const override;
 
@@ -1164,17 +1251,18 @@ struct ExprFnCall : public Expr {
   static bool classof(const Expr *e) { return e->kind == ExprKind::FnCall; }
 };
 
-enum class StmtKind { Return, Let }; //, LetBang };
+enum class StmtKind { Return, Let };
 
 struct Stmt {
   virtual void print(OutFile &out) const = 0;
-  Stmt(StmtKind Kind) : Kind(Kind){};
+  Stmt(Span span, StmtKind Kind) : span(span), Kind(Kind){};
   const StmtKind Kind;
+  Span span;
 };
 
 struct StmtReturn : public Stmt {
   Expr *e;
-  StmtReturn(TAKE Expr *e) : Stmt(StmtKind::Return), e(e){};
+  StmtReturn(Span span, TAKE Expr *e) : Stmt(span, StmtKind::Return), e(e){};
 
   void print(OutFile &o) const { o << "return " << *e; }
 
@@ -1185,8 +1273,8 @@ struct StmtLet : public Stmt {
   Identifier name;
   SurfaceType type;
   Expr *rhs;
-  StmtLet(Identifier name, SurfaceType type, Expr *rhs)
-      : Stmt(StmtKind::Let), name(name), type(type), rhs(rhs){};
+  StmtLet(Span span, Identifier name, SurfaceType type, TAKE Expr *rhs)
+      : Stmt(span, StmtKind::Let), name(name), type(type), rhs(rhs){};
   void print(OutFile &o) const {
     o << "let ";
     name.print(o);
@@ -1198,23 +1286,6 @@ struct StmtLet : public Stmt {
 
   static bool classof(const Stmt *S) { return S->Kind == StmtKind::Let; }
 };
-
-// struct StmtLetBang : public Stmt {
-//   Identifier name;
-//   SurfaceType type;
-//   Expr *rhs;
-//   StmtLetBang(Identifier name, SurfaceType type, Expr *rhs)
-//       : Stmt(StmtKind::LetBang), name(name), type(type), rhs(rhs){};
-//   void print(OutFile &o) const {
-//     o << "let! ";
-//     name.print(o);
-//     o << " : ";
-//     type.print(o);
-//     o << " = ";
-//     rhs->print(o);
-//   }
-//   static bool classof(const Stmt *S) { return S->Kind == StmtKind::LetBang; }
-// };
 
 struct Block {
   const vector<Stmt *> stmts;
@@ -1289,11 +1360,11 @@ CaseLHS *parseCaseLHS(Parser &in) {
 
   Span tupleStructSpan(ident.span);
 
-  vector<CaseLHS *> fields;
+  vector<Identifier> fields;
 
   // parse identifiers
   while (1) {
-    CaseLHS *field = parseCaseLHS(in);
+    Identifier field = in.parseIdentifier();
     fields.push_back(field);
     if (!in.parseOptionalComma()) {
       tupleStructSpan.extendRight(
@@ -1413,24 +1484,18 @@ Expr *parseExprTop(Parser &in) {
 }
 
 Stmt *parseStmt(Parser &in) {
+  Loc begin = in.getCurrentLoc();
   if (in.parseOptionalKeyword("return")) {
-    return new StmtReturn(parseExprTop(in));
+    Expr *e = parseExprTop(in);
+    return new StmtReturn(Span(begin, e->span.end), e);
   } else if (in.parseOptionalKeyword("let")) {
     Identifier name = in.parseIdentifier();
     in.parseColon();
     SurfaceType t = parseType(in);
     in.parseEqual();
     Expr *e = parseExprTop(in);
-    return new StmtLet(name, t, e);
+    return new StmtLet(Span(begin, e->span.end), name, t, e);
   }
-  //  else if (in.parseOptionalKeyword("letbang")) {
-  //   Identifier name = in.parseIdentifier();
-  //   in.parseColon();
-  //   SurfaceType t = parseType(in);
-  //   in.parseEqual();
-  //   Expr *e = parseExprTop(in);
-  //   return new StmtLetBang(name, t, e);
-  // }
 
   in.addErrAtCurrentLoc("expected statement");
   exit(1);
@@ -1473,10 +1538,11 @@ struct Fn {
   const vector<Argument> args;
   SurfaceType retty;
   Block *body;
+  IRTypeFn *type;
 
   Fn(Span span, Identifier name, vector<Argument> args, SurfaceType retty,
      Block *body)
-      : span(span), name(name), args(args), retty(retty), body(body){};
+      : span(span), name(name), args(args), retty(retty), body(body), type(nullptr) {};
 
   OutFile &print(OutFile &out) const {
     out << name.name << "(";
@@ -1487,6 +1553,7 @@ struct Fn {
       }
     }
     out << ")";
+    out << " -> "; this->retty.print(out); out << " ";
     body->print(out);
     return out;
   }
@@ -1559,6 +1626,7 @@ struct Struct {
   const Identifier name;
   StructFields *fields;
 
+  // IRTypeEnum *type = nullptr;
   Struct(Span span, Identifier name, StructFields *fields)
       : span(span), name(name), fields(fields){};
 };
@@ -1648,22 +1716,16 @@ public:
   TypeContext(const char *raw_input) : raw_input(raw_input){};
 
   void assertNonStrict(const IRType *t, Span span) {
-    if (!t->strict)
-      return;
-    printferr(span.begin, raw_input,
-              "expected lazy type, found strict type:\n");
-    t->print(cerr);
-    cerr << "\n";
+    if (!t->strict) return;
+    printferr(span, raw_input, "expected lazy type, found strict type:\n");
+    t->print(cerr); cerr << "\n";
     assert(false && "expected lazy type");
   }
 
   void assertStrict(const IRType *t, Span span) {
-    if (t->strict)
-      return;
-    printferr(span.begin, raw_input,
-              "expected strict type, found found type:\n");
-    t->print(cerr);
-    cerr << "\n";
+    if (t->strict) return;
+    printferr(span, raw_input, "expected strict type, found lazy type:\n");
+    t->print(cerr); cerr << "\n";
     assert(false && "expected strict type");
   }
 
@@ -1673,7 +1735,7 @@ public:
       return;
     }
     (*err)->print(this->raw_input, span);
-    printferr(span.begin, raw_input,
+    printferr(span, raw_input,
               "type error mismatch generated from def/use:\n", span.begin);
     cerr << "defn: ";
     defn->print(cerr);
@@ -1685,10 +1747,10 @@ public:
   };
 
   void assertFntyNArgs(const IRTypeFn *fnty, int nargs, Span span) {
-    if (fnty->argTys.types.size() == nargs) {
+    if (fnty->argTys.size() == nargs) {
       return;
     }
-    printferr(span.begin, raw_input,
+    printferr(span, raw_input,
               "mismatched number of arguments at call site: ");
     cerr << "function type:\n";
     fnty->print(cerr);
@@ -1697,29 +1759,29 @@ public:
   };
 
   void assertVoidBlock(Span span) {
-    printferr(span.begin, raw_input, "block has no return instruction\n");
+    printferr(span, raw_input, "block has no return instruction\n");
     assert(false && "found block with no return");
   }
 
   // check that enum has the constructor and return the corresponding tuple,
   // or error out.
-  IRTypeTuple assertExpectedConstructorInEnum(IRTypeEnum *enumty,
+  IRTypeTuple *assertExpectedConstructorInEnum(IRTypeEnum *enumty,
                                               Identifier constructor,
                                               int size) {
     auto it = enumty->constructors.find(constructor.name);
     if (it == enumty->constructors.end()) {
-      printferr(constructor.span.begin, raw_input,
+      printferr(constructor.span, raw_input,
                 "unable to find constructor |%s| in enum |%s|\n",
                 constructor.name.c_str(), enumty->name.c_str());
       assert(false && "unknown constructor for type");
     }
 
-    if (it->second.types.size() != size) {
-      printferr(constructor.span.begin, raw_input,
+    if (it->second->size() != size) {
+      printferr(constructor.span, raw_input,
                 "expected |%d| fields in constructor |%s| of enum |%s|, found "
                 "|%d| fields\n",
                 size, constructor.name.c_str(), enumty->name.c_str(),
-                it->second.types.size());
+                it->second->size());
       assert(false && "incorrect number of args to tuple type");
     }
 
@@ -1727,40 +1789,36 @@ public:
   }
 
   void assertInteger(const IRType *user, Span span) {
-    if (user->kind == IRTypeKind::Int) {
-      return;
-    }
-    printferr(span.begin, raw_input, "expected integer type. found:\n");
-    user->print(cerr);
-    cerr << "\n";
+    if (user->kind == IRTypeKind::Int) { return; }
+    printferr(span, raw_input, "expected integer type. found:\n");
+    user->print(cerr); cerr << "\n";
     assert(false && "expected integer type");
   }
 
-  IRType *lookupValue(Identifier ident) {
+  IRType *lookupValue(Identifier ident) const {
     auto it = ident2ty.find(ident.name);
 
     if (it == ident2ty.end()) {
-      printferr(ident.span.begin, raw_input,
-                "unable to find value |%s| during type checking!\n",
-                ident.name.c_str());
+      printferr(ident.span, raw_input,
+                "unable to find value |%s| during type checking!\n", ident.name.c_str());
       assert(false && "unable to find value");
     }
     return it->second;
   }
 
   template <typename T>
-  T *lookupValueOfType(Identifier ident, std::string error) {
+  T *lookupValueOfType(Identifier ident, std::string error) const {
     IRType *t = lookupValue(ident);
     return this->cast<T>(t, ident.span, error);
   }
 
   IRTypeInt *getIntType(bool strict) { return new IRTypeInt(strict); }
 
-  IRType *lookupTypeName(Identifier typenam) {
+  IRType *lookupTypeName(Identifier typenam) const {
     auto it = surface2ty.find(typenam.name);
     if (it == surface2ty.end()) {
-      printferr(typenam.span.begin, raw_input,
-                "unable to find type named: |%s|\n", typenam.name.c_str());
+      printferr(typenam.span, raw_input, "unable to find type named: |%s|\n",
+                typenam.name.c_str());
       // TODO: find some way to smuggle |raw_input| here.
       // raw_input? from where the fuck am I supposed to get that to print an
       // error? smh.
@@ -1769,12 +1827,11 @@ public:
     return it->second;
   }
 
-  template <typename T> T *lookupTypeNameOfType(Identifier typenam) {
-    T *result = mlir::dyn_cast<T>(lookupTypeName(typenam));
-    if (result) {
-      return result;
-    }
-    assert(false && "unable to cast type to expected type");
+    template<typename T>
+    T *lookupTypeNameOfType(Identifier typenam) const {
+      T* result = mlir::dyn_cast<T>(lookupTypeName(typenam));
+      if (result) { return result; }
+      assert(false && "unable to cast type to expected type");
   }
 
   void insertIRType(std::string name, IRType *t) {
@@ -1784,20 +1841,18 @@ public:
 
   void insertIdentifier(Identifier name, IRType *t) {
     if (ident2ty.find(name.name) != ident2ty.end()) {
-      printferr(name.span.begin, raw_input,
-                "identifier |%s| already present in scope during type checking",
-                name.name.c_str());
+      printferr(name.span, raw_input, "identifier |%s| already present in scope during type checking", name.name.c_str());
     };
 
     assert(ident2ty.find(name.name) == ident2ty.end());
     ident2ty.insert({name.name, t});
   }
 
-  template <typename T> T *cast(IRType *base, Span span, std::string error) {
+  template <typename T> T *cast(IRType *base, Span span, std::string error) const {
     if (T::classof(base)) {
       return (T *)base;
     }
-    printferr(span.begin, raw_input, error.c_str());
+    printferr(span, raw_input, error.c_str());
     assert(false && "mismatched types");
   }
 
@@ -1823,28 +1878,29 @@ void typeCheckExpr(TypeContext &tc, Expr *e) {
     return;
   }
 
-  if (auto case_ = mlir::dyn_cast<ExprCase>(e)) {
-    typeCheckExpr(tc, case_->scrutinee);
+  if (auto ecase = mlir::dyn_cast<ExprCase>(e)) {
+    typeCheckExpr(tc, ecase->scrutinee);
+    tc.assertStrict(ecase->scrutinee->type, ecase->scrutinee->span);
 
     if (IRTypeEnum *scrutineety =
-            mlir::dyn_cast<IRTypeEnum>(case_->scrutinee->type)) {
-      for (ExprCase::Alt a : case_->alts) {
+            mlir::dyn_cast<IRTypeEnum>(ecase->scrutinee->type)) {
+      for (ExprCase::Alt &a : ecase->alts) {
         if (auto lhsIdentifier = mlir::dyn_cast<CaseLHSIdentifier>(a.first)) {
           TypeContext inner = tc;
-          inner.insertIdentifier(lhsIdentifier->ident, case_->scrutinee->type);
+          inner.insertIdentifier(lhsIdentifier->ident, ecase->scrutinee->type);
+          lhsIdentifier->type = ecase->scrutinee->type;
           typeCheckBlock(inner, a.second);
           continue;
         } // end identifier alt.
 
         if (auto lhsTuple = mlir::dyn_cast<CaseLHSTupleStruct>(a.first)) {
-          IRTypeTuple tuplety = tc.assertExpectedConstructorInEnum(
+          IRTypeTuple *tuplety = tc.assertExpectedConstructorInEnum(
               scrutineety, lhsTuple->name, lhsTuple->fields.size());
+          lhsTuple->type = tuplety;
           TypeContext inner = tc;
           for (int i = 0; i < lhsTuple->fields.size(); ++i) {
             // TODO: actually handle recursive pattern matching.
-            CaseLHSIdentifier *field =
-                mlir::cast<CaseLHSIdentifier>(lhsTuple->fields[i]);
-            inner.insertIdentifier(field->ident, tuplety.types[i]);
+            inner.insertIdentifier(lhsTuple->fields[i], tuplety->get(i));
             typeCheckBlock(inner, a.second);
           }
           continue;
@@ -1856,19 +1912,19 @@ void typeCheckExpr(TypeContext &tc, Expr *e) {
       } // end alts loop for constructor scrutinee.
     }   // end constructor scrutinee.
 
-    if (IRTypeInt *intty = mlir::dyn_cast<IRTypeInt>(case_->scrutinee->type)) {
-      for (ExprCase::Alt a : case_->alts) {
+    if (IRTypeInt *intty = mlir::dyn_cast<IRTypeInt>(ecase->scrutinee->type)) {
+      for (ExprCase::Alt a : ecase->alts) {
         if (auto lhsInt = mlir::dyn_cast<CaseLHSInt>(a.first)) {
           // TODO: add error saying *why* we exepect int type.
-          tc.assertTypeEquality(tc.getIntType(true), case_->scrutinee->type,
-                                case_->scrutinee->span);
+          tc.assertTypeEquality(tc.getIntType(true), ecase->scrutinee->type,
+                                ecase->scrutinee->span);
           TypeContext inner = tc;
           typeCheckBlock(inner, a.second);
           continue;
         }
         if (auto lhsIdentifier = mlir::dyn_cast<CaseLHSIdentifier>(a.first)) {
           TypeContext inner = tc;
-          inner.insertIdentifier(lhsIdentifier->ident, case_->scrutinee->type);
+          inner.insertIdentifier(lhsIdentifier->ident, ecase->scrutinee->type);
           typeCheckBlock(inner, a.second);
           continue;
         } // end identifier alt.
@@ -1879,40 +1935,35 @@ void typeCheckExpr(TypeContext &tc, Expr *e) {
     }   // end int scrutinee
 
     // check that all alts have the same type.
-    assert(case_->alts.size() > 0);
-    case_->type = case_->alts[0].second->type;
-    for (int i = 1; i < case_->alts.size(); ++i) {
-      tc.assertTypeEquality(case_->type, case_->alts[i].second->type,
-                            case_->alts[i].second->span);
+    assert(ecase->alts.size() > 0);
+    ecase->type = ecase->alts[0].second->type;
+    for (int i = 1; i < ecase->alts.size(); ++i) {
+      tc.assertTypeEquality(ecase->type,
+                            ecase->alts[i].second->type,
+                            ecase->alts[i].second->span);
     }
     return;
   } // end case.
 
   if (auto construct = mlir::dyn_cast<ExprConstruct>(e)) {
-    for (Expr *arg : construct->args) {
-      typeCheckExpr(tc, arg);
-    }
-    cerr << "Type checking: |";
-    construct->print(cerr);
-    cerr << "|\n";
-    IRTypeEnum *enumty =
-        tc.lookupTypeNameOfType<IRTypeEnum>(construct->constructorName);
-    // IRTypeEnum *enumty =
-    // tc.lookupValueOfType<IRTypeEnum>(construct->constructorName,
-    //                           "expected constructor to be an enumeration
-    //                           type");
+      for (Expr *arg : construct->args) {
+        typeCheckExpr(tc, arg);
+      }
+      IRTypeEnum *enumty = tc.lookupTypeNameOfType<IRTypeEnum>(construct->constructorName);
+      // IRTypeEnum *enumty = tc.lookupValueOfType<IRTypeEnum>(construct->constructorName,
+      //                           "expected constructor to be an enumeration type");
 
-    auto it = enumty->constructors.find(construct->constructorName.name);
-    assert(it != enumty->constructors.end());
-    IRTypeTuple constructorty = it->second;
+      auto it = enumty->constructors.find(construct->constructorName.name);
+      assert(it != enumty->constructors.end());
+      IRTypeTuple *constructorty = it->second;
 
-    // TODO: convert to a type error.
-    assert(constructorty.types.size() == construct->args.size());
+      // TODO: convert to a type error.
+      assert(constructorty->size() == construct->args.size());
 
-    for (int i = 0; i < construct->args.size(); ++i) {
-      tc.assertTypeEquality(constructorty.types[i], construct->args[i]->type,
-                            construct->args[i]->span);
-    }
+      for(int i = 0; i < construct->args.size(); ++i) {
+        tc.assertTypeEquality(constructorty->get(i), 
+          construct->args[i]->type, construct->args[i]->span);
+      }
 
     construct->type = enumty;
     return;
@@ -1932,7 +1983,7 @@ void typeCheckExpr(TypeContext &tc, Expr *e) {
     tc.assertFntyNArgs(fnty, fncall->args.size(), fncall->span);
     for (int i = 0; i < fncall->args.size(); ++i) {
       typeCheckExpr(tc, fncall->args[i]);
-      tc.assertTypeEquality(fnty->argTys.types[i], fncall->args[i]->type,
+      tc.assertTypeEquality(fnty->argTys.get(i), fncall->args[i]->type,
                             fncall->args[i]->span);
     }
     // set strictness info here.
@@ -1966,17 +2017,12 @@ void typeCheckBlock(TypeContext tc, Block *b) {
       } else {
         tc.assertNonStrict(let->rhs->type, let->rhs->span);
       }
+      IRType *declaredty = tc.lookupTypeName(let->type.tyname);
+      tc.assertTypeEquality(declaredty, let->rhs->type, let->span);
       tc.insertIdentifier(let->name, let->rhs->type);
       continue;
     }
 
-    // if (auto letbang = mlir::dyn_cast<StmtLetBang>(s)) {
-    //   typeCheckExpr(tc, letbang->rhs);
-    //   tc.insertIdentifier(letbang->name, letbang->rhs->type);
-    //   tc.assertStrict(letbang->rhs->type, letbang->rhs->span);
-    //   continue;
-
-    // }
     if (auto ret = mlir::dyn_cast<StmtReturn>(s)) {
       typeCheckExpr(tc, ret->e);
       assert(ret->e->type);
@@ -1997,7 +2043,8 @@ void typeCheckBlock(TypeContext tc, Block *b) {
   }
 };
 
-TypeContext typeCheckModule(const char *raw_input, Module m) {
+// NOTE: this MUTATES THE MODULE! by changing `Fn.type` and `Expr.type` fields.-
+TypeContext typeCheckModule(const char *raw_input, Module &m) {
   TypeContext tcGlobal(raw_input);
   tcGlobal.insertIRType("i64", new IRTypeInt(true));
 
@@ -2011,30 +2058,31 @@ TypeContext typeCheckModule(const char *raw_input, Module m) {
 
     // a struct is an enum with a single constructor whose constructor
     // name is the same as the type name.
-    map<string, IRTypeTuple> constructor2Type;
-    constructor2Type.insert({s.name.name, IRTypeTuple(fieldTys, true)});
+    map<string, IRTypeTuple*> constructor2Type;
+    constructor2Type.insert({s.name.name, new IRTypeTuple(fieldTys, true)});
     // TODO: asking for strictness on Enum is sort of nonsensical?
     tcGlobal.insertIRType(s.name.name,
                           new IRTypeEnum(s.name.name, constructor2Type, true));
     // add all constructors into the scope of the typechecker.
   }
 
-  // insert all function types.
-  for (Fn f : m.fns) {
+  // generate  all function types.
+  for (Fn &f : m.fns) {
     vector<IRType *> argTys;
     for (Fn::Argument arg : f.args) {
       argTys.push_back(tcGlobal.lookupTypeName(arg.second.tyname));
     }
-    IRType *retty = tcGlobal.lookupTypeName(f.retty.tyname)->clone(false);
+    IRType *retty = tcGlobal.lookupTypeName(f.retty.tyname);
 
     // global *functions* are indeed values, not thunks (?)
     // Once again, we need a distinction between "types of stuff" and
     // "types of values?"
-    tcGlobal.insertIdentifier(
-        f.name, new IRTypeFn(IRTypeTuple(argTys, true), retty, true));
+    IRTypeFn *fnty =  new IRTypeFn(IRTypeTuple(argTys, true), retty, true);
+    f.type = fnty;
+    tcGlobal.insertIdentifier(f.name, fnty);
   }
 
-  for (Fn f : m.fns) {
+  for (Fn &f : m.fns) {
     TypeContext tc = tcGlobal;
     for (Fn::Argument arg : f.args) {
       tc.insertIdentifier(arg.first, tc.lookupTypeName(arg.second.tyname));
@@ -2059,39 +2107,130 @@ using ScopeFn = Scope<std::string, mlir::FuncOp>;
 using ScopeValue = Scope<std::string, mlir::Value>;
 
 using SymbolTable = map<std::string, mlir::Value>;
-mlir::Type mlirGenTypeOrDefault(SurfaceType t, mlir::OpBuilder &builder,
-                                mlir::Type defaultty) {
-  //  return builder.getI64Type();
+// mlir::Type mlirGenTypeOrDefault(SurfaceType t, mlir::OpBuilder &builder,
+//                                 mlir::Type defaultty) {
+//   //  return builder.getI64Type();
 
-  if (t.tyname.name == ("i64")) {
-    return builder.getI64Type();
+//   if (t.tyname.name == ("i64")) {
+//     return builder.getI64Type();
+//   }
+//   return defaultty;
+// }
+
+// mlir::Type mlirGenTypeOrThunk(SurfaceType t, mlir::OpBuilder &builder) {
+//   auto valty = mlir::standalone::ValueType::get(builder.getContext());
+//   auto thunkty = mlir::standalone::ThunkType::get(builder.getContext(), valty);
+
+//   return mlirGenTypeOrDefault(t, builder, thunkty);
+// }
+
+// mlir::Type mlirGenTypeOrValue(SurfaceType t, mlir::OpBuilder &builder) {
+//   auto valty = mlir::standalone::ValueType::get(builder.getContext());
+//   return mlirGenTypeOrDefault(t, builder, valty);
+// }
+mlir::Type mlirGenType(mlir::OpBuilder &builder, const IRType *ty);
+
+
+mlir::FunctionType mlirGenTypeFn(mlir::OpBuilder &builder, const IRTypeFn *fnty) {
+  vector<mlir::Type> argtys;
+  for(IRType *argty : fnty->argTys) {
+    argtys.push_back(mlirGenType(builder, argty));
   }
-  return defaultty;
+
+  mlir::FunctionType out =  builder.getFunctionType(argtys,
+      mlirGenType(builder, fnty->retty));
+  assert(fnty->strict && "cannot handle lazy function");
+  return out;
 }
 
-mlir::Type mlirGenTypeOrThunk(SurfaceType t, mlir::OpBuilder &builder) {
-  auto valty = mlir::standalone::ValueType::get(builder.getContext());
-  auto thunkty = mlir::standalone::ThunkType::get(builder.getContext(), valty);
+mlir::Type mlirGenType(mlir::OpBuilder &builder, const IRType *ty) {
+  mlir::Type out;
+  if (const IRTypeFn *fnty = mlir::dyn_cast<IRTypeFn>(ty)) {
+    return mlirGenTypeFn(builder, fnty);
+  }
+  if (const IRTypeInt *i = mlir::dyn_cast<IRTypeInt>(ty)) {
+    out = builder.getI64Type();
+    if (!ty->strict) { out = mlir::standalone::ThunkType::get(builder.getContext(), out); }
+    return out;
+  }
 
-  return mlirGenTypeOrDefault(t, builder, thunkty);
+  if (const IRTypeEnum *enumty = mlir::dyn_cast<IRTypeEnum>(ty)) {
+    out = mlir::standalone::ValueType::get(builder.getContext());
+    if (!ty->strict) { out = mlir::standalone::ThunkType::get(builder.getContext(), out); }
+    return out;
+  }
+
+  if (const IRTypeTuple *tuplety = mlir::dyn_cast<IRTypeTuple>(ty)) {
+    assert(false && "cannot code generate tuples.");
+  }
+
+  assert(false && "unknown type");
 }
 
-mlir::Type mlirGenTypeOrValue(SurfaceType t, mlir::OpBuilder &builder) {
-  auto valty = mlir::standalone::ValueType::get(builder.getContext());
-  return mlirGenTypeOrDefault(t, builder, valty);
+void mlirGenBlock(const Block *b, mlir::OpBuilder &builder, ScopeFn scopeFn,
+                  ScopeValue &scopeValue, const TypeContext &tc);
+
+
+std::pair<mlir::Attribute, mlir::Region*>
+mlirGenCaseAlt(mlir::Value scrutinee, const ExprCase::Alt alt, mlir::OpBuilder builder,
+                        ScopeFn scopeFn, ScopeValue scopeValue,
+                        const TypeContext &tc) {
+
+  if (CaseLHSInt *i = llvm::dyn_cast<CaseLHSInt>(alt.first)) {
+    mlir::Region *r = new mlir::Region();
+    r->push_back(new mlir::Block);
+    mlir::Block &bodyBlock = r->front();
+    {
+      mlir::OpBuilder nestedBuilder = builder;
+      nestedBuilder.setInsertionPointToEnd(&bodyBlock);
+      mlirGenBlock(alt.second, nestedBuilder, scopeFn, scopeValue, tc);
+    }
+
+    return {builder.getI64IntegerAttr(i->value), r};
+  }
+
+  // TODO: differentiate of if we are caseing on an int or something else
+  if (CaseLHSIdentifier *id =
+          llvm::dyn_cast<CaseLHSIdentifier>(alt.first)) {
+    mlir::Region *r = new mlir::Region();
+    r->push_back(new mlir::Block);
+    mlir::Block &bodyBlock = r->front();
+    mlir::OpBuilder nestedBuilder = builder;
+    ScopeValue nestedScopeValue = scopeValue;
+    nestedScopeValue.insert(id->ident.name, scrutinee);
+    nestedBuilder.setInsertionPointToEnd(&bodyBlock);
+    mlirGenBlock(alt.second, nestedBuilder, scopeFn, nestedScopeValue, tc);
+    mlir::Attribute  lhs = mlir::FlatSymbolRefAttr::get("default", builder.getContext());
+    return {lhs, r};
+  }
+
+  if (auto tuplestruct = llvm::dyn_cast<CaseLHSTupleStruct>(alt.first)) {
+    mlir::Region *r = new mlir::Region();
+    r->push_back(new mlir::Block);
+    mlir::Block &bodyBlock = r->front();
+
+    mlir::OpBuilder nestedBuilder = builder;
+    ScopeValue nestedScopeValue = scopeValue;
+
+    for (int i = 0; i< tuplestruct->fields.size(); ++ i) {
+      mlir::BlockArgument arg = bodyBlock.addArgument(mlirGenType(builder, tuplestruct->type->get(i)));
+      nestedScopeValue.insert(tuplestruct->fields[i].name, arg);
+    }
+
+    nestedBuilder.setInsertionPointToEnd(&bodyBlock);
+    mlirGenBlock(alt.second, nestedBuilder, scopeFn, nestedScopeValue, tc);
+    mlir::Attribute lhs = mlir::FlatSymbolRefAttr::get(tuplestruct->name.name,
+                                        builder.getContext());
+    return {lhs, r};
+  }
+
+  assert(false && "unknown case alt");
 }
 
 // https://github.com/llvm/llvm-project/blob/76257422378e54dc2b59ff034e2955e9518e6c99/mlir/lib/Dialect/SCF/SCF.cpp
-void mlirGenBlock(const Block *b, mlir::OpBuilder &builder, ScopeFn scopeFn,
-                  ScopeValue &scopeValue, const TypeContext &tc);
 mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder,
                         ScopeFn scopeFn, ScopeValue &scopeValue,
                         const TypeContext &tc) {
-  cout << __FUNCTION__ << ":" << __LINE__ << "\n";
-  cout.indent();
-  e->print(cout);
-  cout.dedent();
-  cout << "\n";
   if (const ExprInteger *i = mlir::dyn_cast<ExprInteger>(e)) {
     return builder.create<mlir::ConstantIntOp>(builder.getUnknownLoc(),
                                                i->value, builder.getI64Type());
@@ -2111,21 +2250,42 @@ mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder,
   }
 
   if (const ExprCase *c = mlir::dyn_cast<ExprCase>(e)) {
-    assert(c->scrutinee);
+    mlir::Value scrutinee = mlirGenExpr(c->scrutinee, builder, scopeFn, scopeValue, tc);
+    mlir::SmallVector<mlir::Attribute, 4> lhss;
+    mlir::SmallVector<mlir::Region *, 4> rhss;
+    for(ExprCase::Alt alt : c->alts) {
+      mlir::Attribute lhs;
+      mlir::Region *rhs;
+      std::tie(lhs, rhs) = mlirGenCaseAlt(scrutinee, alt, builder, scopeFn, scopeValue, tc);
+      lhss.push_back(lhs);
+      rhss.push_back(rhs);
+    }
+
+    if (mlir::isa<IRTypeInt>(c->scrutinee->type)) {
+      return builder.create<mlir::standalone::CaseIntOp>(
+             builder.getUnknownLoc(), scrutinee, lhss, rhss, mlirGenType(builder, c->type));
+    } else {
+      assert(mlir::isa<IRTypeEnum>(c->scrutinee->type));
+      return builder.create<mlir::standalone::CaseOp>(
+             builder.getUnknownLoc(), scrutinee, lhss, rhss, mlirGenType(builder, c->type));
+    }
+
+
+
+    /*
     mlir::Value scrutinee =
         mlirGenExpr(c->scrutinee, builder, scopeFn, scopeValue, tc);
     llvm::SmallVector<mlir::Attribute, 4> lhss;
     llvm::SmallVector<mlir::Region *, 4> rhss;
 
-    mlir::Type scrutineety = builder.getI64Type();
-    mlir::Type retty = builder.getI64Type();
+    // mlir::Type scrutineety = builder.getI64Type();
+    // mlir::Type retty = builder.getI64Type();
 
     for (ExprCase::Alt alt : c->alts) {
       mlir::Attribute lhs;
       mlir::Region *r = nullptr;
 
       if (CaseLHSInt *i = llvm::dyn_cast<CaseLHSInt>(alt.first)) {
-        cout << "CaseInt\n";
         lhs = builder.getI64IntegerAttr(i->value);
         r = new mlir::Region();
         r->push_back(new mlir::Block);
@@ -2133,11 +2293,7 @@ mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder,
         {
           mlir::OpBuilder nestedBuilder = builder;
           nestedBuilder.setInsertionPointToEnd(&bodyBlock);
-          //  mlir::Value rhsval =  mlirGenExpr(a.second, nestedBuilder,
-          //  scopeFn, scopeValue);
           mlirGenBlock(alt.second, nestedBuilder, scopeFn, scopeValue, tc);
-          //  nestedBuilder.create<mlir::ReturnOp>(builder.getUnknownLoc(),
-          //  rhsval);
         }
       }
 
@@ -2148,7 +2304,6 @@ mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder,
         r = new mlir::Region();
         r->push_back(new mlir::Block);
         mlir::Block &bodyBlock = r->front();
-        cout << "caseLHSIdentifier\n";
         mlir::OpBuilder nestedBuilder = builder;
         ScopeValue nestedScopeValue = scopeValue;
         nestedScopeValue.insert(id->ident.name, scrutinee);
@@ -2157,7 +2312,6 @@ mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder,
       }
 
       if (auto tuplestruct = llvm::dyn_cast<CaseLHSTupleStruct>(alt.first)) {
-        cout << "caseLHSTupleStruct\n";
         lhs = mlir::FlatSymbolRefAttr::get(tuplestruct->name.name,
                                            builder.getContext());
         r = new mlir::Region();
@@ -2172,9 +2326,8 @@ mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder,
                  "unhandled case where tuple struct matches on a non-field. "
                  "TODO: implement recursive caseing");
           CaseLHSIdentifier *lhsFieldCase = llvm::cast<CaseLHSIdentifier>(lhs);
-          mlir::Type mlirFieldTy =
-              builder.getI64Type(); // TODO: find out what the type of the field
-                                    // is.
+          // mlir::Type mlirFieldTy =
+
           mlir::BlockArgument arg = bodyBlock.addArgument(mlirFieldTy);
           nestedScopeValue.insert(lhsFieldCase->ident.name, arg);
         }
@@ -2192,70 +2345,48 @@ mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder,
         builder.create<mlir::standalone::CaseIntOp>(
             builder.getUnknownLoc(), scrutinee, lhss, rhss, retty);
     return case_;
+    */
   }
   if (const ExprIdentifier *id = mlir::dyn_cast<ExprIdentifier>(e)) {
     mlir::Value identVal = scopeValue.lookupExisting(id->name);
-    llvm::outs() << "ident: |" << identVal << "|\n";
     return identVal;
   }
 
   if (const ExprFnCall *call = mlir::dyn_cast<ExprFnCall>(e)) {
-    cout << "call :" << *call << "\n";
-    llvm::SmallVector<mlir::Value, 4> args;
-    for (Expr *e : call->args) {
-      args.push_back(mlirGenExpr(e, builder, scopeFn, scopeValue, tc));
+    llvm::SmallVector<mlir::Value, 4>  args;
+    for(Expr *arg : call->args) {
+      args.push_back(mlirGenExpr(arg, builder, scopeFn, scopeValue, tc));
     }
-
-    llvm::SmallVector<mlir::Type, 4> argTys;
-    for (int i = 0; i < call->args.size(); ++i) {
-      argTys.push_back(builder.getI64Type());
-    }
-
-    assert(args.size() == argTys.size() &&
-           "mismatched argument value and type list");
 
     mlir::Type retty = builder.getI64Type();
-    mlir::standalone::HaskFnType fnty =
-        mlir::standalone::HaskFnType::get(builder.getContext(), argTys, retty);
-    mlir::Value vf = builder.create<mlir::standalone::HaskRefOp>(
-        builder.getUnknownLoc(), call->fnname.name, fnty);
 
-    return builder.create<mlir::standalone::ApOp>(builder.getUnknownLoc(), vf,
-                                                  args);
+    IRTypeFn *fnty = tc.lookupValueOfType<IRTypeFn>(call->fnname,
+      "expected function to have function type");
+    mlir::FunctionType mlirfnty = mlirGenTypeFn(builder, fnty);
+    mlir::Value vf = builder.create<mlir::standalone::HaskRefOp>(
+        builder.getUnknownLoc(), call->fnname.name, mlirfnty);
+    mlir::Value out =  builder.create<mlir::standalone::ApOp>(builder.getUnknownLoc(), vf, args);
+    if (call->strict) {
+       out = builder.create<mlir::standalone::ForceOp>(builder.getUnknownLoc(), out);
+    }
+    return out;
   }
 
   if (auto *construct = mlir::dyn_cast<ExprConstruct>(e)) {
-    cout << "construct :" << *construct << "\n";
     llvm::SmallVector<mlir::Value, 4> args;
     for (Expr *arg : construct->args) {
       args.push_back(mlirGenExpr(arg, builder, scopeFn, scopeValue, tc));
     }
 
-    // need to lookup context.
-    llvm::SmallVector<mlir::Type, 4> argTys;
-    for (int i = 0; i < construct->args.size(); ++i) {
-      argTys.push_back(builder.getI64Type());
-    }
-
-    assert(args.size() == argTys.size() &&
-           "mismatched argument value and type list");
     // creates an lz.value
     return builder.create<mlir::standalone::HaskConstructOp>(
         builder.getUnknownLoc(), construct->constructorName.name, args);
     assert(false && "construct");
-    // assert(false && "Construct");
-    // mlir::Value vf =
-    //     builder.create<mlir::standalone::HaskRefOp>(builder.getUnknownLoc(),
-    //                                                 construct->constructorName.name,
-    //                                                 fnty);
-
-    // return builder.create<mlir::standalone::ApOp>(builder.getUnknownLoc(),
-    // vf, args);
   }
 
-  llvm::outs() << "\n====\n";
-  e->print(cout);
-  llvm::outs() << "\n====\n";
+  llvm::errs() << "\n====\n";
+  e->print(cerr);
+  llvm::errs() << "\n====\n";
   assert(false && "unknown expression");
 }
 void mlirGenStmt(const Stmt *s, mlir::OpBuilder &builder, ScopeFn scopeFn,
@@ -2263,16 +2394,9 @@ void mlirGenStmt(const Stmt *s, mlir::OpBuilder &builder, ScopeFn scopeFn,
   if (const StmtLet *l = mlir::dyn_cast<StmtLet>(s)) {
     mlir::Value v = mlirGenExpr(l->rhs, builder, scopeFn, scopeValue, tc);
     // generate a force expression if need be.
-    if (l->type.strict) {
-      v = builder.create<mlir::standalone::ForceOp>(builder.getUnknownLoc(), v);
-    }
     scopeValue.insert(l->name.name, v);
     return;
   }
-
-  // if (const StmtLetBang *l = mlir::dyn_cast<StmtLetBang>(s)) {
-  //   assert(false && "stmt letbang");
-  // }
 
   if (const StmtReturn *r = mlir::dyn_cast<StmtReturn>(s)) {
     mlir::Value v = mlirGenExpr(r->e, builder, scopeFn, scopeValue, tc);
@@ -2280,9 +2404,9 @@ void mlirGenStmt(const Stmt *s, mlir::OpBuilder &builder, ScopeFn scopeFn,
     return;
   }
 
-  cout << "\n===\n";
-  s->print(cout);
-  cout << "\n===\n";
+  cerr << "\n===\n";
+  s->print(cerr);
+  cerr << "\n===\n";
   assert(false && "unknown statement type");
 }
 
@@ -2293,19 +2417,14 @@ void mlirGenBlock(const Block *b, mlir::OpBuilder &builder, ScopeFn scopeFn,
   }
 }
 
-mlir::FuncOp mlirGenFnDeclaration(mlir::ModuleOp &mod, mlir::OpBuilder &builder,
+mlir::FuncOp mlirGenFnDeclaration(const TypeContext &tc, mlir::ModuleOp &mod, mlir::OpBuilder &builder,
                                   const Fn &f) {
   auto location = builder.getUnknownLoc(); // loc(proto.loc());
   llvm::SmallVector<mlir::Type, 4> argtys;
 
-  for (int i = 0; i < f.args.size(); ++i) {
-    argtys.push_back(mlirGenTypeOrThunk(f.args[i].second, builder));
-  }
 
-  llvm::SmallVector<mlir::Type, 4> rettys = {
-      mlirGenTypeOrValue(f.retty, builder)};
   mlir::FuncOp fn = mlir::FuncOp::create(
-      location, f.name.name, builder.getFunctionType(argtys, rettys));
+      location, f.name.name, mlirGenTypeFn(builder, f.type));
   return fn;
 }
 
@@ -2318,11 +2437,7 @@ void mlirGenFnBody(mlir::FuncOp mlirfn, mlir::OpBuilder &builder, const Fn &f,
     scopeValue.insert(f.args[i].first.name, mlirfn.getArgument(i));
   }
 
-  cout << "====f:"
-       << "\n"
-       << f << "\n";
   mlirGenBlock(f.body, builder, scopeFn, scopeValue, tc);
-  llvm::errs() << "function body:\n" << mlirfn << "\n===\n";
 }
 
 // https://github.com/llvm/llvm-project/blob/master/mlir/examples/toy/Ch2/mlir/MLIRGen.cpp#L57
@@ -2331,8 +2446,9 @@ mlir::ModuleOp mlirGen(mlir::MLIRContext &ctx, const TypeContext &tc,
   mlir::OpBuilder builder(&ctx);
   mlir::ModuleOp theModule = mlir::ModuleOp::create(builder.getUnknownLoc());
   ScopeFn scopeFn;
+
   for (const Fn &f : m.fns) {
-    mlir::FuncOp fn = mlirGenFnDeclaration(theModule, builder, f);
+    mlir::FuncOp fn = mlirGenFnDeclaration(tc, theModule, builder, f);
     theModule.push_back(fn);
     scopeFn.insert(f.name.name, fn);
   }
@@ -2358,7 +2474,7 @@ int main(int argc, const char *const *argv) {
 
   FILE *f = fopen(argv[1], "rb");
   if (f == nullptr) {
-    cout << "unable to open file: |" << argv[1] << "|\n";
+    cerr << "unable to open file: |" << argv[1] << "|\n";
     return 1;
   }
   fseek(f, 0, SEEK_END);
@@ -2405,10 +2521,10 @@ int main(int argc, const char *const *argv) {
 
   std::pair<InterpValue, InterpStats> interpOut =
       interpretModule(mlirmod.get());
-  llvm::errs() << "===running program===\n";
-  llvm::errs() << "value: " << interpOut.first << "\n";
-  llvm::errs() << "statistics:\n" << interpOut.second;
-  llvm::errs() << "\n";
+  llvm::outs() << "===running program===\n";
+  llvm::outs() << "value: " << interpOut.first << "\n";
+  llvm::outs() << "statistics:\n" << interpOut.second;
+  llvm::outs() << "\n";
   llvm::errs().flush();
   return 0;
 }
