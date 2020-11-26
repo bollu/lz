@@ -44,7 +44,7 @@ module {
 
 
   // 1 + 2 = 3
-  lz.func@main () -> !lz.value {
+  lz.func @main () -> !lz.value {
       %input = lz.ref(@one) : !lz.fn<() -> !lz.value>
       %input_t = lz.ap(%input: !lz.fn<() -> !lz.value>)
 

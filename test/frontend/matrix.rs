@@ -4,7 +4,7 @@ fn reduce1d(m: !MatrixSequence) -> !i64 {
 }
 
 fn main() -> !i64 {
-    let m : !Foo  = MatrixSequence(0, 4040);
+    let m : !MatrixSequence  = MatrixSequence(0, 4040);
     let s : !i64 = reduce1d!(m);
     return s;
 }                                                                                                                     

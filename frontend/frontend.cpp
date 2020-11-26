@@ -2139,28 +2139,7 @@ using ScopeFn = Scope<std::string, mlir::FuncOp>;
 using ScopeValue = Scope<std::string, mlir::Value>;
 
 using SymbolTable = map<std::string, mlir::Value>;
-// mlir::Type mlirGenTypeOrDefault(SurfaceType t, mlir::OpBuilder &builder,
-//                                 mlir::Type defaultty) {
-//   //  return builder.getI64Type();
 
-//   if (t.tyname.name == ("i64")) {
-//     return builder.getI64Type();
-//   }
-//   return defaultty;
-// }
-
-// mlir::Type mlirGenTypeOrThunk(SurfaceType t, mlir::OpBuilder &builder) {
-//   auto valty = mlir::standalone::ValueType::get(builder.getContext());
-//   auto thunkty = mlir::standalone::ThunkType::get(builder.getContext(),
-//   valty);
-
-//   return mlirGenTypeOrDefault(t, builder, thunkty);
-// }
-
-// mlir::Type mlirGenTypeOrValue(SurfaceType t, mlir::OpBuilder &builder) {
-//   auto valty = mlir::standalone::ValueType::get(builder.getContext());
-//   return mlirGenTypeOrDefault(t, builder, valty);
-// }
 mlir::Type mlirGenType(mlir::OpBuilder &builder, const IRType *ty);
 
 mlir::FunctionType mlirGenTypeFn(mlir::OpBuilder &builder,
@@ -2190,6 +2169,10 @@ mlir::Type mlirGenType(mlir::OpBuilder &builder, const IRType *ty) {
   }
 
   if (const IRTypeEnum *enumty = mlir::dyn_cast<IRTypeEnum>(ty)) {
+    if (enumty->name == "MatrixSequence") {
+      return mlir::MemRefType::get(5000, builder.getI64Type());
+    }
+
     out = mlir::standalone::ValueType::get(builder.getContext());
     if (!ty->strict) {
       out = mlir::standalone::ThunkType::get(builder.getContext(), out);
@@ -2308,7 +2291,7 @@ mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder,
       assert(mlir::isa<IRTypeEnum>(c->scrutinee->type));
       return builder.create<mlir::standalone::CaseOp>(
           builder.getUnknownLoc(), scrutinee, lhss, rhss,
-            mlirGenType(builder, c->type));
+          mlirGenType(builder, c->type));
     }
   }
   if (const ExprIdentifier *id = mlir::dyn_cast<ExprIdentifier>(e)) {
@@ -2344,6 +2327,21 @@ mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder,
       args.push_back(mlirGenExpr(arg, builder, scopeFn, scopeValue, tc));
     }
 
+    if (construct->constructorName.name == "MatrixSequence") {
+          llvm::SmallVector<int, 4> lowerBounds(1, /*Value=*/0);
+          llvm::SmallVector<int64_t, 4> steps(1, /*Value=*/1);
+          // mlir::buildAffineLoopNest(
+          //     builder, builder.getUnknownLoc(), lowerBounds, tensorType.getShape(), steps,
+          //     [&](OpBuilder &nestedBuilder, Location loc, ValueRange ivs) {
+          //       // Call the processing function with the rewriter, the memref operands,
+          //       // and the loop induction variables. This function will return the value
+          //       // to store at the current index.
+          //       Value valueToStore = processIteration(nestedBuilder, operands, ivs);
+          //       nestedBuilder.create<AffineStoreOp>(loc, valueToStore, alloc, ivs);
+          //     });
+          assert(false && "todo");
+    }
+    
     // creates an lz.value
     return builder.create<mlir::standalone::HaskConstructOp>(
         builder.getUnknownLoc(), construct->constructorName.name, args);
