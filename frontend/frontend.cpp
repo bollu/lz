@@ -2308,7 +2308,7 @@ mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder,
       assert(mlir::isa<IRTypeEnum>(c->scrutinee->type));
       return builder.create<mlir::standalone::CaseOp>(
           builder.getUnknownLoc(), scrutinee, lhss, rhss,
-          mlirGenType(builder, c->type));
+            mlirGenType(builder, c->type));
     }
   }
   if (const ExprIdentifier *id = mlir::dyn_cast<ExprIdentifier>(e)) {
