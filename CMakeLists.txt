@@ -13,7 +13,7 @@ if(POLICY CMP0077)
   cmake_policy(SET CMP0077 NEW)
 endif()
 
-project(standalone-dialect LANGUAGES CXX C)
+project(lz-dialect LANGUAGES CXX C)
 
 
 set(CMAKE_CXX_STANDARD 14 CACHE STRING "C++ standard to conform to")
