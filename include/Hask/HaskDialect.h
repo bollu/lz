@@ -230,7 +230,7 @@ struct HaskInlinerInterface : public DialectInlinerInterface {
   /// return true if the analyzer should recurse within the regions of this
   /// operation when computing legality and cost, false otherwise. The default
   /// implementation returns true.
-  virtual bool shouldAnalyzeRecursively(Operation *op) const {
+  virtual bool shouldAnalyzeRecursively(Operation *op) const override {
     //    assert(false && "being asked if recursively analyze2");
     return true;
   }

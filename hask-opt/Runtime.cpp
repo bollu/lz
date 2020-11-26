@@ -1,4 +1,3 @@
-#pragma once
 #include "Runtime.h"
 #include <stdlib.h>
 
@@ -150,11 +149,11 @@ void *extractConstructorArg(void *cptr, int i) {
   void *v = c->args[i];
   assert(i < c->n);
   DEBUG_LOG;
-  fprintf(stderr, "%s %d -> %p:%s\n", cptr, i, v, getPronouncablePtr(v));
+  fprintf(stderr, "%p %d -> %p:%s\n", cptr, i, v, getPronouncablePtr(v));
   return v;
 }
 
-bool isConstructorTagEq(const void *cptr, const char *tag) {
+bool isConstructorTagEq(void *cptr, const char *tag) {
   Constructor *c = (Constructor *)cptr;
   const bool eq = !strcmp(c->tag, tag);
   DEBUG_LOG;
