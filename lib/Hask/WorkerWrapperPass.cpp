@@ -10,10 +10,10 @@
 #include "mlir/IR/Types.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include <mlir/Parser.h>
 #include <sstream>
-
 // Standard dialect
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/SCF/SCF.h"
@@ -652,9 +652,11 @@ struct WorkerWrapperPass : public Pass {
     llvm::errs() << "===Enabling Debugging...===\n";
     ::llvm::DebugFlag = true;
 
-    ConversionTarget target(getContext());
-    if (failed(mlir::applyPartialConversion(getOperation(), target,
-                                            std::move(patterns)))) {
+    // ConversionTarget target(getContext());
+    // if (failed(mlir::applyPartialConversion(getOperation(), target,
+    //                                         std::move(patterns)))) {
+    if (failed(mlir::applyPatternsAndFoldGreedily(getOperation(),
+                                                  std::move(patterns)))) {
       llvm::errs() << "===Worker wrapper failed===\n";
       getOperation()->print(llvm::errs());
       llvm::errs() << "\n===\n";
