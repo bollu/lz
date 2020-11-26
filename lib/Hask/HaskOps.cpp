@@ -177,9 +177,9 @@ ParseResult ApOp::parse(OpAsmParser &parser, OperationState &result) {
 
   if (HaskFnType fnty = ratorty.dyn_cast<HaskFnType>()) {
     std::vector<Type> paramtys = fnty.getInputTypes();
-    Type retty = fnty.getResultType();
+    // Type retty = fnty.getResultType();
 
-    for (int i = 0; i < paramtys.size(); ++i) {
+    for (int i = 0; i < (int)paramtys.size(); ++i) {
       if (parser.parseComma()) {
         return failure();
       }
@@ -231,7 +231,7 @@ void ApOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
   assert(params.size() == fnty.getNumInputs());
   assert(fnty.getNumResults() == 1);
 
-  for (int i = 0; i < params.size(); ++i) {
+  for (int i = 0; i < (int)params.size(); ++i) {
     if (fnty.getInput(i) != params[i].getType()) {
       llvm::errs() << "ERROR: type mismatch at parameter (" << i << ").\n"
                    << "function parameter type: (" << fnty.getInput(i) << ")\n"
@@ -278,9 +278,9 @@ ParseResult ApEagerOp::parse(OpAsmParser &parser, OperationState &result) {
 
   if (HaskFnType fnty = ratorty.dyn_cast<HaskFnType>()) {
     std::vector<Type> paramtys = fnty.getInputTypes();
-    Type retty = fnty.getResultType();
+    // Type retty = fnty.getResultType();
 
-    for (int i = 0; i < paramtys.size(); ++i) {
+    for (int i = 0; i < (int)paramtys.size(); ++i) {
       if (parser.parseComma()) {
         return failure();
       }
@@ -327,7 +327,7 @@ void ApEagerOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
 
   assert(params.size() == fnty.getInputTypes().size());
 
-  for (int i = 0; i < params.size(); ++i) {
+  for (int i = 0; i < (int)params.size(); ++i) {
     assert(params[i].getType() == fnty.getInputType(i) &&
            "ApEagerOp argument type mismatch");
   }
@@ -382,7 +382,7 @@ ParseResult CaseOp::parse(OpAsmParser &parser, OperationState &result) {
 
   HaskReturnOp retFirst =
       cast<HaskReturnOp>(altRegions[0]->getBlocks().front().getTerminator());
-  for (int i = 1; i < altRegions.size(); ++i) {
+  for (int i = 1; i < (int)altRegions.size(); ++i) {
     HaskReturnOp ret =
         cast<HaskReturnOp>(altRegions[i]->getBlocks().front().getTerminator());
     assert(retFirst.getType() == ret.getType() &&
@@ -432,7 +432,7 @@ void CaseOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
     std::unique_ptr<mlir::Region> pr(r);
     state.addRegion(std::move(pr));
   }
-  for (int i = 0; i < lhss.size(); ++i) {
+  for (int i = 0; i < (int)lhss.size(); ++i) {
     state.addAttribute("alt" + std::to_string(i), lhss[i]);
   }
   state.addTypes(retty);
@@ -791,9 +791,9 @@ void HaskFuncOp::print(OpAsmPrinter &p) {
   // Print the body if this is not an external function.
   Region &body = this->getRegion();
   p << "(";
-  for (int i = 0; i < body.getNumArguments(); ++i) {
+  for (int i = 0; i < (int)body.getNumArguments(); ++i) {
     p << body.getArgument(i) << " : " << body.getArgument(i).getType();
-    if (i + 1 < body.getNumArguments()) {
+    if (i + 1 < (int)body.getNumArguments()) {
       p << ", ";
     }
   }
@@ -1130,7 +1130,7 @@ ParseResult CaseIntOp::parse(OpAsmParser &parser, OperationState &result) {
 
   HaskReturnOp retFirst =
       cast<HaskReturnOp>(altRegions[0]->getBlocks().front().getTerminator());
-  for (int i = 1; i < altRegions.size(); ++i) {
+  for (int i = 1; i < (int)altRegions.size(); ++i) {
     HaskReturnOp ret =
         cast<HaskReturnOp>(altRegions[i]->getBlocks().front().getTerminator());
     assert(retFirst.getType() == ret.getType() &&
@@ -1178,7 +1178,7 @@ void CaseIntOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
     std::unique_ptr<mlir::Region> pr(r);
     state.addRegion(std::move(pr));
   }
-  for (int i = 0; i < lhss.size(); ++i) {
+  for (int i = 0; i < (int)lhss.size(); ++i) {
     state.addAttribute("alt" + std::to_string(i), lhss[i]);
   }
   state.addTypes(retty);
@@ -1407,6 +1407,7 @@ mlir::LLVM::LLVMType haskToLLVMType(MLIRContext *context, Type t) {
     // should become (int -> int) -> int
     std::vector<LLVMType> llvmArgTys;
     for (Type arg : argTys) {
+      (void)arg;
       llvmArgTys.push_back(LLVMType::getInt8PtrTy(context));
       // llvmArgTys.push_back(haskToLLVMType(context, arg));
     }
@@ -1428,7 +1429,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     using namespace mlir::LLVM;
 
-    Operation *module = op->getParentOp();
+    // Operation *module = op->getParentOp();
     // Now lower the [LambdaOp + HaskFuncOp together]
     // TODO: deal with free floating lambads. This LambdaOp is going to
     // become a top-level function. Other lambdas will become toplevel functions
@@ -1468,7 +1469,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     using namespace mlir::LLVM;
 
-    Operation *module = op->getParentOp();
+    // Operation *module = op->getParentOp();
     // Now lower the [LambdaOp + HaskFuncOp together]
     // TODO: deal with free floating lambads. This LambdaOp is going to
     // become a top-level function. Other lambdas will become toplevel functions
@@ -1642,7 +1643,7 @@ public:
           getOrInsertExtractConstructorArg(rewriter, mod);
       llvm::errs() << "-number of arguments: [" << altRhs.getNumArguments()
                    << "]--\n";
-      for (int i = 0; i < altRhs.getNumArguments(); ++i) {
+      for (int i = 0; i < (int)altRhs.getNumArguments(); ++i) {
         Value ival = rewriter.create<LLVM::ConstantOp>(
             caseop.getLoc(), LLVMType::getInt64Ty(rewriter.getContext()),
             rewriter.getI64IntegerAttr(i));
@@ -1745,8 +1746,8 @@ public:
     ModuleOp module = ap.getParentOfType<ModuleOp>();
 
     llvm::errs() << __FUNCTION__ << ":" << __LINE__ << "\n";
-    LLVMType kparamty =
-        haskToLLVMType(rewriter.getContext(), ap.getResult().getType());
+    // LLVMType kparamty =
+    //     haskToLLVMType(rewriter.getContext(), ap.getResult().getType());
 
     // Wow, in what order does the conversion happen? I have no idea.
     // LLVMFuncOp parent = ap.getParentOfType<LLVMFuncOp>();
@@ -1918,8 +1919,8 @@ public:
   }
 };
 
-static FlatSymbolRefAttr getOrInsertMalloc(PatternRewriter &rewriter,
-                                           ModuleOp module) {
+[[maybe_unused]] static FlatSymbolRefAttr
+getOrInsertMalloc(PatternRewriter &rewriter, ModuleOp module) {
   if (module.lookupSymbol<LLVM::LLVMFuncOp>("malloc")) {
     return SymbolRefAttr::get("malloc", rewriter.getContext());
   }
@@ -1943,7 +1944,7 @@ static FlatSymbolRefAttr getOrInsertMkConstructor(PatternRewriter &rewriter,
     return SymbolRefAttr::get(name, rewriter.getContext());
   }
 
-  auto llvmI64Ty = LLVM::LLVMType::getInt64Ty(rewriter.getContext());
+  // auto llvmI64Ty = LLVM::LLVMType::getInt64Ty(rewriter.getContext());
   auto llvmI8PtrTy = LLVM::LLVMType::getInt8PtrTy(rewriter.getContext());
 
   // string constructor name, <n> arguments.
@@ -2062,8 +2063,8 @@ public:
   }
 };
 
-static FlatSymbolRefAttr getOrInsertIsIntEq(PatternRewriter &rewriter,
-                                            ModuleOp module) {
+[[maybe_unused]] static FlatSymbolRefAttr
+getOrInsertIsIntEq(PatternRewriter &rewriter, ModuleOp module) {
   const std::string name = "isIntEq";
   if (module.lookupSymbol<LLVM::LLVMFuncOp>(name)) {
     return SymbolRefAttr::get(name, rewriter.getContext());
@@ -2116,7 +2117,7 @@ public:
 
     // Type result, IntegerAttr predicate, Value lhs, Value rhs
     auto I64Ty = LLVM::LLVMType::getInt64Ty(rewriter.getContext());
-    auto I8PtrTy = LLVM::LLVMType::getInt8PtrTy(rewriter.getContext());
+    // auto I8PtrTy = LLVM::LLVMType::getInt8PtrTy(rewriter.getContext());
 
     // TODO: get block of current caseop?
     llvm::errs() << __LINE__ << "\n";
@@ -2250,7 +2251,7 @@ namespace {
 struct LowerHaskToStandardPass : public Pass {
   LowerHaskToStandardPass()
       : Pass(mlir::TypeID::get<LowerHaskToStandardPass>()){};
-  void runOnOperation();
+  void runOnOperation() override;
   StringRef getName() const override { return "LowerHaskToStandardPass"; }
 
   std::unique_ptr<Pass> clonePass() const override {
@@ -2266,7 +2267,7 @@ struct LowerHaskToStandardPass : public Pass {
 void LowerHaskToStandardPass::runOnOperation() {
   ConversionTarget target(getContext());
   // do I not need a pointer to the dialect? I am so confused :(
-  HaskToLLVMTypeConverter converter();
+  HaskToLLVMTypeConverter converter;
   target.addLegalDialect<mlir::StandardOpsDialect>();
   target.addLegalDialect<mlir::LLVM::LLVMDialect>();
   target.addLegalDialect<mlir::scf::SCFDialect>();
@@ -2378,7 +2379,7 @@ struct LowerHaskStandardToLLVMPass : public Pass {
     return newInst;
   }
 
-  void runOnOperation() {
+  void runOnOperation() override {
     mlir::ConversionTarget target(getContext());
     target.addLegalDialect<mlir::LLVM::LLVMDialect>();
     target.addLegalOp<mlir::ModuleOp, mlir::ModuleTerminatorOp>();

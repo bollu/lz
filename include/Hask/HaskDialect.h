@@ -212,28 +212,48 @@ Attribute parseDataConstructorAttribute(DialectAsmParser &parser, Type type);
 struct HaskInlinerInterface : public DialectInlinerInterface {
   using DialectInlinerInterface::DialectInlinerInterface;
 
-  /// This hook checks to see if the given operation is legal to inline into the
-  /// given region. For Toy this hook can simply return true, as all Toy
-  /// operations are inlinable.
-  virtual bool isLegalToInline(Operation *, Region *,
-                               BlockAndValueMapping &) const final {
-    // assert(false && "being asked if legal to inline");
+  /// Returns true if the given operation 'callable', that implements the
+  /// 'CallableOpInterface', can be inlined into the position given call
+  /// operation 'call', that is registered to the current dialect and implements
+  /// the `CallOpInterface`. 'wouldBeCloned' is set to true if the region of the
+  /// given 'callable' is set to be cloned during the inlining process, or false
+  /// if the region is set to be moved in-place(i.e. no duplicates would be
+  /// created).
+  virtual bool isLegalToInline(Operation *call, Operation *callable,
+                               bool wouldBeCloned) const {
     return true;
   }
 
-  virtual bool isLegalToInline(Region *dest, Region *src,
+  /// Returns true if the given region 'src' can be inlined into the region
+  /// 'dest' that is attached to an operation registered to the current dialect.
+  /// 'wouldBeCloned' is set to true if the given 'src' region is set to be
+  /// cloned during the inlining process, or false if the region is set to be
+  /// moved in-place(i.e. no duplicates would be created). 'valueMapping'
+  /// contains any remapped values from within the 'src' region. This can be
+  /// used to examine what values will replace entry arguments into the 'src'
+  /// region for example.
+  virtual bool isLegalToInline(Region *dest, Region *src, bool wouldBeCloned,
                                BlockAndValueMapping &valueMapping) const {
-    //     assert(false && "being asked if legal to inline");
     return true;
   }
+
+  /// Returns true if the given operation 'op', that is registered to this
+  /// dialect, can be inlined into the given region, false otherwise.
+  /// 'wouldBeCloned' is set to true if the given 'op' is set to be cloned
+  /// during the inlining process, or false if the operation is set to be moved
+  /// in-place(i.e. no duplicates would be created). 'valueMapping' contains any
+  /// remapped values from within the 'src' region. This can be used to examine
+  /// what values may potentially replace the operands to 'op'.
+  virtual bool isLegalToInline(Operation *op, Region *dest, bool wouldBeCloned,
+                               BlockAndValueMapping &valueMapping) const {
+    return true;
+  }
+
   /// This hook is invoked on an operation that contains regions. It should
   /// return true if the analyzer should recurse within the regions of this
   /// operation when computing legality and cost, false otherwise. The default
   /// implementation returns true.
-  virtual bool shouldAnalyzeRecursively(Operation *op) const {
-    //    assert(false && "being asked if recursively analyze2");
-    return true;
-  }
+  virtual bool shouldAnalyzeRecursively(Operation *op) const { return true; }
 
   /// This hook is called when a terminator operation has been inlined. The only
   /// terminator that we have in the Toy dialect is the return

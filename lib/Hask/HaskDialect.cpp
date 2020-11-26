@@ -146,9 +146,9 @@ void HaskDialect::printType(mlir::Type type, mlir::DialectAsmPrinter &p) const {
     ArrayRef<Type> intys = fnty.getInputTypes();
 
     p << "fn<(";
-    for (int i = 0; i < intys.size(); ++i) {
+    for (int i = 0; i < (int)intys.size(); ++i) {
       p << intys[i];
-      if (i + 1 < intys.size())
+      if (i + 1 < (int)intys.size())
         p << ", ";
     }
     p << ") -> " << fnty.getResultType() << ">";

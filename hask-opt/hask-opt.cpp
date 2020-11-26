@@ -382,6 +382,6 @@ int main(int argc, char **argv) {
   const size_t result2int = (size_t)(((Constructor *)result)->args[0]);
   llvm::errs() << "(Constructor 1*)main(nullptr) = " << result2int << "\n";
 
-  printf("%d\n", result2int);
+  printf("%lu\n", result2int);
   return 0;
 }

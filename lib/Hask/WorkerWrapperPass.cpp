@@ -10,10 +10,10 @@
 #include "mlir/IR/Types.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include <mlir/Parser.h>
 #include <sstream>
-
 // Standard dialect
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/SCF/SCF.h"
@@ -52,8 +52,8 @@ struct ForceOfKnownApPattern : public mlir::OpRewritePattern<ForceOp> {
   matchAndRewrite(ForceOp force,
                   mlir::PatternRewriter &rewriter) const override {
 
-    ModuleOp mod = force.getParentOfType<ModuleOp>();
-    HaskFuncOp fn = force.getParentOfType<HaskFuncOp>();
+    // ModuleOp mod = force.getParentOfType<ModuleOp>();
+    // HaskFuncOp fn = force.getParentOfType<HaskFuncOp>();
 
     ApOp ap = force.getOperand().getDefiningOp<ApOp>();
     if (!ap) {
@@ -68,7 +68,7 @@ struct ForceOfKnownApPattern : public mlir::OpRewritePattern<ForceOp> {
                  << "\nap: " << ap << "\n"
                  << "\nforce: " << force << " \n";
 
-    HaskFuncOp forcedFn = mod.lookupSymbol<HaskFuncOp>(ref.getRef());
+    // HaskFuncOp forcedFn = mod.lookupSymbol<HaskFuncOp>(ref.getRef());
 
     // cannot inline a recursive function. Can replace with
     // an apEager
@@ -126,9 +126,9 @@ struct OutlineUknownForcePattern : public mlir::OpRewritePattern<ForceOp> {
     HaskFuncOp outlinedFn = rewriter.create<HaskFuncOp>(
         force.getLoc(), parentfn.getName().str() + "_outline",
         parentfn.getFunctionType());
+    (void)outlinedFn;
 
     rewriter.eraseOp(force);
-    //    assert(false);
     return success();
   }
 };
@@ -143,7 +143,7 @@ struct ForceOfThunkifyPattern : public mlir::OpRewritePattern<ForceOp> {
   mlir::LogicalResult
   matchAndRewrite(ForceOp force,
                   mlir::PatternRewriter &rewriter) const override {
-    HaskFuncOp fn = force.getParentOfType<HaskFuncOp>();
+    // HaskFuncOp fn = force.getParentOfType<HaskFuncOp>();
     ThunkifyOp thunkify = force.getOperand().getDefiningOp<ThunkifyOp>();
     if (!thunkify) {
       return failure();
@@ -253,7 +253,7 @@ struct OutlineRecursiveApEagerOfThunkPattern
     // I've moved the code here to test that the crash isn't because of a
     // bail-out.
 
-    for (int i = 0; i < called.getBody().getNumArguments(); ++i) {
+    for (int i = 0; i < (int)called.getBody().getNumArguments(); ++i) {
       Value arg = called.getBody().getArgument(i);
       if (!arg.hasOneUse()) {
         return failure();
@@ -282,7 +282,7 @@ struct OutlineRecursiveApEagerOfThunkPattern
     // TODO: consider if going forward is more sensible or going back is
     // more sensible. Right now I am reaching forward, but perhaps
     // it makes sense to reach back.
-    for (int i = 0; i < clonedfn.getBody().getNumArguments(); ++i) {
+    for (int i = 0; i < (int)clonedfn.getBody().getNumArguments(); ++i) {
       Value arg = clonedfn.getBody().getArgument(i);
       if (!arg.hasOneUse()) {
         assert(false && "this precondition as already been checked!");
@@ -439,8 +439,8 @@ struct CaseOfKnownConstructorPattern : public mlir::OpRewritePattern<CaseOp> {
   matchAndRewrite(CaseOp caseop,
                   mlir::PatternRewriter &rewriter) const override {
 
-    ModuleOp mod = caseop.getParentOfType<ModuleOp>();
-    HaskFuncOp fn = caseop.getParentOfType<HaskFuncOp>();
+    // ModuleOp mod = caseop.getParentOfType<ModuleOp>();
+    // HaskFuncOp fn = caseop.getParentOfType<HaskFuncOp>();
 
     HaskConstructOp constructor =
         caseop.getScrutinee().getDefiningOp<HaskConstructOp>();
@@ -566,7 +566,7 @@ struct PeelCommonConstructorsInCase : public mlir::OpRewritePattern<CaseOp> {
 
     // TODO: this is too restrictive and will not work for Maybe! Need to
     // encode things differently
-    for (int i = 0; i < retConstructs.size() - 1; ++i) {
+    for (int i = 0; i < (int)retConstructs.size() - 1; ++i) {
       if (retConstructs[i].getDataConstructorName() !=
           retConstructs[i + 1].getDataConstructorName()) {
         return failure();
@@ -577,7 +577,7 @@ struct PeelCommonConstructorsInCase : public mlir::OpRewritePattern<CaseOp> {
 
     // 1. Fix the returns by directly returning the thing the constructor is
     //    wrapping..
-    for (int i = 0; i < rets.size(); ++i) {
+    for (int i = 0; i < (int)rets.size(); ++i) {
       assert(retConstructs[i].getNumOperands() == 1);
       rets[i].setOperand(retConstructs[i].getOperand(0));
       rewriter.eraseOp(retConstructs[i]);
@@ -631,7 +631,7 @@ struct WorkerWrapperPass : public Pass {
     return newInst;
   }
 
-  void runOnOperation() {
+  void runOnOperation() override {
     mlir::OwningRewritePatternList patterns;
     patterns.insert<ForceOfKnownApPattern>(&getContext());
     patterns.insert<ForceOfThunkifyPattern>(&getContext());
@@ -652,9 +652,11 @@ struct WorkerWrapperPass : public Pass {
     llvm::errs() << "===Enabling Debugging...===\n";
     ::llvm::DebugFlag = true;
 
-    ConversionTarget target(getContext());
-    if (failed(mlir::applyPartialConversion(getOperation(), target,
-                                            std::move(patterns)))) {
+    // ConversionTarget target(getContext());
+    // if (failed(mlir::applyPartialConversion(getOperation(), target,
+    //                                         std::move(patterns)))) {
+    if (failed(mlir::applyPatternsAndFoldGreedily(getOperation(),
+                                                  std::move(patterns)))) {
       llvm::errs() << "===Worker wrapper failed===\n";
       getOperation()->print(llvm::errs());
       llvm::errs() << "\n===\n";

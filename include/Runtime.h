@@ -5,12 +5,11 @@
 
 extern "C" {
 
-static int DEBUG_STACK_DEPTH = 0;
+[[maybe_unused]] static int DEBUG_STACK_DEPTH = 0;
 void DEBUG_INDENT();
 
 #define DEBUG_LOG                                                              \
   if (1) {                                                                     \
-    \ 
     DEBUG_INDENT();                                                            \
     fprintf(stderr, "%s ", __FUNCTION__);                                      \
   }
@@ -51,5 +50,5 @@ void *__attribute__((used)) mkConstructor0(const char *tag);
 void *__attribute__((used)) mkConstructor1(const char *tag, void *a);
 void *__attribute__((used)) mkConstructor2(const char *tag, void *a, void *b);
 void *extractConstructorArg(void *cptr, int i);
-bool isConstructorTagEq(const void *cptr, const char *tag);
+bool isConstructorTagEq(void *cptr, const char *tag);
 } // end extern C

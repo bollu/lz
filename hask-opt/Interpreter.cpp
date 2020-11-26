@@ -1,5 +1,3 @@
-#pragma once
-
 #include "Interpreter.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/StandardTypes.h"
@@ -52,7 +50,8 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &o, const InterpValue &v) {
     o << ")";
     break;
   }
-
+  default:
+    assert("WTF SIDDHARTH");
   } // end switch
   return o;
 }
@@ -93,7 +92,7 @@ public:
   }
 
   InterpValue lookup(mlir::Location loc, mlir::Value k) {
-    DiagnosticEngine &diagEngine = k.getContext()->getDiagEngine();
+    // DiagnosticEngine &diagEngine = k.getContext()->getDiagEngine();
     auto it = find(k);
     if (!it) {
       InterpreterError err(loc);
@@ -297,7 +296,7 @@ struct Interpreter {
           env.lookup(caseInt.getLoc(), caseInt.getScrutinee());
       assert(scrutinee.type == InterpValueType::I64);
 
-      bool matched = false;
+      // bool matched = false;
       for (int i = 0; i < caseInt.getNumAlts(); ++i) {
 
         // skip default case
@@ -385,7 +384,7 @@ struct Interpreter {
 
     if (HaskLambdaOp lam = dyn_cast<HaskLambdaOp>(op)) {
       std::vector<InterpValue> args;
-      for (int i = 0; i < lam.getNumOperands(); ++i) {
+      for (int i = 0; i < (int)lam.getNumOperands(); ++i) {
         args.push_back(env.lookup(lam.getLoc(), lam.getOperand(i)));
       }
 
@@ -445,7 +444,7 @@ struct Interpreter {
       exit(1);
     }
 
-    for (int i = 0; i < args.size(); ++i) {
+    for (int i = 0; i < (int)args.size(); ++i) {
       env.addNew(r.getArgument(i), args[i]);
     }
 
@@ -476,7 +475,7 @@ struct Interpreter {
 
     // bind captured variables.
     Env env;
-    for (int i = 0; i < lam.getNumOperands(); ++i) {
+    for (int i = 0; i < (int)lam.getNumOperands(); ++i) {
       env.addNew(lam.getOperand(i), args[i]);
     }
     // rest are parameters

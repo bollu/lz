@@ -251,7 +251,7 @@ public:
         .getValue()
         .str();
   }
-  Value getScrutinee() { this->getOperation()->getOperand(0); }
+  Value getScrutinee() { return this->getOperation()->getOperand(0); }
   void print(OpAsmPrinter &p);
   void
   getEffects(SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
@@ -265,8 +265,10 @@ public:
   using Op::Op;
   static StringRef getOperationName() { return "lz.lambda"; };
   Block &getEntryBlock() { return this->getRegion().front(); }
-  Block::BlockArgListType inputRange() { this->getEntryBlock().getArguments(); }
-  int getNumInputs() { this->getEntryBlock().getNumArguments(); }
+  Block::BlockArgListType inputRange() {
+    return this->getEntryBlock().getArguments();
+  }
+  int getNumInputs() { return this->getEntryBlock().getNumArguments(); }
   mlir::BlockArgument getInput(int i) {
     assert(i < getNumInputs());
     return this->getEntryBlock().getArgument(i);
