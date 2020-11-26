@@ -24,8 +24,8 @@ jobs:
     name: Build and test
     runs-on: ubuntu-latest
     steps:
-      - name: Configure Environment
-        run: echo "::add-path::$GITHUB_WORKSPACE/llvm-project/prefix/bin"
+      # - name: Configure Environment
+      #  run: echo "::add-path::$GITHUB_WORKSPACE/llvm-project/prefix/bin"
       - name: Get Template Code
         uses: actions/checkout@v2
         with:
