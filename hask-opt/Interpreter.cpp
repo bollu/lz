@@ -251,11 +251,10 @@ struct Interpreter {
         assert(scrutinee.type == InterpValueType::ClosureTopLevel);
         InterpValue scrutineefn = scrutinee.closureTopLevelFn();
         assert(scrutineefn.type == InterpValueType::Ref);
-        HaskFuncOp func = module.lookupSymbol<HaskFuncOp>(scrutineefn.ref());
-        assert(func && "unable to find function");
         std::vector<InterpValue> args(scrutinee.closureArgBegin(),
                                       scrutinee.closureArgEnd());
-        env.addNew(force.getResult(), interpretFunction(func, args));
+        env.addNew(force.getResult(),
+                   interpretFunction(scrutineefn.ref(), args));
         return;
       }
       assert(false && "unreachable");
@@ -371,14 +370,12 @@ struct Interpreter {
     if (ApEagerOp ap = dyn_cast<ApEagerOp>(op)) {
       InterpValue fnval = env.lookup(ap.getLoc(), ap.getFn());
       assert(fnval.type == InterpValueType::Ref);
-      HaskFuncOp func = module.lookupSymbol<HaskFuncOp>(fnval.ref());
-      assert(func && "unable to find function");
 
       std::vector<InterpValue> args;
       for (int i = 0; i < ap.getNumFnArguments(); ++i) {
         args.push_back(env.lookup(ap.getLoc(), ap.getFnArgument(i)));
       }
-      env.addNew(ap.getResult(), interpretFunction(func, args));
+      env.addNew(ap.getResult(), interpretFunction(fnval.ref(), args));
       return;
     }
 
@@ -461,14 +458,33 @@ struct Interpreter {
     }
   }
 
-  InterpValue interpretFunction(HaskFuncOp func, ArrayRef<InterpValue> args) {
-    std::string funcName = func.getName().str();
+  InterpValue interpretFunction(std::string funcname,
+                                ArrayRef<InterpValue> args) {
     llvm::errs().changeColor(llvm::raw_fd_ostream::GREEN);
-    llvm::errs() << "--interpreting function:|" << funcName.c_str() << "|--\n";
+    llvm::errs() << "--interpreting function:|" << funcname.c_str() << "|--\n";
     llvm::errs().changeColor(llvm::raw_fd_ostream::BLACK);
-    // functions are isolated from above; create a fresh environment.
-    return interpretRegion(func.getRegion(), args, Env());
+
+    // functions are isolated from above; create a fresh environment
+    if (HaskFuncOp haskfn = module.lookupSymbol<HaskFuncOp>(funcname)) {
+      return interpretRegion(haskfn.getRegion(), args, Env());
+    }
+
+    if (FuncOp fn = module.lookupSymbol<FuncOp>(funcname.c_str())) {
+      return interpretRegion(fn.getRegion(), args, Env());
+    }
+
+    assert(false && "unable to find function.");
   }
+
+  // InterpValue interpretFunction(HaskFuncOp func, ArrayRef<InterpValue> args)
+  // {
+  //   std::string funcName = func.getName().str();
+  //   llvm::errs().changeColor(llvm::raw_fd_ostream::GREEN);
+  //   llvm::errs() << "--interpreting function:|" << funcName.c_str() <<
+  //   "|--\n"; llvm::errs().changeColor(llvm::raw_fd_ostream::BLACK);
+  //   // functions are isolated from above; create a fresh environment.
+  //   return interpretRegion(func.getRegion(), args, Env());
+  // }
 
   InterpValue interpretLambda(HaskLambdaOp lam, ArrayRef<InterpValue> args) {
     // see [[NOTE: hacky lambda representation]]
@@ -495,9 +511,7 @@ private:
 
 // interpret a module, and interpret the result as an integer. print it out.
 std::pair<InterpValue, InterpStats> interpretModule(ModuleOp module) {
-  HaskFuncOp main = module.lookupSymbol<HaskFuncOp>("main");
-  assert(main && "unable to find main!");
   Interpreter I(module);
-  InterpValue val = I.interpretFunction(main, {});
+  InterpValue val = I.interpretFunction("main", {});
   return {val, I.getStats()};
 };
