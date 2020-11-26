@@ -24,6 +24,11 @@ Convert GHC Core to MLIR.
 
 # Log:  [newest] to [oldest]
 
+# Thursday, Nov 26th
+- it seems like using `clang++` is **mandatory** to get correct builds with MLIR. When
+  anurudh was attempting to compile the project, we were getting divergent results
+  till we both standardized on clang. Super super weird. It seems like `g++` miscompiles.
+
 # Wednesday, Nov 25
 
 - I need to allow my `Identifier` to keep pointers to values...
