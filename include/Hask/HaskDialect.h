@@ -149,7 +149,7 @@ public:
   ArrayRef<Type> getInputTypes() { return this->getImpl()->getInputs(); }
   Type getInputType(int i) {
     assert(i >= 0);
-    assert(i < getInputTypes().size());
+    assert(i < (int)getInputTypes().size());
     return this->getImpl()->getInputs()[i];
   }
   Type getResultType() { return this->getImpl()->getResult()[0]; }
@@ -215,8 +215,8 @@ struct HaskInlinerInterface : public DialectInlinerInterface {
   /// This hook checks to see if the given operation is legal to inline into the
   /// given region. For Toy this hook can simply return true, as all Toy
   /// operations are inlinable.
-  bool isLegalToInline(Operation *, Region *,
-                       BlockAndValueMapping &) const final {
+  virtual bool isLegalToInline(Operation *, Region *,
+                               BlockAndValueMapping &) const final {
     // assert(false && "being asked if legal to inline");
     return true;
   }

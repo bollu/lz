@@ -106,9 +106,11 @@ ExitOnError ExitOnErr;
 // code stolen from:
 // https://github.com/llvm/llvm-project/blob/80d7ac3bc7c04975fd444e9f2806e4db224f2416/mlir/examples/toy/Ch3/toyc.cpp
 int main(int argc, char **argv) {
-  mlir::registerAllDialects();
+  mlir::DialectRegistry registry;
+  registry.insert<mlir::standalone::HaskDialect>();
+  mlir::registerAllDialects(registry);
   mlir::registerAllPasses();
-  mlir::registerDialect<mlir::standalone::HaskDialect>();
+  // mlir::registerDialect<mlir::standalone::HaskDialect>();
 
   // Register any command line options.
   mlir::registerAsmPrinterCLOptions();

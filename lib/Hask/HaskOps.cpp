@@ -178,8 +178,9 @@ ParseResult ApOp::parse(OpAsmParser &parser, OperationState &result) {
   if (HaskFnType fnty = ratorty.dyn_cast<HaskFnType>()) {
     std::vector<Type> paramtys = fnty.getInputTypes();
     Type retty = fnty.getResultType();
+    (void)retty;
 
-    for (int i = 0; i < paramtys.size(); ++i) {
+    for (int i = 0; i < (int)paramtys.size(); ++i) {
       if (parser.parseComma()) {
         return failure();
       }
@@ -230,10 +231,11 @@ void ApOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
 
   std::vector<Type> paramtys = fnty.getInputTypes();
   Type retty = fnty.getResultType();
+  (void)retty;
 
   assert(params.size() == paramtys.size());
 
-  for (int i = 0; i < params.size(); ++i) {
+  for (int i = 0; i < (int)params.size(); ++i) {
     if (paramtys[i] != params[i].getType()) {
       llvm::errs() << "ERROR: type mismatch at parameter (" << i << ").\n"
                    << "function parameter type: (" << paramtys[i] << ")\n"
@@ -275,8 +277,9 @@ ParseResult ApEagerOp::parse(OpAsmParser &parser, OperationState &result) {
   if (HaskFnType fnty = ratorty.dyn_cast<HaskFnType>()) {
     std::vector<Type> paramtys = fnty.getInputTypes();
     Type retty = fnty.getResultType();
+    (void)retty;
 
-    for (int i = 0; i < paramtys.size(); ++i) {
+    for (int i = 0; i < (int)paramtys.size(); ++i) {
       if (parser.parseComma()) {
         return failure();
       }
@@ -314,7 +317,7 @@ void ApEagerOp::print(OpAsmPrinter &p) {
 };
 
 void ApEagerOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                      Value fn, SmallVectorImpl<Value> &params) {
+                      Value fn, const SmallVectorImpl<Value> &params) {
 
   // hack! we need to construct the type properly.
   state.addOperands(fn);
@@ -323,7 +326,7 @@ void ApEagerOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
 
   assert(params.size() == fnty.getInputTypes().size());
 
-  for (int i = 0; i < params.size(); ++i) {
+  for (int i = 0; i < (int)params.size(); ++i) {
     assert(params[i].getType() == fnty.getInputType(i) &&
            "ApEagerOp argument type mismatch");
   }
@@ -378,7 +381,7 @@ ParseResult CaseOp::parse(OpAsmParser &parser, OperationState &result) {
 
   HaskReturnOp retFirst =
       cast<HaskReturnOp>(altRegions[0]->getBlocks().front().getTerminator());
-  for (int i = 1; i < altRegions.size(); ++i) {
+  for (int i = 1; i < (int)altRegions.size(); ++i) {
     HaskReturnOp ret =
         cast<HaskReturnOp>(altRegions[i]->getBlocks().front().getTerminator());
     assert(retFirst.getType() == ret.getType() &&
@@ -769,9 +772,9 @@ void HaskFuncOp::print(OpAsmPrinter &p) {
   // Print the body if this is not an external function.
   Region &body = this->getRegion();
   p << "(";
-  for (int i = 0; i < body.getNumArguments(); ++i) {
+  for (int i = 0; i < (int)body.getNumArguments(); ++i) {
     p << body.getArgument(i) << " : " << body.getArgument(i).getType();
-    if (i + 1 < body.getNumArguments()) {
+    if (i + 1 < (int)body.getNumArguments()) {
       p << ", ";
     }
   }
@@ -1108,7 +1111,7 @@ ParseResult CaseIntOp::parse(OpAsmParser &parser, OperationState &result) {
 
   HaskReturnOp retFirst =
       cast<HaskReturnOp>(altRegions[0]->getBlocks().front().getTerminator());
-  for (int i = 1; i < altRegions.size(); ++i) {
+  for (int i = 1; i < (int)altRegions.size(); ++i) {
     HaskReturnOp ret =
         cast<HaskReturnOp>(altRegions[i]->getBlocks().front().getTerminator());
     assert(retFirst.getType() == ret.getType() &&
@@ -1155,7 +1158,7 @@ void CaseIntOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
     std::unique_ptr<mlir::Region> pr(r);
     state.addRegion(std::move(pr));
   }
-  for (int i = 0; i < lhss.size(); ++i) {
+  for (int i = 0; i < (int)lhss.size(); ++i) {
     state.addAttribute("alt" + std::to_string(i), lhss[i]);
   }
   state.addTypes(retty);
@@ -1619,7 +1622,7 @@ public:
           getOrInsertExtractConstructorArg(rewriter, mod);
       llvm::errs() << "-number of arguments: [" << altRhs.getNumArguments()
                    << "]--\n";
-      for (int i = 0; i < altRhs.getNumArguments(); ++i) {
+      for (int i = 0; i < (int)altRhs.getNumArguments(); ++i) {
         Value ival = rewriter.create<LLVM::ConstantOp>(
             caseop.getLoc(), LLVMType::getInt64Ty(rewriter.getContext()),
             rewriter.getI64IntegerAttr(i));
@@ -2227,7 +2230,7 @@ namespace {
 struct LowerHaskToStandardPass : public Pass {
   LowerHaskToStandardPass()
       : Pass(mlir::TypeID::get<LowerHaskToStandardPass>()){};
-  void runOnOperation();
+  void runOnOperation() override;
   StringRef getName() const override { return "LowerHaskToStandardPass"; }
 
   std::unique_ptr<Pass> clonePass() const override {
@@ -2243,7 +2246,7 @@ struct LowerHaskToStandardPass : public Pass {
 void LowerHaskToStandardPass::runOnOperation() {
   ConversionTarget target(getContext());
   // do I not need a pointer to the dialect? I am so confused :(
-  HaskToLLVMTypeConverter converter();
+  HaskToLLVMTypeConverter converter;
   target.addLegalDialect<mlir::StandardOpsDialect>();
   target.addLegalDialect<mlir::LLVM::LLVMDialect>();
   target.addLegalDialect<mlir::scf::SCFDialect>();
@@ -2355,7 +2358,7 @@ struct LowerHaskStandardToLLVMPass : public Pass {
     return newInst;
   }
 
-  void runOnOperation() {
+  void runOnOperation() override {
     mlir::ConversionTarget target(getContext());
     target.addLegalDialect<mlir::LLVM::LLVMDialect>();
     target.addLegalOp<mlir::ModuleOp, mlir::ModuleTerminatorOp>();
@@ -2365,7 +2368,8 @@ struct LowerHaskStandardToLLVMPass : public Pass {
     // patterns.insert<MakeDataConstructorOpConversionPattern>(&getContext());
 
     mlir::populateStdToLLVMConversionPatterns(typeConverter, patterns);
-    if (failed(mlir::applyFullConversion(getOperation(), target, patterns))) {
+    if (failed(mlir::applyFullConversion(getOperation(), target,
+                                         std::move(patterns)))) {
       llvm::errs() << "===Hask+Std -> LLVM lowering failed===\n";
       getOperation()->print(llvm::errs());
       llvm::errs() << "\n===\n";

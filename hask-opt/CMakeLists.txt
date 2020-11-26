@@ -6,8 +6,8 @@ set(LLVM_LINK_COMPONENTS
   nativecodegen
   OrcJIT
   ExecutionEngine
-  # Interpreter
-  # X86 #HACK?
+  Interpreter
+  X86 #HACK?
   )
 
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)

@@ -652,7 +652,9 @@ struct WorkerWrapperPass : public Pass {
     llvm::errs() << "===Enabling Debugging...===\n";
     ::llvm::DebugFlag = true;
 
-    if (failed(mlir::applyPatternsAndFoldGreedily(getOperation(), patterns))) {
+    ConversionTarget target(getContext());
+    if (failed(mlir::applyPartialConversion(getOperation(), target,
+                                            std::move(patterns)))) {
       llvm::errs() << "===Worker wrapper failed===\n";
       getOperation()->print(llvm::errs());
       llvm::errs() << "\n===\n";
