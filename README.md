@@ -1,4 +1,5 @@
 # Core-MLIR
+![Compile paper](../../workflows/Build%20and%20test%20[from%20upstream]/badge.svg)
 
 Convert GHC Core to MLIR.
 
