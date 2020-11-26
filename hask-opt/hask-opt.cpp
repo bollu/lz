@@ -126,6 +126,7 @@ int main(int argc, char **argv) {
   }
 
   mlir::MLIRContext context;
+  registry.loadAll(&context);
   mlir::OwningModuleRef module;
   llvm::SourceMgr sourceMgr;
   mlir::SourceMgrDiagnosticHandler sourceMgrHandler(sourceMgr, &context);
