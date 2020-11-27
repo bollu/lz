@@ -1,4 +1,4 @@
-// RUN: ../build/bin/hask-opt -worker-wrapper %s  | FileCheck %s
+// RUN: ../build/bin/hask-opt -worker-wrapper %s
 module {
   lz.func @f (%i : !lz.thunk<memref<5000xi64>>) -> !lz.value {
       %v = lz.make_i64(2)
