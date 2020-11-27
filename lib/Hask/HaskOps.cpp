@@ -412,7 +412,7 @@ void CaseOp::print(OpAsmPrinter &p) {
 llvm::Optional<int> CaseOp::getDefaultAltIndex() {
   for (int i = 0; i < getNumAlts(); ++i) {
     Attribute ai = this->getAltLHS(i);
-    StringAttr sai = ai.dyn_cast<StringAttr>();
+    FlatSymbolRefAttr sai = ai.dyn_cast<FlatSymbolRefAttr>();
     if (sai && sai.getValue() == "default") {
       return i;
     }

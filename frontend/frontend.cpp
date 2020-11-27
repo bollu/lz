@@ -2323,6 +2323,7 @@ int main(int argc, const char *const *argv) {
     llvm::outs() << "module succeeded verification!\n";
   }
 
+  // return 0;
   std::pair<InterpValue, InterpStats> interpOut =
       interpretModule(mlirmod.get());
   llvm::outs() << "===running program===\n";
