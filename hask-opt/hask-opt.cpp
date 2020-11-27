@@ -152,9 +152,13 @@ int main(int argc, char **argv) {
     // Apply any generic pass manager command line options and run the pipeline.
     applyPassManagerCLOptions(pm);
 
+    std::unique_ptr<mlir::OperationPass<mlir::FuncOp>> normalizePass(
+        mlir::createAffineLoopNormalizePass());
+
     // Add a run of the canonicalizer to optimize the mlir module.
     // pm.addNestedPass<mlir::FuncOp>(mlir::createCanonicalizerPass());
     pm.addPass(mlir::standalone::createWorkerWrapperPass());
+
     llvm::errs() << "===Module: running worker/wrapper...===\n";
     if (mlir::failed(pm.run(*module))) {
       llvm::errs() << "===Run of worker/wrapper failed.===\n";

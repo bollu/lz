@@ -13,9 +13,12 @@
 #include "Interpreter.h"
 
 // more MLIR includes...
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/StandardTypes.h"
 #include "mlir/IR/Verifier.h"
+#include "mlir/Pass/Pass.h"
+#include "llvm/ADT/Sequence.h"
 
 #define GIVE
 #define TAKE
@@ -221,32 +224,8 @@ OutFile &operator<<(OutFile &o, const Span &s) {
   return cout << s.begin << " - " << s.end;
 }
 
-// TODO: upgrade this to take a space, not just a location.
 void vprintfspan(Span span, const char *raw_input, const char *fmt,
                  va_list args) {
-  char *outstr = nullptr;
-  vasprintf(&outstr, fmt, args);
-  assert(outstr);
-  cerr << "===\n";
-  cerr << span.begin << ":" << span.end << "\n";
-
-  cerr << "===\n";
-  cerr << span << "\t" << outstr << "\n";
-  for (ll i = span.begin.si; i < span.end.si; ++i) {
-    cerr << raw_input[i];
-  }
-  cerr << "\n===\n";
-}
-
-void printfspan(Span span, const char *raw_input, const char *fmt, ...) {
-  va_list args;
-  va_start(args, fmt);
-  vprintfspan(span, raw_input, fmt, args);
-  va_end(args);
-}
-
-void vprintferrspan(Span span, const char *raw_input, const char *fmt,
-                    va_list args) {
   const int CONTEXTLEN = 25;
   // const int LINELEN = 80;
 
@@ -300,7 +279,7 @@ void vprintferrspan(Span span, const char *raw_input, const char *fmt,
     errstr += std::string(raw_input + span.begin.si - nchars_back,
                           raw_input + span.end.si + nchars_fwd);
     cursorstr += std::string(nchars_back, ' ');
-    cursorstr += std::string(span.end.si - span.begin.si, '^');
+    cursorstr += std::string(span.end.si - span.begin.si + 1, '^');
     cursorstr += std::string(nchars_fwd, ' ');
 
     if (nchars_fwd > CONTEXTLEN) {
@@ -329,70 +308,6 @@ void vprintferrspan(Span span, const char *raw_input, const char *fmt,
   }
 }
 
-void vprintferr(Loc loc, const char *raw_input, const char *fmt, va_list args) {
-  char *outstr = nullptr;
-  vasprintf(&outstr, fmt, args);
-  assert(outstr);
-
-  const int LINELEN = 80;
-  const int CONTEXTLEN = 25;
-  char line_buf[2 * LINELEN];
-  char pointer_buf[2 * LINELEN];
-
-  // find the previous newline character, or some number of characters back.
-  // Keep a one window lookahead.
-  ll nchars_back = 0;
-  for (; loc.si - nchars_back >= 1 &&
-         raw_input[loc.si - (nchars_back + 1)] != '\n';
-       nchars_back++) {
-  }
-
-  int outix = 0;
-  if (nchars_back > CONTEXTLEN) {
-    nchars_back = CONTEXTLEN;
-    for (int i = 0; i < 3; ++i, ++outix) {
-      line_buf[outix] = '.';
-      pointer_buf[outix] = ' ';
-    }
-  }
-
-  {
-    int inix = loc.si - nchars_back;
-    for (; inix - loc.si <= CONTEXTLEN; ++inix, ++outix) {
-      if (raw_input[inix] == '\0') {
-        break;
-      }
-      if (raw_input[inix] == '\n') {
-        break;
-      }
-      line_buf[outix] = raw_input[inix];
-      pointer_buf[outix] = (inix == loc.si) ? '^' : ' ';
-    }
-
-    if (raw_input[inix] != '\0' && raw_input[inix] != '\n') {
-      for (int i = 0; i < 3; ++i, ++outix) {
-        line_buf[outix] = '.';
-        pointer_buf[outix] = ' ';
-      }
-    }
-    line_buf[outix] = pointer_buf[outix] = '\0';
-  }
-
-  cerr << "\n==\n"
-       << outstr << "\n"
-       << loc.filename << loc << "\n"
-       << line_buf << "\n"
-       << pointer_buf << "\n==\n";
-  free(outstr);
-}
-
-void printferr(Span span, const char *raw_input, const char *fmt, ...) {
-  va_list args;
-  va_start(args, fmt);
-  vprintferrspan(span, raw_input, fmt, args);
-  va_end(args);
-}
-
 bool isWhitespace(char c) { return c == ' ' || c == '\n' || c == '\t'; }
 bool isReservedSigil(char c) {
   return c == '(' || c == ')' || c == '{' || c == '}' || c == ',' || c == ';' ||
@@ -400,124 +315,13 @@ bool isReservedSigil(char c) {
          c == '/' || c == '!';
 }
 
-/*
- * struct string;
-
-struct stringView {
-    friend struct string;
-
-    char operator[](int ix);
-
-    ll nchars() const { return sp.nchars(); }
-
-   private:
-    stringView(string &str, Span sp) : str(str), sp(sp){};
-    string &str;
-    Span sp;
-};
-
-// representation of string as str+number of characters.
-struct string {
-    const ll nchars;
-
-    string substring(Span span) const {
-        assert(span.begin.si <= nchars);
-        assert(span.end.si <= nchars);
-        return string::copyBuf(this->str + span.begin.si, span.nchars());
-    }
-
-    static string copyBuf(KEEP const char *buf, int len) {
-        char *s = (char *)malloc(len + 1);
-        memcpy(s, buf, len);
-        s[len] = 0;
-        return string(s, len);
-    }
-
-    static string copyCStr(KEEP const char *str) {
-        const ll len = strlen(str);
-        char *out = strdup(str);
-        out[len] = 0;
-        return string(out, len);
-    }
-
-    const char *asCStr() const { return str; }
-    std::string const {
-
-      cout << __FILE__ << ":" << __LINE__ << "\n";
-      cout << str << "\n";
-      std::string s; s = str; return s;
-    }
-
-    static string sprintf(const char *fmt, ...) {
-        va_list args;
-        va_start(args, fmt);
-        return sprintf_(fmt, args);
-        va_end(args);
-    }
-
-    char operator[](ll ix) const {
-        assert(ix >= 0);
-        assert(ix <= nchars);
-        return str[ix];
-    }
-
-    bool operator==(const string &other) {
-        if (nchars != other.nchars) {
-            return false;
-        }
-        for (ll i = 0; i < nchars; ++i) {
-            if (str[i] != other.str[i]) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    bool equals(const char *c) const {
-      if (nchars != strlen(c)) {
-        return false;
-      }
-      for (ll i = 0; i < nchars; ++i) {
-        if (str[i] != c[i]) { return false; }
-      }
-      return true;
-    }
-   private:
-    // str is null terminated
-    const char *str;
-
-    string(TAKE const char *str, int nchars) : nchars(nchars), str(str) {
-      assert(str[nchars] == '\0');
-      assert(strlen(str) == nchars);
-    }
-
-    static string sprintf_(const char *fmt, va_list args) {
-        char *str;
-        ll len = vasprintf(&str, fmt, args);
-        debug_assert(len == (ll)strlen(str));
-        return string(str, len);
-    }
-};
-
-OutFile & operator << (OutFile &o, const string &s) {
-    o << s.asCStr(); return o;
+void printfspan(Span span, const char *raw_input, const char *fmt, ...) {
+  va_list args;
+  va_start(args, fmt);
+  vprintfspan(span, raw_input, fmt, args);
+  va_end(args);
 }
 
-
-char stringView::operator[](int ix) {
-    debug_assert(ix < this->sp.nchars());
-    debug_assert(ix >= 0);
-    return (this->str[ix]);
-};
-
-Loc Loc::nextstr(const string &s) const {
-    Loc cur = *this;
-    for (int i = 0; i < s.nchars; ++i) {
-        cur = cur.nextc(s[i]);
-    }
-    return cur;
-}
-*/
 struct ParseError {
   std::string errmsg;
   Span span;
@@ -575,7 +379,7 @@ struct IRTypeErrorKindMismatch : public IRTypeError {
       : IRTypeError(defn, use){};
 
   void print(const char *raw_input, Span span) override {
-    printferr(span, raw_input, "type kind mismatch\n");
+    printfspan(span, raw_input, "type kind mismatch\n");
     cerr << "expected: ";
     defn->print(cerr);
     cerr << "\n";
@@ -589,7 +393,7 @@ struct IRTypeErrorTupleArityMismatch : public IRTypeError {
   IRTypeErrorTupleArityMismatch(const IRType *defn, const IRType *use)
       : IRTypeError(defn, use){};
   void print(const char *raw_input, Span span) override {
-    printferr(span, raw_input, "tuple arity mismatch\n");
+    printfspan(span, raw_input, "tuple arity mismatch\n");
     cerr << "expected: ";
     defn->print(cerr);
     cerr << "\n";
@@ -606,8 +410,8 @@ struct IRTypeErrorEnumMissingConstructor : public IRTypeError {
   std::string name;
 
   void print(const char *raw_input, Span span) override {
-    printferr(span, raw_input, "enum missing constructor: |%s|\n",
-              name.c_str());
+    printfspan(span, raw_input, "enum missing constructor: |%s|\n",
+               name.c_str());
     cerr << "expected: ";
     defn->print(cerr);
     cerr << "\n";
@@ -623,8 +427,8 @@ struct IRTypeErrorEnumExtraConstructor : public IRTypeError {
   std::string name;
 
   void print(const char *raw_input, Span span) override {
-    printferr(span, raw_input, "enum has extra constructor: |%s|\n",
-              name.c_str());
+    printfspan(span, raw_input, "enum has extra constructor: |%s|\n",
+               name.c_str());
     cerr << "expected: ";
     defn->print(cerr);
     cerr << "\n";
@@ -958,7 +762,7 @@ struct Parser {
     if (!fst) {
       return {};
     }
-    if (!isalpha(*fst)) {
+    if (!(isalpha(*fst) || *fst == '_')) {
       return {};
     }
     lcur = lcur.nextc(*fst);
@@ -1014,7 +818,7 @@ struct Parser {
 
   void addErr(ParseError e) {
     errs.push_back(e);
-    printferr(e.span, s.c_str(), e.errmsg.c_str());
+    printfspan(e.span, s.c_str(), e.errmsg.c_str());
   }
 
   void addErrAtCurrentLoc(string err) { addErr(ParseError(Span(l, l), err)); }
@@ -1744,7 +1548,7 @@ public:
   void assertNonStrict(const IRType *t, Span span) {
     if (!t->strict)
       return;
-    printferr(span, raw_input, "expected lazy type, found strict type:\n");
+    printfspan(span, raw_input, "expected lazy type, found strict type:\n");
     t->print(cerr);
     cerr << "\n";
     assert(false && "expected lazy type");
@@ -1753,7 +1557,7 @@ public:
   void assertStrict(const IRType *t, Span span) {
     if (t->strict)
       return;
-    printferr(span, raw_input, "expected strict type, found lazy type:\n");
+    printfspan(span, raw_input, "expected strict type, found lazy type:\n");
     t->print(cerr);
     cerr << "\n";
     assert(false && "expected strict type");
@@ -1765,8 +1569,8 @@ public:
       return;
     }
     (*err)->print(this->raw_input, span);
-    printferr(span, raw_input, "type error mismatch generated from def/use:\n",
-              span.begin);
+    printfspan(span, raw_input, "type error mismatch generated from def/use:\n",
+               span.begin);
     cerr << "defn: ";
     defn->print(cerr);
     cerr << "\n";
@@ -1780,7 +1584,8 @@ public:
     if (fnty->argTys.size() == nargs) {
       return;
     }
-    printferr(span, raw_input, "mismatched number of arguments at call site: ");
+    printfspan(span, raw_input,
+               "mismatched number of arguments at call site: ");
     cerr << "function type:\n";
     fnty->print(cerr);
     cerr << "\n";
@@ -1788,7 +1593,7 @@ public:
   };
 
   void assertVoidBlock(Span span) {
-    printferr(span, raw_input, "block has no return instruction\n");
+    printfspan(span, raw_input, "block has no return instruction\n");
     assert(false && "found block with no return");
   }
 
@@ -1799,18 +1604,18 @@ public:
                                                int size) {
     auto it = enumty->constructors.find(constructor.name);
     if (it == enumty->constructors.end()) {
-      printferr(constructor.span, raw_input,
-                "unable to find constructor |%s| in enum |%s|\n",
-                constructor.name.c_str(), enumty->name.c_str());
+      printfspan(constructor.span, raw_input,
+                 "unable to find constructor |%s| in enum |%s|\n",
+                 constructor.name.c_str(), enumty->name.c_str());
       assert(false && "unknown constructor for type");
     }
 
     if (it->second->size() != size) {
-      printferr(constructor.span, raw_input,
-                "expected |%d| fields in constructor |%s| of enum |%s|, found "
-                "|%d| fields\n",
-                size, constructor.name.c_str(), enumty->name.c_str(),
-                it->second->size());
+      printfspan(constructor.span, raw_input,
+                 "expected |%d| fields in constructor |%s| of enum |%s|, found "
+                 "|%d| fields\n",
+                 size, constructor.name.c_str(), enumty->name.c_str(),
+                 it->second->size());
       assert(false && "incorrect number of args to tuple type");
     }
 
@@ -1821,7 +1626,7 @@ public:
     if (user->kind == IRTypeKind::Int) {
       return;
     }
-    printferr(span, raw_input, "expected integer type. found:\n");
+    printfspan(span, raw_input, "expected integer type. found:\n");
     user->print(cerr);
     cerr << "\n";
     assert(false && "expected integer type");
@@ -1831,9 +1636,9 @@ public:
     auto it = ident2ty.find(ident.name);
 
     if (it == ident2ty.end()) {
-      printferr(ident.span, raw_input,
-                "unable to find value |%s| during type checking!\n",
-                ident.name.c_str());
+      printfspan(ident.span, raw_input,
+                 "unable to find value |%s| during type checking!\n",
+                 ident.name.c_str());
       assert(false && "unable to find value");
     }
     return it->second;
@@ -1850,8 +1655,8 @@ public:
   IRType *lookupTypeName(Identifier typenam) const {
     auto it = surface2ty.find(typenam.name);
     if (it == surface2ty.end()) {
-      printferr(typenam.span, raw_input, "unable to find type named: |%s|\n",
-                typenam.name.c_str());
+      printfspan(typenam.span, raw_input, "unable to find type named: |%s|\n",
+                 typenam.name.c_str());
       // TODO: find some way to smuggle |raw_input| here.
       // raw_input? from where the fuck am I supposed to get that to print an
       // error? smh.
@@ -1875,9 +1680,10 @@ public:
 
   void insertIdentifier(Identifier name, IRType *t) {
     if (ident2ty.find(name.name) != ident2ty.end()) {
-      printferr(name.span, raw_input,
-                "identifier |%s| already present in scope during type checking",
-                name.name.c_str());
+      printfspan(
+          name.span, raw_input,
+          "identifier |%s| already present in scope during type checking",
+          name.name.c_str());
     };
 
     assert(ident2ty.find(name.name) == ident2ty.end());
@@ -1889,7 +1695,7 @@ public:
     if (T::classof(base)) {
       return (T *)base;
     }
-    printferr(span, raw_input, error.c_str());
+    printfspan(span, raw_input, error.c_str());
     assert(false && "mismatched types");
   }
 
@@ -2335,22 +2141,22 @@ mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder,
     }
 
     if (construct->constructorName.name == "MatrixSequence") {
-      llvm::SmallVector<int, 4> lowerBounds(1, /*Value=*/0);
+      llvm::SmallVector<int64_t, 4> lowerBounds(1, /*Value=*/0);
+      llvm::SmallVector<int64_t, 4> upperBounds(1, /*Value=*/5000);
       llvm::SmallVector<int64_t, 4> steps(1, /*Value=*/1);
-      // mlir::buildAffineLoopNest(
-      //     builder, builder.getUnknownLoc(), lowerBounds,
-      //     tensorType.getShape(), steps,
-      //     [&](OpBuilder &nestedBuilder, Location loc, ValueRange ivs) {
-      //       // Call the processing function with the rewriter, the memref
-      //       operands,
-      //       // and the loop induction variables. This function will return
-      //       the value
-      //       // to store at the current index.
-      //       Value valueToStore = processIteration(nestedBuilder, operands,
-      //       ivs); nestedBuilder.create<AffineStoreOp>(loc, valueToStore,
-      //       alloc, ivs);
-      //     });
-      assert(false && "todo");
+      auto alloc = builder.create<mlir::AllocOp>(
+          builder.getUnknownLoc(),
+          mlir::MemRefType::get(5000, builder.getI64Type()));
+
+      mlir::buildAffineLoopNest(builder, builder.getUnknownLoc(), lowerBounds,
+                                upperBounds, steps,
+                                [&](mlir::OpBuilder &nestedBuilder,
+                                    mlir::Location loc, mlir::ValueRange ivs) {
+                                  mlir::Value valueToStore = ivs[0];
+                                  nestedBuilder.create<mlir::AffineStoreOp>(
+                                      loc, valueToStore, alloc, ivs);
+                                });
+      return alloc;
     }
 
     // creates an lz.value
@@ -2478,6 +2284,7 @@ int main(int argc, const char *const *argv) {
   // https://github.com/llvm/llvm-project/blob/79105e464429d2220c81b38bf5339b9c41da1d21/mlir/examples/toy/Ch2/toyc.cpp#L70
   context.getOrLoadDialect<mlir::standalone::HaskDialect>();
   context.getOrLoadDialect<mlir::StandardOpsDialect>();
+  context.getOrLoadDialect<mlir::AffineDialect>();
 
   mlir::OwningModuleRef mlirmod = mlirGen(context, typeContext, mod);
   if (!mlirmod) {

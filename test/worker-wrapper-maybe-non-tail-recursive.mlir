@@ -14,17 +14,24 @@
 // CHECK-WW: num_construct_calls(38)
 
 module {
-  // should it be Attr Attr, with the "list" embedded as an attribute,
-  // or should it be Attr [Attr]? Who really knows :(
-  // define the algebraic data type
-  // TODO: setup constructors properly.
-
-  // f :: Maybe -> Maybe
-  // f i = case i of Maybe i# ->
-  //        case i# of 0 -> Maybe 5;
-  //        _ -> case f ( Maybe(i# -# 1#)) of
-  //              Nothing -> Nothing
-  //              Just j# -> Just (j# +# 1#)
+  // f :: Maybe Int# -> Maybe Int#
+  // f mi = case mi of
+  //         Just i# ->
+  //            case i# of
+  //             0 -> Just 5;
+  //             _ -> case f (Just(i# -# 1#)) of
+  //                  Nothing -> Nothing
+  //                  Just j# -> Just (j# +# 7#)
+  //          Nothing -> Nothing
+  // 
+  // gwork :: Int# -> Int#
+  // gwork i# = case i# of 0 -> 5; _ -> (gwork (i# -# 1)) +# 7#
+  // 
+  // gwrap:: Maybe -> Maybe
+  // gwrap mi = case mi of
+  //             Nothing -> Nothing
+  //             Just i# -> Just (gwork i#)
+  // f =semantics= gwrap
   lz.func @f (%i : !lz.thunk<!lz.value>) -> !lz.value {
       %icons = lz.force(%i): !lz.value
       %reti = lz.case @Maybe %icons 
