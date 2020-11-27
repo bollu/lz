@@ -1,6 +1,4 @@
-// RUN: ../build/bin/hask-opt %s  -interpret | FileCheck %s
-// RUN: ../build/bin/hask-opt %s -lower-std -lower-llvm | FileCheck %s || true
-// RUN: ../build/bin/hask-opt %s  | ../build/bin/hask-opt -lower-std -lower-llvm |  FileCheck %s || true
+// RUN: ../build/bin/hask-opt %s  --lz-interpret | FileCheck %s
 // CHECK: 42
 module {
   // k x y = x

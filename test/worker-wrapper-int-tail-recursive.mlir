@@ -1,7 +1,7 @@
-// RUN: ../build/bin/hask-opt %s  -interpret | FileCheck %s
-// RUN: ../build/bin/hask-opt %s  |  ../build/bin/hask-opt -interpret | FileCheck %s
-// RUN: ../build/bin/hask-opt %s  -worker-wrapper -interpret | FileCheck %s --check-prefix=CHECK-WW 
-// RUN: ../build/bin/hask-opt %s  -worker-wrapper | ../build/bin/hask-opt -interpret | FileCheck %s --check-prefix=CHECK-WW 
+// RUN: ../build/bin/hask-opt %s  --lz-interpret | FileCheck %s
+// RUN: ../build/bin/hask-opt %s  |  ../build/bin/hask-opt --lz-interpret | FileCheck %s
+// RUN: ../build/bin/hask-opt %s  --lz-worker-wrapper --lz-interpret | FileCheck %s --check-prefix=CHECK-WW 
+// RUN: ../build/bin/hask-opt %s  --lz-worker-wrapper | ../build/bin/hask-opt --lz-interpret | FileCheck %s --check-prefix=CHECK-WW 
 
 // Check that @plus works with SimpleInt works.
 // CHECK: constructor(SimpleInt 42)

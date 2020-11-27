@@ -50,6 +50,11 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
 
+extern "C" {
+const char *__asan_default_options() { return "detect_leaks=0"; }
+}
+
+/*
 static llvm::cl::opt<std::string> inputFilename(llvm::cl::Positional,
                                                 llvm::cl::desc("<input file>"),
                                                 llvm::cl::init("-"));
@@ -66,6 +71,7 @@ static llvm::cl::opt<bool>
 
 static llvm::cl::opt<bool>
     optInterpret("interpret", llvm::cl::desc("Enable interpreting IR"));
+*/
 
 // 0 static llvm::cl::opt<std::string>
 // 0     outputFilename("o", llvm::cl::desc("Output filename"),
@@ -103,15 +109,33 @@ using namespace llvm;
 using namespace llvm::orc;
 ExitOnError ExitOnErr;
 
+int realmain(int argc, char **argv) {
+  mlir::registerAllPasses();
+  mlir::standalone::registerWorkerWrapperPass();
+  registerLzInterpretPass();
+  mlir::DialectRegistry registry;
+  mlir::registerAllDialects(registry);
+
+  registry.insert<mlir::standalone::HaskDialect>();
+  // registry.insert<mlir::StandardOpsDialect>();
+  // Add the following to include *all* MLIR Core dialects, or selectively
+  // include what you need like above. You only need to register dialects that
+  // will be *parsed* by the tool, not the one generated
+  // registerAllDialects(registry);
+
+  return failed(mlir::MlirOptMain(argc, argv, "Standalone optimizer driver\n",
+                                  registry, true));
+}
 // code stolen from:
 // https://github.com/llvm/llvm-project/blob/80d7ac3bc7c04975fd444e9f2806e4db224f2416/mlir/examples/toy/Ch3/toyc.cpp
-int main(int argc, char **argv) {
+int main(int argc, char **argv) { return realmain(argc, argv); };
+
+/*
   mlir::DialectRegistry registry;
   registry.insert<mlir::standalone::HaskDialect>();
   mlir::registerAllDialects(registry);
   mlir::registerAllPasses();
   // mlir::registerDialect<mlir::standalone::HaskDialect>();
-
   // Register any command line options.
   mlir::registerAsmPrinterCLOptions();
   mlir::registerMLIRContextCLOptions();
@@ -266,7 +290,8 @@ int main(int argc, char **argv) {
   }
 
   // Lower MLIR-LLVM all the way down to "real LLVM"
-  // https://github.com/llvm/llvm-project/blob/670063eb220663b5a42fd4e9bd63f51d379c9aa0/mlir/examples/toy/Ch6/toyc.cpp#L193
+  //
+https://github.com/llvm/llvm-project/blob/670063eb220663b5a42fd4e9bd63f51d379c9aa0/mlir/examples/toy/Ch6/toyc.cpp#L193
   const bool nativeTargetInitialized = llvm::InitializeNativeTarget();
   LLVMInitializeNativeAsmPrinter();
   LLVMInitializeNativeAsmParser();
@@ -372,7 +397,8 @@ int main(int argc, char **argv) {
       std::move(llvmModule), std::move(llvmContext))));
 
   llvm::errs() << "main:  " << __LINE__ << "\n";
-  // https://llvm.org/docs/ORCv2.html#how-to-add-process-and-library-symbols-to-the-jitdylibs
+  //
+https://llvm.org/docs/ORCv2.html#how-to-add-process-and-library-symbols-to-the-jitdylibs
 
   // Look up the JIT'd function, cast it to a function pointer, then call it.
   auto mainfnSym = ExitOnErr(J->lookup("main"));
@@ -389,3 +415,4 @@ int main(int argc, char **argv) {
   printf("%lu\n", result2int);
   return 0;
 }
+*/

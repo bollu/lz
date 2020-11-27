@@ -515,3 +515,33 @@ std::pair<InterpValue, InterpStats> interpretModule(ModuleOp module) {
   InterpValue val = I.interpretFunction("main", {});
   return {val, I.getStats()};
 };
+
+struct LzInterpretPass : public Pass {
+  LzInterpretPass() : Pass(mlir::TypeID::get<LzInterpretPass>()){};
+  StringRef getName() const override { return "LzInterpretPass"; }
+
+  std::unique_ptr<Pass> clonePass() const override {
+    auto newInst = std::make_unique<LzInterpretPass>(
+        *static_cast<const LzInterpretPass *>(this));
+    newInst->copyOptionValuesFrom(this);
+    return newInst;
+  }
+
+  void runOnOperation() override {
+    mlir::ModuleOp mod(getOperation());
+    std::pair<InterpValue, InterpStats> out = interpretModule(mod);
+    llvm::outs() << out.first << "\n" << out.second << "\n";
+  }
+};
+
+std::unique_ptr<mlir::Pass> createLzInterpretPass() {
+  return std::make_unique<LzInterpretPass>();
+}
+
+void registerLzInterpretPass() {
+  ::mlir::registerPass("lz-interpret",
+                       "Interpret lz IR and generate statistics of thunking.",
+                       []() -> std::unique_ptr<::mlir::Pass> {
+                         return createLzInterpretPass();
+                       });
+}

@@ -1,7 +1,5 @@
-// RUN: ../build/bin/hask-opt %s  -interpret | FileCheck %s
-// RUN: ../build/bin/hask-opt %s -lower-std -lower-llvm | FileCheck %s || true
-// RUN: ../build/bin/hask-opt %s  | ../build/bin/hask-opt -lower-std -lower-llvm |  FileCheck %s || true
-// CHECK: 8
+// RUN: ../build/bin/hask-opt %s  --lz-interpret  | FileCheck %s
+// CHECK: constructor(SimpleInt 8)
 // Core2MLIR: GenMLIR BeforeCorePrep
 module {
   // should it be Attr Attr, with the "list" embedded as an attribute,

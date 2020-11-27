@@ -1,4 +1,4 @@
-// RUN: ../build/bin/hask-opt %s  -interpret | FileCheck %s
+// RUN: ../build/bin/hask-opt %s  --lz-interpret | FileCheck %s
 // Check that @plus works with SimpleInt works.
 // CHECK: constructor(SimpleInt 2)
 module {

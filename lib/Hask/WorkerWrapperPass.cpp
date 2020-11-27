@@ -672,5 +672,12 @@ std::unique_ptr<mlir::Pass> createWorkerWrapperPass() {
   return std::make_unique<WorkerWrapperPass>();
 }
 
+void registerWorkerWrapperPass() {
+  ::mlir::registerPass("lz-worker-wrapper", "Perform worker wrapper transform",
+                       []() -> std::unique_ptr<::mlir::Pass> {
+                         return createWorkerWrapperPass();
+                       });
+}
+
 } // namespace standalone
 } // namespace mlir

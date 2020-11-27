@@ -1,7 +1,5 @@
-// RUN: ../build/bin/hask-opt %s  -interpret | FileCheck %s
-// RUN: ../build/bin/hask-opt %s  -interpret -worker-wrapper | FileCheck %s -check-prefix='CHECK-WW'
-// RUN: ../build/bin/hask-opt %s -lower-std -lower-llvm | FileCheck %s || true
-// RUN: ../build/bin/hask-opt %s  | ../build/bin/hask-opt -lower-std -lower-llvm |  FileCheck %s || true
+// RUN: ../build/bin/hask-opt %s  --lz-interpret | FileCheck %s
+// RUN: ../build/bin/hask-opt %s  --lz-worker-wrapper --lz-interpret | FileCheck %s -check-prefix='CHECK-WW'
 // Check that @plus works with Maybe works.
 // CHECK: constructor(Just 42)
 // CHECK: num_thunkify_calls(6)

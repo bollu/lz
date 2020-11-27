@@ -1,4 +1,4 @@
-// RUN: ../build/bin/hask-opt -worker-wrapper %s
+// RUN: ../build/bin/hask-opt --lz-worker-wrapper --lz-interpret %s
 module {
 
   func @sum(%buffer: memref<?xi64>) -> (i64) {

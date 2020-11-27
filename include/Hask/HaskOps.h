@@ -473,6 +473,7 @@ std::unique_ptr<mlir::Pass> createLowerHaskStandardToLLVMPass();
 // canonicalize, eliminating all intermediate waste.
 std::unique_ptr<mlir::Pass> createWorkerWrapperPass();
 
+void registerWorkerWrapperPass();
 } // namespace standalone
 } // namespace mlir
 
