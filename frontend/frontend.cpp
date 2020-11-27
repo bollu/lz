@@ -1212,20 +1212,20 @@ Expr *parseExprLeaf(Parser &in) {
     optional<Span> strict = in.parseOptionalSigil("!");
     // function call or constructor!
     optional<Span> open;
-    if ((open = in.parseOptionalOpenRoundBracket())) {
-      if (in.parseOptionalCloseRoundBracket()) {
-        return new ExprFnCall(Span(lbegin, in.getCurrentLoc()), *ident, {},
-                              bool(strict));
-      }
 
+    if ((open = in.parseOptionalOpenRoundBracket())) {
       vector<Expr *> args;
-      while (1) {
-        args.push_back(parseExprTop(in));
-        if (in.parseOptionalComma()) {
-          continue;
-        } else {
-          in.parseCloseRoundBracket(*open);
-          break;
+
+      if (in.parseOptionalCloseRoundBracket()) {
+      } else {
+        while (1) {
+          args.push_back(parseExprTop(in));
+          if (in.parseOptionalComma()) {
+            continue;
+          } else {
+            in.parseCloseRoundBracket(*open);
+            break;
+          }
         }
       }
 
@@ -1633,9 +1633,9 @@ public:
   }
 
   IRType *lookupValue(Identifier ident) const {
-    auto it = ident2ty.find(ident.name);
+    auto it = value2ty.find(ident.name);
 
-    if (it == ident2ty.end()) {
+    if (it == value2ty.end()) {
       printfspan(ident.span, raw_input,
                  "unable to find value |%s| during type checking!\n",
                  ident.name.c_str());
@@ -1653,8 +1653,8 @@ public:
   IRTypeInt *getIntType(bool strict) { return new IRTypeInt(strict); }
 
   IRType *lookupTypeName(Identifier typenam) const {
-    auto it = surface2ty.find(typenam.name);
-    if (it == surface2ty.end()) {
+    auto it = typename2ty.find(typenam.name);
+    if (it == typename2ty.end()) {
       printfspan(typenam.span, raw_input, "unable to find type named: |%s|\n",
                  typenam.name.c_str());
       // TODO: find some way to smuggle |raw_input| here.
@@ -1665,29 +1665,37 @@ public:
     return it->second;
   }
 
-  template <typename T> T *lookupTypeNameOfType(Identifier typenam) const {
-    T *result = mlir::dyn_cast<T>(lookupTypeName(typenam));
-    if (result) {
-      return result;
+  pair<IRTypeEnum *, IRTypeTuple *>
+  lookupEnumFromConstrcutor(Identifier constructor) const {
+    for (auto itty : this->typename2ty) {
+      IRTypeEnum *enumty = mlir::dyn_cast<IRTypeEnum>(itty.second);
+      auto itcons = enumty->constructors.find(constructor.name);
+      if (itcons == enumty->constructors.end()) {
+        continue;
+      }
+      return {enumty, itcons->second};
     }
-    assert(false && "unable to cast type to expected type");
+
+    printfspan(constructor.span, raw_input, "unable to find constructor |%s|",
+               constructor.name.c_str());
+    assert(false && "unable to find constrctor");
   }
 
   void insertIRType(std::string name, IRType *t) {
-    assert(surface2ty.find(name) == surface2ty.end());
-    surface2ty.insert({name, t});
+    assert(typename2ty.find(name) == typename2ty.end());
+    typename2ty.insert({name, t});
   }
 
-  void insertIdentifier(Identifier name, IRType *t) {
-    if (ident2ty.find(name.name) != ident2ty.end()) {
+  void insertValue(Identifier name, IRType *t) {
+    if (value2ty.find(name.name) != value2ty.end()) {
       printfspan(
           name.span, raw_input,
           "identifier |%s| already present in scope during type checking",
           name.name.c_str());
     };
 
-    assert(ident2ty.find(name.name) == ident2ty.end());
-    ident2ty.insert({name.name, t});
+    assert(value2ty.find(name.name) == value2ty.end());
+    value2ty.insert({name.name, t});
   }
 
   template <typename T>
@@ -1700,8 +1708,8 @@ public:
   }
 
 private:
-  std::map<string, IRType *> surface2ty;
-  std::map<string, IRType *> ident2ty;
+  std::map<string, IRType *> typename2ty;
+  std::map<string, IRType *> value2ty;
   const char *raw_input;
 };
 
@@ -1730,7 +1738,7 @@ void typeCheckExpr(TypeContext &tc, Expr *e) {
       for (ExprCase::Alt &a : ecase->alts) {
         if (auto lhsIdentifier = mlir::dyn_cast<CaseLHSIdentifier>(a.first)) {
           TypeContext inner = tc;
-          inner.insertIdentifier(lhsIdentifier->ident, ecase->scrutinee->type);
+          inner.insertValue(lhsIdentifier->ident, ecase->scrutinee->type);
           lhsIdentifier->type = ecase->scrutinee->type;
           typeCheckBlock(inner, a.second);
           continue;
@@ -1743,7 +1751,7 @@ void typeCheckExpr(TypeContext &tc, Expr *e) {
           TypeContext inner = tc;
           for (int i = 0; i < (int)lhsTuple->fields.size(); ++i) {
             // TODO: actually handle recursive pattern matching.
-            inner.insertIdentifier(lhsTuple->fields[i], tuplety->get(i));
+            inner.insertValue(lhsTuple->fields[i], tuplety->get(i));
             typeCheckBlock(inner, a.second);
           }
           continue;
@@ -1767,7 +1775,7 @@ void typeCheckExpr(TypeContext &tc, Expr *e) {
         }
         if (auto lhsIdentifier = mlir::dyn_cast<CaseLHSIdentifier>(a.first)) {
           TypeContext inner = tc;
-          inner.insertIdentifier(lhsIdentifier->ident, ecase->scrutinee->type);
+          inner.insertValue(lhsIdentifier->ident, ecase->scrutinee->type);
           typeCheckBlock(inner, a.second);
           continue;
         } // end identifier alt.
@@ -1791,16 +1799,10 @@ void typeCheckExpr(TypeContext &tc, Expr *e) {
     for (Expr *arg : construct->args) {
       typeCheckExpr(tc, arg);
     }
-    IRTypeEnum *enumty =
-        tc.lookupTypeNameOfType<IRTypeEnum>(construct->constructorName);
-    // IRTypeEnum *enumty =
-    // tc.lookupValueOfType<IRTypeEnum>(construct->constructorName,
-    //                           "expected constructor to be an enumeration
-    //                           type");
-
-    auto it = enumty->constructors.find(construct->constructorName.name);
-    assert(it != enumty->constructors.end());
-    IRTypeTuple *constructorty = it->second;
+    IRTypeEnum *enumty = nullptr;
+    IRTypeTuple *constructorty = nullptr;
+    tie(enumty, constructorty) =
+        tc.lookupEnumFromConstrcutor(construct->constructorName);
 
     // TODO: convert to a type error.
     assert(constructorty->size() == (int)construct->args.size());
@@ -1864,7 +1866,7 @@ void typeCheckBlock(TypeContext tc, Block *b) {
       }
       IRType *declaredty = tc.lookupTypeName(let->type.tyname);
       tc.assertTypeEquality(declaredty, let->rhs->type, let->span);
-      tc.insertIdentifier(let->name, let->rhs->type);
+      tc.insertValue(let->name, let->rhs->type);
       continue;
     }
 
@@ -1911,6 +1913,27 @@ TypeContext typeCheckModule(const char *raw_input, Module &m) {
     // add all constructors into the scope of the typechecker.
   }
 
+  for (Enum e : m.enums) {
+    map<string, IRTypeTuple *> constructor2Type;
+    for (Enum::EnumConstructor c : e.constructors) {
+      StructFieldsTuple *fields = mlir::cast<StructFieldsTuple>(c.second);
+      vector<IRType *> fieldTys;
+      for (SurfaceType t : fields->types) {
+        fieldTys.push_back(tcGlobal.lookupTypeName(t.tyname));
+      }
+      constructor2Type.insert({c.first.name, new IRTypeTuple(fieldTys, true)});
+    }
+
+    // insert all constructors.
+    IRTypeEnum *enumty = new IRTypeEnum(e.name.name, constructor2Type, true);
+    // for (auto it : constructor2Type) {
+    //   tcGlobal.insertValue(it.first, enumty);
+    // }
+
+    // insert the type.
+    tcGlobal.insertIRType(e.name.name, enumty);
+  }
+
   // generate  all function types.
   for (Fn &f : m.fns) {
     vector<IRType *> argTys;
@@ -1924,13 +1947,13 @@ TypeContext typeCheckModule(const char *raw_input, Module &m) {
     // "types of values?"
     IRTypeFn *fnty = new IRTypeFn(IRTypeTuple(argTys, true), retty, true);
     f.type = fnty;
-    tcGlobal.insertIdentifier(f.name, fnty);
+    tcGlobal.insertValue(f.name, fnty);
   }
 
   for (Fn &f : m.fns) {
     TypeContext tc = tcGlobal;
     for (Fn::Argument arg : f.args) {
-      tc.insertIdentifier(arg.first, tc.lookupTypeName(arg.second.tyname));
+      tc.insertValue(arg.first, tc.lookupTypeName(arg.second.tyname));
     }
 
     // TODO: each block should have a scope; For now, fuck it.
