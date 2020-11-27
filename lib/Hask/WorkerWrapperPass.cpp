@@ -585,8 +585,10 @@ struct PeelCommonConstructorsInCase : public mlir::OpRewritePattern<CaseOp> {
 
     // 2. Create the peeled constructor
     SmallVector<Location, 4> constructorLocs;
-    for (HaskConstructOp cons : retConstructs) {
-      constructorLocs.push_back(cons.getLoc());
+    for ([[maybe_unused]] HaskConstructOp cons : retConstructs) {
+      // TODO use correct locations for error messages
+      // constructorLocs.push_back(cons.getLoc());
+      constructorLocs.push_back(rewriter.getUnknownLoc());
     }
 
     rewriter.setInsertionPointAfter(caseop);
