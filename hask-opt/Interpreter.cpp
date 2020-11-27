@@ -156,7 +156,7 @@ struct Interpreter {
   void interpretOperation(Operation &op, Env &env) {
     llvm::errs().changeColor(llvm::raw_fd_ostream::GREEN);
     llvm::errs() << "--interpreting operation:--\n";
-    llvm::errs().changeColor(llvm::raw_fd_ostream::BLACK);
+    llvm::errs().resetColor();
 
     op.print(llvm::errs());
     fprintf(stderr, "\n");
@@ -415,7 +415,7 @@ struct Interpreter {
   TerminatorResult interpretBlock(Block &block, Env &env) {
     llvm::errs().changeColor(llvm::raw_fd_ostream::GREEN);
     llvm::errs() << "--interpreting Block:--\n";
-    llvm::errs().changeColor(llvm::raw_fd_ostream::BLACK);
+    llvm::errs().resetColor();
     block.print(llvm::errs());
     llvm::errs() << "\n";
 
@@ -462,7 +462,7 @@ struct Interpreter {
                                 ArrayRef<InterpValue> args) {
     llvm::errs().changeColor(llvm::raw_fd_ostream::GREEN);
     llvm::errs() << "--interpreting function:|" << funcname.c_str() << "|--\n";
-    llvm::errs().changeColor(llvm::raw_fd_ostream::BLACK);
+    llvm::errs().resetColor();
 
     // functions are isolated from above; create a fresh environment
     if (HaskFuncOp haskfn = module.lookupSymbol<HaskFuncOp>(funcname)) {
@@ -481,7 +481,7 @@ struct Interpreter {
   //   std::string funcName = func.getName().str();
   //   llvm::errs().changeColor(llvm::raw_fd_ostream::GREEN);
   //   llvm::errs() << "--interpreting function:|" << funcName.c_str() <<
-  //   "|--\n"; llvm::errs().changeColor(llvm::raw_fd_ostream::BLACK);
+  //   "|--\n"; llvm::errs().resetColor();
   //   // functions are isolated from above; create a fresh environment.
   //   return interpretRegion(func.getRegion(), args, Env());
   // }
