@@ -44,7 +44,7 @@ HaskDialect::HaskDialect(mlir::MLIRContext *context)
   // #define GET_OP_LIST
   // #include "Hask/HaskOps.cpp.inc"
   //       >();
-  addOperations<HaskReturnOp, MakeI64Op,
+  addOperations<MakeI64Op,
                 // DeclareDataConstructorOp,
                 ApOp, ApEagerOp, CaseOp, DefaultCaseOp, HaskRefOp, MakeStringOp,
                 HaskFuncOp, ForceOp, HaskGlobalOp, HaskConstructOp,
@@ -181,10 +181,11 @@ void HaskInlinerInterface::handleTerminator(
   //    assert(false);
   //    assert(false && "handling terminator in HaskInliner...");
   // Only "toy.return" needs to be handled here.
-  auto returnOp = cast<HaskReturnOp>(op);
+  auto returnOp = cast<ReturnOp>(op);
   // Replace the values directly with the return operands.
   //    assert(1 == valuesToRepl.size());
-  valuesToRepl[0].replaceAllUsesWith(returnOp.getOperand());
+  // TODO handle multiple return values
+  valuesToRepl[0].replaceAllUsesWith(returnOp.getOperand(0));
   // https://github.com/llvm/llvm-project/blob/1b012a9146b85d30083a47d4929e86f843a5938d/mlir/docs/Tutorials/Toy/Ch-4.md
 }
 

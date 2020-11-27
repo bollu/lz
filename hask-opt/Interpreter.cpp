@@ -400,8 +400,8 @@ struct Interpreter {
   };
 
   TerminatorResult interpretTerminator(Operation &op, Env &env) {
-    if (HaskReturnOp ret = dyn_cast<HaskReturnOp>(op)) {
-      return TerminatorResult(env.lookup(ret.getLoc(), ret.getOperand()));
+    if (ReturnOp ret = dyn_cast<ReturnOp>(op)) {
+      return TerminatorResult(env.lookup(ret.getLoc(), ret.getOperand(0)));
     } else if (ReturnOp ret = dyn_cast<ReturnOp>(op)) {
       // TODO: we assume we have only one return value
       return TerminatorResult(env.lookup(ret.getLoc(), ret.getOperand(0)));

@@ -13,6 +13,7 @@
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/StandardTypes.h"
@@ -32,20 +33,20 @@ namespace standalone {
 // #define GET_OP_CLASSES
 // #include "Hask/HaskOps.h.inc"
 
-class HaskReturnOp
-    : public Op<HaskReturnOp, OpTrait::ZeroResult, OpTrait::ZeroSuccessor,
-                OpTrait::IsTerminator, OpTrait::OneOperand> {
-public:
-  using Op::Op;
-  static StringRef getOperationName() { return "lz.return"; };
-  Value getInput() { return this->getOperation()->getOperand(0); }
-  Type getType() { return this->getInput().getType(); }
-  static ParseResult parse(OpAsmParser &parser, OperationState &result);
-  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                    Value v);
-
-  void print(OpAsmPrinter &p);
-};
+// class HaskReturnOp
+//     : public Op<HaskReturnOp, OpTrait::ZeroResult, OpTrait::ZeroSuccessor,
+//                 OpTrait::IsTerminator, OpTrait::OneOperand> {
+// public:
+//   using Op::Op;
+//   static StringRef getOperationName() { return "lz.return"; };
+//   Value getInput() { return this->getOperation()->getOperand(0); }
+//   Type getType() { return this->getInput().getType(); }
+//   static ParseResult parse(OpAsmParser &parser, OperationState &result);
+//   static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
+//                     Value v);
+//
+//   void print(OpAsmPrinter &p);
+// };
 
 class MakeI64Op
     : public Op<MakeI64Op, OpTrait::OneResult, OpTrait::ZeroSuccessor,
@@ -365,12 +366,11 @@ public:
   Region &getRegion() { return this->getOperation()->getRegion(0); };
   Type getType() {
     Region &r = getRegion();
-    HaskReturnOp ret =
-        dyn_cast<HaskReturnOp>(r.getBlocks().front().getTerminator());
+    ReturnOp ret = dyn_cast<ReturnOp>(r.getBlocks().front().getTerminator());
     assert(ret && "global does not have a return value");
     llvm::errs() << "ret: " << ret << "\n";
     assert(false && "case op's ret");
-    return ret.getType();
+    return ret.getOperand(0).getType();
   }
   llvm::StringRef getGlobalName();
   static ParseResult parse(OpAsmParser &parser, OperationState &result);

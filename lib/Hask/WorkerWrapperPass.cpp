@@ -512,14 +512,14 @@ struct CaseOfBoxedRecursiveApWithFinalConstruct
     }
 
     // find the return operations
-    HaskReturnOp ret = dyn_cast<HaskReturnOp>(
-        fn.getBody().getBlocks().front().getTerminator());
+    ReturnOp ret =
+        dyn_cast<ReturnOp>(fn.getBody().getBlocks().front().getTerminator());
     if (!ret) {
       return failure();
     }
 
     HaskConstructOp construct =
-        ret.getOperand().getDefiningOp<HaskConstructOp>();
+        ret.getOperand(0).getDefiningOp<HaskConstructOp>();
     if (!construct) {
       return failure();
     }
@@ -546,18 +546,18 @@ struct PeelCommonConstructorsInCase : public mlir::OpRewritePattern<CaseOp> {
   matchAndRewrite(CaseOp caseop,
                   mlir::PatternRewriter &rewriter) const override {
 
-    SmallVector<HaskReturnOp, 4> rets;
+    SmallVector<ReturnOp, 4> rets;
     for (int i = 0; i < caseop.getNumAlts(); ++i) {
       Region &r = caseop.getAltRHS(i);
-      r.walk([&](HaskReturnOp ret) { rets.push_back(ret); });
+      r.walk([&](ReturnOp ret) { rets.push_back(ret); });
     }
     assert(rets.size() && "expected at least one return value");
 
     SmallVector<HaskConstructOp, 4> retConstructs;
 
-    for (HaskReturnOp ret : rets) {
+    for (ReturnOp ret : rets) {
       HaskConstructOp construct =
-          ret.getOperand().getDefiningOp<HaskConstructOp>();
+          ret.getOperand(0).getDefiningOp<HaskConstructOp>();
       if (!construct) {
         return failure();
       }
@@ -579,7 +579,7 @@ struct PeelCommonConstructorsInCase : public mlir::OpRewritePattern<CaseOp> {
     //    wrapping..
     for (int i = 0; i < (int)rets.size(); ++i) {
       assert(retConstructs[i].getNumOperands() == 1);
-      rets[i].setOperand(retConstructs[i].getOperand(0));
+      rets[i].setOperand(0, retConstructs[i].getOperand(0));
       rewriter.eraseOp(retConstructs[i]);
     }
 

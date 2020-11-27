@@ -56,30 +56,33 @@ namespace standalone {
 // === RETURN OP ===
 // === RETURN OP ===
 
-ParseResult HaskReturnOp::parse(OpAsmParser &parser, OperationState &result) {
-  mlir::OpAsmParser::OperandType in;
-  mlir::Type type;
-  if (parser.parseLParen() || parser.parseOperand(in) || parser.parseRParen() ||
-      parser.parseColon() || parser.parseType(type)) {
-    return failure();
-  }
-
-  parser.resolveOperand(in, type, result.operands);
-  return success();
-};
-
-void HaskReturnOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                         Value v) {
-  state.addOperands(v);
-  state.addTypes(v.getType());
-};
-
-void HaskReturnOp::print(OpAsmPrinter &p) {
-  p.printGenericOp(this->getOperation());
-  return;
-  p << getOperationName() << "(" << getInput() << ")"
-    << " : " << getInput().getType();
-};
+// ParseResult HaskReturnOp::parse(OpAsmParser &parser, OperationState &result)
+// {
+//   mlir::OpAsmParser::OperandType in;
+//   mlir::Type type;
+//   if (parser.parseLParen() || parser.parseOperand(in) || parser.parseRParen()
+//   ||
+//       parser.parseColon() || parser.parseType(type)) {
+//     return failure();
+//   }
+//
+//   parser.resolveOperand(in, type, result.operands);
+//   return success();
+// };
+//
+// void HaskReturnOp::build(mlir::OpBuilder &builder, mlir::OperationState
+// &state,
+//                          Value v) {
+//   state.addOperands(v);
+//   state.addTypes(v.getType());
+// };
+//
+// void HaskReturnOp::print(OpAsmPrinter &p) {
+//   p.printGenericOp(this->getOperation());
+//   return;
+//   p << getOperationName() << "(" << getInput() << ")"
+//     << " : " << getInput().getType();
+// };
 
 // === MakeI32 OP ===
 // === MakeI32 OP ===
@@ -380,15 +383,16 @@ ParseResult CaseOp::parse(OpAsmParser &parser, OperationState &result) {
 
   assert(altRegions.size() > 0);
 
-  HaskReturnOp retFirst =
-      cast<HaskReturnOp>(altRegions[0]->getBlocks().front().getTerminator());
+  // TODO support multiple return values
+  ReturnOp retFirst =
+      cast<ReturnOp>(altRegions[0]->getBlocks().front().getTerminator());
   for (int i = 1; i < (int)altRegions.size(); ++i) {
-    HaskReturnOp ret =
-        cast<HaskReturnOp>(altRegions[i]->getBlocks().front().getTerminator());
-    assert(retFirst.getType() == ret.getType() &&
+    ReturnOp ret =
+        cast<ReturnOp>(altRegions[i]->getBlocks().front().getTerminator());
+    assert(retFirst.getOperand(0).getType() == ret.getOperand(0).getType() &&
            "all case branches must return  same levity [value/thunk]");
   }
-  result.addTypes(retFirst.getType());
+  result.addTypes(retFirst.getOperand(0).getType());
   return success();
 };
 
@@ -1131,16 +1135,16 @@ ParseResult CaseIntOp::parse(OpAsmParser &parser, OperationState &result) {
 
   assert(altRegions.size() > 0);
 
-  HaskReturnOp retFirst =
-      cast<HaskReturnOp>(altRegions[0]->getBlocks().front().getTerminator());
+  ReturnOp retFirst =
+      cast<ReturnOp>(altRegions[0]->getBlocks().front().getTerminator());
   for (int i = 1; i < (int)altRegions.size(); ++i) {
-    HaskReturnOp ret =
-        cast<HaskReturnOp>(altRegions[i]->getBlocks().front().getTerminator());
-    assert(retFirst.getType() == ret.getType() &&
+    ReturnOp ret =
+        cast<ReturnOp>(altRegions[i]->getBlocks().front().getTerminator());
+    assert(retFirst.getOperand(0).getType() == ret.getOperand(0).getType() &&
            "all case branches must return  same levity [value/thunk]");
   }
 
-  result.addTypes(retFirst.getType());
+  result.addTypes(retFirst.getOperand(0).getType());
   return success();
 };
 
@@ -1859,22 +1863,22 @@ public:
   }
 };
 
-class HaskReturnOpConversionPattern : public ConversionPattern {
-public:
-  explicit HaskReturnOpConversionPattern(MLIRContext *context)
-      : ConversionPattern(HaskReturnOp::getOperationName(), 1, context) {}
-
-  LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
-                  ConversionPatternRewriter &rewriter) const override {
-    HaskReturnOp ret = cast<HaskReturnOp>(op);
-    llvm::errs() << "running HaskReturnOpConversionPattern on: "
-                 << op->getName() << " | " << op->getLoc() << "\n";
-    using namespace mlir::LLVM;
-    rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(ret, ret.getInput());
-    return success();
-  }
-};
+// class HaskReturnOpConversionPattern : public ConversionPattern {
+// public:
+//   explicit HaskReturnOpConversionPattern(MLIRContext *context)
+//       : ConversionPattern(HaskReturnOp::getOperationName(), 1, context) {}
+//
+//   LogicalResult
+//   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+//                   ConversionPatternRewriter &rewriter) const override {
+//     HaskReturnOp ret = cast<HaskReturnOp>(op);
+//     llvm::errs() << "running HaskReturnOpConversionPattern on: "
+//                  << op->getName() << " | " << op->getLoc() << "\n";
+//     using namespace mlir::LLVM;
+//     rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(ret, ret.getInput());
+//     return success();
+//   }
+// };
 
 class HaskRefOpConversionPattern : public ConversionPattern {
 public:
@@ -2149,9 +2153,9 @@ public:
       // then -> code
       rewriter.setInsertionPointToEnd(thenBB);
       Block &altRhs = caseop.getAltRHS(i).getBlocks().front();
-      HaskReturnOp altRhsRet = cast<HaskReturnOp>(altRhs.getTerminator());
-      rewriter.replaceOpWithNewOp<LLVM::BrOp>(altRhsRet, altRhsRet.getOperand(),
-                                              afterCaseBB);
+      mlir::ReturnOp altRhsRet = cast<mlir::ReturnOp>(altRhs.getTerminator());
+      rewriter.replaceOpWithNewOp<LLVM::BrOp>(
+          altRhsRet, altRhsRet.getOperand(0), afterCaseBB);
       rewriter.mergeBlocks(&altRhs, thenBB, scrutineeInt);
 
       // next
@@ -2162,11 +2166,11 @@ public:
     if (default_ix) {
       // default block should have have no parameters?
       Block &defaultRhsBlock = caseop.getAltRHS(*default_ix).front();
-      HaskReturnOp defaultRet =
-          cast<HaskReturnOp>(defaultRhsBlock.getTerminator());
+      mlir::ReturnOp defaultRet =
+          cast<mlir::ReturnOp>(defaultRhsBlock.getTerminator());
       rewriter.mergeBlocks(&defaultRhsBlock, prevBB, {});
       rewriter.replaceOpWithNewOp<LLVM::BrOp>(
-          defaultRet, defaultRet.getOperand(), afterCaseBB);
+          defaultRet, defaultRet.getOperand(0), afterCaseBB);
 
     } else {
       rewriter.setInsertionPointToEnd(prevBB);
@@ -2298,7 +2302,7 @@ void LowerHaskToStandardPass::runOnOperation() {
   patterns.insert<CaseOpConversionPattern>(&getContext());
   // patterns.insert<LambdaOpConversionPattern>(&getContext());
   patterns.insert<MakeI64OpConversionPattern>(&getContext());
-  patterns.insert<HaskReturnOpConversionPattern>(&getContext());
+  // patterns.insert<HaskReturnOpConversionPattern>(&getContext());
   patterns.insert<HaskRefOpConversionPattern>(&getContext());
   patterns.insert<HaskConstructOpConversionPattern>(&getContext());
   patterns.insert<ForceOpConversionPattern>(&getContext());

@@ -18,11 +18,11 @@ module {
                   [@SimpleInt -> { ^entry(%jval: !lz.value):
                         %sum_v = lz.primop_add(%ival, %jval)
                         %boxed = lz.construct(@SimpleInt, %sum_v:!lz.value)
-                        lz.return(%boxed) : !lz.value
+                        return %boxed : !lz.value
                   }]
-              lz.return(%retj):!lz.value
+              return %retj:!lz.value
            }]
-      lz.return(%reti): !lz.value
+      return %reti: !lz.value
     }
 
   
@@ -30,14 +30,14 @@ module {
   lz.func @one () -> !lz.value {
        %v = lz.make_i64(1)
        %boxed = lz.construct(@SimpleInt, %v:!lz.value)
-       lz.return(%boxed): !lz.value
+       return %boxed: !lz.value
      }
 
 
   lz.func @two () -> !lz.value {
        %v = lz.make_i64(2)
        %boxed = lz.construct(@SimpleInt, %v:!lz.value)
-       lz.return(%boxed): !lz.value
+       return %boxed: !lz.value
      }
 
 
@@ -53,7 +53,7 @@ module {
       %out_t = lz.ap(%plus : !lz.fn<(!lz.thunk<!lz.value>, !lz.thunk<!lz.value>) -> !lz.value>, 
         %input_t, %input2_t)
       %out_v = lz.force(%out_t): !lz.value
-      lz.return(%out_v) : !lz.value
+      return %out_v : !lz.value
     }
 }
 
