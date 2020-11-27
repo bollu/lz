@@ -30,3 +30,11 @@ func @main () -> i64 {
     %out = call @sum(%buf) : (memref<?xi64>) -> i64
     std.return %out : i64
 }
+
+
+lz.func @lzmain () -> i64 {
+   %size = constant 1024 : i64
+   %buf = call @seq(%size) : (i64) -> memref<?xi64>
+    %out = call @sum(%buf) : (memref<?xi64>) -> i64
+    lz.return(%out) : i64
+}

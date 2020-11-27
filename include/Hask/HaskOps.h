@@ -302,11 +302,11 @@ public:
                  &effects) {}
 };
 
-class HaskFuncOp
-    : public Op<HaskFuncOp, OpTrait::ZeroOperands, OpTrait::ZeroResult,
-                OpTrait::OneRegion,
-                // OpTrait::AffineScope,
-                CallableOpInterface::Trait, SymbolOpInterface::Trait> {
+class HaskFuncOp : public Op<HaskFuncOp, OpTrait::ZeroOperands,
+                             OpTrait::ZeroResult, OpTrait::OneRegion,
+                             // OpTrait::AffineScope,
+                             CallableOpInterface::Trait,
+                             SymbolOpInterface::Trait, OpTrait::AffineScope> {
 public:
   using Op::Op;
   static StringRef getOperationName() { return "lz.func"; };

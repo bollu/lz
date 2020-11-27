@@ -117,7 +117,8 @@ int realmain(int argc, char **argv) {
   mlir::registerAllDialects(registry);
 
   registry.insert<mlir::standalone::HaskDialect>();
-  // registry.insert<mlir::StandardOpsDialect>();
+  registry.insert<mlir::StandardOpsDialect>();
+  registry.insert<mlir::AffineDialect>();
   // Add the following to include *all* MLIR Core dialects, or selectively
   // include what you need like above. You only need to register dialects that
   // will be *parsed* by the tool, not the one generated

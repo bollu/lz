@@ -618,6 +618,8 @@ void HaskRefOp::print(OpAsmPrinter &p) {
 };
 
 LogicalResult HaskRefOp::verify() {
+  return success();
+  /*
   ModuleOp mod = this->getOperation()->getParentOfType<mlir::ModuleOp>();
   HaskFuncOp fn = mod.lookupSymbol<HaskFuncOp>(this->getRef());
   HaskGlobalOp global = mod.lookupSymbol<HaskGlobalOp>(this->getRef());
@@ -657,6 +659,7 @@ LogicalResult HaskRefOp::verify() {
     // TODO: forward declare stuff like +#
     return failure();
   }
+  */
 }
 
 void HaskRefOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
@@ -734,12 +737,12 @@ ParseResult HaskFuncOp::parse(OpAsmParser &parser, OperationState &result) {
         return failure();
       }
       argTys.push_back(argType);
-      if (!(argType.isa<ThunkType>() || argType.isa<ValueType>() ||
-            argType.isa<HaskFnType>())) {
-        return parser.emitError(arg.location,
-                                "argument must either ValueType, ThunkType, "
-                                "or HaskFnType");
-      }
+      // if (!(argType.isa<ThunkType>() || argType.isa<ValueType>() ||
+      //       argType.isa<HaskFnType>())) {
+      //   return parser.emitError(arg.location,
+      //                           "argument must either ValueType, ThunkType, "
+      //                           "or HaskFnType");
+      // }
 
       if (succeeded(parser.parseOptionalRParen())) {
         break;
