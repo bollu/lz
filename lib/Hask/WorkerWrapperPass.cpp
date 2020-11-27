@@ -154,6 +154,19 @@ struct ForceOfThunkifyPattern : public mlir::OpRewritePattern<ForceOp> {
   }
 };
 
+// TODO: this is very very naive
+bool isFuncOpRecursive(FuncOp fn) {
+  bool isrec = false;
+  fn.walk([&](HaskRefOp ref) {
+    if (ref.getRef() == fn.getName()) {
+      isrec = true;
+      return WalkResult::interrupt();
+    }
+    return WalkResult::advance();
+  });
+  return isrec;
+}
+
 struct InlineApEagerPattern : public mlir::OpRewritePattern<ApEagerOp> {
   InlineApEagerPattern(mlir::MLIRContext *context)
       : OpRewritePattern<ApEagerOp>(context, /*benefit=*/1) {}
@@ -161,7 +174,7 @@ struct InlineApEagerPattern : public mlir::OpRewritePattern<ApEagerOp> {
   matchAndRewrite(ApEagerOp ap,
                   mlir::PatternRewriter &rewriter) const override {
 
-    HaskFuncOp parent = ap.getParentOfType<HaskFuncOp>();
+    FuncOp parent = ap.getParentOfType<FuncOp>();
     ModuleOp mod = ap.getParentOfType<ModuleOp>();
 
     auto ref = ap.getFn().getDefiningOp<HaskRefOp>();
@@ -175,7 +188,7 @@ struct InlineApEagerPattern : public mlir::OpRewritePattern<ApEagerOp> {
       return failure();
     }
 
-    HaskFuncOp called = mod.lookupSymbol<HaskFuncOp>(ref.getRef());
+    FuncOp called = mod.lookupSymbol<FuncOp>(ref.getRef());
     assert(called && "unable to find called function.");
 
     // TODO: setup mapping for arguments in mapper
@@ -184,7 +197,7 @@ struct InlineApEagerPattern : public mlir::OpRewritePattern<ApEagerOp> {
     // this will expand into
     //   g() { f(); } -> g() { stmt; f(); } -> g { stmt; stmt; f(); } -> ...
     InlinerInterface inliner(rewriter.getContext());
-    if (!called.isRecursive()) {
+    if (!isFuncOpRecursive(called)) {
       LogicalResult isInlined = inlineRegion(
           inliner, &called.getBody(), ap, ap.getFnArguments(), ap.getResult());
       assert(succeeded(isInlined) && "unable to inline");
@@ -206,6 +219,12 @@ HaskFnType mkForcedFnType(HaskFnType fty) {
   return HaskFnType::get(fty.getContext(), forcedTys, fty.getResultType());
 }
 
+HaskFnType functionTypeToHaskFnType(mlir::PatternRewriter &rewriter,
+                                    FunctionType functy) {
+  return HaskFnType::get(rewriter.getContext(), functy.getInputs(),
+                         functy.getResults());
+}
+
 //
 // convert ap(thunkify(...)) of a recursive call that is force(...) d
 // into an "immediate" function call.
@@ -217,7 +236,7 @@ struct OutlineRecursiveApEagerOfThunkPattern
   matchAndRewrite(ApEagerOp ap,
                   mlir::PatternRewriter &rewriter) const override {
 
-    HaskFuncOp parentfn = ap.getParentOfType<HaskFuncOp>();
+    FuncOp parentfn = ap.getParentOfType<FuncOp>();
     ModuleOp mod = ap.getParentOfType<ModuleOp>();
 
     auto ref = ap.getFn().getDefiningOp<HaskRefOp>();
@@ -230,7 +249,7 @@ struct OutlineRecursiveApEagerOfThunkPattern
       return failure();
     }
 
-    HaskFuncOp called = mod.lookupSymbol<HaskFuncOp>(ref.getRef());
+    FuncOp called = mod.lookupSymbol<FuncOp>(ref.getRef());
     assert(called && "unable to find called function.");
 
     if (ap.getNumFnArguments() != 1) {
@@ -268,7 +287,8 @@ struct OutlineRecursiveApEagerOfThunkPattern
 
     rewriter.setInsertionPoint(ap);
     HaskRefOp clonedFnRef = rewriter.create<HaskRefOp>(
-        ref.getLoc(), clonedFnName, mkForcedFnType(called.getFunctionType()));
+        ref.getLoc(), clonedFnName,
+        mkForcedFnType(functionTypeToHaskFnType(rewriter, called.getType())));
 
     llvm::errs() << "clonedFnRef: |" << clonedFnRef << "|\n";
 
@@ -276,7 +296,7 @@ struct OutlineRecursiveApEagerOfThunkPattern
 
     // TODO: this disastrous house of cards depends on the order of cloning.
     // We first replace the reucrsive call, and *then* clone the function.
-    HaskFuncOp clonedfn = parentfn.clone();
+    FuncOp clonedfn = parentfn.clone();
     clonedfn.setName(clonedFnName);
 
     // TODO: consider if going forward is more sensible or going back is
@@ -334,7 +354,7 @@ struct OutlineRecursiveApEagerOfConstructorPattern
   mlir::LogicalResult
   matchAndRewrite(ApEagerOp ap,
                   mlir::PatternRewriter &rewriter) const override {
-    HaskFuncOp parentfn = ap.getParentOfType<HaskFuncOp>();
+    FuncOp parentfn = ap.getParentOfType<FuncOp>();
     ModuleOp mod = ap.getParentOfType<ModuleOp>();
 
     auto ref = ap.getFn().getDefiningOp<HaskRefOp>();
@@ -394,10 +414,10 @@ struct OutlineRecursiveApEagerOfConstructorPattern
     HaskRefOp clonedFnRef = rewriter.create<HaskRefOp>(
         ref.getLoc(), clonedFnName,
         HaskFnType::get(mod.getContext(), clonedFnCallArgTys,
-                        parentfn.getReturnType()));
+                        parentfn.getType().getResult(0)));
 
     rewriter.replaceOpWithNewOp<ApEagerOp>(ap, clonedFnRef, clonedFnCallArgs);
-    HaskFuncOp clonedfn = parentfn.clone();
+    FuncOp clonedfn = parentfn.clone();
 
     // 2. Build the cloned function that is an unboxed version of the
     //    case. Eliminate the case for the argument RHS.

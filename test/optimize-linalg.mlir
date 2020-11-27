@@ -1,8 +1,18 @@
-// RUN: ../build/bin/hask-opt --lz-worker-wrapper --affine-loop-fusion --canonicalize --inline --affine-loop-fusion  --lz-interpret %s
+// RUN: ../build/bin/hask-opt --lz-worker-wrapper --affine-loop-fusion %s | FileCheck %s
+// How to get it to optimize this?!
+// CHECK:         %1 = affine.for %arg0 = 0 to 1024 iter_args(%arg1 = %c0_i64) -> (i64) {
+// CHECK-NEXT:      %2 = index_cast %arg0 : index to i64
+// CHECK-NEXT:      affine.store %2, %0[0] : memref<1xi64>
+// CHECK-NEXT:      %3 = affine.load %0[0] : memref<1xi64>
+// CHECK-NEXT:      %4 = addi %arg1, %3 : i64
+// CHECK-NEXT:      affine.yield %4 : i64
+// CHECK-NEXT:    }
+
+
 module {
 
     // sum up all values in the buffer
-    lz.func @sum(%buffert: !lz.thunk<memref<?xi64>>) -> i64 {
+    func @sum(%buffert: !lz.thunk<memref<?xi64>>) -> i64 {
      %buffer = lz.force(%buffert) :  memref<?xi64>
      %c0 = constant 0 : index
      %N = dim %buffer, %c0 : memref<?xi64>
@@ -17,7 +27,7 @@ module {
     }
 
   // create a sequence [0..upper_bound)
-  lz.func @seq(%upper_bound: i64) ->  memref<?xi64> {
+  func @seq(%upper_bound: i64) ->  memref<?xi64> {
     %upper_bound_ix = std.index_cast %upper_bound : i64 to index
     %buf = alloc(%upper_bound_ix) : memref<?xi64>
     affine.for %i = 0 to %upper_bound_ix step 1 {
@@ -29,7 +39,7 @@ module {
 
 
 
-  lz.func @main () -> i64 {
+  func @main () -> i64 {
       %seqf = lz.ref(@seq)  : !lz.fn<(i64) ->  memref<?xi64> >
       %size = std.constant 1024 : i64
       %seqt = lz.ap(%seqf: !lz.fn<(i64) -> memref<?xi64>>, %size) 
