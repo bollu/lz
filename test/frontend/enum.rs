@@ -1,3 +1,5 @@
+// RUN: ../../build/bin/frontend %s  -interpret | FileCheck %s
+// CHECK: value: constructor(Just 42)
 enum MaybeInt { Just(!i64), Nothing() };
 
 fn f(m: MaybeInt) -> MaybeInt {
