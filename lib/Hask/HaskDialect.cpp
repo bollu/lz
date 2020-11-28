@@ -47,10 +47,10 @@ HaskDialect::HaskDialect(mlir::MLIRContext *context)
   addOperations<MakeI64Op,
                 // DeclareDataConstructorOp,
                 ApOp, ApEagerOp, CaseOp, DefaultCaseOp, HaskRefOp, MakeStringOp,
-                HaskFuncOp, ForceOp, HaskGlobalOp, HaskConstructOp,
-                HaskPrimopAddOp, HaskPrimopSubOp, CaseIntOp, ThunkifyOp,
-                TransmuteOp, HaskLambdaOp>();
-  addTypes<ThunkType, ValueType, HaskFnType>(); // , ADTType>();
+                ForceOp, HaskGlobalOp, HaskConstructOp, HaskPrimopAddOp,
+                HaskPrimopSubOp, CaseIntOp, ThunkifyOp, TransmuteOp,
+                HaskLambdaOp>();
+  addTypes<ThunkType, ValueType>(); // , HaskFnType, ADTType>();
   // addAttributes<DataConstructorAttr>();
   addInterfaces<HaskInlinerInterface>();
 }
@@ -67,7 +67,7 @@ mlir::Type HaskDialect::parseType(mlir::DialectAsmParser &parser) const {
 
   } else if (succeeded(parser.parseOptionalKeyword("value"))) {
     return ValueType::get(parser.getBuilder().getContext());
-  } else if (succeeded(parser.parseOptionalKeyword("fn"))) {
+  } /* else if (succeeded(parser.parseOptionalKeyword("fn"))) {
     SmallVector<Type, 4> params;
     Type res;
     if (parser.parseLess()) {
@@ -127,7 +127,8 @@ mlir::Type HaskDialect::parseType(mlir::DialectAsmParser &parser) const {
     }
 
     return HaskFnType::get(parser.getBuilder().getContext(), params, res);
-  } else {
+  } */
+  else {
     parser.emitError(parser.getCurrentLocation(),
                      "unknown type for hask dialect");
     assert(false && "unknown type");
@@ -141,7 +142,7 @@ void HaskDialect::printType(mlir::Type type, mlir::DialectAsmPrinter &p) const {
     p << "thunk<" << thunk.getElementType() << ">";
   } else if (type.isa<ValueType>()) {
     p << "value";
-  } else if (type.isa<HaskFnType>()) {
+  } /* else if (type.isa<HaskFnType>()) {
     HaskFnType fnty = type.cast<HaskFnType>();
     ArrayRef<Type> intys = fnty.getInputTypes();
 
@@ -152,7 +153,8 @@ void HaskDialect::printType(mlir::Type type, mlir::DialectAsmPrinter &p) const {
         p << ", ";
     }
     p << ") -> " << fnty.getResultType() << ">";
-  } else {
+  } */
+  else {
     assert(false && "unknown type");
   }
 }
@@ -189,4 +191,15 @@ void HaskInlinerInterface::handleTerminator(
   // https://github.com/llvm/llvm-project/blob/1b012a9146b85d30083a47d4929e86f843a5938d/mlir/docs/Tutorials/Toy/Ch-4.md
 }
 
-// === LOWERING ===
+bool HaskDialect::isFunctionRecursive(FuncOp funcOp) {
+  // https://mlir.llvm.org/docs/Tutorials/UnderstandingTheIRStructure/
+  bool isrec = false;
+  funcOp.walk([&](HaskRefOp ref) {
+    if (ref.getRef() == funcOp.getName()) {
+      isrec = true;
+      return WalkResult::interrupt();
+    }
+    return WalkResult::advance();
+  });
+  return isrec;
+}

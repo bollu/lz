@@ -303,31 +303,32 @@ public:
                  &effects) {}
 };
 
-class HaskFuncOp : public Op<HaskFuncOp, OpTrait::ZeroOperands,
-                             OpTrait::ZeroResult, OpTrait::OneRegion,
-                             // OpTrait::AffineScope,
-                             CallableOpInterface::Trait,
-                             SymbolOpInterface::Trait, OpTrait::AffineScope> {
-public:
-  using Op::Op;
-  static StringRef getOperationName() { return "lz.func"; };
-  Region &getBody() { return this->getRegion(); }
-  void print(OpAsmPrinter &p);
-  // MLIR TODO: expose this as part of the Callable interface.
-  int getNumArguments() { return this->getBody().getNumArguments(); }
-  llvm::StringRef getFuncName();
-  HaskFnType getFunctionType();
-  Type getReturnType();
-
-  bool isRecursive();
-  static ParseResult parse(OpAsmParser &parser, OperationState &result);
-  static const char *getReturnTypeAttributeKey() { return "retty"; }
-  Region *getCallableRegion() { return &this->getRegion(); };
-  ArrayRef<Type> getCallableResults() { return this->getReturnType(); };
-
-  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                    std::string FuncName, HaskFnType fnty);
-};
+// class HaskFuncOp : public Op<HaskFuncOp, OpTrait::ZeroOperands,
+//                              OpTrait::ZeroResult, OpTrait::OneRegion,
+//                              // OpTrait::AffineScope,
+//                              CallableOpInterface::Trait,
+//                              SymbolOpInterface::Trait, OpTrait::AffineScope>
+//                              {
+// public:
+//   using Op::Op;
+//   static StringRef getOperationName() { return "lz.func"; };
+//   Region &getBody() { return this->getRegion(); }
+//   void print(OpAsmPrinter &p);
+//   // MLIR TODO: expose this as part of the Callable interface.
+//   int getNumArguments() { return this->getBody().getNumArguments(); }
+//   llvm::StringRef getFuncName();
+//   HaskFnType getFunctionType();
+//   Type getReturnType();
+//
+//   bool isRecursive();
+//   static ParseResult parse(OpAsmParser &parser, OperationState &result);
+//   static const char *getReturnTypeAttributeKey() { return "retty"; }
+//   Region *getCallableRegion() { return &this->getRegion(); };
+//   ArrayRef<Type> getCallableResults() { return this->getReturnType(); };
+//
+//   static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
+//                     std::string FuncName, HaskFnType fnty);
+// };
 
 // replace case x of name { default -> ... } with name = force(x);
 class ForceOp : public Op<ForceOp, OpTrait::OneResult, OpTrait::OneOperand,

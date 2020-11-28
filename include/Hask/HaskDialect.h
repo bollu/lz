@@ -28,6 +28,8 @@ public:
   void printAttribute(Attribute attr,
                       DialectAsmPrinter &printer) const override;
   static llvm::StringRef getDialectNamespace() { return "lz"; }
+  static llvm::StringRef getReturnTypeAttributeKey() { return "retty"; }
+  static bool isFunctionRecursive(FuncOp);
 };
 
 class HaskType : public Type {
@@ -135,25 +137,25 @@ struct HaskFnTypeStorage : public TypeStorage {
 // https://github.com/llvm/llvm-project/blob/7a06b166b1afb457a7df6ad73a6710b4dde4db68/mlir/include/mlir/IR/Types.h#L239
 // https://github.com/llvm/llvm-project/blob/7a06b166b1afb457a7df6ad73a6710b4dde4db68/mlir/lib/IR/Types.cpp#L36
 // https://github.com/llvm/llvm-project/blob/7a06b166b1afb457a7df6ad73a6710b4dde4db68/mlir/lib/IR/TypeDetail.h#L83
-class HaskFnType
-    : public mlir::Type::TypeBase<HaskFnType, HaskType, HaskFnTypeStorage> {
-public:
-  using Base::Base;
-  static HaskFnType get(MLIRContext *context, ArrayRef<Type> argTys,
-                        ArrayRef<Type> resultTy) {
-    std::pair<ArrayRef<Type>, ArrayRef<Type>> data(argTys, resultTy);
-    return Base::get(context, data);
-  }
-
-  size_t getNumInputs() { return this->getImpl()->getInputs().size(); }
-  ArrayRef<Type> getInputTypes() { return this->getImpl()->getInputs(); }
-  Type getInputType(int i) {
-    assert(i >= 0);
-    assert(i < (int)getInputTypes().size());
-    return this->getImpl()->getInputs()[i];
-  }
-  Type getResultType() { return this->getImpl()->getResult()[0]; }
-};
+//! class HaskFnType
+//!     : public mlir::Type::TypeBase<HaskFnType, HaskType, HaskFnTypeStorage> {
+//! public:
+//!   using Base::Base;
+//!   static HaskFnType get(MLIRContext *context, ArrayRef<Type> argTys,
+//!                         ArrayRef<Type> resultTy) {
+//!     std::pair<ArrayRef<Type>, ArrayRef<Type>> data(argTys, resultTy);
+//!     return Base::get(context, data);
+//!   }
+//!
+//!   size_t getNumInputs() { return this->getImpl()->getInputs().size(); }
+//!   ArrayRef<Type> getInputTypes() { return this->getImpl()->getInputs(); }
+//!   Type getInputType(int i) {
+//!     assert(i >= 0);
+//!     assert(i < (int)getInputTypes().size());
+//!     return this->getImpl()->getInputs()[i];
+//!   }
+//!   Type getResultType() { return this->getImpl()->getResult()[0]; }
+//! };
 
 struct DataConstructorAttributeStorage : public AttributeStorage {
   using KeyTy = std::pair<ArrayRef<SymbolRefAttr>, ArrayRef<ArrayAttr>>;

@@ -465,7 +465,7 @@ struct Interpreter {
     llvm::errs().resetColor();
 
     // functions are isolated from above; create a fresh environment
-    if (HaskFuncOp haskfn = module.lookupSymbol<HaskFuncOp>(funcname)) {
+    if (FuncOp haskfn = module.lookupSymbol<FuncOp>(funcname)) {
       return interpretRegion(haskfn.getRegion(), args, Env());
     }
 
