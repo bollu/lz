@@ -44,15 +44,36 @@ HaskDialect::HaskDialect(mlir::MLIRContext *context)
   // #define GET_OP_LIST
   // #include "Hask/HaskOps.cpp.inc"
   //       >();
-  addOperations<MakeI64Op,
-                // DeclareDataConstructorOp,
-                ApOp, ApEagerOp, CaseOp, DefaultCaseOp, HaskRefOp, MakeStringOp,
-                ForceOp, HaskGlobalOp, HaskConstructOp, HaskPrimopAddOp,
-                HaskPrimopSubOp, CaseIntOp, ThunkifyOp, TransmuteOp,
-                HaskLambdaOp>();
-  addTypes<ThunkType, ValueType>(); // , HaskFnType, ADTType>();
+  // clang-format off
+  addOperations<
+    MakeI64Op,
+    // DeclareDataConstructorOp,
+    HaskReturnOp,
+    ApOp,
+    ApEagerOp,
+    CaseOp,
+    DefaultCaseOp,
+    HaskRefOp,
+    MakeStringOp,
+    ForceOp,
+    HaskGlobalOp,
+    HaskConstructOp,
+    HaskPrimopAddOp,
+    HaskPrimopSubOp,
+    CaseIntOp,
+    ThunkifyOp,
+    TransmuteOp,
+    HaskLambdaOp
+  >();
+  addTypes<
+    // HaskFnType,
+    // ADTType,
+    ThunkType,
+    ValueType
+  >();
   // addAttributes<DataConstructorAttr>();
   addInterfaces<HaskInlinerInterface>();
+  // clang-format on
 }
 
 mlir::Type HaskDialect::parseType(mlir::DialectAsmParser &parser) const {
@@ -64,7 +85,6 @@ mlir::Type HaskDialect::parseType(mlir::DialectAsmParser &parser) const {
       return Type();
     }
     return ThunkType::get(parser.getBuilder().getContext(), t);
-
   } else if (succeeded(parser.parseOptionalKeyword("value"))) {
     return ValueType::get(parser.getBuilder().getContext());
   } /* else if (succeeded(parser.parseOptionalKeyword("fn"))) {
@@ -130,8 +150,8 @@ mlir::Type HaskDialect::parseType(mlir::DialectAsmParser &parser) const {
   } */
   else {
     parser.emitError(parser.getCurrentLocation(),
-                     "unknown type for hask dialect");
-    assert(false && "unknown type");
+                     "unknown type for hask/lz dialect");
+    // assert(false && "unknown type");
   }
   return Type();
 }

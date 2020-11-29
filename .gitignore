@@ -90,3 +90,4 @@ build
 .gdb_history
 
 local_opts.sh
+test/Scratches/

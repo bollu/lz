@@ -18,9 +18,9 @@ module {
                   [@SimpleInt -> { ^entry(%jval: !lz.value):
                     %sum_v = lz.primop_add(%ival, %jval)
                     %boxed = lz.construct(@SimpleInt, %sum_v:!lz.value)
-                    return %boxed : !lz.value
+                    lz.return %boxed : !lz.value
                   }]
-                return %retj:!lz.value
+                lz.return %retj:!lz.value
               }]
     return %reti: !lz.value
   }
@@ -41,14 +41,14 @@ module {
 
   // 1 + 2 = 3
   func @main () -> !lz.value {
-    %input = lz.ref(@one) : !lz.fn<() -> !lz.value>
-    %input_t = lz.ap(%input: !lz.fn<() -> !lz.value>)
+    %input = constant @one : () -> !lz.value
+    %input_t = lz.ap(%input: () -> !lz.value)
 
-    %input2 = lz.ref(@two) :!lz.fn<() -> !lz.value>
-    %input2_t = lz.ap(%input2 : !lz.fn<() -> !lz.value>)
+    %input2 = constant @two : () -> !lz.value
+    %input2_t = lz.ap(%input2 : () -> !lz.value)
 
-    %plus = lz.ref(@plus)  : !lz.fn<(!lz.thunk<!lz.value>, !lz.thunk<!lz.value>) ->  !lz.value>
-    %out_t = lz.ap(%plus : !lz.fn<(!lz.thunk<!lz.value>, !lz.thunk<!lz.value>) -> !lz.value>, %input_t, %input2_t)
+    %plus = constant @plus  : (!lz.thunk<!lz.value>, !lz.thunk<!lz.value>) ->  !lz.value
+    %out_t = lz.ap(%plus : (!lz.thunk<!lz.value>, !lz.thunk<!lz.value>) -> !lz.value, %input_t, %input2_t)
     %out_v = lz.force(%out_t): !lz.value
     return %out_v : !lz.value
   }

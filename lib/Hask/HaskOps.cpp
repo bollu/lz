@@ -56,33 +56,30 @@ namespace standalone {
 // === RETURN OP ===
 // === RETURN OP ===
 
-// ParseResult HaskReturnOp::parse(OpAsmParser &parser, OperationState &result)
-// {
-//   mlir::OpAsmParser::OperandType in;
-//   mlir::Type type;
-//   if (parser.parseLParen() || parser.parseOperand(in) || parser.parseRParen()
-//   ||
-//       parser.parseColon() || parser.parseType(type)) {
-//     return failure();
-//   }
-//
-//   parser.resolveOperand(in, type, result.operands);
-//   return success();
-// };
-//
-// void HaskReturnOp::build(mlir::OpBuilder &builder, mlir::OperationState
-// &state,
-//                          Value v) {
-//   state.addOperands(v);
-//   state.addTypes(v.getType());
-// };
-//
-// void HaskReturnOp::print(OpAsmPrinter &p) {
-//   p.printGenericOp(this->getOperation());
-//   return;
-//   p << getOperationName() << "(" << getInput() << ")"
-//     << " : " << getInput().getType();
-// };
+ParseResult HaskReturnOp::parse(OpAsmParser &parser, OperationState &result) {
+  mlir::OpAsmParser::OperandType in;
+  mlir::Type type;
+  if (parser.parseOperand(in) || parser.parseColonType(type)) {
+    return failure();
+  }
+
+  if (parser.resolveOperand(in, type, result.operands))
+    return failure();
+
+  return success();
+};
+
+void HaskReturnOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                         Value v) {
+  state.addOperands(v);
+  state.addTypes(v.getType());
+};
+
+void HaskReturnOp::print(OpAsmPrinter &p) {
+  // p.printGenericOp(this->getOperation());
+  // return;
+  p << getOperationName() << " " << getInput() << " : " << getInput().getType();
+};
 
 // === MakeI32 OP ===
 // === MakeI32 OP ===
@@ -170,8 +167,8 @@ ParseResult ApOp::parse(OpAsmParser &parser, OperationState &result) {
   }
 
   // : type
-  HaskType ratorty;
-  if (parser.parseColonType<HaskType>(ratorty)) {
+  FunctionType ratorty;
+  if (parser.parseColonType<FunctionType>(ratorty)) {
     return failure();
   }
   if (parser.resolveOperand(op_fn, ratorty, result.operands)) {
@@ -380,16 +377,15 @@ ParseResult CaseOp::parse(OpAsmParser &parser, OperationState &result) {
 
   assert(altRegions.size() > 0);
 
-  // TODO support multiple return values
-  ReturnOp retFirst =
-      cast<ReturnOp>(altRegions[0]->getBlocks().front().getTerminator());
+  HaskReturnOp retFirst =
+      cast<HaskReturnOp>(altRegions[0]->getBlocks().front().getTerminator());
   for (int i = 1; i < (int)altRegions.size(); ++i) {
-    ReturnOp ret =
-        cast<ReturnOp>(altRegions[i]->getBlocks().front().getTerminator());
-    assert(retFirst.getOperand(0).getType() == ret.getOperand(0).getType() &&
+    HaskReturnOp ret =
+        cast<HaskReturnOp>(altRegions[i]->getBlocks().front().getTerminator());
+    assert(retFirst.getOperand().getType() == ret.getOperand().getType() &&
            "all case branches must return  same levity [value/thunk]");
   }
-  result.addTypes(retFirst.getOperand(0).getType());
+  result.addTypes(retFirst.getOperand().getType());
   return success();
 };
 
