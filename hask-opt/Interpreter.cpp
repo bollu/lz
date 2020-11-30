@@ -390,8 +390,27 @@ struct Interpreter {
     }
 
     if (mlir::ConstantIntOp cint = mlir::dyn_cast<mlir::ConstantIntOp>(op)) {
-      llvm::errs() << "constant int op: " << op << "\n";
       env.addNew(cint.getResult(), InterpValue::i(cint.getValue()));
+      return;
+    }
+
+    if (mlir::ConstantOp constop = mlir::dyn_cast<mlir::ConstantOp>(op)) {
+      if (mlir::IntegerAttr consti =
+              constop.getValue().dyn_cast<mlir::IntegerAttr>()) {
+        env.addNew(constop.getResult(), InterpValue::i(consti.getInt()));
+        return;
+      }
+
+      if (mlir::FlatSymbolRefAttr constref =
+              constop.getValue().dyn_cast<mlir::FlatSymbolRefAttr>()) {
+        env.addNew(constop.getResult(),
+                   InterpValue::ref(constref.getValue().str()));
+        return;
+      }
+
+      InterpreterError err(op.getLoc());
+      err << "INTERPRETER ERROR: unknown type of constant: |" << op << "|\n";
+
       return;
     }
 
@@ -402,9 +421,9 @@ struct Interpreter {
   TerminatorResult interpretTerminator(Operation &op, Env &env) {
     if (ReturnOp ret = dyn_cast<ReturnOp>(op)) {
       return TerminatorResult(env.lookup(ret.getLoc(), ret.getOperand(0)));
-    } else if (ReturnOp ret = dyn_cast<ReturnOp>(op)) {
+    } else if (HaskReturnOp ret = dyn_cast<HaskReturnOp>(op)) {
       // TODO: we assume we have only one return value
-      return TerminatorResult(env.lookup(ret.getLoc(), ret.getOperand(0)));
+      return TerminatorResult(env.lookup(ret.getLoc(), ret.getOperand()));
     } else {
       InterpreterError err(op.getLoc());
       err << "unknown terminator: |" << op << "|\n";
@@ -476,7 +495,8 @@ struct Interpreter {
     assert(false && "unable to find function.");
   }
 
-  // InterpValue interpretFunction(HaskFuncOp func, ArrayRef<InterpValue> args)
+  // InterpValue interpretFunction(HaskFuncOp func, ArrayRef<InterpValue>
+  // args)
   // {
   //   std::string funcName = func.getName().str();
   //   llvm::errs().changeColor(llvm::raw_fd_ostream::GREEN);
