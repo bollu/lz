@@ -355,7 +355,6 @@ ParseResult CaseOp::parse(OpAsmParser &parser, OperationState &result) {
   }
 
   llvm::errs() << __FUNCTION__ << ":" << __LINE__ << "\n";
-  // if(parser.parseOptionalAttrDict(result.attributes)) return failure();
   llvm::errs() << __FUNCTION__ << ":" << __LINE__ << "\n";
 
   // "[" altname "->" region "]"
@@ -1132,16 +1131,16 @@ ParseResult CaseIntOp::parse(OpAsmParser &parser, OperationState &result) {
 
   assert(altRegions.size() > 0);
 
-  ReturnOp retFirst =
-      cast<ReturnOp>(altRegions[0]->getBlocks().front().getTerminator());
+  HaskReturnOp retFirst =
+      cast<HaskReturnOp>(altRegions[0]->getBlocks().front().getTerminator());
   for (int i = 1; i < (int)altRegions.size(); ++i) {
-    ReturnOp ret =
-        cast<ReturnOp>(altRegions[i]->getBlocks().front().getTerminator());
-    assert(retFirst.getOperand(0).getType() == ret.getOperand(0).getType() &&
+    HaskReturnOp ret =
+        cast<HaskReturnOp>(altRegions[i]->getBlocks().front().getTerminator());
+    assert(retFirst.getOperand().getType() == ret.getOperand().getType() &&
            "all case branches must return  same levity [value/thunk]");
   }
 
-  result.addTypes(retFirst.getOperand(0).getType());
+  result.addTypes(retFirst.getOperand().getType());
   return success();
 };
 
