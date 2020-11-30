@@ -53,7 +53,7 @@ HaskDialect::HaskDialect(mlir::MLIRContext *context)
     ApEagerOp,
     CaseOp,
     DefaultCaseOp,
-    HaskRefOp,
+    // HaskRefOp,
     MakeStringOp,
     ForceOp,
     HaskGlobalOp,
@@ -214,11 +214,18 @@ void HaskInlinerInterface::handleTerminator(
 bool HaskDialect::isFunctionRecursive(FuncOp funcOp) {
   // https://mlir.llvm.org/docs/Tutorials/UnderstandingTheIRStructure/
   bool isrec = false;
-  funcOp.walk([&](HaskRefOp ref) {
-    if (ref.getRef() == funcOp.getName()) {
+  funcOp.walk([&](ConstantOp constop) {
+    mlir::FlatSymbolRefAttr ref =
+        constop.getValue().dyn_cast<FlatSymbolRefAttr>();
+    if (!ref) {
+      return WalkResult::advance();
+    }
+
+    if (ref.getValue() == funcOp.getName()) {
       isrec = true;
       return WalkResult::interrupt();
     }
+
     return WalkResult::advance();
   });
   return isrec;

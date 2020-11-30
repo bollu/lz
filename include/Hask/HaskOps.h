@@ -137,7 +137,8 @@ public:
                  &effects) {}
 
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                    Value fn, const SmallVectorImpl<Value> &params);
+                    Value fn, const SmallVectorImpl<Value> &params,
+                    Type resultty);
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   void print(OpAsmPrinter &p);
 
@@ -281,6 +282,7 @@ public:
   //  void verify();
 };
 
+/*
 class HaskRefOp
     : public Op<HaskRefOp, OpTrait::OneResult, OpTrait::ZeroOperands,
                 MemoryEffectOpInterface::Trait> {
@@ -302,6 +304,7 @@ public:
   getEffects(SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
                  &effects) {}
 };
+*/
 
 // class HaskFuncOp : public Op<HaskFuncOp, OpTrait::ZeroOperands,
 //                              OpTrait::ZeroResult, OpTrait::OneRegion,

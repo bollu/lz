@@ -49,6 +49,6 @@ module {
       %f = constant @f: (!lz.thunk<!lz.value>) -> !lz.value
       %out_t = lz.ap(%f : (!lz.thunk<!lz.value>) -> !lz.value, %v_thunk)
       %out_v = lz.force(%out_t): !lz.value
-      std.return %out_v : !lz.value
+      lz.return %out_v : !lz.value
     }
 }

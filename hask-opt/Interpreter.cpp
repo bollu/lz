@@ -192,10 +192,6 @@ struct Interpreter {
       return;
     }
 
-    if (HaskRefOp ref = dyn_cast<HaskRefOp>(op)) {
-      env.addNew(ref.getResult(), InterpValue::ref(ref.getRef().str()));
-      return;
-    }
     if (ApOp ap = dyn_cast<ApOp>(op)) {
       InterpValue fn = env.lookup(ap.getLoc(), ap.getFn());
 

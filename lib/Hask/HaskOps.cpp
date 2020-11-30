@@ -316,21 +316,21 @@ void ApEagerOp::print(OpAsmPrinter &p) {
 };
 
 void ApEagerOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                      Value fn, const SmallVectorImpl<Value> &params) {
+                      Value fn, const SmallVectorImpl<Value> &params,
+                      Type resultty) {
   // hack! we need to construct the type properly.
   state.addOperands(fn);
-  assert(fn.getType().isa<FunctionType>());
-  FunctionType fnty = fn.getType().cast<FunctionType>();
+  // assert(fn.getType().isa<FunctionType>());
+  // FunctionType fnty = fn.getType().cast<FunctionType>();
 
-  assert(params.size() == fnty.getInputs().size());
-
-  for (int i = 0; i < (int)params.size(); ++i) {
-    assert(params[i].getType() == fnty.getInput(i) &&
-           "ApEagerOp argument type mismatch");
-  }
+  // assert(params.size() == fnty.getInputs().size());
+  // for (int i = 0; i < (int)params.size(); ++i) {
+  //   assert(params[i].getType() == fnty.getInput(i) &&
+  //          "ApEagerOp argument type mismatch");
+  // }
 
   state.addOperands(params);
-  state.addTypes(fnty.getResult(0));
+  state.addTypes(resultty);
 };
 
 // === CASESSA OP ===
@@ -578,93 +578,97 @@ void HaskLambdaOp::print(OpAsmPrinter &p) {
 // === RECURSIVEREF OP ===
 // === RECURSIVEREF OP ===
 
-ParseResult HaskRefOp::parse(OpAsmParser &parser, OperationState &result) {
-  StringAttr nameAttr;
-  // ( <arg> ) : <type>
-  Type ty;
-  if (parser.parseLParen() ||
-      parser.parseSymbolName(nameAttr, ::mlir::SymbolTable::getSymbolAttrName(),
-                             result.attributes) ||
-      parser.parseRParen() || parser.parseColonType(ty)) {
-    return failure();
-  }
+// ParseResult HaskRefOp::parse(OpAsmParser &parser, OperationState &result) {
+//   StringAttr nameAttr;
+//   // ( <arg> ) : <type>
+//   Type ty;
+//   if (parser.parseLParen() ||
+//       parser.parseSymbolName(nameAttr,
+//       ::mlir::SymbolTable::getSymbolAttrName(),
+//                              result.attributes) ||
+//       parser.parseRParen() || parser.parseColonType(ty)) {
+//     return failure();
+//   }
 
-  // TODO: extract this out as a separate function or something.
-  if (!ty.isa<HaskType>()) {
-    return parser.emitError(parser.getCurrentLocation(),
-                            "expected a haskell type");
-  }
+//   // TODO: extract this out as a separate function or something.
+//   if (!ty.isa<HaskType>()) {
+//     return parser.emitError(parser.getCurrentLocation(),
+//                             "expected a haskell type");
+//   }
 
-  // if (!(ty.isa<ValueType>() || ty.isa<ThunkType>() || ty.isa<HaskFnType>() ||
-  // ty.isa<UntypedType>())) {
-  //     return parser.emitError(parser.getCurrentLocation(), "expected value,
-  //     thunk, function, or untyped type");
-  // }
+//   // if (!(ty.isa<ValueType>() || ty.isa<ThunkType>() || ty.isa<HaskFnType>()
+//   ||
+//   // ty.isa<UntypedType>())) {
+//   //     return parser.emitError(parser.getCurrentLocation(), "expected
+//   value,
+//   //     thunk, function, or untyped type");
+//   // }
 
-  result.addTypes(ty);
-  return success();
-}
+//   result.addTypes(ty);
+//   return success();
+// }
 
-void HaskRefOp::print(OpAsmPrinter &p) {
-  p.printGenericOp(this->getOperation());
-  return;
-  p << getOperationName() << "(";
-  p.printSymbolName(this->getRef());
-  p << ")"
-    << " : " << this->getResult().getType();
-};
+// void HaskRefOp::print(OpAsmPrinter &p) {
+//   p.printGenericOp(this->getOperation());
+//   return;
+//   p << getOperationName() << "(";
+//   p.printSymbolName(this->getRef());
+//   p << ")"
+//     << " : " << this->getResult().getType();
+// };
 
-LogicalResult HaskRefOp::verify() {
-  return success();
-  /*
-  ModuleOp mod = this->getOperation()->getParentOfType<mlir::ModuleOp>();
-  HaskFuncOp fn = mod.lookupSymbol<HaskFuncOp>(this->getRef());
-  HaskGlobalOp global = mod.lookupSymbol<HaskGlobalOp>(this->getRef());
-  if (fn) {
-    // how do I attach an error message?
-    if (fn.getFunctionType() == this->getResult().getType()) {
-      return success();
-    }
-    llvm::errs() << "ERROR at HaskRefOp type verification:"
-                 << "\n-mismatch of types at ref."
-                 << "\n-Found from function at loc["
-                 << " " << fn.getLoc() << "] "
-                 << "name:" << this->getRef() << " type["
-                 << fn.getFunctionType()
-                 << "]\n"
-                    "-Declared at ref as ["
-                 << this->getLoc() << "] type[" << this->getResult().getType()
-                 << "]\n";
-    return failure();
-  } else if (global) {
-    if (global.getType() == this->getResult().getType()) {
-      return success();
-    }
-    llvm::errs() << "ERROR at HaskRefOp type verification:"
-                 << "\n-mismatch of types at ref."
-                 << "\n-Found from global"
-                 << " " << global.getLoc() << " "
-                 << "name:" << this->getRef() << " [" << global.getType()
-                 << "]\n"
-                    "-Declared at ref as ["
-                 << this->getLoc() << " " << *this << "]\n";
-    return failure();
-  } else {
-    llvm::errs() << "ERROR at HaskRefOpVerification:"
-                 << "\n-unable to find referenced function/global |"
-                 << this->getRef() << "|\n";
-    // TODO: forward declare stuff like +#
-    return failure();
-  }
-  */
-}
+// LogicalResult HaskRefOp::verify() {
+//   return success();
+//   /*
+//   ModuleOp mod = this->getOperation()->getParentOfType<mlir::ModuleOp>();
+//   HaskFuncOp fn = mod.lookupSymbol<HaskFuncOp>(this->getRef());
+//   HaskGlobalOp global = mod.lookupSymbol<HaskGlobalOp>(this->getRef());
+//   if (fn) {
+//     // how do I attach an error message?
+//     if (fn.getFunctionType() == this->getResult().getType()) {
+//       return success();
+//     }
+//     llvm::errs() << "ERROR at HaskRefOp type verification:"
+//                  << "\n-mismatch of types at ref."
+//                  << "\n-Found from function at loc["
+//                  << " " << fn.getLoc() << "] "
+//                  << "name:" << this->getRef() << " type["
+//                  << fn.getFunctionType()
+//                  << "]\n"
+//                     "-Declared at ref as ["
+//                  << this->getLoc() << "] type[" <<
+//                  this->getResult().getType()
+//                  << "]\n";
+//     return failure();
+//   } else if (global) {
+//     if (global.getType() == this->getResult().getType()) {
+//       return success();
+//     }
+//     llvm::errs() << "ERROR at HaskRefOp type verification:"
+//                  << "\n-mismatch of types at ref."
+//                  << "\n-Found from global"
+//                  << " " << global.getLoc() << " "
+//                  << "name:" << this->getRef() << " [" << global.getType()
+//                  << "]\n"
+//                     "-Declared at ref as ["
+//                  << this->getLoc() << " " << *this << "]\n";
+//     return failure();
+//   } else {
+//     llvm::errs() << "ERROR at HaskRefOpVerification:"
+//                  << "\n-unable to find referenced function/global |"
+//                  << this->getRef() << "|\n";
+//     // TODO: forward declare stuff like +#
+//     return failure();
+//   }
+//   */
+// }
 
-void HaskRefOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                      std::string refname, Type retty) {
-  state.addAttribute(::mlir::SymbolTable::getSymbolAttrName(),
-                     builder.getStringAttr(refname));
-  state.addTypes(retty);
-}
+// void HaskRefOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
+//                       std::string refname, Type retty) {
+//   state.addAttribute(::mlir::SymbolTable::getSymbolAttrName(),
+//                      builder.getStringAttr(refname));
+//   state.addTypes(retty);
+// }
 
 // === MakeString OP ===
 // === MakeString OP ===
@@ -1880,51 +1884,52 @@ public:
 //   }
 // };
 
-class HaskRefOpConversionPattern : public ConversionPattern {
-public:
-  explicit HaskRefOpConversionPattern(MLIRContext *context)
-      : ConversionPattern(HaskRefOp::getOperationName(), 1, context) {}
+// class HaskRefOpConversionPattern : public ConversionPattern {
+// public:
+//   explicit HaskRefOpConversionPattern(MLIRContext *context)
+//       : ConversionPattern(HaskRefOp::getOperationName(), 1, context) {}
 
-  LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
-                  ConversionPatternRewriter &rewriter) const override {
-    HaskRefOp ref = cast<HaskRefOp>(op);
-    ModuleOp mod = ref.getParentOfType<ModuleOp>();
+//   LogicalResult
+//   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+//                   ConversionPatternRewriter &rewriter) const override {
+//     HaskRefOp ref = cast<HaskRefOp>(op);
+//     ModuleOp mod = ref.getParentOfType<ModuleOp>();
 
-    llvm::errs() << "running HaskRefOpConversionPattern on: " << op->getName()
-                 << " | " << op->getLoc() << "\n";
-    using namespace mlir::LLVM;
+//     llvm::errs() << "running HaskRefOpConversionPattern on: " <<
+//     op->getName()
+//                  << " | " << op->getLoc() << "\n";
+//     using namespace mlir::LLVM;
 
-    auto I8PtrTy = mlir::LLVM::LLVMType::getInt8PtrTy(rewriter.getContext());
+//     auto I8PtrTy = mlir::LLVM::LLVMType::getInt8PtrTy(rewriter.getContext());
 
-    Operation *referenced = mod.lookupSymbol(ref.getRef());
-    assert(referenced && "reference does not exist");
+//     Operation *referenced = mod.lookupSymbol(ref.getRef());
+//     assert(referenced && "reference does not exist");
 
-    if (LLVMFuncOp llvmfn = dyn_cast<LLVMFuncOp>(referenced)) {
-      LLVM::AddressOfOp addr = rewriter.create<LLVM::AddressOfOp>(
-          op->getLoc(), llvmfn.getType().getPointerTo(), ref.getRef());
-      rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(op, I8PtrTy, addr);
-      return success();
-    } else {
-      // not yet converted.
-      LLVMType llvmty;
-      if (FuncOp fn = mod.lookupSymbol<FuncOp>(ref.getRef())) {
-        llvmty =
-            haskToLLVMType(rewriter.getContext(), ref.getResult().getType());
+//     if (LLVMFuncOp llvmfn = dyn_cast<LLVMFuncOp>(referenced)) {
+//       LLVM::AddressOfOp addr = rewriter.create<LLVM::AddressOfOp>(
+//           op->getLoc(), llvmfn.getType().getPointerTo(), ref.getRef());
+//       rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(op, I8PtrTy, addr);
+//       return success();
+//     } else {
+//       // not yet converted.
+//       LLVMType llvmty;
+//       if (FuncOp fn = mod.lookupSymbol<FuncOp>(ref.getRef())) {
+//         llvmty =
+//             haskToLLVMType(rewriter.getContext(), ref.getResult().getType());
 
-      } else if (mod.lookupSymbol<HaskGlobalOp>(ref.getRef())) {
-        llvmty = LLVMType::getFunctionTy(I8PtrTy, {}, /*isVaridic=*/false);
-      } else {
-        assert(false && "unknown symbol");
-      }
-      LLVM::AddressOfOp addr = rewriter.create<LLVM::AddressOfOp>(
-          op->getLoc(), llvmty, ref.getRef());
-      rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(op, I8PtrTy, addr);
-      return success();
-    }
-    return success();
-  }
-};
+//       } else if (mod.lookupSymbol<HaskGlobalOp>(ref.getRef())) {
+//         llvmty = LLVMType::getFunctionTy(I8PtrTy, {}, /*isVaridic=*/false);
+//       } else {
+//         assert(false && "unknown symbol");
+//       }
+//       LLVM::AddressOfOp addr = rewriter.create<LLVM::AddressOfOp>(
+//           op->getLoc(), llvmty, ref.getRef());
+//       rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(op, I8PtrTy, addr);
+//       return success();
+//     }
+//     return success();
+//   }
+// };
 
 [[maybe_unused]] static FlatSymbolRefAttr
 getOrInsertMalloc(PatternRewriter &rewriter, ModuleOp module) {
@@ -2303,7 +2308,7 @@ void LowerHaskToStandardPass::runOnOperation() {
   // patterns.insert<LambdaOpConversionPattern>(&getContext());
   patterns.insert<MakeI64OpConversionPattern>(&getContext());
   // patterns.insert<HaskReturnOpConversionPattern>(&getContext());
-  patterns.insert<HaskRefOpConversionPattern>(&getContext());
+  // patterns.insert<HaskRefOpConversionPattern>(&getContext());
   patterns.insert<HaskConstructOpConversionPattern>(&getContext());
   patterns.insert<ForceOpConversionPattern>(&getContext());
   patterns.insert<ApOpConversionPattern>(&getContext());
