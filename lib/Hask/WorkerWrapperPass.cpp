@@ -378,6 +378,24 @@ struct OutlineRecursiveApEagerOfThunkPattern
   }
 };
 
+// ===INPUT===
+// C { MKC(V) }
+// @f(%inc: C)
+//  %inv = extract(@MKC, %inc) : V
+//  %w = ... : V
+//  %wc = construct(@MKC, w) : C
+//  %rec = apEager(@f, wc)
+// ===OUTPUT===
+// @frec(%inv: V)
+//  %inv = extract(@MKC, %inc) : V
+//  %w = ... : V
+//  %wc = construct(@MKC, w) : C
+//  %rec = apEager(@f, wc)
+
+// @f(%inc: C)
+//  %inv = extract(%inc) : V
+//  apEager(@frec, inv)
+
 struct OutlineRecursiveApEagerOfConstructorPattern
     : public mlir::OpRewritePattern<ApEagerOp> {
   OutlineRecursiveApEagerOfConstructorPattern(mlir::MLIRContext *context)
@@ -444,8 +462,12 @@ struct OutlineRecursiveApEagerOfConstructorPattern
     SmallVector<Type, 4> clonedFnCallArgTys{
         (constructedArgument.getOperand(0).getType())};
 
+    mlir::FunctionType clonedFnTy = mlir::FunctionType::get(
+        clonedFnCallArgTys, called.getType().getResult(0),
+        rewriter.getContext());
+
     ConstantOp clonedFnRef = rewriter.create<ConstantOp>(
-        ap.getFn().getLoc(), mkForcedFnType(called.getType()),
+        ap.getFn().getLoc(), clonedFnTy,
         mlir::FlatSymbolRefAttr::get(clonedFnName, rewriter.getContext()));
 
     // HaskRefOp clonedFnRef = rewriter.create<HaskRefOp>(
@@ -701,11 +723,11 @@ struct WorkerWrapperPass : public Pass {
   void runOnOperation() override {
     mlir::OwningRewritePatternList patterns;
     patterns.insert<ForceOfKnownApPattern>(&getContext());
-    // patterns.insert<ForceOfThunkifyPattern>(&getContext());
+    patterns.insert<ForceOfThunkifyPattern>(&getContext());
     patterns.insert<OutlineRecursiveApEagerOfThunkPattern>(&getContext());
-    // patterns.insert<OutlineRecursiveApEagerOfConstructorPattern>(&getContext());
-    // patterns.insert<CaseOfKnownConstructorPattern>(&getContext());
-    // patterns.insert<CaseOfBoxedRecursiveApWithFinalConstruct>(&getContext());
+    patterns.insert<OutlineRecursiveApEagerOfConstructorPattern>(&getContext());
+    patterns.insert<CaseOfKnownConstructorPattern>(&getContext());
+    patterns.insert<CaseOfBoxedRecursiveApWithFinalConstruct>(&getContext());
 
     // change:
     //   retval = case x of L1 -> { ...; return Foo(x1); } L2 -> { ...; return

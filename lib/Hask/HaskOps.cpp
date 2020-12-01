@@ -257,6 +257,7 @@ void ApOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
 ParseResult ApEagerOp::parse(OpAsmParser &parser, OperationState &result) {
   // OpAsmParser::OperandType operand_fn;
   OpAsmParser::OperandType op_fn;
+
   // (<fn-arg>
   if (parser.parseLParen()) {
     return failure();
@@ -306,6 +307,9 @@ ParseResult ApEagerOp::parse(OpAsmParser &parser, OperationState &result) {
 };
 
 void ApEagerOp::print(OpAsmPrinter &p) {
+  p.printGenericOp(this->getOperation());
+  return;
+
   p << getOperationName() << "(";
   p << this->getFn() << " :" << this->getFn().getType();
 
