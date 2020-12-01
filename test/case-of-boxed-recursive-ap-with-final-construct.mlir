@@ -3,10 +3,7 @@
 // TODO: really we want *anything* that is common in control flow to be
 //        pulled out.
 // RUN: ../build/bin/hask-opt %s  -lz-interpret | FileCheck %s
-// RUN: ../build/bin/hask-opt %s  -lz-worker-wrapper | FileCheck %s -check-prefix='CHECK-WW-IR'
 // RUN: ../build/bin/hask-opt %s  -lz-interpret -lz-worker-wrapper | FileCheck %s -check-prefix='CHECK-WW-OUTPUT'
-// RUN: ../build/bin/hask-opt %s -lower-std -lower-llvm | FileCheck %s || true
-// RUN: ../build/bin/hask-opt %s  | ../build/bin/hask-opt -lower-std -lower-llvm |  FileCheck %s || true
 // Check that @plus works with SimpleInt works.
 // CHECK-WW-OUTPUT: constructor(SimpleInt 42)
 // CHECK: constructor(SimpleInt 42)

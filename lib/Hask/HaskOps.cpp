@@ -262,47 +262,43 @@ ParseResult ApEagerOp::parse(OpAsmParser &parser, OperationState &result) {
   if (parser.parseLParen()) {
     return failure();
   }
+
   if (parser.parseOperand(op_fn)) {
     return failure();
   }
-
   // : type
-  HaskType ratorty;
-  if (parser.parseColonType<HaskType>(ratorty)) {
+  FunctionType ratorty;
+  if (parser.parseColonType<FunctionType>(ratorty)) {
     return failure();
   }
+
   if (parser.resolveOperand(op_fn, ratorty, result.operands)) {
     return failure();
   }
 
-  if (FunctionType fnty = ratorty.dyn_cast<FunctionType>()) {
-    std::vector<Type> paramtys = fnty.getInputs();
-    // Type retty = fnty.getResultType();
-
-    for (int i = 0; i < (int)paramtys.size(); ++i) {
-      if (parser.parseComma()) {
-        return failure();
-      }
-      OpAsmParser::OperandType op;
-      if (parser.parseOperand(op))
-        return failure();
-      if (parser.resolveOperand(op, paramtys[i], result.operands)) {
-        return failure();
-      }
-    }
-
-    //)
-    if (parser.parseRParen())
-      return failure();
-    result.addTypes(fnty.getResult(0));
-  } else {
+  FunctionType fnty = ratorty.dyn_cast<FunctionType>();
+  if (!fnty) {
     InFlightDiagnostic err =
         parser.emitError(parser.getCurrentLocation(),
                          "expected function type, got non function type: [");
     err << ratorty << "]";
     return failure();
   }
+  std::vector<Type> paramtys = fnty.getInputs();
 
+  for (int i = 0; i < (int)paramtys.size(); ++i) {
+    OpAsmParser::OperandType op;
+    if (parser.parseComma() || parser.parseOperand(op) ||
+        parser.resolveOperand(op, paramtys[i], result.operands)) {
+      return failure();
+    }
+  }
+
+  //)
+  if (parser.parseRParen())
+    return failure();
+
+  result.addTypes(fnty.getResult(0));
   return success();
 };
 
