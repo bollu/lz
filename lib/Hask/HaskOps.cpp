@@ -219,33 +219,20 @@ void ApOp::print(OpAsmPrinter &p) {
 };
 
 void ApOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                 Value fn, SmallVectorImpl<Value> &params) {
+                 Value fnref, SmallVectorImpl<Value> &params, Type retty) {
 
   // hack! we need to construct the type properly.
-  state.addOperands(fn);
-  assert(fn.getType().isa<FunctionType>());
-  FunctionType fnty = fn.getType().cast<FunctionType>();
-
-  assert(params.size() == fnty.getNumInputs());
-  assert(fnty.getNumResults() == 1);
-
-  for (int i = 0; i < (int)params.size(); ++i) {
-    if (fnty.getInput(i) != params[i].getType()) {
-      llvm::errs() << "ERROR: type mismatch at parameter (" << i << ").\n"
-                   << "function parameter type: (" << fnty.getInput(i) << ")\n"
-                   << "argument type: (" << params[i].getType() << ")\n";
-      llvm::errs() << "function: " << fn << "\n";
-      llvm::errs() << "arguments: (";
-      for (Value p : params) {
-        llvm::errs() << p << " ";
-      }
-      llvm::errs() << ")";
-    }
-    assert(fnty.getInput(i) == params[i].getType());
-  }
-
+  state.addOperands(fnref);
   state.addOperands(params);
-  state.addTypes(builder.getType<ThunkType>(fnty.getResult(0)));
+  state.addTypes(builder.getType<ThunkType>(retty));
+};
+
+void ApOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                 FuncOp fn, SmallVectorImpl<Value> &params) {
+  Value fnname =   builder.create<ConstantOp>(builder.getUnknownLoc(), mlir::FlatSymbolRefAttr::get(fn.getName(), builder.getContext()));
+  state.addOperands(fnname);
+  state.addOperands(params);
+  state.addTypes(builder.getType<ThunkType>(fn.getType().getResult(0)));
 };
 
 // === APEAGEROP OP ===
