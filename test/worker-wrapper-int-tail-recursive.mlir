@@ -38,7 +38,7 @@ module {
                   }]
               lz.return %retj:!lz.value
            }]
-      std.return %reti: !lz.value
+      lz.return %reti: !lz.value
     }
 
   // 1 + 2 = 3

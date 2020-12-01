@@ -216,17 +216,6 @@ struct InlineApEagerPattern : public mlir::OpRewritePattern<ApEagerOp> {
 };
 
 // TODO: we need to know which argument was forced.
-//! HaskFnType mkForcedFnType(HaskFnType fty) {
-//!   SmallVector<Type, 4> forcedTys;
-//!   for (Type ty : fty.getInputTypes()) {
-//!     ThunkType thunkty = ty.dyn_cast<ThunkType>();
-//!     assert(thunkty);
-//!     forcedTys.push_back(thunkty.getElementType());
-//!   }
-//!   return HaskFnType::get(fty.getContext(), forcedTys,
-//!   fty.getResultType());
-//! }
-
 FunctionType mkForcedFnType(FunctionType fty) {
   SmallVector<Type, 4> forcedTys;
   for (Type ty : fty.getInputs()) {
@@ -237,8 +226,26 @@ FunctionType mkForcedFnType(FunctionType fty) {
   return FunctionType::get(forcedTys, fty.getResult(0), fty.getContext());
 }
 
+// ===IN===
+// @f(%int: thunk<V>):
+//    %inv = force(%int) : V
+//    -----
+//    %recw = ... : V
+//    %rect = thunkify(%recw) : thunk<V>
+//    %outt = ap(@f, %rect)
+// ===OUT===
+// @fforced(%inv: V)
+//    %f = ref @f
+//    %recw = ... : V
+//    %rect = thunkify(%recw) : thunk<V>
+//    %outt = ap(%f, %rect)
+// @f(%int: thunk<V>):
+//    %inv = force(%int) : V
+//    apEager(@fforced, inv)
+
 // convert ap(thunkify(...)) of a recursive call that is force(...) d
 // into an "immediate" function call.
+
 struct OutlineRecursiveApEagerOfThunkPattern
     : public mlir::OpRewritePattern<ApEagerOp> {
   OutlineRecursiveApEagerOfThunkPattern(mlir::MLIRContext *context)
@@ -260,6 +267,7 @@ struct OutlineRecursiveApEagerOfThunkPattern
       return failure();
     }
 
+    // called == parentfn?
     FuncOp called = mod.lookupSymbol<FuncOp>(apfnname);
     assert(called && "unable to find called function.");
 
@@ -275,9 +283,6 @@ struct OutlineRecursiveApEagerOfThunkPattern
     }
     clonedFnCallArgs.push_back(thunkifiedArgument.getOperand());
 
-    llvm::errs() << "found thunkified argument: |" << thunkifiedArgument
-                 << "|\n";
-
     // TODO: this is an over-approximation of course, we only need
     // a single argument (really, the *same* argument to be reused).
     // I've moved the code here to test that the crash isn't because of a
@@ -288,6 +293,7 @@ struct OutlineRecursiveApEagerOfThunkPattern
       if (!arg.hasOneUse()) {
         return failure();
       }
+
       ForceOp uniqueForceOfArg = dyn_cast<ForceOp>(arg.use_begin().getUser());
       if (!uniqueForceOfArg) {
         return failure();
@@ -295,12 +301,25 @@ struct OutlineRecursiveApEagerOfThunkPattern
     }
 
     std::string clonedFnName = called.getName().str() + "rec_force_outline";
-
     rewriter.setInsertionPoint(ap);
 
+    // ConstantOp original = ap.getFn().getDefiningOp<ConstantOp>();
+
+    // original.dump();
+    // mlir::OpPrintingFlags flags;
+    // original.print(llvm::errs(), flags.printGenericOpForm());
+    // assert(original.getValue().isa<mlir::FlatSymbolRefAttr>() &&
+    //        "is a flat symbol ref");
+    // assert(original.getValue().isa<mlir::SymbolRefAttr>() && "is a symbol
+    // ref");
+
     ConstantOp clonedFnRef = rewriter.create<ConstantOp>(
-        ap.getFn().getLoc(),
+        rewriter.getUnknownLoc(), mkForcedFnType(called.getType()),
         mlir::FlatSymbolRefAttr::get(clonedFnName, rewriter.getContext()));
+
+    // llvm::errs() << "\nCLONED: ";
+    // clonedFnRef.print(llvm::errs(), flags.printGenericOpForm());
+    // assert(false && "printed original and cloned");
 
     rewriter.replaceOpWithNewOp<ApEagerOp>(ap, clonedFnRef, clonedFnCallArgs,
                                            called.getType().getResult(0));
@@ -309,6 +328,7 @@ struct OutlineRecursiveApEagerOfThunkPattern
     // We first replace the reucrsive call, and *then* clone the function.
     FuncOp clonedfn = parentfn.clone();
     clonedfn.setName(clonedFnName);
+    clonedfn.setType(mkForcedFnType(called.getType()));
 
     // TODO: consider if going forward is more sensible or going back is
     // more sensible. Right now I am reaching forward, but perhaps
@@ -414,7 +434,7 @@ struct OutlineRecursiveApEagerOfConstructorPattern
     }
 
     std::string clonedFnName =
-        called.getName().str() + "rec_construct_" +
+        called.getName().str() + "_rec_construct_" +
         constructedArgument.getDataConstructorName().str() + "_outline";
     rewriter.setInsertionPoint(ap);
 
@@ -425,7 +445,7 @@ struct OutlineRecursiveApEagerOfConstructorPattern
         (constructedArgument.getOperand(0).getType())};
 
     ConstantOp clonedFnRef = rewriter.create<ConstantOp>(
-        ap.getFn().getLoc(),
+        ap.getFn().getLoc(), mkForcedFnType(called.getType()),
         mlir::FlatSymbolRefAttr::get(clonedFnName, rewriter.getContext()));
 
     // HaskRefOp clonedFnRef = rewriter.create<HaskRefOp>(
@@ -444,8 +464,10 @@ struct OutlineRecursiveApEagerOfConstructorPattern
     // 2. Build the cloned function that is an unboxed version of the
     //    case. Eliminate the case for the argument RHS.
     clonedfn.setName(clonedFnName);
+    // NOTE THE REPETITION!
     clonedfn.getBody().getArgument(0).setType(
         constructedArgument.getOperand(0).getType());
+    // clonedfn.setType(mkForcedFnType(called.getType()));
 
     CaseOp caseClonedFnArg = cast<CaseOp>(
         clonedfn.getBody().getArgument(0).getUses().begin().getUser());
@@ -679,11 +701,11 @@ struct WorkerWrapperPass : public Pass {
   void runOnOperation() override {
     mlir::OwningRewritePatternList patterns;
     patterns.insert<ForceOfKnownApPattern>(&getContext());
-    patterns.insert<ForceOfThunkifyPattern>(&getContext());
+    // patterns.insert<ForceOfThunkifyPattern>(&getContext());
     patterns.insert<OutlineRecursiveApEagerOfThunkPattern>(&getContext());
-    patterns.insert<OutlineRecursiveApEagerOfConstructorPattern>(&getContext());
-    patterns.insert<CaseOfKnownConstructorPattern>(&getContext());
-    patterns.insert<CaseOfBoxedRecursiveApWithFinalConstruct>(&getContext());
+    // patterns.insert<OutlineRecursiveApEagerOfConstructorPattern>(&getContext());
+    // patterns.insert<CaseOfKnownConstructorPattern>(&getContext());
+    // patterns.insert<CaseOfBoxedRecursiveApWithFinalConstruct>(&getContext());
 
     // change:
     //   retval = case x of L1 -> { ...; return Foo(x1); } L2 -> { ...; return
@@ -706,12 +728,17 @@ struct WorkerWrapperPass : public Pass {
       getOperation()->print(llvm::errs());
       llvm::errs() << "\n===\n";
       signalPassFailure();
-    };
+    } else {
+
+      llvm::errs() << "===Worker wrapper succeeded===\n";
+      getOperation()->print(llvm::errs());
+      llvm::errs() << "\n===\n";
+    }
 
     llvm::errs() << "===Disabling Debugging...===\n";
     ::llvm::DebugFlag = false;
   };
-};
+}; // namespace standalone
 
 std::unique_ptr<mlir::Pass> createWorkerWrapperPass() {
   return std::make_unique<WorkerWrapperPass>();

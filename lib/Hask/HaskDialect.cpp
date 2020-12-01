@@ -200,15 +200,17 @@ void HaskInlinerInterface::handleTerminator(
     Operation *op, ArrayRef<Value> valuesToRepl) const {
   llvm::errs() << "handleTerminator(" << *op << ", " << valuesToRepl[0]
                << ")\n";
-  //    assert(false);
-  //    assert(false && "handling terminator in HaskInliner...");
-  // Only "toy.return" needs to be handled here.
-  auto returnOp = cast<ReturnOp>(op);
-  // Replace the values directly with the return operands.
-  //    assert(1 == valuesToRepl.size());
-  // TODO handle multiple return values
-  valuesToRepl[0].replaceAllUsesWith(returnOp.getOperand(0));
+  if (auto returnOp = mlir::dyn_cast<ReturnOp>(op)) {
+    valuesToRepl[0].replaceAllUsesWith(returnOp.getOperand(0));
+    return;
+  }
   // https://github.com/llvm/llvm-project/blob/1b012a9146b85d30083a47d4929e86f843a5938d/mlir/docs/Tutorials/Toy/Ch-4.md
+  if (auto returnOp = mlir::dyn_cast<HaskReturnOp>(op)) {
+    valuesToRepl[0].replaceAllUsesWith(returnOp.getOperand());
+    return;
+  }
+
+  assert(false && "unknown return operation");
 }
 
 bool HaskDialect::isFunctionRecursive(FuncOp funcOp) {
