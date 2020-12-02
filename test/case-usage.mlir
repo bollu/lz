@@ -1,4 +1,4 @@
-// RUN: ../build/bin/hask-opt %s  --lz-interpret | FileCheck %s
+// RUN: hask-opt %s  --lz-interpret | FileCheck %s
 // CHECK: constructor(X 42)
 // Test that a non-trivial use of a case works. So we don't just have:
 // %x = case {.. ret }; return(%x)

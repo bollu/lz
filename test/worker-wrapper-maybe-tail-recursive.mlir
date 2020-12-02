@@ -1,5 +1,5 @@
-// RUN: ../build/bin/hask-opt %s  --lz-interpret | FileCheck %s
-// RUN: ../build/bin/hask-opt %s  --lz-worker-wrapper --lz-interpret | FileCheck %s -check-prefix='CHECK-WW'
+// RUN: hask-opt %s  --lz-interpret | FileCheck %s
+// RUN: hask-opt %s  --lz-worker-wrapper --lz-interpret | FileCheck %s -check-prefix='CHECK-WW'
 // Check that @plus works with Maybe works.
 // CHECK: constructor(Just 42)
 // CHECK: num_thunkify_calls(6)

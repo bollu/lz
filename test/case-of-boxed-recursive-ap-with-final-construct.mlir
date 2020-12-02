@@ -2,8 +2,8 @@
 // leaving us with the control flow to decide on the `int` followed by a boxing.
 // TODO: really we want *anything* that is common in control flow to be
 //        pulled out.
-// RUN: ../build/bin/hask-opt %s  -lz-interpret | FileCheck %s
-// RUN: ../build/bin/hask-opt %s  -lz-interpret -lz-worker-wrapper | FileCheck %s -check-prefix='CHECK-WW-OUTPUT'
+// RUN: hask-opt %s  -lz-interpret | FileCheck %s
+// RUN: hask-opt %s  -lz-interpret -lz-worker-wrapper | FileCheck %s -check-prefix='CHECK-WW-OUTPUT'
 // Check that @plus works with SimpleInt works.
 // CHECK-WW-OUTPUT: constructor(SimpleInt 42)
 // CHECK: constructor(SimpleInt 42)

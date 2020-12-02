@@ -1,4 +1,4 @@
-// RUN: ../build/bin/hask-opt %s  --lz-interpret | FileCheck %s
+// RUN: hask-opt %s  --lz-interpret | FileCheck %s
 // CHECK: 1
 module {
   // should it be Attr Attr, with the "list" embedded as an attribute,

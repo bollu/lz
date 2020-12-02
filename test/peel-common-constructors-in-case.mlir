@@ -2,8 +2,8 @@
 // leaving us with the control flow to decide on the `int` followed by a boxing.
 // TODO: really we want *anything* that is common in control flow to be 
 //        pulled out.
-// RUN: ../build/bin/hask-opt %s  --lz-interpret | FileCheck %s
-// RUN: ../build/bin/hask-opt %s   --lz-worker-wrapper --lz-interpret | FileCheck %s -check-prefix='CHECK-WW-OUTPUT'
+// RUN: hask-opt %s  --lz-interpret | FileCheck %s
+// RUN: hask-opt %s   --lz-worker-wrapper --lz-interpret | FileCheck %s -check-prefix='CHECK-WW-OUTPUT'
 // Check that @plus works with Maybe works.
 // CHECK: constructor(Just 0)
 // CHECK: num_construct_calls(2)

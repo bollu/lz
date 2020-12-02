@@ -1,4 +1,4 @@
-// RUN: ../build/bin/hask-opt %s  --lz-interpret  | FileCheck %s
+// RUN: hask-opt %s  --lz-interpret  | FileCheck %s
 // CHECK: constructor(SimpleInt 8)
 // Core2MLIR: GenMLIR BeforeCorePrep
 module {

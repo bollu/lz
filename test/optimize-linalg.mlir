@@ -1,5 +1,5 @@
-// RUN: ../build/bin/hask-opt --lz-worker-wrapper --affine-loop-fusion --canonicalize --inline --affine-loop-fusion %s
-// RUN: ../build/bin/hask-opt --lz-worker-wrapper --affine-loop-fusion --canonicalize --inline --affine-loop-fusion %s | ../build/bin/hask-opt --lz-interpret
+// RUN: hask-opt --lz-worker-wrapper --affine-loop-fusion --canonicalize --inline --affine-loop-fusion %s
+// RUN: hask-opt --lz-worker-wrapper --affine-loop-fusion --canonicalize --inline --affine-loop-fusion %s | hask-opt --lz-interpret
 
 module {
 

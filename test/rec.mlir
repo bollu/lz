@@ -2,7 +2,7 @@
 // We need to worker wrapper optimise this into:
 // f(Int y) = Int (g# y)
 // g# 0 = 1; g# x = g (x - 1) -- g# is strict.
-// RUN: ../build/bin/hask-opt %s  --lz-interpret | FileCheck %s
+// RUN: hask-opt %s  --lz-interpret | FileCheck %s
 // CHECK: constructor(SimpleInt 42)
 module {
 

@@ -1,5 +1,5 @@
-// RUN: ../build/bin/hask-opt %s  -lz-interpret | FileCheck %s
-// RUN: ../build/bin/hask-opt %s  | ../build/bin/hask-opt -lz-interpret |  FileCheck %s
+// RUN: hask-opt %s  -lz-interpret | FileCheck %s
+// RUN: hask-opt %s  | hask-opt -lz-interpret |  FileCheck %s
 // CHECK: constructor(X 8)
 module {
   // lz.make_data_constructor @"+#"

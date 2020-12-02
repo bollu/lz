@@ -1,4 +1,4 @@
-// RUN: ../build/bin/hask-opt %s  --lz-interpret | FileCheck %s
+// RUN: hask-opt %s  --lz-interpret | FileCheck %s
 // CHECK: 42
 module {
   // k x y = x
