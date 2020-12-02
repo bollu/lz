@@ -61,7 +61,7 @@ jobs:
           # cmake $GITHUB_WORKSPACE/mlir-standalone-template -DCMAKE_BUILD_TYPE=Debug -DUSE_SANITIZER='Address;Undefined' ${{ env.CMAKE_FLAGS }}
           cmake $GITHUB_WORKSPACE/mlir-standalone-template -DCMAKE_BUILD_TYPE=Debug ${{ env.CMAKE_FLAGS }}
           cmake --build . -j$(nproc) # --target check-standalone-opt -- -j$(nproc)
-          cd $GITHUB_WORKSPACE/test && $GITHUB_WORKSPACE/llvm-project/build/bin/llvm-lit .
+          cd $GITHUB_WORKSPACE/mlir-standalone-template/test && $GITHUB_WORKSPACE/llvm-project/build/bin/llvm-lit .
       - name: Release build
         run: |
           export PATH=$PATH:$GITHUB_WORKSPACE/llvm-project/prefix/bin
@@ -70,5 +70,5 @@ jobs:
           cd $GITHUB_WORKSPACE/mlir-standalone-template/build
           cmake $GITHUB_WORKSPACE/mlir-standalone-template -DCMAKE_BUILD_TYPE=Release ${{ env.CMAKE_FLAGS }}
           cmake --build . -j$(nproc) # --target check-standalone-opt -- -j$(nproc)
-          cd $GITHUB_WORKSPACE/test && $GITHUB_WORKSPACE/llvm-project/build/bin/llvm-lit . 
+          cd $GITHUB_WORKSPACE/mlir-standalone-template/test && $GITHUB_WORKSPACE/llvm-project/build/bin/llvm-lit . 
 
