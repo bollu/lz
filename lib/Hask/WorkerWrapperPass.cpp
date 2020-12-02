@@ -12,6 +12,7 @@
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/InliningUtils.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include <mlir/Parser.h>
 #include <sstream>
 // Standard dialect
@@ -54,9 +55,6 @@ mlir::FlatSymbolRefAttr getConstantFnRefFromValue(mlir::Value v) {
 }
 
 struct ForceOfKnownApPattern : public mlir::OpRewritePattern<ForceOp> {
-  /// We register this pattern to match every toy.transpose in the IR.
-  /// The "benefit" is used by the framework to order the patterns and process
-  /// them in order of profitability.
   ForceOfKnownApPattern(mlir::MLIRContext *context)
       : OpRewritePattern<ForceOp>(context, /*benefit=*/1) {}
 
@@ -367,7 +365,6 @@ struct OutlineRecursiveApEagerOfThunkPattern
 //  %w = ... : V
 //  %wc = construct(@MKC, w) : C
 //  %rec = apEager(@f, wc)
-
 // @f(%inc: C)
 //  %inv = extract(%inc) : V
 //  apEager(@frec, inv)
@@ -668,6 +665,90 @@ struct PeelCommonConstructorsInCase : public mlir::OpRewritePattern<CaseOp> {
   }
 };
 
+// ===INPUT===
+// @f(box: List) = case List of Nil -> Foo y; Cons x xs -> Foo z
+// ===OUTPUT====
+// @f(box: List) = Foo (case List of Nil -> y; Cons x xs -> z)
+struct FloatConstructorFromCasePattern : public mlir::OpRewritePattern<CaseOp> {
+  FloatConstructorFromCasePattern(mlir::MLIRContext *context)
+      : OpRewritePattern<CaseOp>(context, /*benefit=*/1) {}
+
+  mlir::LogicalResult
+  matchAndRewrite(CaseOp caseop,
+                  mlir::PatternRewriter &rewriter) const override {
+    llvm::Optional<std::string> constructorName;
+
+    // ret[i](constructors[i](val)) -> ret[i](val)
+    std::vector<mlir::standalone::HaskReturnOp> rets;
+    std::vector<mlir::standalone::HaskConstructOp> constructors;
+
+    for (int i = 0; i < caseop.getNumAlts(); ++i) {
+      mlir::Region &rhs = caseop.getAltRHS(i);
+      if (rhs.getBlocks().size() > 1) {
+        return failure();
+      }
+
+      mlir::standalone::HaskReturnOp ret =
+          mlir::dyn_cast<HaskReturnOp>(rhs.getBlocks().front().getTerminator());
+      if (!ret) {
+        return failure();
+      }
+      rets.push_back(ret);
+
+      mlir::standalone::HaskConstructOp constructor =
+          ret.getOperand().getDefiningOp<HaskConstructOp>();
+      if (!constructor) {
+        return failure();
+      }
+      constructors.push_back(constructor);
+
+      if (!constructorName) {
+        constructorName = constructor.getDataConstructorName().str();
+        continue;
+      }
+      assert(constructorName);
+      if (constructorName != constructor.getDataConstructorName().str()) {
+        return failure();
+      }
+
+      // TODO: handle multi argument constructors. Fuck me.
+      if (constructor.getNumOperands() != 1) {
+        return failure();
+      }
+    } // end alts loop
+
+    assert(constructorName &&
+           "must have found constructor. Otherwise, the case has zero alts!");
+
+    assert(rets.size() == constructors.size());
+    std::vector<HaskReturnOp> newRets;
+    // ret[i](constructors[i](val)) -> ret[i](val)
+    for (int i = 0; i < (int)rets.size(); ++i) {
+      rewriter.setInsertionPointAfter(rets[i]);
+      newRets.push_back(rewriter.create<mlir::standalone::HaskReturnOp>(
+          rets[i].getLoc(), constructors[i].getOperand(0)));
+      rewriter.eraseOp(rets[i]);
+    }
+
+    // OK, so all branches have a constructor. pull constructor out
+    // after the case.
+    rewriter.setInsertionPointAfter(caseop);
+    HaskConstructOp peeledConstructor = rewriter.create<HaskConstructOp>(
+        rewriter.getUnknownLoc(), *constructorName, caseop.getResult());
+    // does this *remove* the old op?
+
+    llvm::SmallPtrSet<mlir::Operation *, 4> exceptions(
+        {peeledConstructor.getOperation()});
+
+    // replace all uses, except the one by peeledConstructor
+    caseop.getResult().replaceAllUsesExcept(peeledConstructor.getResult(),
+                                            exceptions);
+
+    llvm::errs() << "peeledConstructor: |" << peeledConstructor << "|\n";
+    return success();
+  }
+};
+
 struct WorkerWrapperPass : public Pass {
   WorkerWrapperPass() : Pass(mlir::TypeID::get<WorkerWrapperPass>()){};
   StringRef getName() const override { return "WorkerWrapperPass"; }
@@ -685,8 +766,9 @@ struct WorkerWrapperPass : public Pass {
     patterns.insert<ForceOfThunkifyPattern>(&getContext());
     patterns.insert<OutlineRecursiveApEagerOfThunkPattern>(&getContext());
     patterns.insert<OutlineRecursiveApEagerOfConstructorPattern>(&getContext());
+    patterns.insert<FloatConstructorFromCasePattern>(&getContext());
     patterns.insert<CaseOfKnownConstructorPattern>(&getContext());
-    patterns.insert<CaseOfBoxedRecursiveApWithFinalConstruct>(&getContext());
+    // patterns.insert<CaseOfBoxedRecursiveApWithFinalConstruct>(&getContext());
 
     // change:
     //   retval = case x of L1 -> { ...; return Foo(x1); } L2 -> { ...; return
@@ -694,7 +776,8 @@ struct WorkerWrapperPass : public Pass {
     // into:
     //  v = case x of L1 -> { ...; return x1; } L2 -> { ...; return x2; };
     //  retval = Foo(v)
-    patterns.insert<PeelCommonConstructorsInCase>(&getContext());
+    //  patterns.insert<PeelCommonConstructorsInCase>(&getContext()); <- does
+    //  not work?
     patterns.insert<InlineApEagerPattern>(&getContext());
 
     ::llvm::DebugFlag = true;

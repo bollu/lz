@@ -172,14 +172,31 @@ public:
     assert(this->getDefaultAltIndex().hasValue());
     return this->getAltRHS(*this->getDefaultAltIndex());
   }
-  mlir::DictionaryAttr getAltLHSs() {
+  // get dictionary attribute that contains all the LHSs
+  mlir::DictionaryAttr getAltLHSsDict() {
     return this->getOperation()->getAttrDictionary();
   }
   FlatSymbolRefAttr getAltLHS(int i) {
-    return getAltLHSs()
+    return getAltLHSsDict()
         .get("alt" + std::to_string(i))
         .cast<FlatSymbolRefAttr>();
   }
+
+  std::vector<mlir::FlatSymbolRefAttr> getAltLHSs() {
+    std::vector<mlir::FlatSymbolRefAttr> out;
+    for (int i = 0; i < this->getNumAlts(); ++i) {
+      out.push_back(getAltLHS(i));
+    }
+    return out;
+  }
+
+  // std::vector<mlir::Region &> getAltRHS() {
+  //   std::vector<mlir::Region &> out;
+  //   for (int i = 0; i < this->getNumAlts(); ++i) {
+  //     out.push_back(getAltRHS(i));
+  //   }
+  //   return out;
+  // }
 
   Optional<int> getAltIndexForConstructor(llvm::StringRef constructorName) {
     for (int i = 0; i < this->getNumAlts(); ++i) {
@@ -385,15 +402,13 @@ class HaskConstructOp
 public:
   using Op::Op;
   static StringRef getOperationName() { return "lz.construct"; };
-  static StringRef getDataConstructorAttrName() { return "dataconstructor"; }
-  static StringRef getDataTypeAttrName() { return "datatype"; }
+  static const char *getDataConstructorAttrKey() { return "dataconstructor"; }
+  static const char *getDataTypeAttrKey() { return "datatype"; }
   StringRef getDataConstructorName() {
-    return getAttrOfType<FlatSymbolRefAttr>(getDataConstructorAttrName())
+    return getAttrOfType<FlatSymbolRefAttr>(getDataConstructorAttrKey())
         .getValue();
   }
 
-  //  StringRef getDataTypeName() { assert(false && "unimplemented"); return
-  //  "DATATYPE"; }
   int getNumOperands() { return this->getOperation()->getNumOperands(); }
   Value getOperand(int i) { return this->getOperation()->getOperand(i); }
   Operation::operand_range getOperands() {
@@ -402,9 +417,7 @@ public:
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   void print(OpAsmPrinter &p);
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                    StringRef constructorName,
-                    //   StringRef ADTTypeName,
-                    ValueRange args);
+                    StringRef constructorName, ValueRange args);
 
   void
   getEffects(SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>

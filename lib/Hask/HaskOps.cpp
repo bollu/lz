@@ -72,7 +72,7 @@ ParseResult HaskReturnOp::parse(OpAsmParser &parser, OperationState &result) {
 void HaskReturnOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
                          Value v) {
   state.addOperands(v);
-  state.addTypes(v.getType());
+  // state.addTypes(v.getType());
 };
 
 void HaskReturnOp::print(OpAsmPrinter &p) {
@@ -959,7 +959,7 @@ ParseResult HaskConstructOp::parse(OpAsmParser &parser,
   // get constructor name.
   FlatSymbolRefAttr constructor;
   if (parser.parseAttribute<FlatSymbolRefAttr>(
-          constructor, getDataConstructorAttrName(), result.attributes)) {
+          constructor, getDataConstructorAttrKey(), result.attributes)) {
     return failure();
   }
 
@@ -1025,7 +1025,7 @@ void HaskConstructOp::build(mlir::OpBuilder &builder,
                             // StringRef ADTTypeName,
                             ValueRange args) {
   state.addAttribute(
-      HaskConstructOp::getDataConstructorAttrName(),
+      HaskConstructOp::getDataConstructorAttrKey(),
       FlatSymbolRefAttr::get(constructorName, builder.getContext()));
   state.addOperands(args);
   state.addTypes(ValueType::get(builder.getContext()));
