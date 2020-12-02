@@ -107,8 +107,7 @@ public:
   // NOTE: the return type should be the return type of the *function*. The ApOp
   // will wrap the fnretty in a ThunkType
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                    Value fnref, SmallVectorImpl<Value> &params,
-                    Type fnretty);
+                    Value fnref, SmallVectorImpl<Value> &params, Type fnretty);
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
                     FuncOp fn, SmallVectorImpl<Value> &params);
 
