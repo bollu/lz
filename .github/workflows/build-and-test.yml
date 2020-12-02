@@ -17,7 +17,7 @@ jobs:
         uses: DoozyX/clang-format-lint-action@v0.6
         with:
           source: '.'
-          exclude: 'reading'
+          exclude: './reading'
           extensions: 'h,cpp'
           clangFormatVersion: 9
   build:
@@ -58,9 +58,10 @@ jobs:
           export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$GITHUB_WORKSPACE/llvm-project/prefix/lib
           mkdir $GITHUB_WORKSPACE/mlir-standalone-template/sanitizer-build
           cd $GITHUB_WORKSPACE/mlir-standalone-template/sanitizer-build
-          # cmake $GITHUB_WORKSPACE/mlir-standalone-template -DCMAKE_BUILD_TYPE=Debug -DUSE_SANITIZER='Address;Undefined' ${{ env.CMAKE_FLAGS }}
-          cmake $GITHUB_WORKSPACE/mlir-standalone-template -DCMAKE_BUILD_TYPE=Debug ${{ env.CMAKE_FLAGS }}
+          cmake $GITHUB_WORKSPACE/mlir-standalone-template -DCMAKE_BUILD_TYPE=Debug -DUSE_SANITIZER='Address;Undefined' ${{ env.CMAKE_FLAGS }}
+          # cmake $GITHUB_WORKSPACE/mlir-standalone-template -DCMAKE_BUILD_TYPE=Debug ${{ env.CMAKE_FLAGS }}
           cmake --build . -j$(nproc) # --target check-standalone-opt -- -j$(nproc)
+          export PATH=$PATH:$GITHUB_WORKSPACE/mlir-standalone-template/sanitizer-build/bin
           cd $GITHUB_WORKSPACE/mlir-standalone-template/test && $GITHUB_WORKSPACE/llvm-project/build/bin/llvm-lit . -v
       - name: Release build
         run: |
@@ -70,5 +71,6 @@ jobs:
           cd $GITHUB_WORKSPACE/mlir-standalone-template/build
           cmake $GITHUB_WORKSPACE/mlir-standalone-template -DCMAKE_BUILD_TYPE=Release ${{ env.CMAKE_FLAGS }}
           cmake --build . -j$(nproc) # --target check-standalone-opt -- -j$(nproc)
-          cd $GITHUB_WORKSPACE/mlir-standalone-template/test && $GITHUB_WORKSPACE/llvm-project/build/bin/llvm-lit . 
+          export PATH=$PATH:$GITHUB_WORKSPACE/mlir-standalone-template/build/bin
+          cd $GITHUB_WORKSPACE/mlir-standalone-template/test && $GITHUB_WORKSPACE/llvm-project/build/bin/llvm-lit .
 
