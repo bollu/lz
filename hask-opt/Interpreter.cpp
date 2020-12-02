@@ -296,9 +296,6 @@ struct Interpreter {
       for (int i = 0; i < caseInt.getNumAlts(); ++i) {
 
         // skip default case
-        llvm::errs() << "caseInt.getDefaultAltIndex(): "
-                     << caseInt.getDefaultAltIndex() << "\n";
-
         if (caseInt.getDefaultAltIndex().getValueOr(-1) == i) {
           continue;
         }

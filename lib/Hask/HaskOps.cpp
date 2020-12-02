@@ -343,9 +343,6 @@ ParseResult CaseOp::parse(OpAsmParser &parser, OperationState &result) {
     return failure();
   }
 
-  llvm::errs() << __FUNCTION__ << ":" << __LINE__ << "\n";
-  llvm::errs() << __FUNCTION__ << ":" << __LINE__ << "\n";
-
   // "[" altname "->" region "]"
   int nattr = 0;
   SmallVector<Region *, 4> altRegions;
@@ -1100,9 +1097,7 @@ ParseResult CaseIntOp::parse(OpAsmParser &parser, OperationState &result) {
     return failure();
   }
 
-  llvm::errs() << __FUNCTION__ << ":" << __LINE__ << "\n";
   // if(parser.parseOptionalAttrDict(result.attributes)) return failure();
-  llvm::errs() << __FUNCTION__ << ":" << __LINE__ << "\n";
 
   // "[" altname "->" region "]"
   int nattr = 0;
@@ -1153,7 +1148,6 @@ void CaseIntOp::print(OpAsmPrinter &p) {
 llvm::Optional<int> CaseIntOp::getDefaultAltIndex() {
   for (int i = 0; i < getNumAlts(); ++i) {
     Attribute ai = this->getAltLHSRaw(i);
-    llvm::errs() << "getDefaultAltIndex() i=" << i << " |ai=" << ai << "\n";
     FlatSymbolRefAttr sai = ai.dyn_cast<FlatSymbolRefAttr>();
     if (sai && sai.getValue() == "default") {
       return i;
@@ -1315,7 +1309,6 @@ Block *cloneBlockBefore(mlir::PatternRewriter &rewriter,
 // stuff I wrote.
 Value transmuteToVoidPtr(Value v, ConversionPatternRewriter &rewriter,
                          Location loc) {
-  llvm::errs() << "v: " << v << " |ty: " << v.getType() << "\n";
   if (v.getType().isa<LLVM::LLVMType>()) {
     LLVM::LLVMType vty = v.getType().cast<LLVM::LLVMType>();
     if (vty.isPointerTy()) {
@@ -1344,7 +1337,6 @@ Value transmuteToVoidPtr(Value v, ConversionPatternRewriter &rewriter,
 
 Value transmuteToInt(Value v, ConversionPatternRewriter &rewriter,
                      Location loc) {
-  llvm::errs() << "v: " << v << " |ty: " << v.getType() << "\n";
   if (v.getType().isa<LLVM::LLVMType>()) {
     LLVM::LLVMType vty = v.getType().cast<LLVM::LLVMType>();
     if (vty.isPointerTy()) {
@@ -1390,7 +1382,6 @@ class HaskToLLVMTypeConverter : public mlir::TypeConverter {
 mlir::LLVM::LLVMType haskToLLVMType(MLIRContext *context, Type t) {
   using namespace mlir::LLVM;
 
-  llvm::errs() << __FUNCTION__ << "(" << t << ")\n";
   if (t.isa<ValueType>() || t.isa<ThunkType>()) {
     // return LLVMType::getInt64Ty(context);
     return LLVMType::getInt8PtrTy(context);
@@ -1431,8 +1422,6 @@ public:
     // TODO: deal with free floating lambads. This LambdaOp is going to
     // become a top-level function. Other lambdas will become toplevel functions
     // with synthetic names.
-    llvm::errs() << "running HaskGlobalOpConversionPattern on: "
-                 << op->getName() << " | " << op->getLoc() << "\n";
     auto fn = cast<HaskGlobalOp>(op);
 
     auto I8PtrTy = LLVMType::getInt8PtrTy(rewriter.getContext());
@@ -1601,10 +1590,6 @@ public:
     ModuleOp mod = op->getParentOfType<ModuleOp>();
     const Optional<int> default_ix = caseop.getDefaultAltIndex();
 
-    llvm::errs() << "running CaseOpConversionPattern on: " << op->getName()
-                 << " | " << op->getLoc() << "\n";
-    llvm::errs() << caseop << "\n";
-
     // delete the use of the case.
     // TODO: Change the IR so that we create a landing pad BB where the
     // case uses all wind up.
@@ -1637,7 +1622,6 @@ public:
 
       rewriter.setInsertionPointToEnd(thenBB);
       Block &altRhs = caseop.getAltRHS(i).getBlocks().front();
-      llvm::errs() << "--MERGE BLOCKS (CaseOp)--\n";
       SmallVector<Value, 4> extractedFields;
       FlatSymbolRefAttr extractConstructorArg =
           getOrInsertExtractConstructorArg(rewriter, mod);
@@ -1800,8 +1784,6 @@ public:
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    llvm::errs() << "running MakeI64OpConversionPattern on: " << op->getName()
-                 << " | " << op->getLoc() << "\n";
     MakeI64Op makei64 = cast<MakeI64Op>(op);
     auto I64Ty = LLVM::LLVMType::getInt64Ty(rewriter.getContext());
     Value v = rewriter.create<mlir::LLVM::ConstantOp>(makei64.getLoc(), I64Ty,
@@ -1841,8 +1823,6 @@ public:
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     ForceOp force = cast<ForceOp>(op);
-    llvm::errs() << "running ForceOpConversionPattern on: " << op->getName()
-                 << " | " << op->getLoc() << "\n";
     using namespace mlir::LLVM;
     // assert(force.getScrutinee().getType().isa<LLVMFunctionType>());
     // LLVMFunctionType scrutty =
@@ -1968,9 +1948,6 @@ public:
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    llvm::errs() << "running HaskConstructOpConversionPattern on: "
-                 << op->getName() << " | " << op->getLoc() << "\n";
-
     HaskConstructOp cons = cast<HaskConstructOp>(op);
     ModuleOp mod = cons.getParentOfType<ModuleOp>();
 
@@ -2101,10 +2078,6 @@ public:
 
     const Optional<int> default_ix = caseop.getDefaultAltIndex();
 
-    llvm::errs() << "running CaseIntOpConversionPattern on: " << op->getName()
-                 << " | " << op->getLoc() << "\n";
-    llvm::errs() << caseop << "\n";
-
     Value scrutineeInt = rewriter.create<LLVM::PtrToIntOp>(
         caseop.getLoc(), LLVM::LLVMType::getInt64Ty(rewriter.getContext()),
         caseop.getScrutinee());
@@ -2121,7 +2094,6 @@ public:
     // auto I8PtrTy = LLVM::LLVMType::getInt8PtrTy(rewriter.getContext());
 
     // TODO: get block of current caseop?
-    llvm::errs() << __LINE__ << "\n";
     for (int i = 0; i < caseop.getNumAlts(); ++i) {
 
       if (default_ix && i == *default_ix) {
@@ -2204,8 +2176,6 @@ public:
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    llvm::errs() << "running ThunkifyOpConversionPattern on: " << op->getName()
-                 << " | " << op->getLoc() << "\n";
 
     ThunkifyOp thunkify = cast<ThunkifyOp>(op);
     ModuleOp mod = thunkify.getParentOfType<ModuleOp>();
@@ -2230,8 +2200,6 @@ public:
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    llvm::errs() << "running ThunkifyOpConversionPattern on: " << op->getName()
-                 << " | " << op->getLoc() << "\n";
 
     TransmuteOp transmute = cast<TransmuteOp>(op);
     rewriter.replaceOp(transmute, transmute.getOperand());

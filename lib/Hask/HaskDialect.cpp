@@ -198,8 +198,6 @@ void HaskDialect::printAttribute(Attribute attr, DialectAsmPrinter &p) const {
 
 void HaskInlinerInterface::handleTerminator(
     Operation *op, ArrayRef<Value> valuesToRepl) const {
-  llvm::errs() << "handleTerminator(" << *op << ", " << valuesToRepl[0]
-               << ")\n";
   if (auto returnOp = mlir::dyn_cast<ReturnOp>(op)) {
     valuesToRepl[0].replaceAllUsesWith(returnOp.getOperand(0));
     return;

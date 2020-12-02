@@ -130,7 +130,6 @@ struct OutlineUknownForcePattern : public mlir::OpRewritePattern<ForceOp> {
         assert(false && "force not in entry BB");
         return failure();
       }
-      llvm::errs() << "- UNK FORCE: " << force << "\n";
 
       // is this going to break *completely*? or only partially?
       std::unique_ptr<Region> r = std::make_unique<Region>();
@@ -188,10 +187,7 @@ struct InlineApEagerPattern : public mlir::OpRewritePattern<ApEagerOp> {
       return failure();
     }
 
-    llvm::errs() << ap << "\n";
     if (parent.getName() == apfn.getValue().str()) {
-
-      llvm::errs() << "  - RECURSIVE: |" << ap << "|\n";
       return failure();
     }
 
@@ -317,10 +313,6 @@ struct OutlineRecursiveApEagerOfThunkPattern
         rewriter.getUnknownLoc(), mkForcedFnType(called.getType()),
         mlir::FlatSymbolRefAttr::get(clonedFnName, rewriter.getContext()));
 
-    // llvm::errs() << "\nCLONED: ";
-    // clonedFnRef.print(llvm::errs(), flags.printGenericOpForm());
-    // assert(false && "printed original and cloned");
-
     rewriter.replaceOpWithNewOp<ApEagerOp>(ap, clonedFnRef, clonedFnCallArgs,
                                            called.getType().getResult(0));
 
@@ -341,16 +333,11 @@ struct OutlineRecursiveApEagerOfThunkPattern
       // This is of course crazy. We should handle the case if we have
       // multiple force()s.
 
-      llvm::errs() << __FUNCTION__ << ":" << __LINE__ << "\n";
       ForceOp uniqueForceOfArg = dyn_cast<ForceOp>(arg.use_begin().getUser());
-      llvm::errs() << __FUNCTION__ << ":" << __LINE__ << "\n";
-
       if (!uniqueForceOfArg) {
         assert(false && "this precondition has already been checked!");
         return failure();
       }
-
-      llvm::errs() << __FUNCTION__ << ":" << __LINE__ << "\n";
 
       // we are safe to create a new function because we have a unique force
       // of an argument. We can change the type of the function and we can
@@ -360,20 +347,9 @@ struct OutlineRecursiveApEagerOfThunkPattern
       uniqueForceOfArg.replaceAllUsesWith(arg);
       arg.setType(uniqueForceOfArg.getType());
       rewriter.eraseOp(uniqueForceOfArg);
-      llvm::errs() << __FUNCTION__ << ":" << __LINE__ << "\n";
     }
 
-    llvm::errs() << "clonedFn:\n";
-    llvm::errs() << clonedfn << "\n";
-    llvm::errs() << "------\n";
-
     mod.push_back(clonedfn);
-
-    llvm::errs() << "mod:\n";
-    llvm::errs() << mod << "\n";
-    llvm::errs() << "------\n";
-
-    //    assert(false);
     return success();
   }
 };
@@ -434,9 +410,6 @@ struct OutlineRecursiveApEagerOfConstructorPattern
     assert(constructedArgument.getNumOperands() == 1);
     SmallVector<Value, 4> improvedFnCallArgs(
         {constructedArgument.getOperand(0)});
-
-    llvm::errs() << "- ap: " << ap << "\n"
-                 << "-arg: " << constructedArgument << "\n";
 
     assert(parentfn.getNumArguments() == 1);
 
@@ -611,15 +584,6 @@ struct CaseOfBoxedRecursiveApWithFinalConstruct
       return failure();
     }
 
-    ModuleOp mod = fn.getParentOfType<ModuleOp>();
-    llvm::errs() << "\n=====\n";
-    llvm::errs() << mod;
-    llvm::errs() << "\n=====\n";
-
-    assert(false);
-
-    llvm::errs() << "====\n";
-    llvm::errs() << fn << "\n";
     assert(false && "case of boxed recursive ap eager");
   }
 };
@@ -686,11 +650,6 @@ struct PeelCommonConstructorsInCase : public mlir::OpRewritePattern<CaseOp> {
         // retConstructs[0].getDataTypeName(),
         caseop.getResult());
 
-    llvm::errs() << caseop << "\n";
-    llvm::errs() << caseop.getType() << "\n";
-    llvm::errs() << caseop.getResult().getType() << "\n";
-    llvm::errs() << peeledConstructor << "\n";
-
     // Now walk all the uses of case other than the peeledConstructor
     // and replace it with peeledConstructor
     for (OpOperand &u : caseop.getResult().getUses()) {
@@ -700,10 +659,6 @@ struct PeelCommonConstructorsInCase : public mlir::OpRewritePattern<CaseOp> {
       u.getOwner()->replaceUsesOfWith(caseop.getResult(),
                                       peeledConstructor.getResult());
     }
-
-    ModuleOp mod = caseop.getParentOfType<ModuleOp>();
-    llvm::errs() << mod << "\n";
-    // assert(false && "peled common constructor");
 
     return success();
   }
@@ -738,7 +693,6 @@ struct WorkerWrapperPass : public Pass {
     patterns.insert<PeelCommonConstructorsInCase>(&getContext());
     patterns.insert<InlineApEagerPattern>(&getContext());
 
-    llvm::errs() << "===Enabling Debugging...===\n";
     ::llvm::DebugFlag = true;
 
     // ConversionTarget target(getContext());
@@ -756,8 +710,6 @@ struct WorkerWrapperPass : public Pass {
       getOperation()->print(llvm::errs());
       llvm::errs() << "\n===\n";
     }
-
-    llvm::errs() << "===Disabling Debugging...===\n";
     ::llvm::DebugFlag = false;
   };
 }; // namespace standalone

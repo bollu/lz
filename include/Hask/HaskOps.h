@@ -207,11 +207,7 @@ class CaseIntOp
 public:
   using Op::Op;
   static StringRef getOperationName() { return "lz.caseint"; };
-  Value getScrutinee() {
-    llvm::errs() << "this->numOperands: "
-                 << this->getOperation()->getNumOperands() << "\n";
-    return this->getOperation()->getOperand(0);
-  }
+  Value getScrutinee() { return this->getOperation()->getOperand(0); }
   int getNumAlts() { return this->getOperation()->getNumRegions(); }
   Region &getAltRHS(int i) { return this->getOperation()->getRegion(i); }
   Region &getDefaultRHS() {
@@ -224,7 +220,6 @@ public:
   }
   Optional<IntegerAttr> getAltLHS(int i) {
     Attribute lhs = getAltLHSs().get("alt" + std::to_string(i));
-    llvm::errs() << "getAltLHS(i=" << i << "): " << lhs << "\n";
     if (lhs.isa<IntegerAttr>()) {
       return {lhs.cast<IntegerAttr>()};
     }
@@ -377,8 +372,6 @@ public:
     Region &r = getRegion();
     ReturnOp ret = dyn_cast<ReturnOp>(r.getBlocks().front().getTerminator());
     assert(ret && "global does not have a return value");
-    llvm::errs() << "ret: " << ret << "\n";
-    assert(false && "case op's ret");
     return ret.getOperand(0).getType();
   }
   llvm::StringRef getGlobalName();
