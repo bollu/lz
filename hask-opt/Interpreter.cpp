@@ -65,6 +65,7 @@ struct InterpreterError {
 
   ~InterpreterError() {
     diag.report();
+    assert(false && "interpreter error");
     exit(1);
   }
 };

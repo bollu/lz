@@ -2145,7 +2145,6 @@ mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder,
 
     IRTypeFn *fnty = tc.lookupValueOfType<IRTypeFn>(
         call->fnname, "expected function to have function type");
-    // mlir::FunctionType mlirfnty = mlirGenTypeFn(builder, fnty);
 
     mlir::Value vf = builder.create<mlir::ConstantOp>(
         builder.getUnknownLoc(),
