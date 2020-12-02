@@ -2145,15 +2145,18 @@ mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder,
 
     IRTypeFn *fnty = tc.lookupValueOfType<IRTypeFn>(
         call->fnname, "expected function to have function type");
-    mlir::FunctionType mlirfnty = mlirGenTypeFn(builder, fnty);
-    mlir::Value vf = builder.create<mlir::standalone::HaskRefOp>(
-        builder.getUnknownLoc(), call->fnname.name, mlirfnty);
+
+    mlir::Value vf = builder.create<mlir::ConstantOp>(
+        builder.getUnknownLoc(),
+        mlir::FlatSymbolRefAttr::get(call->fnname.name, builder.getContext()));
     mlir::Value out = builder.create<mlir::standalone::ApOp>(
-        builder.getUnknownLoc(), vf, args);
+        builder.getUnknownLoc(), vf, args, mlirGenType(builder, fnty->retty));
+
     if (call->strict) {
       out = builder.create<mlir::standalone::ForceOp>(builder.getUnknownLoc(),
                                                       out);
     }
+
     return out;
   }
 

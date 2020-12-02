@@ -44,15 +44,36 @@ HaskDialect::HaskDialect(mlir::MLIRContext *context)
   // #define GET_OP_LIST
   // #include "Hask/HaskOps.cpp.inc"
   //       >();
-  addOperations<HaskReturnOp, MakeI64Op,
-                // DeclareDataConstructorOp,
-                ApOp, ApEagerOp, CaseOp, DefaultCaseOp, HaskRefOp, MakeStringOp,
-                HaskFuncOp, ForceOp, HaskGlobalOp, HaskConstructOp,
-                HaskPrimopAddOp, HaskPrimopSubOp, CaseIntOp, ThunkifyOp,
-                TransmuteOp, HaskLambdaOp>();
-  addTypes<ThunkType, ValueType, HaskFnType>(); // , ADTType>();
+  // clang-format off
+  addOperations<
+    MakeI64Op,
+    // DeclareDataConstructorOp,
+    HaskReturnOp,
+    ApOp,
+    ApEagerOp,
+    CaseOp,
+    DefaultCaseOp,
+    // HaskRefOp,
+    MakeStringOp,
+    ForceOp,
+    HaskGlobalOp,
+    HaskConstructOp,
+    HaskPrimopAddOp,
+    HaskPrimopSubOp,
+    CaseIntOp,
+    ThunkifyOp,
+    TransmuteOp,
+    HaskLambdaOp
+  >();
+  addTypes<
+    // HaskFnType,
+    // ADTType,
+    ThunkType,
+    ValueType
+  >();
   // addAttributes<DataConstructorAttr>();
   addInterfaces<HaskInlinerInterface>();
+  // clang-format on
 }
 
 mlir::Type HaskDialect::parseType(mlir::DialectAsmParser &parser) const {
@@ -64,10 +85,9 @@ mlir::Type HaskDialect::parseType(mlir::DialectAsmParser &parser) const {
       return Type();
     }
     return ThunkType::get(parser.getBuilder().getContext(), t);
-
   } else if (succeeded(parser.parseOptionalKeyword("value"))) {
     return ValueType::get(parser.getBuilder().getContext());
-  } else if (succeeded(parser.parseOptionalKeyword("fn"))) {
+  } /* else if (succeeded(parser.parseOptionalKeyword("fn"))) {
     SmallVector<Type, 4> params;
     Type res;
     if (parser.parseLess()) {
@@ -127,10 +147,11 @@ mlir::Type HaskDialect::parseType(mlir::DialectAsmParser &parser) const {
     }
 
     return HaskFnType::get(parser.getBuilder().getContext(), params, res);
-  } else {
+  } */
+  else {
     parser.emitError(parser.getCurrentLocation(),
-                     "unknown type for hask dialect");
-    assert(false && "unknown type");
+                     "unknown type for hask/lz dialect");
+    // assert(false && "unknown type");
   }
   return Type();
 }
@@ -141,7 +162,7 @@ void HaskDialect::printType(mlir::Type type, mlir::DialectAsmPrinter &p) const {
     p << "thunk<" << thunk.getElementType() << ">";
   } else if (type.isa<ValueType>()) {
     p << "value";
-  } else if (type.isa<HaskFnType>()) {
+  } /* else if (type.isa<HaskFnType>()) {
     HaskFnType fnty = type.cast<HaskFnType>();
     ArrayRef<Type> intys = fnty.getInputTypes();
 
@@ -152,7 +173,8 @@ void HaskDialect::printType(mlir::Type type, mlir::DialectAsmPrinter &p) const {
         p << ", ";
     }
     p << ") -> " << fnty.getResultType() << ">";
-  } else {
+  } */
+  else {
     assert(false && "unknown type");
   }
 }
@@ -178,14 +200,35 @@ void HaskInlinerInterface::handleTerminator(
     Operation *op, ArrayRef<Value> valuesToRepl) const {
   llvm::errs() << "handleTerminator(" << *op << ", " << valuesToRepl[0]
                << ")\n";
-  //    assert(false);
-  //    assert(false && "handling terminator in HaskInliner...");
-  // Only "toy.return" needs to be handled here.
-  auto returnOp = cast<HaskReturnOp>(op);
-  // Replace the values directly with the return operands.
-  //    assert(1 == valuesToRepl.size());
-  valuesToRepl[0].replaceAllUsesWith(returnOp.getOperand());
+  if (auto returnOp = mlir::dyn_cast<ReturnOp>(op)) {
+    valuesToRepl[0].replaceAllUsesWith(returnOp.getOperand(0));
+    return;
+  }
   // https://github.com/llvm/llvm-project/blob/1b012a9146b85d30083a47d4929e86f843a5938d/mlir/docs/Tutorials/Toy/Ch-4.md
+  if (auto returnOp = mlir::dyn_cast<HaskReturnOp>(op)) {
+    valuesToRepl[0].replaceAllUsesWith(returnOp.getOperand());
+    return;
+  }
+
+  assert(false && "unknown return operation");
 }
 
-// === LOWERING ===
+bool HaskDialect::isFunctionRecursive(FuncOp funcOp) {
+  // https://mlir.llvm.org/docs/Tutorials/UnderstandingTheIRStructure/
+  bool isrec = false;
+  funcOp.walk([&](ConstantOp constop) {
+    mlir::FlatSymbolRefAttr ref =
+        constop.getValue().dyn_cast<FlatSymbolRefAttr>();
+    if (!ref) {
+      return WalkResult::advance();
+    }
+
+    if (ref.getValue() == funcOp.getName()) {
+      isrec = true;
+      return WalkResult::interrupt();
+    }
+
+    return WalkResult::advance();
+  });
+  return isrec;
+}

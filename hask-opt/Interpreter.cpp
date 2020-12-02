@@ -65,6 +65,7 @@ struct InterpreterError {
 
   ~InterpreterError() {
     diag.report();
+    assert(false && "interpreter error");
     exit(1);
   }
 };
@@ -192,10 +193,6 @@ struct Interpreter {
       return;
     }
 
-    if (HaskRefOp ref = dyn_cast<HaskRefOp>(op)) {
-      env.addNew(ref.getResult(), InterpValue::ref(ref.getRef().str()));
-      return;
-    }
     if (ApOp ap = dyn_cast<ApOp>(op)) {
       InterpValue fn = env.lookup(ap.getLoc(), ap.getFn());
 
@@ -390,8 +387,27 @@ struct Interpreter {
     }
 
     if (mlir::ConstantIntOp cint = mlir::dyn_cast<mlir::ConstantIntOp>(op)) {
-      llvm::errs() << "constant int op: " << op << "\n";
       env.addNew(cint.getResult(), InterpValue::i(cint.getValue()));
+      return;
+    }
+
+    if (mlir::ConstantOp constop = mlir::dyn_cast<mlir::ConstantOp>(op)) {
+      if (mlir::IntegerAttr consti =
+              constop.getValue().dyn_cast<mlir::IntegerAttr>()) {
+        env.addNew(constop.getResult(), InterpValue::i(consti.getInt()));
+        return;
+      }
+
+      if (mlir::FlatSymbolRefAttr constref =
+              constop.getValue().dyn_cast<mlir::FlatSymbolRefAttr>()) {
+        env.addNew(constop.getResult(),
+                   InterpValue::ref(constref.getValue().str()));
+        return;
+      }
+
+      InterpreterError err(op.getLoc());
+      err << "INTERPRETER ERROR: unknown type of constant: |" << op << "|\n";
+
       return;
     }
 
@@ -400,11 +416,11 @@ struct Interpreter {
   };
 
   TerminatorResult interpretTerminator(Operation &op, Env &env) {
-    if (HaskReturnOp ret = dyn_cast<HaskReturnOp>(op)) {
-      return TerminatorResult(env.lookup(ret.getLoc(), ret.getOperand()));
-    } else if (ReturnOp ret = dyn_cast<ReturnOp>(op)) {
-      // TODO: we assume we have only one return value
+    if (ReturnOp ret = dyn_cast<ReturnOp>(op)) {
       return TerminatorResult(env.lookup(ret.getLoc(), ret.getOperand(0)));
+    } else if (HaskReturnOp ret = dyn_cast<HaskReturnOp>(op)) {
+      // TODO: we assume we have only one return value
+      return TerminatorResult(env.lookup(ret.getLoc(), ret.getOperand()));
     } else {
       InterpreterError err(op.getLoc());
       err << "unknown terminator: |" << op << "|\n";
@@ -465,7 +481,7 @@ struct Interpreter {
     llvm::errs().resetColor();
 
     // functions are isolated from above; create a fresh environment
-    if (HaskFuncOp haskfn = module.lookupSymbol<HaskFuncOp>(funcname)) {
+    if (FuncOp haskfn = module.lookupSymbol<FuncOp>(funcname)) {
       return interpretRegion(haskfn.getRegion(), args, Env());
     }
 
@@ -476,7 +492,8 @@ struct Interpreter {
     assert(false && "unable to find function.");
   }
 
-  // InterpValue interpretFunction(HaskFuncOp func, ArrayRef<InterpValue> args)
+  // InterpValue interpretFunction(HaskFuncOp func, ArrayRef<InterpValue>
+  // args)
   // {
   //   std::string funcName = func.getName().str();
   //   llvm::errs().changeColor(llvm::raw_fd_ostream::GREEN);

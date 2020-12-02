@@ -9,45 +9,41 @@ module {
 
   // k :: SimpleInt -> (SimpleInt -> SimpleInt); (k x) y = x
 
-  lz.func @k(%i: !lz.thunk<!lz.value>) -> !lz.fn<( !lz.thunk<!lz.value> ) -> !lz.value > {
-        %lam = lz.lambda [%i: !lz.thunk<!lz.value>] (%j: !lz.thunk<!lz.value>) -> !lz.value {
-         	%iv = lz.force(%i): !lz.value
-            lz.return(%iv): !lz.value 
-        }
-        lz.return(%lam): !lz.fn<(!lz.thunk<!lz.value>) -> !lz.value>
+  func @k(%i: !lz.thunk<!lz.value>) -> ((!lz.thunk<!lz.value>) -> !lz.value) {
+    %lam = lz.lambda [%i: !lz.thunk<!lz.value>] (%j: !lz.thunk<!lz.value>) -> !lz.value {
+      %iv = lz.force(%i): !lz.value
+      lz.return %iv : !lz.value
+    }
+    return %lam : (!lz.thunk<!lz.value>) -> !lz.value
   }
 
-  lz.func @one () -> !lz.value {
-       %v = lz.make_i64(1)
-       %boxed = lz.construct(@SimpleInt, %v:!lz.value)
-       lz.return(%boxed): !lz.value
-     }
+  func @one() -> !lz.value {
+    %v = lz.make_i64(1)
+    %boxed = lz.construct(@SimpleInt, %v:!lz.value)
+    return %boxed : !lz.value
+  }
 
-
-  lz.func @two () -> !lz.value {
-       %v = lz.make_i64(2)
-       %boxed = lz.construct(@SimpleInt, %v:!lz.value)
-       lz.return(%boxed): !lz.value
-     }
-
+  func @two() -> !lz.value {
+    %v = lz.make_i64(2)
+    %boxed = lz.construct(@SimpleInt, %v:!lz.value)
+    return %boxed : !lz.value
+  }
 
   // 1 + 2 = 3
-  lz.func@main () -> !lz.value {
-      %onef = lz.ref(@one) : !lz.fn<() -> !lz.value>
-      %onet = lz.ap(%onef: !lz.fn<() -> !lz.value>)
+  func @main() -> !lz.value {
+    %onef = constant @one : () -> !lz.value
+    %onet = lz.ap(%onef: () -> !lz.value)
 
-      %twof = lz.ref(@two) :!lz.fn<() -> !lz.value>
-      %twot = lz.ap(%twof : !lz.fn<() -> !lz.value>)
-      
-      %kf = lz.ref(@k): !lz.fn<( !lz.thunk<!lz.value> ) ->  !lz.fn<( !lz.thunk<!lz.value> ) -> !lz.value >>
-      %k2t = lz.ap(%kf: !lz.fn<( !lz.thunk<!lz.value> ) ->  !lz.fn<( !lz.thunk<!lz.value> ) -> !lz.value >> , %twot)
-      %k2v = lz.force(%k2t): !lz.fn<( !lz.thunk<!lz.value> ) -> !lz.value>
-	
-	  %k21t = lz.ap(%k2v: !lz.fn<( !lz.thunk<!lz.value> ) -> !lz.value>, %onet)
+    %twof = constant @two : () -> !lz.value
+    %twot = lz.ap(%twof : () -> !lz.value)
 
-      %outv = lz.force(%k21t): !lz.value
-      lz.return(%outv) : !lz.value
-    }
+    %kf = constant @k : (!lz.thunk<!lz.value>) -> ((!lz.thunk<!lz.value>) -> !lz.value)
+    %k2t = lz.ap(%kf: (!lz.thunk<!lz.value>) -> ((!lz.thunk<!lz.value>) -> !lz.value), %twot)
+    %k2v = lz.force(%k2t): (!lz.thunk<!lz.value>) -> !lz.value
+
+    %k21t = lz.ap(%k2v: (!lz.thunk<!lz.value>) -> !lz.value, %onet)
+
+    %outv = lz.force(%k21t): !lz.value
+    return %outv : !lz.value
+  }
 }
-
-

@@ -13,44 +13,44 @@
 module {
   // f :: Maybe -> Maybe
   // f i = case i of Maybe i# -> case i# of 0 -> Maybe 42; _ -> f ( Maybe(i# -# 1#))
-  lz.func @f (%i : !lz.thunk<!lz.value>) -> !lz.value {
-      %icons = lz.force(%i): !lz.value
-      %reti = lz.case @Maybe %icons 
-           [@Nothing -> {
-              %nothing = lz.construct(@Nothing)
-              lz.return (%nothing):!lz.value
-           }
-           [@Just -> { ^entry(%ihash: !lz.value):
-              %retj = lz.caseint %ihash
-                  [0 -> {
-                        %fortytwo = lz.make_i64(42)
-                        %boxed = lz.construct(@Just, %fortytwo:!lz.value)
-                        lz.return(%boxed) : !lz.value
-                  }]
-                  [@default ->  {
-                        %one = lz.make_i64(1)
-                        %isub = lz.primop_sub(%ihash, %one)
-                        %boxed_isub = lz.construct(@Just, %isub: !lz.value)
-                        %boxed_isub_t = lz.thunkify(%boxed_isub : !lz.value) : !lz.thunk<!lz.value>
-                        %f = lz.ref(@f): !lz.fn<(!lz.thunk<!lz.value>) -> !lz.value>
-                        %rec_t = lz.ap(%f : !lz.fn<(!lz.thunk<!lz.value>) -> !lz.value> , %boxed_isub_t)
-                        %rec_v = lz.force(%rec_t): !lz.value 
-                        lz.return(%rec_v): !lz.value
-                  }]
-              lz.return(%retj):!lz.value
-           }]
-      lz.return(%reti): !lz.value
-    }
+  func @f (%i : !lz.thunk<!lz.value>) -> !lz.value {
+    %icons = lz.force(%i): !lz.value
+    %reti = lz.case @Maybe %icons
+      [@Nothing -> {
+        %nothing = lz.construct(@Nothing)
+        lz.return %nothing : !lz.value
+      }]
+      [@Just -> { ^entry(%ihash: !lz.value):
+        %retj = lz.caseint %ihash
+        [0 -> {
+          %fortytwo = lz.make_i64(42)
+          %boxed = lz.construct(@Just, %fortytwo:!lz.value)
+          lz.return %boxed : !lz.value
+        }]
+        [@default -> {
+          %one = lz.make_i64(1)
+          %isub = lz.primop_sub(%ihash, %one)
+          %boxed_isub = lz.construct(@Just, %isub: !lz.value)
+          %boxed_isub_t = lz.thunkify(%boxed_isub : !lz.value) : !lz.thunk<!lz.value>
+          %f = constant @f : (!lz.thunk<!lz.value>) -> !lz.value
+          %rec_t = lz.ap(%f : (!lz.thunk<!lz.value>) -> !lz.value, %boxed_isub_t)
+          %rec_v = lz.force(%rec_t): !lz.value
+          lz.return %rec_v : !lz.value
+        }]
+        lz.return %retj :!lz.value
+      }]
+    return %reti : !lz.value
+  }
 
   // 1 + 2 = 3
-  lz.func@main () -> !lz.value {
-      %v = lz.make_i64(5)
-      %v_box = lz.construct(@Just, %v:!lz.value)
-      %v_thunk = lz.thunkify(%v_box: !lz.value): !lz.thunk<!lz.value>
-      %f = lz.ref(@f): !lz.fn<(!lz.thunk<!lz.value>) -> !lz.value>
-      %out_t = lz.ap(%f : !lz.fn<(!lz.thunk<!lz.value>) -> !lz.value>, %v_thunk)
-      %out_v = lz.force(%out_t): !lz.value
-      lz.return(%out_v) : !lz.value
-    }
+  func@main () -> !lz.value {
+    %v = lz.make_i64(5)
+    %v_box = lz.construct(@Just, %v:!lz.value)
+    %v_thunk = lz.thunkify(%v_box: !lz.value): !lz.thunk<!lz.value>
+    %f = constant @f: (!lz.thunk<!lz.value>) -> !lz.value
+    %out_t = lz.ap(%f : (!lz.thunk<!lz.value>) -> !lz.value, %v_thunk)
+    %out_v = lz.force(%out_t): !lz.value
+    return %out_v : !lz.value
+  }
 }
 

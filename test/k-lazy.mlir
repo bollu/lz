@@ -2,38 +2,37 @@
 // CHECK: 42
 module {
   // k x y = x
-  lz.func @k (%x: !lz.thunk<!lz.value>, %y: !lz.thunk<!lz.value>) -> !lz.value {
-      %x_v = lz.force(%x):!lz.value
-      lz.return(%x_v) : !lz.value
-    }
+  func @k (%x: !lz.thunk<!lz.value>, %y: !lz.thunk<!lz.value>) -> !lz.value {
+    %x_v = lz.force(%x):!lz.value
+    return %x_v : !lz.value
+  }
 
   // loop a = loop a
-  lz.func @loop (%a: !lz.thunk<!lz.value>) -> !lz.value {
-      %loop = lz.ref(@loop) : !lz.fn<(!lz.thunk<!lz.value>) ->  !lz.value>
-      %out_t = lz.ap(%loop : !lz.fn<(!lz.thunk<!lz.value>) -> !lz.value>, %a)
-      %out_v = lz.force(%out_t) : !lz.value
-      lz.return(%out_v) : !lz.value
-    }
+  func @loop (%a: !lz.thunk<!lz.value>) -> !lz.value {
+    %loop = constant @loop  : (!lz.thunk<!lz.value>) ->  !lz.value
+    %out_t = lz.ap(%loop : (!lz.thunk<!lz.value>) -> !lz.value, %a)
+    %out_v = lz.force(%out_t) : !lz.value
+    return %out_v : !lz.value
+  }
 
   // k (x:(X 42)) (y:(loop (X 42))) = x
-  // main = 
+  // main =
   //     let y = loop x -- builds a closure.
   //     in (k x y)
-  lz.func @main ()  -> !lz.value {
-      %lit_42 = lz.make_i64(42)
-      // TODO: I need a think to transmute to different types.
-      // Because we may want to "downcast" a ADT to a raw value
-      %xv = lz.construct(@X, %lit_42 : !lz.value)
-      %x_t = lz.thunkify(%xv : !lz.value) :!lz.thunk<!lz.value>
+  func @main () -> !lz.value {
+    %lit_42 = lz.make_i64(42)
+    // TODO: I need a think to transmute to different types.
+    // Because we may want to "downcast" a ADT to a raw value
+    %xv = lz.construct(@X, %lit_42 : !lz.value)
+    %x_t = lz.thunkify(%xv : !lz.value) :!lz.thunk<!lz.value>
 
-      %loop = lz.ref(@loop) :  !lz.fn<(!lz.thunk<!lz.value>) -> !lz.value>
-      %y = lz.ap(%loop : !lz.fn<(!lz.thunk<!lz.value>) -> !lz.value>, %x_t)
+    %loop = constant @loop : (!lz.thunk<!lz.value>) -> !lz.value
+    %y = lz.ap(%loop : (!lz.thunk<!lz.value>) -> !lz.value, %x_t)
 
 
-      %k = lz.ref(@k) : !lz.fn<(!lz.thunk<!lz.value>, !lz.thunk<!lz.value>) -> !lz.value>
-      %out_t = lz.ap(%k: !lz.fn<(!lz.thunk<!lz.value>, !lz.thunk<!lz.value>) -> !lz.value>, 
-        %x_t, %y)
-      %out = lz.force(%out_t) : !lz.value
-      lz.return(%out) : !lz.value
-    }
+    %k = constant @k : (!lz.thunk<!lz.value>, !lz.thunk<!lz.value>) -> !lz.value
+    %out_t = lz.ap(%k: (!lz.thunk<!lz.value>, !lz.thunk<!lz.value>) -> !lz.value, %x_t, %y)
+    %out = lz.force(%out_t) : !lz.value
+    return %out : !lz.value
+  }
 }

@@ -13,6 +13,7 @@
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/StandardTypes.h"
@@ -103,8 +104,14 @@ public:
   getEffects(SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
                  &effects) {}
 
+  // NOTE: the return type should be the return type of the *function*. The ApOp
+  // will wrap the fnretty in a ThunkType
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                    Value fn, SmallVectorImpl<Value> &params);
+                    Value fnref, SmallVectorImpl<Value> &params,
+                    Type fnretty);
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                    FuncOp fn, SmallVectorImpl<Value> &params);
+
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   void print(OpAsmPrinter &p);
 };
@@ -136,7 +143,8 @@ public:
                  &effects) {}
 
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                    Value fn, const SmallVectorImpl<Value> &params);
+                    Value fn, const SmallVectorImpl<Value> &params,
+                    Type resultty);
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   void print(OpAsmPrinter &p);
 
@@ -280,6 +288,7 @@ public:
   //  void verify();
 };
 
+/*
 class HaskRefOp
     : public Op<HaskRefOp, OpTrait::OneResult, OpTrait::ZeroOperands,
                 MemoryEffectOpInterface::Trait> {
@@ -301,32 +310,34 @@ public:
   getEffects(SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
                  &effects) {}
 };
+*/
 
-class HaskFuncOp : public Op<HaskFuncOp, OpTrait::ZeroOperands,
-                             OpTrait::ZeroResult, OpTrait::OneRegion,
-                             // OpTrait::AffineScope,
-                             CallableOpInterface::Trait,
-                             SymbolOpInterface::Trait, OpTrait::AffineScope> {
-public:
-  using Op::Op;
-  static StringRef getOperationName() { return "lz.func"; };
-  Region &getBody() { return this->getRegion(); }
-  void print(OpAsmPrinter &p);
-  // MLIR TODO: expose this as part of the Callable interface.
-  int getNumArguments() { return this->getBody().getNumArguments(); }
-  llvm::StringRef getFuncName();
-  HaskFnType getFunctionType();
-  Type getReturnType();
-
-  bool isRecursive();
-  static ParseResult parse(OpAsmParser &parser, OperationState &result);
-  static const char *getReturnTypeAttributeKey() { return "retty"; }
-  Region *getCallableRegion() { return &this->getRegion(); };
-  ArrayRef<Type> getCallableResults() { return this->getReturnType(); };
-
-  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                    std::string FuncName, HaskFnType fnty);
-};
+// class HaskFuncOp : public Op<HaskFuncOp, OpTrait::ZeroOperands,
+//                              OpTrait::ZeroResult, OpTrait::OneRegion,
+//                              // OpTrait::AffineScope,
+//                              CallableOpInterface::Trait,
+//                              SymbolOpInterface::Trait, OpTrait::AffineScope>
+//                              {
+// public:
+//   using Op::Op;
+//   static StringRef getOperationName() { return "lz.func"; };
+//   Region &getBody() { return this->getRegion(); }
+//   void print(OpAsmPrinter &p);
+//   // MLIR TODO: expose this as part of the Callable interface.
+//   int getNumArguments() { return this->getBody().getNumArguments(); }
+//   llvm::StringRef getFuncName();
+//   HaskFnType getFunctionType();
+//   Type getReturnType();
+//
+//   bool isRecursive();
+//   static ParseResult parse(OpAsmParser &parser, OperationState &result);
+//   static const char *getReturnTypeAttributeKey() { return "retty"; }
+//   Region *getCallableRegion() { return &this->getRegion(); };
+//   ArrayRef<Type> getCallableResults() { return this->getReturnType(); };
+//
+//   static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
+//                     std::string FuncName, HaskFnType fnty);
+// };
 
 // replace case x of name { default -> ... } with name = force(x);
 class ForceOp : public Op<ForceOp, OpTrait::OneResult, OpTrait::OneOperand,
@@ -365,12 +376,11 @@ public:
   Region &getRegion() { return this->getOperation()->getRegion(0); };
   Type getType() {
     Region &r = getRegion();
-    HaskReturnOp ret =
-        dyn_cast<HaskReturnOp>(r.getBlocks().front().getTerminator());
+    ReturnOp ret = dyn_cast<ReturnOp>(r.getBlocks().front().getTerminator());
     assert(ret && "global does not have a return value");
     llvm::errs() << "ret: " << ret << "\n";
     assert(false && "case op's ret");
-    return ret.getType();
+    return ret.getOperand(0).getType();
   }
   llvm::StringRef getGlobalName();
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
