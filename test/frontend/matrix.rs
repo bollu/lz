@@ -1,4 +1,4 @@
-// RUN: ../../build/bin/frontend %s -interpret
+// RUN: frontend %s -interpret
 
 struct MatrixSequence(i64, i64);
 fn reduce1d(m: !MatrixSequence) -> !i64 {

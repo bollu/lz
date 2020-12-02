@@ -1,4 +1,4 @@
-// RUN: ../../build/bin/frontend %s  -interpret | FileCheck %s
+// RUN: frontend %s  -interpret | FileCheck %s
 // CHECK: value: constructor(Just 42)
 enum MaybeInt { Just(!i64), Nothing() };
 

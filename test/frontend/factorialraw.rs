@@ -1,4 +1,4 @@
-// RUN: ../../build/bin/frontend %s  -interpret | FileCheck %s
+// RUN: frontend %s  -interpret | FileCheck %s
 // CHECK: value: 120
 
 
