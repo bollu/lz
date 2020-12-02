@@ -628,6 +628,9 @@ struct PeelCommonConstructorsInCase : public mlir::OpRewritePattern<CaseOp> {
 
     // 1. Fix the returns by directly returning the thing the constructor is
     //    wrapping..
+
+    // cache the constructor name before erasing the Op
+    std::string dataConstructorName = retConstructs[0].getDataConstructorName().str();
     for (int i = 0; i < (int)rets.size(); ++i) {
       assert(retConstructs[i].getNumOperands() == 1);
       rets[i].setOperand(retConstructs[i].getOperand(0));
@@ -646,7 +649,8 @@ struct PeelCommonConstructorsInCase : public mlir::OpRewritePattern<CaseOp> {
 
     HaskConstructOp peeledConstructor = rewriter.create<HaskConstructOp>(
         FusedLoc::get(constructorLocs, caseop.getContext()),
-        retConstructs[0].getDataConstructorName(),
+        dataConstructorName,
+        // retConstructs[0].getDataConstructorName(),
         // retConstructs[0].getDataTypeName(),
         caseop.getResult());
 

@@ -385,8 +385,8 @@ class HaskConstructOp
 public:
   using Op::Op;
   static StringRef getOperationName() { return "lz.construct"; };
-  static const char *getDataConstructorAttrName() { return "dataconstructor"; }
-  static const char *getDataTypeAttrName() { return "datatype"; }
+  static StringRef getDataConstructorAttrName() { return "dataconstructor"; }
+  static StringRef getDataTypeAttrName() { return "datatype"; }
   StringRef getDataConstructorName() {
     return getAttrOfType<FlatSymbolRefAttr>(getDataConstructorAttrName())
         .getValue();
