@@ -25,6 +25,12 @@ Convert GHC Core to MLIR.
 
 # Log:  [newest] to [oldest]
 
+
+# Thursday, Dec 12th
+- Our transformation of outline/inline is very similar to converting a `while(c){..}`
+  into an `if(c) { do{..}while(c)}`. What other "classical loop knowledge"
+  can we take?
+
 # Thursday, Nov 26th
 - it seems like using `clang++` is **mandatory** to get correct builds with MLIR. When
   anurudh was attempting to compile the project, we were getting divergent results

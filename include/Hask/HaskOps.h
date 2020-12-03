@@ -122,6 +122,13 @@ class ApEagerOp
 public:
   using Op::Op;
   static StringRef getOperationName() { return "lz.apEager"; };
+
+  std::string getFnName() {
+    ConstantOp nameOp = getFn().getDefiningOp<ConstantOp>();
+    FlatSymbolRefAttr nameAttr = nameOp.getValue().cast<FlatSymbolRefAttr>();
+    return nameAttr.getValue().str();
+  }
+
   Value getFn() { return this->getOperation()->getOperand(0); };
   int getNumFnArguments() {
     return this->getOperation()->getNumOperands() - 1;

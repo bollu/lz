@@ -355,132 +355,80 @@ struct OutlineRecursiveApEagerOfThunkPattern
 // ===INPUT===
 // C { MKC(V) }
 // @f(%inc: C)
-//  %inv = extract(@MKC, %inc) : V
-//  %w = ... : V
-//  %wc = construct(@MKC, w) : C
-//  %rec = apEager(@f, wc)
-// ===OUTPUT===
-// @frec(%inv: V)
-//  %inv = extract(@MKC, %inc) : V
-//  %w = ... : V
-//  %wc = construct(@MKC, w) : C
-//  %rec = apEager(@f, wc)
-// @f(%inc: C)
-//  %inv = extract(%inc) : V
-//  apEager(@frec, inv)
-
-struct OutlineRecursiveApEagerOfConstructorPattern
-    : public mlir::OpRewritePattern<ApEagerOp> {
-  OutlineRecursiveApEagerOfConstructorPattern(mlir::MLIRContext *context)
-      : OpRewritePattern<ApEagerOp>(context, /*benefit=*/1) {}
+// ...
+// %out = constructor(C, %w)
+// lz.return (%out)
+struct OutlineReturnOfConstructor
+    : public mlir::OpRewritePattern<FuncOp> {
+  OutlineReturnOfConstructor(mlir::MLIRContext *context)
+      : OpRewritePattern<FuncOp>(context, /*benefit=*/1) {}
   mlir::LogicalResult
-  matchAndRewrite(ApEagerOp ap,
+  matchAndRewrite(FuncOp parentfn,
                   mlir::PatternRewriter &rewriter) const override {
-    FuncOp parentfn = ap.getParentOfType<FuncOp>();
-    ModuleOp mod = ap.getParentOfType<ModuleOp>();
 
-    mlir::FlatSymbolRefAttr ref = getConstantFnRefFromValue(ap.getFn());
-    // auto ref = ap.getFn().getDefiningOp<HaskRefOp>();
-    if (!ref) {
+    // TODO: use postdom info.
+    if(parentfn.getBlocks().size() != 1) { return failure(); }
+    HaskReturnOp ret = mlir::dyn_cast<HaskReturnOp>(parentfn.getBlocks().front().getTerminator());
+    if (!ret) { return failure(); }
+    ModuleOp mod = parentfn.getParentOfType<ModuleOp>();
+
+    HaskConstructOp constructor =
+        ret.getOperand().getDefiningOp<HaskConstructOp>();
+    if (!constructor) {
       return failure();
     }
 
-    // if the call is not recursive, bail
-    if (parentfn.getName() != ref.getValue().str()) {
+    // currently our functions only support a single argument constructor.
+    // Will need to generalize by allowing tuple of results.
+    if (constructor.getNumOperands() != 1) {
       return failure();
     }
 
-    FuncOp called = mod.lookupSymbol<FuncOp>(ref);
-    assert(called && "unable to find called function.");
 
-    if (ap.getNumFnArguments() != 1) {
-      assert(false && "cannot handle functions with multiple args just yet");
-    }
+    const std::string outlinedFnName =
+        parentfn.getName().str() + "_outline_retcons";
+    // replace all recursive calls f() with. constructor(f_outline())
+    parentfn.walk([&](ApEagerOp call) {
+      if (call.getFnName() != parentfn.getName()) {
+        return WalkResult::advance();
+      }
 
-    HaskConstructOp constructedArgument =
-        ap.getFnArgument(0).getDefiningOp<HaskConstructOp>();
-    if (!constructedArgument) {
-      return failure();
-    }
+      std::vector<Value> callArgs;
+      for (int i = 0; i < call.getNumFnArguments(); ++i) {
+        callArgs.push_back(call.getFnArgument(i));
+      }
+      rewriter.setInsertionPointAfter(call);
+      CallOp outlinedCall = rewriter.create<CallOp>(
+          call.getLoc(),
+          mlir::FlatSymbolRefAttr::get(outlinedFnName, rewriter.getContext()),
+          constructor.getOperand(0).getType(), // type of result
+          callArgs);
+      HaskConstructOp outlinedCallWrap = rewriter.create<HaskConstructOp>(
+          call.getLoc(), constructor.getDataConstructorName(), outlinedCall.getResults());
+      rewriter.replaceOp(call, outlinedCallWrap.getResult());
+      return WalkResult::advance();
+    }); // end walk
 
-    // First focus on SimpleInt. Then expand to Maybe.
-    assert(constructedArgument.getNumOperands() == 1);
-    SmallVector<Value, 4> improvedFnCallArgs(
-        {constructedArgument.getOperand(0)});
+    // OK, now create the actually outlined function by cloning our function.
+    // Then fixup the return by removing the constructor around the return.
+    mlir::FuncOp clonedFn = parentfn.clone();
 
-    assert(parentfn.getNumArguments() == 1);
+    assert(clonedFn.getBody().getBlocks().size() == 1);
+    HaskReturnOp clonedRet =
+        mlir::cast<HaskReturnOp>(clonedFn.getBody().front().getTerminator());
+    HaskConstructOp clonedConstructor =
+        clonedRet.getOperand().getDefiningOp<HaskConstructOp>();
+    Value clonedConstructorArg = clonedConstructor.getOperand(0);
 
-    BlockArgument arg = parentfn.getBody().getArgument(0);
-    // has multiple uses, we can't use this for our purposes.
-    if (!arg.hasOneUse()) {
-      return failure();
-    }
-    // MLIR TODO: add arg.getSingleUse()
-    CaseOp caseOfArg = dyn_cast<CaseOp>(arg.getUses().begin().getUser());
-    if (!caseOfArg) {
-      return failure();
-    }
+    // <original inputs> -> unwrapped output
+    mlir::FunctionType clonedfnty = rewriter.getFunctionType(
+        parentfn.getType().getInputs(), clonedConstructorArg.getType());
+    clonedFn.setType(clonedfnty);
+    // return constructor(val) -> return val
+    rewriter.replaceOpWithNewOp<HaskReturnOp>(clonedRet, clonedConstructorArg);
 
-    std::string clonedFnName =
-        called.getName().str() + "_rec_construct_" +
-        constructedArgument.getDataConstructorName().str() + "_outline";
-    rewriter.setInsertionPoint(ap);
-
-    // 1. Replace the ApEager with a simpler apEager
-    //    that directly passes the parameter
-    SmallVector<Value, 4> clonedFnCallArgs({constructedArgument.getOperand(0)});
-    SmallVector<Type, 4> clonedFnCallArgTys{
-        (constructedArgument.getOperand(0).getType())};
-
-    mlir::FunctionType clonedFnTy = mlir::FunctionType::get(
-        clonedFnCallArgTys, called.getType().getResult(0),
-        rewriter.getContext());
-
-    ConstantOp clonedFnRef = rewriter.create<ConstantOp>(
-        ap.getFn().getLoc(), clonedFnTy,
-        mlir::FlatSymbolRefAttr::get(clonedFnName, rewriter.getContext()));
-
-    // HaskRefOp clonedFnRef = rewriter.create<HaskRefOp>(
-    //     ref.getLoc(), clonedFnName,
-    //     FunctionType::get(
-    //         clonedFnCallArgTys,
-    //         parentfn.getType().cast<FunctionType>().getResult(0),
-    //         mod.getContext()));
-    // HaskFnType::get(mod.getContext(), clonedFnCallArgTys,
-    //                 parentfn.getType().cast<FunctionType>().getResult(0)));
-
-    rewriter.replaceOpWithNewOp<ApEagerOp>(ap, clonedFnRef, clonedFnCallArgs,
-                                           called.getType().getResult(0));
-    FuncOp clonedfn = parentfn.clone();
-
-    // 2. Build the cloned function that is an unboxed version of the
-    //    case. Eliminate the case for the argument RHS.
-    clonedfn.setName(clonedFnName);
-    // NOTE THE REPETITION!
-    clonedfn.getBody().getArgument(0).setType(
-        constructedArgument.getOperand(0).getType());
-    // clonedfn.setType(mkForcedFnType(called.getType()));
-
-    CaseOp caseClonedFnArg = cast<CaseOp>(
-        clonedfn.getBody().getArgument(0).getUses().begin().getUser());
-
-    int altIx = *caseClonedFnArg.getAltIndexForConstructor(
-        constructedArgument.getDataConstructorName());
-
-    InlinerInterface inliner(rewriter.getContext());
-    LogicalResult isInlined = inlineRegion(
-        inliner, &caseClonedFnArg.getAltRHS(altIx), caseClonedFnArg,
-        clonedfn.getBody().getArgument(0), caseClonedFnArg.getResult());
-
-    rewriter.eraseOp(caseClonedFnArg);
-    assert(succeeded(isInlined) && "unable to inline");
-
-    // 3. add the function into the module
-    mod.push_back(clonedfn);
+    mod.push_back(clonedFn);
     return success();
-
-    assert(false && "matched against f(arg) { case(arg): ...; apEager(f, "
-                    "construct(...); } ");
   }
 };
 
@@ -584,87 +532,6 @@ struct CaseOfBoxedRecursiveApWithFinalConstruct
     assert(false && "case of boxed recursive ap eager");
   }
 };
-
-// Can be generalized?
-struct PeelCommonConstructorsInCase : public mlir::OpRewritePattern<CaseOp> {
-  PeelCommonConstructorsInCase(mlir::MLIRContext *context)
-      : OpRewritePattern<CaseOp>(context, /*benefit=*/1) {}
-
-  mlir::LogicalResult
-  matchAndRewrite(CaseOp caseop,
-                  mlir::PatternRewriter &rewriter) const override {
-
-    SmallVector<HaskReturnOp, 4> rets;
-    for (int i = 0; i < caseop.getNumAlts(); ++i) {
-      Region &r = caseop.getAltRHS(i);
-      r.walk([&](HaskReturnOp ret) { rets.push_back(ret); });
-    }
-    assert(rets.size() && "expected at least one return value");
-
-    SmallVector<HaskConstructOp, 4> retConstructs;
-
-    for (HaskReturnOp ret : rets) {
-      HaskConstructOp construct =
-          ret.getOperand().getDefiningOp<HaskConstructOp>();
-      if (!construct) {
-        return failure();
-      }
-      retConstructs.push_back(construct);
-    }
-
-    // TODO: this is too restrictive and will not work for Maybe! Need to
-    // encode things differently
-    for (int i = 0; i < (int)retConstructs.size() - 1; ++i) {
-      if (retConstructs[i].getDataConstructorName() !=
-          retConstructs[i + 1].getDataConstructorName()) {
-        return failure();
-      }
-    }
-
-    // OK, we know everything we need to know.
-
-    // 1. Fix the returns by directly returning the thing the constructor is
-    //    wrapping..
-
-    // cache the constructor name before erasing the Op
-    std::string dataConstructorName = retConstructs[0].getDataConstructorName().str();
-    for (int i = 0; i < (int)rets.size(); ++i) {
-      assert(retConstructs[i].getNumOperands() == 1);
-      rets[i].setOperand(retConstructs[i].getOperand(0));
-      rewriter.eraseOp(retConstructs[i]);
-    }
-
-    // 2. Create the peeled constructor
-    SmallVector<Location, 4> constructorLocs;
-    for ([[maybe_unused]] HaskConstructOp cons : retConstructs) {
-      // TODO use correct locations for error messages
-      // constructorLocs.push_back(cons.getLoc());
-      constructorLocs.push_back(rewriter.getUnknownLoc());
-    }
-
-    rewriter.setInsertionPointAfter(caseop);
-
-    HaskConstructOp peeledConstructor = rewriter.create<HaskConstructOp>(
-        FusedLoc::get(constructorLocs, caseop.getContext()),
-        dataConstructorName,
-        // retConstructs[0].getDataConstructorName(),
-        // retConstructs[0].getDataTypeName(),
-        caseop.getResult());
-
-    // Now walk all the uses of case other than the peeledConstructor
-    // and replace it with peeledConstructor
-    for (OpOperand &u : caseop.getResult().getUses()) {
-      if (u.getOwner() == peeledConstructor.getOperation()) {
-        continue;
-      }
-      u.getOwner()->replaceUsesOfWith(caseop.getResult(),
-                                      peeledConstructor.getResult());
-    }
-
-    return success();
-  }
-};
-
 // ===INPUT===
 // @f(box: List) = case List of Nil -> Foo y; Cons x xs -> Foo z
 // ===OUTPUT====
@@ -765,10 +632,10 @@ struct WorkerWrapperPass : public Pass {
     patterns.insert<ForceOfKnownApPattern>(&getContext());
     patterns.insert<ForceOfThunkifyPattern>(&getContext());
     patterns.insert<OutlineRecursiveApEagerOfThunkPattern>(&getContext());
-    patterns.insert<OutlineRecursiveApEagerOfConstructorPattern>(&getContext());
+    patterns.insert<OutlineReturnOfConstructor>(&getContext());
     patterns.insert<FloatConstructorFromCasePattern>(&getContext());
     patterns.insert<CaseOfKnownConstructorPattern>(&getContext());
-    // patterns.insert<CaseOfBoxedRecursiveApWithFinalConstruct>(&getContext());
+    patterns.insert<CaseOfBoxedRecursiveApWithFinalConstruct>(&getContext());
 
     // change:
     //   retval = case x of L1 -> { ...; return Foo(x1); } L2 -> { ...; return
@@ -776,7 +643,6 @@ struct WorkerWrapperPass : public Pass {
     // into:
     //  v = case x of L1 -> { ...; return x1; } L2 -> { ...; return x2; };
     //  retval = Foo(v)
-    //  patterns.insert<PeelCommonConstructorsInCase>(&getContext()); <- does
     //  not work?
     patterns.insert<InlineApEagerPattern>(&getContext());
 
