@@ -559,8 +559,8 @@ struct CaseOfBoxedRecursiveApWithFinalConstruct
 // @f(box: List) = case List of Nil -> Foo y; Cons x xs -> Foo z
 // ===OUTPUT====
 // @f(box: List) = Foo (case List of Nil -> y; Cons x xs -> z)
-struct FloatConstructorFromCasePattern : public mlir::OpRewritePattern<CaseOp> {
-  FloatConstructorFromCasePattern(mlir::MLIRContext *context)
+struct PeelConstructorsFromCasePattern : public mlir::OpRewritePattern<CaseOp> {
+  PeelConstructorsFromCasePattern(mlir::MLIRContext *context)
       : OpRewritePattern<CaseOp>(context, /*benefit=*/1) {}
 
   mlir::LogicalResult
@@ -656,7 +656,7 @@ struct WorkerWrapperPass : public Pass {
     patterns.insert<ForceOfThunkifyPattern>(&getContext());
     patterns.insert<OutlineRecursiveApEagerOfThunkPattern>(&getContext());
     patterns.insert<OutlineReturnOfConstructor>(&getContext());
-    patterns.insert<FloatConstructorFromCasePattern>(&getContext());
+    patterns.insert<PeelConstructorsFromCasePattern>(&getContext());
     patterns.insert<CaseOfKnownConstructorPattern>(&getContext());
     patterns.insert<CaseOfBoxedRecursiveApWithFinalConstruct>(&getContext());
 
