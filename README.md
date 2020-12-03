@@ -30,6 +30,87 @@ Convert GHC Core to MLIR.
 - Our transformation of outline/inline is very similar to converting a `while(c){..}`
   into an `if(c) { do{..}while(c)}`. What other "classical loop knowledge"
   can we take?
+- Is this inlining/outlining nonsense literally just performing CPS? Aren't
+  we encoding things as "continuations" when we outline+call? isn't SSA supposed
+  to free us from this? why isn't it freeing us from this? is it because of
+  recursion? If so, should we convert a `scf.recurse`?
+
+On giving haskell the complicated program I'm interested in:
+
+```hs
+{-# LANGUAGE MagicHash #-}
+module GHCMaybeIntNonTailRecursive(main) where
+import GHC.Int
+import GHC.Prim
+data MaybeHash = JustHash Int# | NothingHash deriving(Show)
+
+f :: MaybeHash -> MaybeHash
+f mi = case mi of
+        JustHash i# -> 
+               case i# of
+                 0# -> JustHash 5#
+                 _ -> case f (JustHash (i# -# 1#)) of
+                      NothingHash -> NothingHash
+                      JustHash j# -> JustHash (j# +# 7#)
+        NothingHash -> NothingHash
+
+main :: IO ()
+main = print (f (JustHash 100#))
+```
+
+and compiled with `-O2 -ddump-simple` it produces the core:
+
+
+- Entry point: `main`
+```
+main
+  = GHC.IO.Handle.Text.hPutStr'
+      GHC.IO.Handle.FD.stdout
+      GHCMaybeIntNonTailRecursive.main1
+      GHC.Types.True
+```
+
+- `GHCMaybeIntNonTailRecursive.main1`: calls `GHCMaybeIntNonTailRecursive.main_$sf` and then does the printing work here.
+```
+GHCMaybeIntNonTailRecursive.main1
+  = case GHCMaybeIntNonTailRecursive.main_$sf 100# of {
+      JustHash b1_aLr ->
+        ++
+          @ Char
+          GHCMaybeIntNonTailRecursive.$fShowMaybeHash6
+          (case GHC.Show.$wshowSignedInt
+                  0# b1_aLr GHCMaybeIntNonTailRecursive.$fShowMaybeHash8
+           of
+           { (# ww5_a1RD, ww6_a1RE #) ->
+           GHC.Types.: @ Char ww5_a1RD ww6_a1RE
+           });
+      NothingHash -> GHCMaybeIntNonTailRecursive.$fShowMaybeHash3
+    }
+```
+
+- `GHCMaybeIntNonTailRecursive.main_$sf`: GHC does not optimize this. It just bakes a stupid
+   recursive call. It's unable to prove that the wrapper in un-necessary!
+   Please let us be able to prove this using `SCEV`ness?
+
+```
+GHCMaybeIntNonTailRecursive.main_$sf [Occ=LoopBreaker]
+  :: Int# -> MaybeHash
+[GblId, Arity=1, Caf=NoCafRefs, Str=<S,1*U>, Unf=OtherCon []]
+GHCMaybeIntNonTailRecursive.main_$sf
+  = \ (sc_s1X4 :: Int#) ->
+      case sc_s1X4 of ds_d1IV {
+        __DEFAULT ->
+          case GHCMaybeIntNonTailRecursive.main_$sf (-# ds_d1IV 1#) of {
+            JustHash j#_aHM ->
+              GHCMaybeIntNonTailRecursive.JustHash (+# j#_aHM 7#);
+            NothingHash -> GHCMaybeIntNonTailRecursive.NothingHash
+          };
+        0# -> lvl_r1XW
+      }
+```
+
+- TODO for tomorrow: write equivalent C code and see what LLVM generates.
+
 
 # Thursday, Nov 26th
 - it seems like using `clang++` is **mandatory** to get correct builds with MLIR. When

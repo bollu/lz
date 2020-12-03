@@ -1,0 +1,118 @@
+  // f :: Maybe Int# -> Maybe Int#
+  // f mi = case mi of
+  //         Just i# ->
+  //            case i# of
+  //             0 -> Just 5;
+  //             _ -> case f (Just(i# -# 1#)) of
+  //                  Nothing -> Nothing
+  //                  Just j# -> Just (j# +# 7#)
+  //          Nothing -> Nothing
+  //
+  // gwork :: Int# -> Int#
+  // gwork i# = case i# of 0 -> 5; _ -> (gwork (i# -# 1)) +# 7#
+  //
+  // gwrap:: Maybe -> Maybe
+  // gwrap mi = case mi of
+  //             Nothing -> Nothing
+  //             Just i# -> Just (gwork i#)
+
+
+// STEP 0:
+// First thing that happens is to case on the `f`.
+Maybe f(Maybe xm) {
+	if (optional<Just> xjust = xm.asJust()) {
+		if (xjust.val == 0) {
+			return 5;
+		} else {
+			Maybe ym = f(Just(xjust.val - 1));
+			if (optional<Just> yjust = ym.asJust()) {
+				return Just(yjust.val + 7);
+			} else {
+				return Maybe::Nothing();
+			}
+ 		}
+	} else {
+		return Maybe::Nothing();
+	}
+}
+
+// STEP 1:
+// Build specialized versions of `f`
+// with both branches. Replace all recursive calls:
+// f(Just(val)) -> fJust(val)
+// f(Nothing) -> fNothing()
+// this replacement happens in BOTH f AND fJust (easy to do)
+//   1. first mutate `f` to replace all calls of the form `f(Just(val)) -> fJust(val)` and similarly for nothing
+//   2. clone `f` to build `fJust`, `fNothing`.
+Maybe fJust(int val) {
+	if(val == 0) { return Maybe::Just(5); }
+	else {
+		// Maybe ym = f(Just(xjust.val - 1));
+		Maybe ym = fJust(xjust.val - 1); // <- UNWRAP
+		if (optional<Just> yjust = ym.asJust()) {
+			return Just(yjust.val + 7);
+		} else {
+			return fNothing();
+		}
+	}
+}
+Maybe fNothing() { return Maybe::Nothing(); }
+Maybe f(Maybe xm) {
+	if (optional<Just> xjust = xm.asJust()) {
+		if (xjust.val == 0) { return Maybe::Just(5); }
+		else {
+			// Maybe ym = f(Just(xjust.val - 1));
+			Maybe ym = fJust(xjust.val - 1); // <- UNWRAP
+			if (optional<Just> yjust = ym.asJust()) {
+				return Just(yjust.val + 7);
+			} else {
+				return Maybe::Nothing();
+			}
+ 		}
+	} else {
+		return fNothing();
+	}
+}
+
+// STEP 2: pull out inner branch of constructors into a tag-value pair.
+Maybe fJust(int val) {
+	if(val == 0) { return Maybe::Just(5); }
+	else {
+		Tag outTag = undef; int outVal = undef;
+
+		// Maybe ym = f(Just(xjust.val - 1));
+		Maybe ym = fJust(xjust.val - 1); // <- UNWRAP
+		if (optional<Just> yjust = ym.asJust()) {
+			outTag = Just; outVal = yjust.val + 7;
+		} else {
+			outTag = Nothing;
+		}
+		return construct(outTag, outVal);
+	}
+}
+
+// STEP 3: pull out outer branch of constructors into a tag-value pair.
+Maybe fJust(int val) {
+	Tag outTag2 = undef; int outval2 = undef;
+	if(val == 0) {
+		outTag2 = Just; outVal2 = 5; 
+		// return Maybe::Just(5);
+	}
+	else {
+		Tag outTag = undef; int outVal = undef;
+
+		// Maybe ym = f(Just(xjust.val - 1));
+		Maybe ym = fJust(xjust.val - 1); // <- UNWRAP
+		if (optional<Just> yjust = ym.asJust()) {
+			outTag = Just; outVal = yjust.val + 7;
+		} else {
+			outTag = Nothing;
+		}
+		// return construct(outTag, outVal);
+		outTag2 = outTag;
+		outVal2 = outVal;
+	}
+	return construct(outTag2, outVal2);
+}
+
+

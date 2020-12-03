@@ -1,0 +1,434 @@
+Loaded package environment from /home/bollu/.ghc/x86_64-linux-8.10.2/environments/default
+[1 of 1] Compiling GHCMaybeIntNonTailRecursive ( GHCMaybeIntNonTailRecursive.hs, GHCMaybeIntNonTailRecursive.o )
+
+==================== Tidy Core ====================
+Result size of Tidy Core
+  = {terms: 211, types: 116, coercions: 0, joins: 0/0}
+
+-- RHS size: {terms: 1, types: 0, coercions: 0, joins: 0/0}
+GHCMaybeIntNonTailRecursive.$fShowMaybeHash7 :: Addr#
+[GblId,
+ Caf=NoCafRefs,
+ Unf=Unf{Src=<vanilla>, TopLvl=True, Value=True, ConLike=True,
+         WorkFree=True, Expandable=True, Guidance=IF_ARGS [] 40 0}]
+GHCMaybeIntNonTailRecursive.$fShowMaybeHash7 = "JustHash "#
+
+-- RHS size: {terms: 2, types: 0, coercions: 0, joins: 0/0}
+GHCMaybeIntNonTailRecursive.$fShowMaybeHash6 :: [Char]
+[GblId,
+ Unf=Unf{Src=<vanilla>, TopLvl=True, Value=False, ConLike=True,
+         WorkFree=False, Expandable=True, Guidance=IF_ARGS [] 20 0}]
+GHCMaybeIntNonTailRecursive.$fShowMaybeHash6
+  = GHC.CString.unpackCString#
+      GHCMaybeIntNonTailRecursive.$fShowMaybeHash7
+
+-- RHS size: {terms: 1, types: 0, coercions: 0, joins: 0/0}
+GHCMaybeIntNonTailRecursive.$fShowMaybeHash4 :: Addr#
+[GblId,
+ Caf=NoCafRefs,
+ Unf=Unf{Src=<vanilla>, TopLvl=True, Value=True, ConLike=True,
+         WorkFree=True, Expandable=True, Guidance=IF_ARGS [] 40 0}]
+GHCMaybeIntNonTailRecursive.$fShowMaybeHash4 = "NothingHash"#
+
+-- RHS size: {terms: 2, types: 0, coercions: 0, joins: 0/0}
+GHCMaybeIntNonTailRecursive.$fShowMaybeHash3 :: [Char]
+[GblId,
+ Unf=Unf{Src=<vanilla>, TopLvl=True, Value=False, ConLike=True,
+         WorkFree=False, Expandable=True, Guidance=IF_ARGS [] 20 0}]
+GHCMaybeIntNonTailRecursive.$fShowMaybeHash3
+  = GHC.CString.unpackCString#
+      GHCMaybeIntNonTailRecursive.$fShowMaybeHash4
+
+-- RHS size: {terms: 1, types: 0, coercions: 0, joins: 0/0}
+GHCMaybeIntNonTailRecursive.$fShowMaybeHash5 :: Addr#
+[GblId,
+ Caf=NoCafRefs,
+ Unf=Unf{Src=<vanilla>, TopLvl=True, Value=True, ConLike=True,
+         WorkFree=True, Expandable=True, Guidance=IF_ARGS [] 20 0}]
+GHCMaybeIntNonTailRecursive.$fShowMaybeHash5 = "#"#
+
+-- RHS size: {terms: 49, types: 33, coercions: 0, joins: 0/0}
+GHCMaybeIntNonTailRecursive.$fShowMaybeHash_$cshowsPrec
+  :: Int -> MaybeHash -> ShowS
+[GblId,
+ Arity=3,
+ Str=<L,1*U(U)><S,1*U><L,U>,
+ Unf=Unf{Src=<vanilla>, TopLvl=True, Value=True, ConLike=True,
+         WorkFree=True, Expandable=True, Guidance=IF_ARGS [20 60 0] 341 30}]
+GHCMaybeIntNonTailRecursive.$fShowMaybeHash_$cshowsPrec
+  = \ (a_aLq :: Int) (ds_d1Qx :: MaybeHash) (eta_B1 :: String) ->
+      case ds_d1Qx of {
+        JustHash b1_aLr ->
+          case a_aLq of { I# x_a1SR ->
+          case >=# x_a1SR 11# of {
+            __DEFAULT ->
+              ++
+                @ Char
+                GHCMaybeIntNonTailRecursive.$fShowMaybeHash6
+                (case GHC.Show.$wshowSignedInt
+                        0#
+                        b1_aLr
+                        (GHC.CString.unpackAppendCString#
+                           GHCMaybeIntNonTailRecursive.$fShowMaybeHash5 eta_B1)
+                 of
+                 { (# ww5_a1RD, ww6_a1RE #) ->
+                 GHC.Types.: @ Char ww5_a1RD ww6_a1RE
+                 });
+            1# ->
+              GHC.Types.:
+                @ Char
+                GHC.Show.$fShow(,)4
+                (++
+                   @ Char
+                   GHCMaybeIntNonTailRecursive.$fShowMaybeHash6
+                   (case GHC.Show.$wshowSignedInt
+                           0#
+                           b1_aLr
+                           (GHC.CString.unpackAppendCString#
+                              GHCMaybeIntNonTailRecursive.$fShowMaybeHash5
+                              (GHC.Types.: @ Char GHC.Show.$fShow(,)2 eta_B1))
+                    of
+                    { (# ww5_a1RD, ww6_a1RE #) ->
+                    GHC.Types.: @ Char ww5_a1RD ww6_a1RE
+                    }))
+          }
+          };
+        NothingHash ->
+          ++ @ Char GHCMaybeIntNonTailRecursive.$fShowMaybeHash3 eta_B1
+      }
+
+-- RHS size: {terms: 2, types: 0, coercions: 0, joins: 0/0}
+lvl_r1XW :: MaybeHash
+[GblId, Caf=NoCafRefs, Str=m1, Unf=OtherCon []]
+lvl_r1XW = GHCMaybeIntNonTailRecursive.JustHash 5#
+
+Rec {
+-- RHS size: {terms: 18, types: 4, coercions: 0, joins: 0/0}
+GHCMaybeIntNonTailRecursive.main_$sf [Occ=LoopBreaker]
+  :: Int# -> MaybeHash
+[GblId, Arity=1, Caf=NoCafRefs, Str=<S,1*U>, Unf=OtherCon []]
+GHCMaybeIntNonTailRecursive.main_$sf
+  = \ (sc_s1X4 :: Int#) ->
+      case sc_s1X4 of ds_d1IV {
+        __DEFAULT ->
+          case GHCMaybeIntNonTailRecursive.main_$sf (-# ds_d1IV 1#) of {
+            JustHash j#_aHM ->
+              GHCMaybeIntNonTailRecursive.JustHash (+# j#_aHM 7#);
+            NothingHash -> GHCMaybeIntNonTailRecursive.NothingHash
+          };
+        0# -> lvl_r1XW
+      }
+end Rec }
+
+-- RHS size: {terms: 1, types: 0, coercions: 0, joins: 0/0}
+GHCMaybeIntNonTailRecursive.$trModule4 :: Addr#
+[GblId,
+ Caf=NoCafRefs,
+ Unf=Unf{Src=<vanilla>, TopLvl=True, Value=True, ConLike=True,
+         WorkFree=True, Expandable=True, Guidance=IF_ARGS [] 20 0}]
+GHCMaybeIntNonTailRecursive.$trModule4 = "main"#
+
+-- RHS size: {terms: 2, types: 0, coercions: 0, joins: 0/0}
+GHCMaybeIntNonTailRecursive.$trModule3 :: GHC.Types.TrName
+[GblId,
+ Caf=NoCafRefs,
+ Str=m1,
+ Unf=Unf{Src=<vanilla>, TopLvl=True, Value=True, ConLike=True,
+         WorkFree=True, Expandable=True, Guidance=IF_ARGS [] 10 20}]
+GHCMaybeIntNonTailRecursive.$trModule3
+  = GHC.Types.TrNameS GHCMaybeIntNonTailRecursive.$trModule4
+
+-- RHS size: {terms: 1, types: 0, coercions: 0, joins: 0/0}
+GHCMaybeIntNonTailRecursive.$trModule2 :: Addr#
+[GblId,
+ Caf=NoCafRefs,
+ Unf=Unf{Src=<vanilla>, TopLvl=True, Value=True, ConLike=True,
+         WorkFree=True, Expandable=True, Guidance=IF_ARGS [] 80 0}]
+GHCMaybeIntNonTailRecursive.$trModule2
+  = "GHCMaybeIntNonTailRecursive"#
+
+-- RHS size: {terms: 2, types: 0, coercions: 0, joins: 0/0}
+GHCMaybeIntNonTailRecursive.$trModule1 :: GHC.Types.TrName
+[GblId,
+ Caf=NoCafRefs,
+ Str=m1,
+ Unf=Unf{Src=<vanilla>, TopLvl=True, Value=True, ConLike=True,
+         WorkFree=True, Expandable=True, Guidance=IF_ARGS [] 10 20}]
+GHCMaybeIntNonTailRecursive.$trModule1
+  = GHC.Types.TrNameS GHCMaybeIntNonTailRecursive.$trModule2
+
+-- RHS size: {terms: 3, types: 0, coercions: 0, joins: 0/0}
+GHCMaybeIntNonTailRecursive.$trModule :: GHC.Types.Module
+[GblId,
+ Caf=NoCafRefs,
+ Str=m,
+ Unf=Unf{Src=<vanilla>, TopLvl=True, Value=True, ConLike=True,
+         WorkFree=True, Expandable=True, Guidance=IF_ARGS [] 10 30}]
+GHCMaybeIntNonTailRecursive.$trModule
+  = GHC.Types.Module
+      GHCMaybeIntNonTailRecursive.$trModule3
+      GHCMaybeIntNonTailRecursive.$trModule1
+
+-- RHS size: {terms: 3, types: 1, coercions: 0, joins: 0/0}
+$krep_r1XX :: GHC.Types.KindRep
+[GblId, Caf=NoCafRefs, Str=m1, Unf=OtherCon []]
+$krep_r1XX
+  = GHC.Types.KindRepTyConApp
+      GHC.Types.$tcInt# (GHC.Types.[] @ GHC.Types.KindRep)
+
+-- RHS size: {terms: 1, types: 0, coercions: 0, joins: 0/0}
+GHCMaybeIntNonTailRecursive.$tcMaybeHash2 :: Addr#
+[GblId,
+ Caf=NoCafRefs,
+ Unf=Unf{Src=<vanilla>, TopLvl=True, Value=True, ConLike=True,
+         WorkFree=True, Expandable=True, Guidance=IF_ARGS [] 40 0}]
+GHCMaybeIntNonTailRecursive.$tcMaybeHash2 = "MaybeHash"#
+
+-- RHS size: {terms: 2, types: 0, coercions: 0, joins: 0/0}
+GHCMaybeIntNonTailRecursive.$tcMaybeHash1 :: GHC.Types.TrName
+[GblId,
+ Caf=NoCafRefs,
+ Str=m1,
+ Unf=Unf{Src=<vanilla>, TopLvl=True, Value=True, ConLike=True,
+         WorkFree=True, Expandable=True, Guidance=IF_ARGS [] 10 20}]
+GHCMaybeIntNonTailRecursive.$tcMaybeHash1
+  = GHC.Types.TrNameS GHCMaybeIntNonTailRecursive.$tcMaybeHash2
+
+-- RHS size: {terms: 7, types: 0, coercions: 0, joins: 0/0}
+GHCMaybeIntNonTailRecursive.$tcMaybeHash :: GHC.Types.TyCon
+[GblId,
+ Caf=NoCafRefs,
+ Str=m,
+ Unf=Unf{Src=<vanilla>, TopLvl=True, Value=True, ConLike=True,
+         WorkFree=True, Expandable=True, Guidance=IF_ARGS [] 10 70}]
+GHCMaybeIntNonTailRecursive.$tcMaybeHash
+  = GHC.Types.TyCon
+      16717800485154621343##
+      8270939015002527636##
+      GHCMaybeIntNonTailRecursive.$trModule
+      GHCMaybeIntNonTailRecursive.$tcMaybeHash1
+      0#
+      GHC.Types.krep$*
+
+-- RHS size: {terms: 3, types: 1, coercions: 0, joins: 0/0}
+GHCMaybeIntNonTailRecursive.$tc'NothingHash1 [InlPrag=NOUSERINLINE[~]]
+  :: GHC.Types.KindRep
+[GblId, Caf=NoCafRefs, Str=m1, Unf=OtherCon []]
+GHCMaybeIntNonTailRecursive.$tc'NothingHash1
+  = GHC.Types.KindRepTyConApp
+      GHCMaybeIntNonTailRecursive.$tcMaybeHash
+      (GHC.Types.[] @ GHC.Types.KindRep)
+
+-- RHS size: {terms: 1, types: 0, coercions: 0, joins: 0/0}
+GHCMaybeIntNonTailRecursive.$tc'NothingHash3 :: Addr#
+[GblId,
+ Caf=NoCafRefs,
+ Unf=Unf{Src=<vanilla>, TopLvl=True, Value=True, ConLike=True,
+         WorkFree=True, Expandable=True, Guidance=IF_ARGS [] 40 0}]
+GHCMaybeIntNonTailRecursive.$tc'NothingHash3 = "'NothingHash"#
+
+-- RHS size: {terms: 2, types: 0, coercions: 0, joins: 0/0}
+GHCMaybeIntNonTailRecursive.$tc'NothingHash2 :: GHC.Types.TrName
+[GblId,
+ Caf=NoCafRefs,
+ Str=m1,
+ Unf=Unf{Src=<vanilla>, TopLvl=True, Value=True, ConLike=True,
+         WorkFree=True, Expandable=True, Guidance=IF_ARGS [] 10 20}]
+GHCMaybeIntNonTailRecursive.$tc'NothingHash2
+  = GHC.Types.TrNameS GHCMaybeIntNonTailRecursive.$tc'NothingHash3
+
+-- RHS size: {terms: 7, types: 0, coercions: 0, joins: 0/0}
+GHCMaybeIntNonTailRecursive.$tc'NothingHash :: GHC.Types.TyCon
+[GblId,
+ Caf=NoCafRefs,
+ Str=m,
+ Unf=Unf{Src=<vanilla>, TopLvl=True, Value=True, ConLike=True,
+         WorkFree=True, Expandable=True, Guidance=IF_ARGS [] 10 70}]
+GHCMaybeIntNonTailRecursive.$tc'NothingHash
+  = GHC.Types.TyCon
+      1818685209417558453##
+      2694524589056238407##
+      GHCMaybeIntNonTailRecursive.$trModule
+      GHCMaybeIntNonTailRecursive.$tc'NothingHash2
+      0#
+      GHCMaybeIntNonTailRecursive.$tc'NothingHash1
+
+-- RHS size: {terms: 3, types: 0, coercions: 0, joins: 0/0}
+GHCMaybeIntNonTailRecursive.$tc'JustHash1 [InlPrag=NOUSERINLINE[~]]
+  :: GHC.Types.KindRep
+[GblId, Caf=NoCafRefs, Str=m4, Unf=OtherCon []]
+GHCMaybeIntNonTailRecursive.$tc'JustHash1
+  = GHC.Types.KindRepFun
+      $krep_r1XX GHCMaybeIntNonTailRecursive.$tc'NothingHash1
+
+-- RHS size: {terms: 1, types: 0, coercions: 0, joins: 0/0}
+GHCMaybeIntNonTailRecursive.$tc'JustHash3 :: Addr#
+[GblId,
+ Caf=NoCafRefs,
+ Unf=Unf{Src=<vanilla>, TopLvl=True, Value=True, ConLike=True,
+         WorkFree=True, Expandable=True, Guidance=IF_ARGS [] 40 0}]
+GHCMaybeIntNonTailRecursive.$tc'JustHash3 = "'JustHash"#
+
+-- RHS size: {terms: 2, types: 0, coercions: 0, joins: 0/0}
+GHCMaybeIntNonTailRecursive.$tc'JustHash2 :: GHC.Types.TrName
+[GblId,
+ Caf=NoCafRefs,
+ Str=m1,
+ Unf=Unf{Src=<vanilla>, TopLvl=True, Value=True, ConLike=True,
+         WorkFree=True, Expandable=True, Guidance=IF_ARGS [] 10 20}]
+GHCMaybeIntNonTailRecursive.$tc'JustHash2
+  = GHC.Types.TrNameS GHCMaybeIntNonTailRecursive.$tc'JustHash3
+
+-- RHS size: {terms: 7, types: 0, coercions: 0, joins: 0/0}
+GHCMaybeIntNonTailRecursive.$tc'JustHash :: GHC.Types.TyCon
+[GblId,
+ Caf=NoCafRefs,
+ Str=m,
+ Unf=Unf{Src=<vanilla>, TopLvl=True, Value=True, ConLike=True,
+         WorkFree=True, Expandable=True, Guidance=IF_ARGS [] 10 70}]
+GHCMaybeIntNonTailRecursive.$tc'JustHash
+  = GHC.Types.TyCon
+      14383744098315228295##
+      9099085750969440763##
+      GHCMaybeIntNonTailRecursive.$trModule
+      GHCMaybeIntNonTailRecursive.$tc'JustHash2
+      0#
+      GHCMaybeIntNonTailRecursive.$tc'JustHash1
+
+-- RHS size: {terms: 2, types: 0, coercions: 0, joins: 0/0}
+GHCMaybeIntNonTailRecursive.$fShowMaybeHash8 :: [Char]
+[GblId,
+ Unf=Unf{Src=<vanilla>, TopLvl=True, Value=False, ConLike=True,
+         WorkFree=False, Expandable=True, Guidance=IF_ARGS [] 20 0}]
+GHCMaybeIntNonTailRecursive.$fShowMaybeHash8
+  = GHC.CString.unpackCString#
+      GHCMaybeIntNonTailRecursive.$fShowMaybeHash5
+
+-- RHS size: {terms: 17, types: 14, coercions: 0, joins: 0/0}
+GHCMaybeIntNonTailRecursive.$fShowMaybeHash_$cshow
+  :: MaybeHash -> String
+[GblId,
+ Arity=1,
+ Str=<S,1*U>,
+ Unf=Unf{Src=<vanilla>, TopLvl=True, Value=True, ConLike=True,
+         WorkFree=True, Expandable=True, Guidance=IF_ARGS [30] 110 0}]
+GHCMaybeIntNonTailRecursive.$fShowMaybeHash_$cshow
+  = \ (x_a1QU :: MaybeHash) ->
+      case x_a1QU of {
+        JustHash b1_aLr ->
+          ++
+            @ Char
+            GHCMaybeIntNonTailRecursive.$fShowMaybeHash6
+            (case GHC.Show.$wshowSignedInt
+                    0# b1_aLr GHCMaybeIntNonTailRecursive.$fShowMaybeHash8
+             of
+             { (# ww5_a1RD, ww6_a1RE #) ->
+             GHC.Types.: @ Char ww5_a1RD ww6_a1RE
+             });
+        NothingHash -> GHCMaybeIntNonTailRecursive.$fShowMaybeHash3
+      }
+
+-- RHS size: {terms: 2, types: 0, coercions: 0, joins: 0/0}
+GHCMaybeIntNonTailRecursive.$fShowMaybeHash2 :: Int
+[GblId,
+ Caf=NoCafRefs,
+ Str=m,
+ Unf=Unf{Src=<vanilla>, TopLvl=True, Value=True, ConLike=True,
+         WorkFree=True, Expandable=True, Guidance=IF_ARGS [] 10 20}]
+GHCMaybeIntNonTailRecursive.$fShowMaybeHash2 = GHC.Types.I# 0#
+
+-- RHS size: {terms: 2, types: 0, coercions: 0, joins: 0/0}
+GHCMaybeIntNonTailRecursive.$fShowMaybeHash1 :: MaybeHash -> ShowS
+[GblId,
+ Arity=2,
+ Str=<S,1*U><L,U>,
+ Unf=Unf{Src=InlineStable, TopLvl=True, Value=True, ConLike=True,
+         WorkFree=True, Expandable=True,
+         Guidance=ALWAYS_IF(arity=0,unsat_ok=True,boring_ok=False)
+         Tmpl= GHCMaybeIntNonTailRecursive.$fShowMaybeHash_$cshowsPrec
+                 GHCMaybeIntNonTailRecursive.$fShowMaybeHash2}]
+GHCMaybeIntNonTailRecursive.$fShowMaybeHash1
+  = GHCMaybeIntNonTailRecursive.$fShowMaybeHash_$cshowsPrec
+      GHCMaybeIntNonTailRecursive.$fShowMaybeHash2
+
+-- RHS size: {terms: 6, types: 4, coercions: 0, joins: 0/0}
+GHCMaybeIntNonTailRecursive.$fShowMaybeHash_$cshowList
+  :: [MaybeHash] -> ShowS
+[GblId,
+ Arity=2,
+ Str=<S,1*U><L,U>,
+ Unf=Unf{Src=InlineStable, TopLvl=True, Value=True, ConLike=True,
+         WorkFree=True, Expandable=True,
+         Guidance=ALWAYS_IF(arity=2,unsat_ok=True,boring_ok=False)
+         Tmpl= \ (ls_a1QX [Occ=Once] :: [MaybeHash])
+                 (s_a1QY [Occ=Once] :: String) ->
+                 GHC.Show.showList__
+                   @ MaybeHash
+                   GHCMaybeIntNonTailRecursive.$fShowMaybeHash1
+                   ls_a1QX
+                   s_a1QY}]
+GHCMaybeIntNonTailRecursive.$fShowMaybeHash_$cshowList
+  = \ (ls_a1QX :: [MaybeHash]) (s_a1QY :: String) ->
+      GHC.Show.showList__
+        @ MaybeHash
+        GHCMaybeIntNonTailRecursive.$fShowMaybeHash1
+        ls_a1QX
+        s_a1QY
+
+-- RHS size: {terms: 4, types: 1, coercions: 0, joins: 0/0}
+GHCMaybeIntNonTailRecursive.$fShowMaybeHash [InlPrag=NOUSERINLINE CONLIKE]
+  :: Show MaybeHash
+[GblId[DFunId],
+ Str=m,
+ Unf=DFun: \ ->
+       GHC.Show.C:Show TYPE: MaybeHash
+                       GHCMaybeIntNonTailRecursive.$fShowMaybeHash_$cshowsPrec
+                       GHCMaybeIntNonTailRecursive.$fShowMaybeHash_$cshow
+                       GHCMaybeIntNonTailRecursive.$fShowMaybeHash_$cshowList]
+GHCMaybeIntNonTailRecursive.$fShowMaybeHash
+  = GHC.Show.C:Show
+      @ MaybeHash
+      GHCMaybeIntNonTailRecursive.$fShowMaybeHash_$cshowsPrec
+      GHCMaybeIntNonTailRecursive.$fShowMaybeHash_$cshow
+      GHCMaybeIntNonTailRecursive.$fShowMaybeHash_$cshowList
+
+-- RHS size: {terms: 17, types: 13, coercions: 0, joins: 0/0}
+GHCMaybeIntNonTailRecursive.main1 :: String
+[GblId,
+ Unf=Unf{Src=<vanilla>, TopLvl=True, Value=False, ConLike=False,
+         WorkFree=False, Expandable=False, Guidance=IF_ARGS [] 130 0}]
+GHCMaybeIntNonTailRecursive.main1
+  = case GHCMaybeIntNonTailRecursive.main_$sf 100# of {
+      JustHash b1_aLr ->
+        ++
+          @ Char
+          GHCMaybeIntNonTailRecursive.$fShowMaybeHash6
+          (case GHC.Show.$wshowSignedInt
+                  0# b1_aLr GHCMaybeIntNonTailRecursive.$fShowMaybeHash8
+           of
+           { (# ww5_a1RD, ww6_a1RE #) ->
+           GHC.Types.: @ Char ww5_a1RD ww6_a1RE
+           });
+      NothingHash -> GHCMaybeIntNonTailRecursive.$fShowMaybeHash3
+    }
+
+-- RHS size: {terms: 4, types: 0, coercions: 0, joins: 0/0}
+main :: IO ()
+[GblId,
+ Arity=1,
+ Str=<L,U>,
+ Unf=Unf{Src=InlineStable, TopLvl=True, Value=True, ConLike=True,
+         WorkFree=True, Expandable=True,
+         Guidance=ALWAYS_IF(arity=0,unsat_ok=True,boring_ok=False)
+         Tmpl= GHC.IO.Handle.Text.hPutStr'
+                 GHC.IO.Handle.FD.stdout
+                 GHCMaybeIntNonTailRecursive.main1
+                 GHC.Types.True}]
+main
+  = GHC.IO.Handle.Text.hPutStr'
+      GHC.IO.Handle.FD.stdout
+      GHCMaybeIntNonTailRecursive.main1
+      GHC.Types.True
+
+
+
