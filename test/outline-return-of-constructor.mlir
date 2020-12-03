@@ -15,7 +15,7 @@
 // CHECK-WW: constructor(SimpleInt 42)
 // CHECK-WW: num_thunkify_calls(0)
 // CHECK-WW: num_force_calls(0)
-// CHECK-WW: num_construct_calls(1)
+// CHECK-WW: num_construct_calls(38)
 
 module {        
   // should it be Attr Attr, with the "list" embedded as an attribute,
@@ -54,7 +54,7 @@ module {
                 lz.return %retj :!lz.value
               }]
     %retibox = lz.construct(@SimpleInt, %reti: !lz.value)
-    return %retibox : !lz.value
+    lz.return %retibox : !lz.value
   }
 
   // 37 + 5 = 42
@@ -63,6 +63,6 @@ module {
     %vbox = lz.construct(@SimpleInt, %v:!lz.value)
     %f = constant @f : (!lz.value) -> !lz.value
     %outv = lz.apEager(%f : (!lz.value) -> !lz.value, %vbox)
-    return %outv : !lz.value
+    lz.return %outv : !lz.value
   }
 }

@@ -149,8 +149,8 @@ public:
                  &effects) {}
 
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                    Value fn, const SmallVectorImpl<Value> &params,
-                    Type resultty);
+                    Value fn, Type resultty,
+                    const SmallVectorImpl<Value> &params);
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   void print(OpAsmPrinter &p);
 

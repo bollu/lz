@@ -305,8 +305,8 @@ void ApEagerOp::print(OpAsmPrinter &p) {
 };
 
 void ApEagerOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                      Value fn, const SmallVectorImpl<Value> &params,
-                      Type resultty) {
+                      Value fn, Type resultty,
+                      const SmallVectorImpl<Value> &params) {
   // hack! we need to construct the type properly.
   state.addOperands(fn);
   // assert(fn.getType().isa<FunctionType>());

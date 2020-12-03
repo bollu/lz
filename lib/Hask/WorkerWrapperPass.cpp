@@ -85,9 +85,9 @@ struct ForceOfKnownApPattern : public mlir::OpRewritePattern<ForceOp> {
     // cannot inline a recursive function. Can replace with
     // an apEager
     rewriter.setInsertionPoint(ap);
-    ApEagerOp eager =
-        rewriter.create<ApEagerOp>(ap.getLoc(), ap.getFn(), ap.getFnArguments(),
-                                   fn.getType().getResult(0));
+    ApEagerOp eager = rewriter.create<ApEagerOp>(ap.getLoc(), ap.getFn(),
+                                                 fn.getType().getResult(0),
+                                                 ap.getFnArguments());
     rewriter.replaceOp(force, eager.getResult());
     return success();
   };
@@ -311,8 +311,8 @@ struct OutlineRecursiveApEagerOfThunkPattern
         rewriter.getUnknownLoc(), mkForcedFnType(called.getType()),
         mlir::FlatSymbolRefAttr::get(clonedFnName, rewriter.getContext()));
 
-    rewriter.replaceOpWithNewOp<ApEagerOp>(ap, clonedFnRef, clonedFnCallArgs,
-                                           called.getType().getResult(0));
+    rewriter.replaceOpWithNewOp<ApEagerOp>(
+        ap, clonedFnRef, called.getType().getResult(0), clonedFnCallArgs);
 
     // TODO: this disastrous house of cards depends on the order of cloning.
     // We first replace the reucrsive call, and *then* clone the function.
@@ -358,8 +358,7 @@ struct OutlineRecursiveApEagerOfThunkPattern
 // ...
 // %out = constructor(C, %w)
 // lz.return (%out)
-struct OutlineReturnOfConstructor
-    : public mlir::OpRewritePattern<FuncOp> {
+struct OutlineReturnOfConstructor : public mlir::OpRewritePattern<FuncOp> {
   OutlineReturnOfConstructor(mlir::MLIRContext *context)
       : OpRewritePattern<FuncOp>(context, /*benefit=*/1) {}
   mlir::LogicalResult
@@ -367,9 +366,14 @@ struct OutlineReturnOfConstructor
                   mlir::PatternRewriter &rewriter) const override {
 
     // TODO: use postdom info.
-    if(parentfn.getBlocks().size() != 1) { return failure(); }
-    HaskReturnOp ret = mlir::dyn_cast<HaskReturnOp>(parentfn.getBlocks().front().getTerminator());
-    if (!ret) { return failure(); }
+    if (parentfn.getBlocks().size() != 1) {
+      return failure();
+    }
+    HaskReturnOp ret = mlir::dyn_cast<HaskReturnOp>(
+        parentfn.getBlocks().front().getTerminator());
+    if (!ret) {
+      return failure();
+    }
     ModuleOp mod = parentfn.getParentOfType<ModuleOp>();
 
     HaskConstructOp constructor =
@@ -384,50 +388,69 @@ struct OutlineReturnOfConstructor
       return failure();
     }
 
-
     const std::string outlinedFnName =
         parentfn.getName().str() + "_outline_retcons";
+
+    // pass has already run and outlined; fail to indicate we have made no
+    // progress / have terminated the rewrite system.
+    if (mod.lookupSymbol<FuncOp>(outlinedFnName)) {
+      return failure();
+    }
+
+    llvm::SmallVector<ApEagerOp, 2> recursiveCalls;
     // replace all recursive calls f() with. constructor(f_outline())
     parentfn.walk([&](ApEagerOp call) {
       if (call.getFnName() != parentfn.getName()) {
         return WalkResult::advance();
       }
+      recursiveCalls.push_back(call);
+      return WalkResult::advance();
+    }); // end walk
 
-      std::vector<Value> callArgs;
+    for (ApEagerOp call : recursiveCalls) {
+      llvm::SmallVector<Value, 4> callArgs;
       for (int i = 0; i < call.getNumFnArguments(); ++i) {
         callArgs.push_back(call.getFnArgument(i));
       }
       rewriter.setInsertionPointAfter(call);
-      CallOp outlinedCall = rewriter.create<CallOp>(
+      ConstantOp outlinedFnNameSymbol = rewriter.create<ConstantOp>(
           call.getLoc(),
-          mlir::FlatSymbolRefAttr::get(outlinedFnName, rewriter.getContext()),
+          rewriter.getFunctionType(parentfn.getType().getInputs(),
+                                   constructor.getOperand(0).getType()),
+          mlir::FlatSymbolRefAttr::get(outlinedFnName, rewriter.getContext()));
+
+      ApEagerOp outlinedCall = rewriter.create<ApEagerOp>(
+          call.getLoc(), outlinedFnNameSymbol,
           constructor.getOperand(0).getType(), // type of result
           callArgs);
       HaskConstructOp outlinedCallWrap = rewriter.create<HaskConstructOp>(
-          call.getLoc(), constructor.getDataConstructorName(), outlinedCall.getResults());
+          call.getLoc(), constructor.getDataConstructorName(),
+          outlinedCall.getResult());
       rewriter.replaceOp(call, outlinedCallWrap.getResult());
-      return WalkResult::advance();
-    }); // end walk
-
+    }
     // OK, now create the actually outlined function by cloning our function.
     // Then fixup the return by removing the constructor around the return.
-    mlir::FuncOp clonedFn = parentfn.clone();
+    mlir::FuncOp outlinedFn = parentfn.clone();
+    outlinedFn.setName(outlinedFnName);
 
-    assert(clonedFn.getBody().getBlocks().size() == 1);
+    assert(outlinedFn.getBody().getBlocks().size() == 1);
     HaskReturnOp clonedRet =
-        mlir::cast<HaskReturnOp>(clonedFn.getBody().front().getTerminator());
+        mlir::cast<HaskReturnOp>(outlinedFn.getBody().front().getTerminator());
     HaskConstructOp clonedConstructor =
         clonedRet.getOperand().getDefiningOp<HaskConstructOp>();
     Value clonedConstructorArg = clonedConstructor.getOperand(0);
 
     // <original inputs> -> unwrapped output
-    mlir::FunctionType clonedfnty = rewriter.getFunctionType(
+    mlir::FunctionType outlinedFnty = rewriter.getFunctionType(
         parentfn.getType().getInputs(), clonedConstructorArg.getType());
-    clonedFn.setType(clonedfnty);
+    outlinedFn.setType(outlinedFnty);
     // return constructor(val) -> return val
+    rewriter.setInsertionPointAfter(clonedRet);
     rewriter.replaceOpWithNewOp<HaskReturnOp>(clonedRet, clonedConstructorArg);
+    rewriter.eraseOp(clonedConstructor);
+    mod.push_back(outlinedFn);
 
-    mod.push_back(clonedFn);
+    llvm::errs() << "vvvAFTER PASSvvv\n" << mod << "\n^^^^\n";
     return success();
   }
 };
@@ -653,7 +676,7 @@ struct WorkerWrapperPass : public Pass {
     //                                         std::move(patterns)))) {
     if (failed(mlir::applyPatternsAndFoldGreedily(getOperation(),
                                                   std::move(patterns)))) {
-      llvm::errs() << "===Worker wrapper failed===\n";
+      llvm::errs() << "\n===Worker wrapper failed===\n";
       getOperation()->print(llvm::errs());
       llvm::errs() << "\n===\n";
       signalPassFailure();
