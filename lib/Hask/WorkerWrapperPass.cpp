@@ -737,17 +737,31 @@ struct CaseOfKnownIntPattern : public mlir::OpRewritePattern<CaseIntOp> {
       return failure();
     }
 
+    llvm::errs() << "constint: | " << constint << "\n";
+
     rewriter.setInsertionPoint(caseop);
     int altIx = *caseop.getAltIndexForConstInt(constint.getValue().getInt());
 
     InlinerInterface inliner(rewriter.getContext());
-    LogicalResult isInlined =
-        inlineRegion(inliner, &caseop.getAltRHS(altIx), caseop,
-                     constint.getResult(), caseop.getResult());
-    assert(succeeded(isInlined) && "unable to inline caseint of known int");
+
+    // note that the default alt index DOES NOT HAVE ARGUMENTS!
+    if (altIx == caseop.getDefaultAltIndex()) {
+      LogicalResult isInlined =
+          inlineRegion(inliner, &caseop.getAltRHS(altIx), caseop,
+                       /*inlineOperands=*/{}, caseop.getResult());
+      assert(succeeded(isInlined) &&
+             "unable to inline the default case of a caseint of known int ");
+
+    } else {
+      LogicalResult isInlined =
+          inlineRegion(inliner, &caseop.getAltRHS(altIx), caseop,
+                       constint.getResult(), caseop.getResult());
+      assert(succeeded(isInlined) && "unable to inline the non-default known "
+                                     "branch case of a  caseint of known int");
+    }
     return success();
   };
-};
+}; // namespace standalone
 
 // @f {
 //   x = ...
