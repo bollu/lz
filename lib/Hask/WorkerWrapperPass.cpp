@@ -138,7 +138,7 @@ struct OutlineUknownForcePattern : public mlir::OpRewritePattern<ForceOp> {
       rewriter.setInsertionPointToEnd(&module.getBodyRegion().front());
 
       FuncOp outlinedFn = rewriter.create<FuncOp>(
-          force.getLoc(), parentfn.getName().str() + "_outline",
+          force.getLoc(), parentfn.getName().str() + "_outline_unknown_force",
           parentfn.getType());
       (void)outlinedFn;
 
@@ -352,6 +352,114 @@ struct OutlineRecursiveApEagerOfThunkPattern
   }
 };
 
+// ==INPUT==
+// data Box { MkBox(int) }
+// @f(x: Box):
+// case x of ...
+//   MkBox val -> ...
+//      f(MkBox(y))
+// ==OUTPUT==
+// @MkBox(val: int):
+//   <RHS OF CASE FOO>
+//    ...
+//    fFoo(y)
+//  @f(x):
+//    case x of
+//      MkBox val -> fFoo(val)
+struct OutlineCaseOfFnInput : public mlir::OpRewritePattern<FuncOp> {
+  OutlineCaseOfFnInput(mlir::MLIRContext *context)
+      : OpRewritePattern<FuncOp>(context, /*benefit=*/1) {}
+  mlir::LogicalResult
+  matchAndRewrite(FuncOp parentfn,
+                  mlir::PatternRewriter &rewriter) const override {
+    mlir::ModuleOp mod = parentfn.getParentOfType<ModuleOp>();
+
+    if (parentfn.getArguments().size() != 1) {
+      return failure();
+    }
+
+    if (!parentfn.getArgument(0).hasOneUse()) {
+      return failure();
+    }
+    Value::use_iterator argUse = parentfn.getArgument(0).use_begin();
+    mlir::standalone::CaseOp caseOfArg =
+        mlir::dyn_cast<CaseOp>(argUse.getUser());
+
+    if (!caseOfArg) {
+      return failure();
+    }
+
+    // TODO: generalize
+    if (caseOfArg.getNumAlts() != 1) {
+      return failure();
+    }
+
+    if (caseOfArg.getAltRHS(0).getNumArguments() != 1) {
+      return failure();
+    }
+
+    std::string outlinedFnName = parentfn.getName().str() + "_outline_case_arg";
+    // <original inputs> -> unwrapped output
+    mlir::FunctionType outlinedFnty = rewriter.getFunctionType(
+        caseOfArg.getAltRHS(0).getArgument(0).getType(),
+        parentfn.getType().getResults());
+
+    // pass has already run and outlined; fail to indicate we have made no
+    // progress / have terminated the rewrite system.
+    if (mod.lookupSymbol<FuncOp>(outlinedFnName)) {
+      return failure();
+    }
+
+    llvm::SmallVector<ApEagerOp, 2> recursiveCalls;
+    // replace all recursive calls f(constructor(y)) with. f_outline(y)
+    parentfn.walk([&](ApEagerOp call) {
+      if (call.getFnName() != parentfn.getName()) {
+        return WalkResult::advance();
+      }
+      recursiveCalls.push_back(call);
+      return WalkResult::advance();
+    }); // end walk
+
+    for (ApEagerOp call : recursiveCalls) {
+      llvm::SmallVector<Value, 4> callArgs;
+      // replace call = f(argConstruct = Constructor(v)) with fConstructor(v);
+      HaskConstructOp argConstruct =
+          call.getFnArgument(0).getDefiningOp<HaskConstructOp>();
+
+      if (!argConstruct) {
+        continue;
+      }
+      callArgs.push_back(argConstruct.getOperand(0));
+      rewriter.setInsertionPointAfter(call);
+
+      ConstantOp outlinedFnNameSymbol = rewriter.create<ConstantOp>(
+          call.getLoc(), outlinedFnty,
+          mlir::FlatSymbolRefAttr::get(outlinedFnName, rewriter.getContext()));
+      ApEagerOp outlinedCall = rewriter.create<ApEagerOp>(
+          call.getLoc(), outlinedFnNameSymbol,
+          outlinedFnty.getResult(0), // type of result
+          callArgs);
+      rewriter.replaceOp(call, outlinedCall.getResult());
+    }
+
+    // OK, now create the actually outlined function by cloning our function.
+    // Then fixup the return by removing the constructor around the return.
+    rewriter.setInsertionPointAfter(parentfn);
+    mlir::FuncOp outlinedFn = rewriter.create<FuncOp>(
+        rewriter.getUnknownLoc(), outlinedFnName, outlinedFnty);
+    // // TODO: build body of outlinedFn by cloning whatever was inside the case
+    // // directly into outlinedFn.
+    // // outlinedFn.addEntryBlock();
+    mlir::BlockAndValueMapping mapper;
+    // mapper.map(caseOfArg.getAltRHS(0).getArgument(0),
+    //            outlinedFn.getArgument(0));
+    // TODO: add field to mapper to map the case LHS to the outlined function
+    // argument.
+    caseOfArg.getAltRHS(0).cloneInto(&outlinedFn.getBody(), mapper);
+    return success();
+  }
+};
+
 // ===INPUT===
 // C { MKC(V) }
 // @f(%inc: C)
@@ -389,7 +497,7 @@ struct OutlineReturnOfConstructor : public mlir::OpRewritePattern<FuncOp> {
     }
 
     const std::string outlinedFnName =
-        parentfn.getName().str() + "_outline_retcons";
+        parentfn.getName().str() + "_outline_ret_cons";
 
     // pass has already run and outlined; fail to indicate we have made no
     // progress / have terminated the rewrite system.
@@ -450,7 +558,6 @@ struct OutlineReturnOfConstructor : public mlir::OpRewritePattern<FuncOp> {
     rewriter.eraseOp(clonedConstructor);
     mod.push_back(outlinedFn);
 
-    llvm::errs() << "vvvAFTER PASSvvv\n" << mod << "\n^^^^\n";
     return success();
   }
 };
@@ -634,7 +741,6 @@ struct PeelConstructorsFromCasePattern : public mlir::OpRewritePattern<CaseOp> {
     caseop.getResult().replaceAllUsesExcept(peeledConstructor.getResult(),
                                             exceptions);
 
-    llvm::errs() << "peeledConstructor: |" << peeledConstructor << "|\n";
     return success();
   }
 };
@@ -655,6 +761,8 @@ struct WorkerWrapperPass : public Pass {
     patterns.insert<ForceOfKnownApPattern>(&getContext());
     patterns.insert<ForceOfThunkifyPattern>(&getContext());
     patterns.insert<OutlineRecursiveApEagerOfThunkPattern>(&getContext());
+    patterns.insert<OutlineCaseOfFnInput>(&getContext());
+
     patterns.insert<OutlineReturnOfConstructor>(&getContext());
     patterns.insert<PeelConstructorsFromCasePattern>(&getContext());
     patterns.insert<CaseOfKnownConstructorPattern>(&getContext());

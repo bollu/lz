@@ -25,6 +25,16 @@ Convert GHC Core to MLIR.
 
 # Log:  [newest] to [oldest]
 
+# Friday, Dec 13th
+- Printing an operation in its generic form:
+
+```cpp
+llvm::errs() << "outlinedFn:\n";
+mlir::OpPrintingFlags flags;
+outlinedFn.print(llvm::errs(), flags.printGenericOpForm());
+assert(false);
+```
+
 
 # Thursday, Dec 12th
 - Our transformation of outline/inline is very similar to converting a `while(c){..}`
