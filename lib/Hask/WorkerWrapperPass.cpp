@@ -1021,7 +1021,7 @@ struct WorkerWrapperPass : public Pass {
     patterns.insert<CaseOfKnownConstructorPattern>(&getContext());
     patterns.insert<CaseOfKnownIntPattern>(&getContext());
 
-    patterns.insert<CaseOfBoxedRecursiveApWithFinalConstruct>(&getContext());
+    // patterns.insert<CaseOfBoxedRecursiveApWithFinalConstruct>(&getContext());
 
     // change:
     //   retval = case x of L1 -> { ...; return Foo(x1); } L2 -> { ...; return
