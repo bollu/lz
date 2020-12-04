@@ -5,4 +5,4 @@ nov-11-IO-force.out: nov-11-IO-force.cpp
 	g++ -std=c++17 -O0 nov-11-IO-force.cpp -o nov-11-IO-force.out
 
 MaybeIntNonTailRecursive.ll: MaybeIntNonTailRecursive.c
-	clang -S -O1 -emit-llvm MaybeIntNonTailRecursive.c  -o MaybeIntNonTailRecursive.ll
+	clang -S -O3 -emit-llvm MaybeIntNonTailRecursive.c  -o MaybeIntNonTailRecursive.ll

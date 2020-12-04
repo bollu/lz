@@ -3,7 +3,7 @@ source_filename = "MaybeIntNonTailRecursive.c"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
 
-@.str = private unnamed_addr constant [4 x i8] c"%d\0A\00", align 1
+@.str = private unnamed_addr constant [21 x i8] c"tag: %d | value: %d\0A\00", align 1
 
 ; Function Attrs: norecurse nounwind readnone uwtable
 define dso_local i64 @nothing() local_unnamed_addr #0 {
@@ -20,46 +20,38 @@ define dso_local i64 @just(i32 %0) local_unnamed_addr #0 {
 ; Function Attrs: nounwind readnone uwtable
 define dso_local i64 @f(i64 %0) local_unnamed_addr #1 {
   %2 = trunc i64 %0 to i32
-  %3 = lshr i64 %0, 32
-  %4 = trunc i64 %3 to i32
-  %5 = icmp eq i32 %2, 0
-  br i1 %5, label %6, label %21
+  %3 = icmp eq i32 %2, 0
+  br i1 %3, label %4, label %15
 
-6:                                                ; preds = %1
-  %7 = icmp eq i32 %4, 0
-  br i1 %7, label %8, label %10
+4:                                                ; preds = %1
+  %5 = icmp ult i64 %0, 4294967296
+  br i1 %5, label %15, label %6
 
-8:                                                ; preds = %6
-  %9 = call i64 @just(i32 5)
-  br label %21
+6:                                                ; preds = %4
+  %7 = add i64 %0, -4294967296
+  %8 = and i64 %7, -4294967296
+  %9 = tail call i64 @f(i64 %8)
+  %10 = trunc i64 %9 to i32
+  %11 = icmp eq i32 %10, 1
+  br i1 %11, label %15, label %12
 
-10:                                               ; preds = %6
-  %11 = add nsw i32 %4, -1
-  %12 = call i64 @just(i32 %11)
-  %13 = call i64 @f(i64 %12)
-  %14 = trunc i64 %13 to i32
-  %15 = icmp eq i32 %14, 1
-  br i1 %15, label %21, label %16
+12:                                               ; preds = %6
+  %13 = add i64 %9, 30064771072
+  %14 = and i64 %13, -4294967296
+  br label %15
 
-16:                                               ; preds = %10
-  %17 = lshr i64 %13, 32
-  %18 = trunc i64 %17 to i32
-  %19 = add nsw i32 %18, 7
-  %20 = call i64 @just(i32 %19)
-  br label %21
-
-21:                                               ; preds = %1, %10, %16, %8
-  %22 = phi i64 [ %9, %8 ], [ %20, %16 ], [ 180388626433, %10 ], [ 180388626433, %1 ]
-  ret i64 %22
+15:                                               ; preds = %1, %6, %4, %12
+  %16 = phi i64 [ %14, %12 ], [ 21474836480, %4 ], [ 180388626433, %6 ], [ 180388626433, %1 ]
+  ret i64 %16
 }
 
 ; Function Attrs: nofree nounwind uwtable
 define dso_local i32 @main() local_unnamed_addr #2 {
-  %1 = call i64 @just(i32 5)
-  %2 = call i64 @f(i64 %1)
-  %3 = lshr i64 %2, 32
+  %1 = tail call i64 @f(i64 21474836480)
+  %2 = trunc i64 %1 to i32
+  %3 = lshr i64 %1, 32
   %4 = trunc i64 %3 to i32
-  %5 = call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0), i32 %4)
+  %5 = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([21 x i8], [21 x i8]* @.str, i64 0, i64 0), i32 %2, i32 %4)
   ret i32 0
 }
 

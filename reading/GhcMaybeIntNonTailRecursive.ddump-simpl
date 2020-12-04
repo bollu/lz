@@ -56,23 +56,23 @@ GHCMaybeIntNonTailRecursive.$fShowMaybeHash_$cshowsPrec
  Unf=Unf{Src=<vanilla>, TopLvl=True, Value=True, ConLike=True,
          WorkFree=True, Expandable=True, Guidance=IF_ARGS [20 60 0] 341 30}]
 GHCMaybeIntNonTailRecursive.$fShowMaybeHash_$cshowsPrec
-  = \ (a_aLq :: Int) (ds_d1Qx :: MaybeHash) (eta_B1 :: String) ->
-      case ds_d1Qx of {
-        JustHash b1_aLr ->
-          case a_aLq of { I# x_a1SR ->
-          case >=# x_a1SR 11# of {
+  = \ (a_aLQ :: Int) (ds_d1QW :: MaybeHash) (eta_B1 :: String) ->
+      case ds_d1QW of {
+        JustHash b1_aLR ->
+          case a_aLQ of { I# x_a1Tg ->
+          case >=# x_a1Tg 11# of {
             __DEFAULT ->
               ++
                 @ Char
                 GHCMaybeIntNonTailRecursive.$fShowMaybeHash6
                 (case GHC.Show.$wshowSignedInt
                         0#
-                        b1_aLr
+                        b1_aLR
                         (GHC.CString.unpackAppendCString#
                            GHCMaybeIntNonTailRecursive.$fShowMaybeHash5 eta_B1)
                  of
-                 { (# ww5_a1RD, ww6_a1RE #) ->
-                 GHC.Types.: @ Char ww5_a1RD ww6_a1RE
+                 { (# ww5_a1S2, ww6_a1S3 #) ->
+                 GHC.Types.: @ Char ww5_a1S2 ww6_a1S3
                  });
             1# ->
               GHC.Types.:
@@ -83,13 +83,13 @@ GHCMaybeIntNonTailRecursive.$fShowMaybeHash_$cshowsPrec
                    GHCMaybeIntNonTailRecursive.$fShowMaybeHash6
                    (case GHC.Show.$wshowSignedInt
                            0#
-                           b1_aLr
+                           b1_aLR
                            (GHC.CString.unpackAppendCString#
                               GHCMaybeIntNonTailRecursive.$fShowMaybeHash5
                               (GHC.Types.: @ Char GHC.Show.$fShow(,)2 eta_B1))
                     of
-                    { (# ww5_a1RD, ww6_a1RE #) ->
-                    GHC.Types.: @ Char ww5_a1RD ww6_a1RE
+                    { (# ww5_a1S2, ww6_a1S3 #) ->
+                    GHC.Types.: @ Char ww5_a1S2 ww6_a1S3
                     }))
           }
           };
@@ -98,25 +98,25 @@ GHCMaybeIntNonTailRecursive.$fShowMaybeHash_$cshowsPrec
       }
 
 -- RHS size: {terms: 2, types: 0, coercions: 0, joins: 0/0}
-lvl_r1XW :: MaybeHash
+lvl_r1Re :: MaybeHash
 [GblId, Caf=NoCafRefs, Str=m1, Unf=OtherCon []]
-lvl_r1XW = GHCMaybeIntNonTailRecursive.JustHash 5#
+lvl_r1Re = GHCMaybeIntNonTailRecursive.JustHash 5#
 
 Rec {
 -- RHS size: {terms: 18, types: 4, coercions: 0, joins: 0/0}
 GHCMaybeIntNonTailRecursive.main_$sf [Occ=LoopBreaker]
-  :: Int# -> MaybeHash
+  :: Int# -> MaybeHash  
 [GblId, Arity=1, Caf=NoCafRefs, Str=<S,1*U>, Unf=OtherCon []]
 GHCMaybeIntNonTailRecursive.main_$sf
-  = \ (sc_s1X4 :: Int#) ->
-      case sc_s1X4 of ds_d1IV {
+  = \ (sc_s1Xt :: Int#) ->
+      case sc_s1Xt of ds_d1Jk {
         __DEFAULT ->
-          case GHCMaybeIntNonTailRecursive.main_$sf (-# ds_d1IV 1#) of {
-            JustHash j#_aHM ->
-              GHCMaybeIntNonTailRecursive.JustHash (+# j#_aHM 7#);
+          case GHCMaybeIntNonTailRecursive.main_$sf (-# ds_d1Jk 1#) of {
+            JustHash j#_aIi ->
+              GHCMaybeIntNonTailRecursive.JustHash (+# j#_aIi 7#);
             NothingHash -> GHCMaybeIntNonTailRecursive.NothingHash
           };
-        0# -> lvl_r1XW
+        0# -> lvl_r1Re
       }
 end Rec }
 
@@ -313,17 +313,17 @@ GHCMaybeIntNonTailRecursive.$fShowMaybeHash_$cshow
  Unf=Unf{Src=<vanilla>, TopLvl=True, Value=True, ConLike=True,
          WorkFree=True, Expandable=True, Guidance=IF_ARGS [30] 110 0}]
 GHCMaybeIntNonTailRecursive.$fShowMaybeHash_$cshow
-  = \ (x_a1QU :: MaybeHash) ->
-      case x_a1QU of {
-        JustHash b1_aLr ->
+  = \ (x_a1Rj :: MaybeHash) ->
+      case x_a1Rj of {
+        JustHash b1_aLR ->
           ++
             @ Char
             GHCMaybeIntNonTailRecursive.$fShowMaybeHash6
             (case GHC.Show.$wshowSignedInt
-                    0# b1_aLr GHCMaybeIntNonTailRecursive.$fShowMaybeHash8
+                    0# b1_aLR GHCMaybeIntNonTailRecursive.$fShowMaybeHash8
              of
-             { (# ww5_a1RD, ww6_a1RE #) ->
-             GHC.Types.: @ Char ww5_a1RD ww6_a1RE
+             { (# ww5_a1S2, ww6_a1S3 #) ->
+             GHC.Types.: @ Char ww5_a1S2 ww6_a1S3
              });
         NothingHash -> GHCMaybeIntNonTailRecursive.$fShowMaybeHash3
       }
@@ -360,20 +360,20 @@ GHCMaybeIntNonTailRecursive.$fShowMaybeHash_$cshowList
  Unf=Unf{Src=InlineStable, TopLvl=True, Value=True, ConLike=True,
          WorkFree=True, Expandable=True,
          Guidance=ALWAYS_IF(arity=2,unsat_ok=True,boring_ok=False)
-         Tmpl= \ (ls_a1QX [Occ=Once] :: [MaybeHash])
-                 (s_a1QY [Occ=Once] :: String) ->
+         Tmpl= \ (ls_a1Rm [Occ=Once] :: [MaybeHash])
+                 (s_a1Rn [Occ=Once] :: String) ->
                  GHC.Show.showList__
                    @ MaybeHash
                    GHCMaybeIntNonTailRecursive.$fShowMaybeHash1
-                   ls_a1QX
-                   s_a1QY}]
+                   ls_a1Rm
+                   s_a1Rn}]
 GHCMaybeIntNonTailRecursive.$fShowMaybeHash_$cshowList
-  = \ (ls_a1QX :: [MaybeHash]) (s_a1QY :: String) ->
+  = \ (ls_a1Rm :: [MaybeHash]) (s_a1Rn :: String) ->
       GHC.Show.showList__
         @ MaybeHash
         GHCMaybeIntNonTailRecursive.$fShowMaybeHash1
-        ls_a1QX
-        s_a1QY
+        ls_a1Rm
+        s_a1Rn
 
 -- RHS size: {terms: 4, types: 1, coercions: 0, joins: 0/0}
 GHCMaybeIntNonTailRecursive.$fShowMaybeHash [InlPrag=NOUSERINLINE CONLIKE]
@@ -399,15 +399,15 @@ GHCMaybeIntNonTailRecursive.main1 :: String
          WorkFree=False, Expandable=False, Guidance=IF_ARGS [] 130 0}]
 GHCMaybeIntNonTailRecursive.main1
   = case GHCMaybeIntNonTailRecursive.main_$sf 100# of {
-      JustHash b1_aLr ->
+      JustHash b1_aLR ->
         ++
           @ Char
           GHCMaybeIntNonTailRecursive.$fShowMaybeHash6
           (case GHC.Show.$wshowSignedInt
-                  0# b1_aLr GHCMaybeIntNonTailRecursive.$fShowMaybeHash8
+                  0# b1_aLR GHCMaybeIntNonTailRecursive.$fShowMaybeHash8
            of
-           { (# ww5_a1RD, ww6_a1RE #) ->
-           GHC.Types.: @ Char ww5_a1RD ww6_a1RE
+           { (# ww5_a1S2, ww6_a1S3 #) ->
+           GHC.Types.: @ Char ww5_a1S2 ww6_a1S3
            });
       NothingHash -> GHCMaybeIntNonTailRecursive.$fShowMaybeHash3
     }

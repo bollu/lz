@@ -1,4 +1,5 @@
 {-# LANGUAGE MagicHash #-}
+{-# LANGUAGE BangPatterns #-}
 module GHCMaybeIntNonTailRecursive(main) where
 import GHC.Int
 import GHC.Prim
