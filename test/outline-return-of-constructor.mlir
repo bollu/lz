@@ -18,11 +18,6 @@
 // CHECK-WW: num_construct_calls(38)
 
 module {        
-  // should it be Attr Attr, with the "list" embedded as an attribute,
-  // or should it be Attr [Attr]? Who really knows :(
-  // define the algebraic data type
-  // TODO: setup constructors properly.
-
   // f :: SimpleInt -> SimpleInt
   // f i = case i of SimpleInt i# ->
   //          case i# of

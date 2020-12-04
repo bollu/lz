@@ -239,6 +239,20 @@ public:
     return this->getAltRHS(*this->getDefaultAltIndex());
   }
 
+  llvm::Optional<int> getAltIndexForConstInt(int constval) {
+    for (int i = 0; i < this->getNumAlts(); ++i) {
+      Optional<IntegerAttr> iattr = this->getAltLHS(i);
+      if (!iattr) {
+        continue;
+      };
+
+      if (iattr->getInt() == constval) {
+        return i;
+      }
+    }
+    return this->getDefaultAltIndex();
+  }
+
   mlir::DictionaryAttr getAltLHSs() {
     return this->getOperation()->getAttrDictionary();
   }
