@@ -3,3 +3,6 @@ sep-30-worker-wrapper.out: sep-30-worker-wrapper.cpp
 
 nov-11-IO-force.out: nov-11-IO-force.cpp
 	g++ -std=c++17 -O0 nov-11-IO-force.cpp -o nov-11-IO-force.out
+
+MaybeIntNonTailRecursive.ll: MaybeIntNonTailRecursive.c
+	clang -S -O1 -emit-llvm MaybeIntNonTailRecursive.c  -o MaybeIntNonTailRecursive.ll
