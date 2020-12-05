@@ -15,7 +15,7 @@
 // CHECK-WW: constructor(SimpleInt 42)
 // CHECK-WW: num_thunkify_calls(0)
 // CHECK-WW: num_force_calls(0)
-// CHECK-WW: num_construct_calls(38)
+// CHECK-WW: num_construct_calls(1)
 
 module {        
   // f :: SimpleInt -> SimpleInt

@@ -501,6 +501,8 @@ struct OutlineRecursiveApEagerOfConstructorPattern
 //  @f(x):
 //    case x of
 //      MkBox val -> fFoo(val)
+// This not so easy! We need to carry all the values that are referenced
+// by the RHS *into* the outlined function x(oi2
 struct OutlineCaseOfFnInput : public mlir::OpRewritePattern<FuncOp> {
   OutlineCaseOfFnInput(mlir::MLIRContext *context)
       : OpRewritePattern<FuncOp>(context, /*benefit=*/1) {}
@@ -546,7 +548,6 @@ struct OutlineCaseOfFnInput : public mlir::OpRewritePattern<FuncOp> {
     }
 
     llvm::SmallVector<ApEagerOp, 2> recursiveCalls;
-    // replace all recursive calls f(constructor(y)) with. f_outline(y)
     parentfn.walk([&](ApEagerOp call) {
       if (call.getFnName() != parentfn.getName()) {
         return WalkResult::advance();
@@ -554,6 +555,52 @@ struct OutlineCaseOfFnInput : public mlir::OpRewritePattern<FuncOp> {
       recursiveCalls.push_back(call);
       return WalkResult::advance();
     }); // end walk
+
+    llvm::errs() << __PRETTY_FUNCTION__ << ": Considering function: |"
+                 << parentfn.getName() << "| \n";
+
+    llvm::errs() << "region:\n" << caseOfArg;
+    llvm::errs() << "\n===\n";
+
+    // try to find ops that we need to copy
+    bool canBeSelfContained = true;
+    caseOfArg.getAltRHS(0).walk([&](Operation *op) {
+      llvm::errs() << "- op: ";
+      op->print(llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
+      llvm::errs() << "\n";
+      for (Value v : op->getOperands()) {
+        llvm::errs() << "\t-" << v << "\n";
+
+        if (v.getParentRegion()->getParentOp() == caseOfArg.getOperation()) {
+          continue;
+        }
+        if (v.getParentRegion() == &caseOfArg.getAltRHS(0)) {
+          continue;
+        }
+
+        // has different region as owner.
+        ConstantOp vconst = v.getDefiningOp<ConstantOp>();
+        if (vconst) {
+          continue;
+        }
+
+
+
+        // can't be outlined
+        llvm::errs() << "\t^^^^^ not contained\n";
+        llvm::errs() << "\tv's parent op: ";
+         v.getParentRegion()->getParentOp()->print(llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
+        llvm::errs() << "\t---";
+
+        canBeSelfContained = false;
+        return WalkResult::interrupt();
+      }
+      return WalkResult::advance();
+    }); // end walk
+
+    if (!canBeSelfContained) {
+      return failure();
+    }
 
     for (ApEagerOp call : recursiveCalls) {
       llvm::SmallVector<Value, 4> callArgs;
@@ -582,15 +629,52 @@ struct OutlineCaseOfFnInput : public mlir::OpRewritePattern<FuncOp> {
     rewriter.setInsertionPointAfter(parentfn);
     mlir::FuncOp outlinedFn = rewriter.create<FuncOp>(
         rewriter.getUnknownLoc(), outlinedFnName, outlinedFnty);
-    // // TODO: build body of outlinedFn by cloning whatever was inside the case
-    // // directly into outlinedFn.
-    // // outlinedFn.addEntryBlock();
+    outlinedFn.addEntryBlock();
+    rewriter.setInsertionPointToStart(&outlinedFn.getBody().front());
     mlir::BlockAndValueMapping mapper;
-    // mapper.map(caseOfArg.getAltRHS(0).getArgument(0),
-    //            outlinedFn.getArgument(0));
-    // TODO: add field to mapper to map the case LHS to the outlined function
-    // argument.
+
+    // try to find ops that we need to copy
+    caseOfArg.getAltRHS(0).walk([&](Operation *op) {
+      for (Value v : op->getOperands()) {
+        if (v.getParentRegion() == &caseOfArg.getAltRHS(0)) {
+          return WalkResult::advance();
+        }
+        // has different region as owner.
+        ConstantOp vconst = v.getDefiningOp<ConstantOp>();
+        if (vconst) {
+          // I want to call OpBuilder::clone
+          rewriter.clone(*vconst.getOperation(), mapper);
+          return WalkResult::advance();
+        }
+
+        assert(false && "must succeeed! Otherwise we should have bailed out");
+      }
+      return WalkResult::advance();
+    }); // end walk
+
+    // ===BEFORE==
+    // outlinedFn:
+    //   entry:
+    //     <constants>
+    //   DONE
+    // ===AFTER==
+    // outlinedFn:
+    //   entry(%v):
+    //     <constants>
+    //   bb1(%w):
+    //     ...
+    //   bb2: ...
+
     caseOfArg.getAltRHS(0).cloneInto(&outlinedFn.getBody(), mapper);
+    rewriter.mergeBlocks(outlinedFn.getBody().front().getNextNode(),
+                         &outlinedFn.getBody().front(),
+                         outlinedFn.getBody().front().getArguments());
+
+    llvm::errs() << "===outlined fn:===\n";
+    outlinedFn.print(llvm::errs());
+    llvm::errs() << "\n\n";
+    assert(false);
+
     return success();
   }
 };
