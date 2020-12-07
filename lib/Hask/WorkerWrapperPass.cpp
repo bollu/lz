@@ -484,6 +484,8 @@ struct OutlineRecursiveApEagerOfConstructorPattern
 
     // 3. add the function into the module
     mod.push_back(clonedfn);
+    rewriter.notifyOperationInserted(clonedfn);
+
     return success();
 
     assert(false && "matched against f(arg) { case(arg): ...; apEager(f, "
@@ -515,13 +517,18 @@ struct OutlineCaseOfFnInput : public mlir::OpRewritePattern<FuncOp> {
                   mlir::PatternRewriter &rewriter) const override {
     mlir::ModuleOp mod = parentfn.getParentOfType<ModuleOp>();
 
+    llvm::errs() << "Analysing function: |" << parentfn.getName() << "\n";
     if (parentfn.getArguments().size() != 1) {
       return failure();
     }
 
     if (!parentfn.getArgument(0).hasOneUse()) {
+      llvm::errs() << "function with argument of more than 1 use: " << parentfn
+                   << "\n";
+      assert(false);
       return failure();
     }
+
     Value::use_iterator argUse = parentfn.getArgument(0).use_begin();
     mlir::standalone::CaseOp caseOfArg =
         mlir::dyn_cast<CaseOp>(argUse.getUser());
@@ -779,6 +786,7 @@ struct OutlineReturnOfConstructor : public mlir::OpRewritePattern<FuncOp> {
     rewriter.replaceOpWithNewOp<HaskReturnOp>(clonedRet, clonedConstructorArg);
     rewriter.eraseOp(clonedConstructor);
     mod.push_back(outlinedFn);
+    rewriter.notifyOperationInserted(outlinedFn);
 
     return success();
   }
@@ -1114,7 +1122,7 @@ struct WorkerWrapperPass : public Pass {
     // instruction.
     // 1. Write as FuncOp pattern
     // 2. write as closure.
-    patterns.insert<OutlineRecursiveApEagerOfConstructorPattern>(&getContext());
+    // patterns.insert<OutlineRecursiveApEagerOfConstructorPattern>(&getContext());
     // same as above?
     patterns.insert<OutlineCaseOfFnInput>(&getContext());
     // f(x): .. return(Constructor(v)) -> outline the last paer. Safe ish,
