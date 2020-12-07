@@ -3,49 +3,94 @@
 #include "Hask/HaskDialect.h"
 #include "Hask/HaskOps.h"
 
+struct InterpValue;
+
 enum class InterpValueType {
   I64,
+  MemRef,
   ClosureTopLevel,
   ClosureLambda,
   Constructor,
   Ref,
   ThunkifiedValue,
 };
+
+template <class T> struct MemRef {
+  using KeyTy = std::vector<int>;
+
+  MemRef() : dims(), mem() {}
+  MemRef(const KeyTy &dims, T v) : dims(dims) {
+    int size = 1;
+    for (int d : dims)
+      size *= d;
+    mem.assign(size, v);
+  }
+
+  T at(const KeyTy &key) const { return mem[_idx(key)]; }
+  T &at(const KeyTy &key) { return mem[_idx(key)]; }
+
+private:
+  KeyTy dims;
+  std::vector<T> mem; // row-major storage
+
+  int _idx(const KeyTy &key) const {
+    int rank = dims.size();
+    int idx = 0, prod = 1;
+    for (int i = rank - 1; i >= 0; i--) {
+      idx += prod * key[i];
+      prod *= dims[i];
+    }
+    return idx;
+  }
+};
+using MemRefIV = MemRef<InterpValue>;
+
 struct InterpValue {
   InterpValueType type;
 
-  int i() const {
-    assert(type == InterpValueType::I64);
-    return i_;
-  }
-
-  std::string ref() const {
-    assert(type == InterpValueType::Ref);
-    return s_;
-  }
-
+  //============= I64 ======================//
   static InterpValue i(int i) {
     InterpValue v(InterpValueType::I64);
     v.i_ = i;
     return v;
   }
-
-  static InterpValue thunkifiedValue(InterpValue v) {
-    InterpValue thunk(InterpValueType::ThunkifiedValue);
-    thunk.vs_.push_back(v);
-    return thunk;
+  int i() const {
+    assert(type == InterpValueType::I64);
+    return i_;
   }
 
-  InterpValue thunkifiedValue() const {
-    assert(type == InterpValueType::ThunkifiedValue);
-    return vs_[0];
+  //============= MemRef ======================//
+  static InterpValue mem(MemRefIV mem) {
+    InterpValue v(InterpValueType::MemRef);
+    v.mem_ = mem;
+    return v;
   }
+  InterpValue load(MemRefIV::KeyTy key) const { return mem_.at(key); }
+  void store(MemRefIV::KeyTy key, InterpValue v) { mem_.at(key) = v; }
 
+  //============= Ref ======================//
   static InterpValue ref(std::string tag) {
     InterpValue ref(InterpValueType::Ref);
     ref.s_ = tag;
     return ref;
   }
+  std::string ref() const {
+    assert(type == InterpValueType::Ref);
+    return s_;
+  }
+
+  //============= ThunkifiedValue ======================//
+  static InterpValue thunkifiedValue(InterpValue v) {
+    InterpValue thunk(InterpValueType::ThunkifiedValue);
+    thunk.vs_.push_back(v);
+    return thunk;
+  }
+  InterpValue thunkifiedValue() const {
+    assert(type == InterpValueType::ThunkifiedValue);
+    return vs_[0];
+  }
+
+  //============= ClosureTopLevel ======================//
   static InterpValue closureTopLevel(InterpValue fn,
                                      std::vector<InterpValue> args) {
     InterpValue closure(InterpValueType::ClosureTopLevel);
@@ -80,6 +125,8 @@ struct InterpValue {
     assert(type == InterpValueType::ClosureTopLevel);
     return vs_.end();
   }
+
+  //============= ClosureLampbda ======================//
   static InterpValue closureLambda(mlir::standalone::HaskLambdaOp lam,
                                    std::vector<InterpValue> args) {
     InterpValue closure(InterpValueType::ClosureLambda);
@@ -106,6 +153,7 @@ struct InterpValue {
     return vs_;
   }
 
+  //===================== Constructor ==========================//
   static InterpValue constructor(std::string tag, std::vector<InterpValue> vs) {
     InterpValue cons(InterpValueType::Constructor);
     cons.s_ = tag;
@@ -146,6 +194,7 @@ struct InterpValue {
   }
 
   int i_;
+  MemRefIV mem_;
   std::vector<InterpValue> vs_;
   std::string s_;
   mlir::standalone::HaskLambdaOp lam; // ugh

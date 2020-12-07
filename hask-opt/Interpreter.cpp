@@ -1,4 +1,5 @@
 #include "Interpreter.h"
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/StandardTypes.h"
 #include <map>
@@ -92,11 +93,13 @@ public:
     insert(k, v);
   }
 
+  /// loc: location to throw error at
+  /// k: value to lookup
   InterpValue lookup(mlir::Location loc, mlir::Value k) {
     // DiagnosticEngine &diagEngine = k.getContext()->getDiagEngine();
     auto it = find(k);
     if (!it) {
-      InterpreterError err(loc);
+      InterpreterError err(k.getLoc());
       llvm::errs() << "unable to find key: |";
       k.print(llvm::errs());
       llvm::errs() << "|\n";
@@ -124,7 +127,7 @@ private:
   void insert(mlir::Value k, InterpValue v) {
     env.push_back(std::make_pair(k, v));
   }
-  // you have got to be fucking kidding me. Value doesn't have a < operator?
+  // you have got to be f***ing kidding me. Value doesn't have a < operator?
   std::vector<std::pair<mlir::Value, InterpValue>> env;
 };
 
@@ -163,8 +166,25 @@ struct Interpreter {
     fprintf(stderr, "\n");
     fflush(stdout);
 
+    //============= HaskOps ========================//
     if (MakeI64Op mi64 = dyn_cast<MakeI64Op>(op)) {
       env.addNew(mi64.getResult(), InterpValue::i(mi64.getValue().getInt()));
+      return;
+    }
+    if (HaskPrimopSubOp sub = dyn_cast<HaskPrimopSubOp>(op)) {
+      InterpValue a = env.lookup(sub.getLoc(), sub.getOperand(0));
+      InterpValue b = env.lookup(sub.getLoc(), sub.getOperand(1));
+      assert(a.type == InterpValueType::I64);
+      assert(b.type == InterpValueType::I64);
+      env.addNew(sub.getResult(), InterpValue::i(a.i() - b.i()));
+      return;
+    }
+    if (HaskPrimopAddOp add = dyn_cast<HaskPrimopAddOp>(op)) {
+      InterpValue a = env.lookup(add.getLoc(), add.getOperand(0));
+      InterpValue b = env.lookup(add.getLoc(), add.getOperand(1));
+      assert(a.type == InterpValueType::I64);
+      assert(b.type == InterpValueType::I64);
+      env.addNew(add.getResult(), InterpValue::i(a.i() + b.i()));
       return;
     }
 
@@ -326,41 +346,6 @@ struct Interpreter {
       return;
     }
 
-    if (HaskPrimopSubOp sub = dyn_cast<HaskPrimopSubOp>(op)) {
-      InterpValue a = env.lookup(sub.getLoc(), sub.getOperand(0));
-      InterpValue b = env.lookup(sub.getLoc(), sub.getOperand(1));
-      assert(a.type == InterpValueType::I64);
-      assert(b.type == InterpValueType::I64);
-      env.addNew(sub.getResult(), InterpValue::i(a.i() - b.i()));
-      return;
-    }
-
-    if (SubIOp sub = dyn_cast<SubIOp>(op)) {
-      InterpValue a = env.lookup(sub.getLoc(), sub.getOperand(0));
-      InterpValue b = env.lookup(sub.getLoc(), sub.getOperand(1));
-      assert(a.type == InterpValueType::I64);
-      assert(b.type == InterpValueType::I64);
-      env.addNew(sub.getResult(), InterpValue::i(a.i() - b.i()));
-      return;
-    }
-    if (MulIOp mul = dyn_cast<MulIOp>(op)) {
-      InterpValue a = env.lookup(mul.getLoc(), mul.getOperand(0));
-      InterpValue b = env.lookup(mul.getLoc(), mul.getOperand(1));
-      assert(a.type == InterpValueType::I64);
-      assert(b.type == InterpValueType::I64);
-      env.addNew(mul.getResult(), InterpValue::i(a.i() * b.i()));
-      return;
-    }
-
-    if (HaskPrimopAddOp add = dyn_cast<HaskPrimopAddOp>(op)) {
-      InterpValue a = env.lookup(add.getLoc(), add.getOperand(0));
-      InterpValue b = env.lookup(add.getLoc(), add.getOperand(1));
-      assert(a.type == InterpValueType::I64);
-      assert(b.type == InterpValueType::I64);
-      env.addNew(add.getResult(), InterpValue::i(a.i() + b.i()));
-      return;
-    }
-
     if (ApEagerOp ap = dyn_cast<ApEagerOp>(op)) {
       InterpValue fnval = env.lookup(ap.getLoc(), ap.getFn());
       assert(fnval.type == InterpValueType::Ref);
@@ -383,11 +368,11 @@ struct Interpreter {
       return;
     }
 
+    //============= StdOps ========================//
     if (mlir::ConstantIntOp cint = mlir::dyn_cast<mlir::ConstantIntOp>(op)) {
       env.addNew(cint.getResult(), InterpValue::i(cint.getValue()));
       return;
     }
-
     if (mlir::ConstantOp constop = mlir::dyn_cast<mlir::ConstantOp>(op)) {
       if (mlir::IntegerAttr consti =
               constop.getValue().dyn_cast<mlir::IntegerAttr>()) {
@@ -407,6 +392,51 @@ struct Interpreter {
 
       return;
     }
+    if (SubIOp sub = dyn_cast<SubIOp>(op)) {
+      InterpValue a = env.lookup(sub.getLoc(), sub.getOperand(0));
+      InterpValue b = env.lookup(sub.getLoc(), sub.getOperand(1));
+      assert(a.type == InterpValueType::I64);
+      assert(b.type == InterpValueType::I64);
+      env.addNew(sub.getResult(), InterpValue::i(a.i() - b.i()));
+      return;
+    }
+    if (MulIOp mul = dyn_cast<MulIOp>(op)) {
+      InterpValue a = env.lookup(mul.getLoc(), mul.getOperand(0));
+      InterpValue b = env.lookup(mul.getLoc(), mul.getOperand(1));
+      assert(a.type == InterpValueType::I64);
+      assert(b.type == InterpValueType::I64);
+      env.addNew(mul.getResult(), InterpValue::i(a.i() * b.i()));
+      return;
+    }
+
+    if (mlir::IndexCastOp indexCastOp = mlir::dyn_cast<IndexCastOp>(op)) {
+      auto v = env.lookup(op.getLoc(), indexCastOp.getOperand());
+      env.addNew(indexCastOp.getResult(), v);
+    }
+    if (mlir::AllocOp allocOp = mlir::dyn_cast<mlir::AllocOp>(op)) {
+      auto dims_ = allocOp.getType().getShape();
+      MemRefIV::KeyTy dims(dims_.begin(), dims_.end());
+      InterpValue v = [&]() {
+        if (allocOp.getType().isIntOrIndex()) {
+          return InterpValue::i(0);
+        }
+        {
+          InterpreterError err(op.getLoc());
+          err << "INTERPRETER ERROR: unknown memref element type\n";
+        }
+        assert(false);
+      }();
+      auto mem = MemRefIV(dims, v);
+      env.addNew(allocOp.getResult(), InterpValue::mem(mem));
+
+      return;
+    }
+    if (mlir::DimOp dimOp = mlir::dyn_cast<mlir::DimOp>(op)) {
+      auto v = env.lookup(dimOp.memrefOrTensor().getLoc(), dimOp.memrefOrTensor());
+    }
+
+    //============= AffineOps ========================//
+
 
     InterpreterError err(op.getLoc());
     err << "INTERPRETER ERROR: unknown operation: |" << op << "|\n";
