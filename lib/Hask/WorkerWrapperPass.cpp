@@ -355,10 +355,14 @@ struct OutlineRecursiveApEagerOfThunkPattern
 // ===INPUT===
 // C { MKC(V) }
 // @f(%inc: C)
-//  %inv = extract(@MKC, %inc) : V
-//  %w = ... : V
-//  %wc = construct(@MKC, w) : C
-//  %rec = apEager(@f, wc)
+//  case inc of {
+//    C inv -> {
+//      %inv = extract(@MKC, %inc) : V
+//      %w = ... : V
+//      %wc = construct(@MKC, w) : C
+//      %rec = apEager(@f, wc)
+//    }
+// }
 // ===OUTPUT===
 // @frec(%inv: V)
 //  %inv = extract(@MKC, %inc) : V
@@ -584,12 +588,11 @@ struct OutlineCaseOfFnInput : public mlir::OpRewritePattern<FuncOp> {
           continue;
         }
 
-
-
         // can't be outlined
         llvm::errs() << "\t^^^^^ not contained\n";
         llvm::errs() << "\tv's parent op: ";
-         v.getParentRegion()->getParentOp()->print(llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
+        v.getParentRegion()->getParentOp()->print(
+            llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
         llvm::errs() << "\t---";
 
         canBeSelfContained = false;
@@ -1092,29 +1095,44 @@ struct WorkerWrapperPass : public Pass {
 
   void runOnOperation() override {
     mlir::OwningRewritePatternList patterns;
+    // force(ap) -> apeager. safe.
     patterns.insert<ForceOfKnownApPattern>(&getContext());
+    // force(thunkify) -> direct val. safe.
     patterns.insert<ForceOfThunkifyPattern>(&getContext());
-    patterns.insert<OutlineRecursiveApEagerOfThunkPattern>(&getContext());
-    patterns.insert<OutlineRecursiveApEagerOfConstructorPattern>(&getContext());
-    patterns.insert<OutlineCaseOfFnInput>(&getContext());
+    // apeager(f, x, y, z) -> inlined. safe.
+    patterns.insert<InlineApEagerPattern>(&getContext());
 
+    // f(paramt): paramv = force(paramt); use paramv. Safe-ish, since
+    // we immediately have a force as the first instruction.
+    // 1. Write as FuncOp pattern
+    // 2.  Write as closure.
+    patterns.insert<OutlineRecursiveApEagerOfThunkPattern>(&getContext());
+    // f(paramConstructor) = case paramConstructor of {
+    // (Constructor paramValue) -> ..
+    // }.
+    // Safe ish, since we immediately expect a case of the first
+    // instruction.
+    // 1. Write as FuncOp pattern
+    // 2. write as closure.
+    patterns.insert<OutlineRecursiveApEagerOfConstructorPattern>(&getContext());
+    // same as above?
+    patterns.insert<OutlineCaseOfFnInput>(&getContext());
+    // f(x): .. return(Constructor(v)) -> outline the last paer. Safe ish,
+    // since we only outline the final computation.
     patterns.insert<OutlineReturnOfConstructor>(&getContext());
+    // f: case of {C1 -> D v1; C2 -> D v2; .. Cn -> D vn;} into
+    //    f: D (case v of {C1 -> v1; C2 -> v2; .. Cn -> vn; }
+    // Safe.
     patterns.insert<PeelConstructorsFromCasePattern>(&getContext());
+    // Same as peel constructor from case for ints. safe.
     patterns.insert<PeelConstructorsFromCaseIntPattern>(&getContext());
 
+    // f: case (Ci vi) of { C1 w1 -> e1; C2 w2 -> e2 ... Cn wn -> en};
+    //    f: ei[wi := vi].
+    // safe
     patterns.insert<CaseOfKnownConstructorPattern>(&getContext());
+    // same as Case of known constructor for ints. safe.
     patterns.insert<CaseOfKnownIntPattern>(&getContext());
-
-    // patterns.insert<CaseOfBoxedRecursiveApWithFinalConstruct>(&getContext());
-
-    // change:
-    //   retval = case x of L1 -> { ...; return Foo(x1); } L2 -> { ...; return
-    //   Foo(x2); }
-    // into:
-    //  v = case x of L1 -> { ...; return x1; } L2 -> { ...; return x2; };
-    //  retval = Foo(v)
-    //  not work?
-    patterns.insert<InlineApEagerPattern>(&getContext());
 
     ::llvm::DebugFlag = true;
 
