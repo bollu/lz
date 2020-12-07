@@ -517,25 +517,43 @@ struct OutlineCaseOfFnInput : public mlir::OpRewritePattern<FuncOp> {
                   mlir::PatternRewriter &rewriter) const override {
     mlir::ModuleOp mod = parentfn.getParentOfType<ModuleOp>();
 
-    llvm::errs() << "Analysing function: |" << parentfn.getName() << "\n";
+    llvm::errs() << "Analysing function: |" << parentfn.getName() << "|\n";
     if (parentfn.getArguments().size() != 1) {
       return failure();
     }
 
+    // TODO: ACTUALLY CHECK THIS CONDITION!
+    // The current problem is that something like:
+    // case x  of  (1)
+    //   Foo x' -> ...
+    //    default -> use x (2)
+    // counts as TWO uses!
+    /*
     if (!parentfn.getArgument(0).hasOneUse()) {
       llvm::errs() << "function with argument of more than 1 use: " << parentfn
                    << "\n";
       assert(false);
       return failure();
     }
+    */
 
     Value::use_iterator argUse = parentfn.getArgument(0).use_begin();
+    llvm::errs() << "argUse: |";
+    argUse.getUser()->print(llvm::errs());
+    llvm::errs() << "|\n";
+
     mlir::standalone::CaseOp caseOfArg =
         mlir::dyn_cast<CaseOp>(argUse.getUser());
 
     if (!caseOfArg) {
       return failure();
     }
+
+    llvm::errs() << "===module:===\n";
+    parentfn.getParentOp()->print(llvm::errs());
+    llvm::errs() << "======\n";
+
+    // llvm::errs() << "caseOfArg: |" << caseOfArg << "|\n";
 
     // TODO: generalize
     if (caseOfArg.getNumAlts() != 1) {
@@ -567,11 +585,10 @@ struct OutlineCaseOfFnInput : public mlir::OpRewritePattern<FuncOp> {
       return WalkResult::advance();
     }); // end walk
 
-    llvm::errs() << __PRETTY_FUNCTION__ << ": Considering function: |"
-                 << parentfn.getName() << "| \n";
+    llvm::errs() << "Considering function: |" << parentfn.getName() << "| \n";
 
-    llvm::errs() << "region:\n" << caseOfArg;
-    llvm::errs() << "\n===\n";
+    // llvm::errs() << "region:\n" << caseOfArg;
+    // llvm::errs() << "\n===\n";
 
     // try to find ops that we need to copy
     bool canBeSelfContained = true;
@@ -579,13 +596,11 @@ struct OutlineCaseOfFnInput : public mlir::OpRewritePattern<FuncOp> {
       llvm::errs() << "- op: ";
       op->print(llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
       llvm::errs() << "\n";
+
       for (Value v : op->getOperands()) {
         llvm::errs() << "\t-" << v << "\n";
 
-        if (v.getParentRegion()->getParentOp() == caseOfArg.getOperation()) {
-          continue;
-        }
-        if (v.getParentRegion() == &caseOfArg.getAltRHS(0)) {
+        if (caseOfArg.getAltRHS(0).isAncestor(v.getParentRegion())) {
           continue;
         }
 
@@ -594,13 +609,6 @@ struct OutlineCaseOfFnInput : public mlir::OpRewritePattern<FuncOp> {
         if (vconst) {
           continue;
         }
-
-        // can't be outlined
-        llvm::errs() << "\t^^^^^ not contained\n";
-        llvm::errs() << "\tv's parent op: ";
-        v.getParentRegion()->getParentOp()->print(
-            llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
-        llvm::errs() << "\t---";
 
         canBeSelfContained = false;
         return WalkResult::interrupt();
@@ -646,7 +654,7 @@ struct OutlineCaseOfFnInput : public mlir::OpRewritePattern<FuncOp> {
     // try to find ops that we need to copy
     caseOfArg.getAltRHS(0).walk([&](Operation *op) {
       for (Value v : op->getOperands()) {
-        if (v.getParentRegion() == &caseOfArg.getAltRHS(0)) {
+        if (caseOfArg.getAltRHS(0).isAncestor(v.getParentRegion())) {
           return WalkResult::advance();
         }
         // has different region as owner.
@@ -683,8 +691,6 @@ struct OutlineCaseOfFnInput : public mlir::OpRewritePattern<FuncOp> {
     llvm::errs() << "===outlined fn:===\n";
     outlinedFn.print(llvm::errs());
     llvm::errs() << "\n\n";
-    assert(false);
-
     return success();
   }
 };
@@ -832,7 +838,7 @@ struct CaseOfKnownIntPattern : public mlir::OpRewritePattern<CaseIntOp> {
       return failure();
     }
 
-    llvm::errs() << "constint: | " << constint << "\n";
+    llvm::errs() << "constint: | " << constint << "|\n";
 
     rewriter.setInsertionPoint(caseop);
     int altIx = *caseop.getAltIndexForConstInt(constint.getValue().getInt());
