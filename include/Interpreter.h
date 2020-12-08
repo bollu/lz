@@ -15,32 +15,36 @@ enum class InterpValueType {
   ThunkifiedValue,
 };
 
+// we need the template nonsense to break the loop between `MemRef`
+// and `InterpValue`.
 template <typename T> struct MemRefT {
   using KeyTy = std::vector<int>;
   MemRefT() {}
-
-  MemRefT(const KeyTy &dims, T v) : dims(dims) {
-    assert(v);
-    int size = 1;
-    for (int d : dims)
-      size *= d;
-    mem.assign(size, {v});
-  }
-
   MemRefT(const KeyTy &dims) : dims(dims) {
     int size = 1;
-    for (int d : dims) {size *= d; }
-    // TODO: mem.resize(size) CRASHES! WTF? Find out why and fix.
-    for(int i = 0; i < size; ++i) {
-      mem[i] = {};
+    for (int d : dims) {
+      assert(d >= 0 && "negative dimension illegal");
+      llvm::errs() << d << " ";
+      size *= d;
     }
 
+    assert(size >= 0 && "negative size illegal");
+    // TODO: mem.resize(size) CRASHES! WTF? Find out why and fix.
+    for (int i = 0; i < size; ++i) {
+      mem.push_back({});
+    }
   }
 
-  T at(const KeyTy &key) const {
+  T load(const KeyTy &key) const {
     llvm::Optional<T> ov = mem[_idx(key)];
     assert(ov && "unable to find key");
     return ov.getValue();
+  }
+
+  void store(const KeyTy &key, T v) {
+    const int i = _idx(key);
+    assert(i < (int)mem.size());
+    mem[i] = llvm::Optional<T>(v);
   }
 
 private:
@@ -82,8 +86,14 @@ struct InterpValue {
     v.mem_ = mem;
     return v;
   }
-  InterpValue load(MemRef::KeyTy key) const { return mem_.at(key); }
-  void store(MemRef::KeyTy key, InterpValue v) { mem_.at(key) = v; }
+  InterpValue load(MemRef::KeyTy key) const {
+    assert(this->type == InterpValueType::MemRef);
+    return mem_.load(key);
+  }
+  void store(MemRef::KeyTy key, InterpValue v) {
+    assert(this->type == InterpValueType::MemRef);
+    mem_.store(key, v);
+  }
 
   //============= Ref ======================//
   static InterpValue ref(std::string tag) {

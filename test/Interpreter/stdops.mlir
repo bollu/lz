@@ -1,5 +1,6 @@
 // RUN: hask-opt %s
 // RUN: hask-opt --lz-interpret %s
+// CHECK: 42
 
 module {
   func @makemem(%n: index, %vAt0 : i64, %vAt1: i64) -> memref<?xi64> {

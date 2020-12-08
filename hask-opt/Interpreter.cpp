@@ -92,11 +92,15 @@ public:
     assert(!find(k));
     insert(k, v);
   }
-  void addOrUpdate(mlir::Value k, const InterpValue &v) {
-    if (find(k))
-      update(k, v);
-    else
-      insert(k, v);
+
+  void update(mlir::Value k, const InterpValue &v) {
+    for (auto &it : env) {
+      if (it.first == k) {
+        it.second = v;
+        return;
+      }
+    }
+    assert(false && "unable to find element in Env");
   }
 
   /// loc: location to throw error at
@@ -131,17 +135,7 @@ private:
     return {};
   }
   void insert(mlir::Value k, const InterpValue &v) { env.emplace_back(k, v); }
-  void update(mlir::Value k, const InterpValue &v) {
-    bool ok = false;
-    for (auto &it : env) {
-      if (it.first == k) {
-        it.second = v;
-        ok = true;
-        break;
-      }
-    }
-    assert(ok);
-  }
+
   // you have got to be f***ing kidding me. Value doesn't have a < operator?
   std::vector<std::pair<mlir::Value, InterpValue>> env;
 };
@@ -417,13 +411,22 @@ struct Interpreter {
                    InterpValue::ref(constref.getValue().str()));
         return;
       }
-
       InterpreterError err(op.getLoc());
       err << "INTERPRETER ERROR: unknown type of constant: |" << op << "|\n";
 
       return;
     }
-    if (SubIOp sub = dyn_cast<SubIOp>(op)) {
+
+    if (auto add = dyn_cast<mlir::AddIOp>(op)) {
+      InterpValue a = env.lookup(add.getLoc(), add.getOperand(0));
+      InterpValue b = env.lookup(add.getLoc(), add.getOperand(1));
+      assert(a.type == InterpValueType::I64);
+      assert(b.type == InterpValueType::I64);
+      env.addNew(add.getResult(), InterpValue::i(a.i() + b.i()));
+      return;
+    }
+
+    if (auto sub = dyn_cast<mlir::SubIOp>(op)) {
       InterpValue a = env.lookup(sub.getLoc(), sub.getOperand(0));
       InterpValue b = env.lookup(sub.getLoc(), sub.getOperand(1));
       assert(a.type == InterpValueType::I64);
@@ -431,7 +434,7 @@ struct Interpreter {
       env.addNew(sub.getResult(), InterpValue::i(a.i() - b.i()));
       return;
     }
-    if (MulIOp mul = dyn_cast<MulIOp>(op)) {
+    if (auto mul = dyn_cast<mlir::MulIOp>(op)) {
       InterpValue a = env.lookup(mul.getLoc(), mul.getOperand(0));
       InterpValue b = env.lookup(mul.getLoc(), mul.getOperand(1));
       assert(a.type == InterpValueType::I64);
@@ -442,23 +445,56 @@ struct Interpreter {
 
     // NOTE: Indexes. We choose to track no difference between indexes
     // and i64s.
-    if (mlir::IndexCastOp indexCastOp = mlir::dyn_cast<IndexCastOp>(op)) {
+    if (auto indexCastOp = mlir::dyn_cast<mlir::IndexCastOp>(op)) {
       auto v = env.lookup(op.getLoc(), indexCastOp.getOperand());
       env.addNew(indexCastOp.getResult(), v);
       return;
     }
 
-    if (mlir::AllocOp allocOp = mlir::dyn_cast<mlir::AllocOp>(op)) {
-      auto dims_ = allocOp.getType().getShape();
-      MemRef::KeyTy dims(dims_.begin(), dims_.end());
-      llvm::errs() << "allocOp:";
-      allocOp.print(llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
+    if (auto allocOp = mlir::dyn_cast<mlir::AllocOp>(op)) {
+      std::vector<int> dims;
+      for (Value dimv : allocOp.getDynamicSizes()) {
+        dims.push_back(env.lookup(allocOp.getLoc(), dimv).i());
+      }
       env.addNew(allocOp.getResult(), InterpValue::mem(MemRef(dims)));
       return;
     }
-    if (mlir::DimOp dimOp = mlir::dyn_cast<mlir::DimOp>(op)) {
+
+    if (auto dimOp = mlir::dyn_cast<mlir::DimOp>(op)) {
       auto v =
           env.lookup(dimOp.memrefOrTensor().getLoc(), dimOp.memrefOrTensor());
+    }
+
+    if (auto call = dyn_cast<mlir::CallOp>(op)) {
+      std::vector<InterpValue> args;
+      for (Value operand : call.getArgOperands()) {
+        args.push_back(env.lookup(call.getLoc(), operand));
+      }
+      // TODO: generalize to more than 1 result
+      assert(call.getNumResults() == 1);
+      env.addNew(call.getResult(0),
+                 interpretFunction(call.getCallee().str(), args));
+      return;
+    }
+
+    if (auto store = dyn_cast<mlir::StoreOp>(op)) {
+      std::vector<InterpValue> args;
+      InterpValue memref = env.lookup(store.getLoc(), store.memref());
+      InterpValue v = env.lookup(store.getLoc(), store.value());
+      // TODO: generalize to multi dimensional indexes
+      InterpValue ix = env.lookup(store.getLoc(), *store.getIndices().begin());
+      memref.store({ix.i()}, v);
+      env.update(store.memref(), memref);
+      return;
+    }
+
+    if (auto load = dyn_cast<mlir::LoadOp>(op)) {
+      std::vector<InterpValue> args;
+      InterpValue memref = env.lookup(load.getLoc(), load.memref());
+      InterpValue ix = env.lookup(load.getLoc(), *load.getIndices().begin());
+      InterpValue result = memref.load({ix.i()});
+      env.addNew(load.getResult(), result);
+      return;
     }
 
     //============= AffineOps ========================//
@@ -480,11 +516,11 @@ struct Interpreter {
     }
 
     InterpreterError err(op.getLoc());
-    err << "INTERPRETER ERROR: unknown operation: |" << op << "|\n";
+    err << "INTERPRETER ERROR: unknown operation:\n|" << op << "|\n";
   };
 
   TerminatorResult interpretTerminator(Operation &op, Env &env) {
-    if (ReturnOp ret = dyn_cast<ReturnOp>(op)) {
+    if (auto ret = dyn_cast<mlir::ReturnOp>(op)) {
       return TerminatorResult(env.lookup(ret.getLoc(), ret.getOperand(0)));
     } else if (HaskReturnOp ret = dyn_cast<HaskReturnOp>(op)) {
       // TODO: we assume we have only one return value
