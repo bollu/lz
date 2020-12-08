@@ -2,7 +2,7 @@
 // RUN: hask-opt %s  --lz-worker-wrapper --lz-interpret | FileCheck %s -check-prefix='CHECK-WW'
 // Check that @plus works with Maybe works.
 // CHECK: constructor(Just 42)
-// CHECK: num_thunkify_calls(6)
+// CHECK: num_thunkify_calls(12)
 // CHECK: num_force_calls(12)
 // CHECK: num_construct_calls(7)
 

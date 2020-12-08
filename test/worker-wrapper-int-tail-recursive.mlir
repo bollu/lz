@@ -5,7 +5,7 @@
 
 // Check that @plus works with SimpleInt works.
 // CHECK: constructor(SimpleInt 42)
-// CHECK: num_thunkify_calls(6)
+// CHECK: num_thunkify_calls(12)
 // CHECK: num_force_calls(12)
 // CHECK: num_construct_calls(7)
 

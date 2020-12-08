@@ -245,7 +245,7 @@ struct Interpreter {
 
     if (ApOp ap = dyn_cast<ApOp>(op)) {
       InterpValue fn = env.lookup(ap.getLoc(), ap.getFn());
-      // stats.num_thunkify_calls++;
+      stats.num_thunkify_calls++;
 
       if (fn.type == InterpValueType::Ref) {
 

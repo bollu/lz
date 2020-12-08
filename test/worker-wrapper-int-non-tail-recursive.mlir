@@ -4,7 +4,7 @@
 // RUN: hask-opt %s -lz-worker-wrapper | hask-opt  -lz-interpret | FileCheck %s --check-prefix=CHECK-WW
 // Check that @plus works with SimpleInt works.
 // CHECK: constructor(SimpleInt 42)
-// CHECK: num_thunkify_calls(38)
+// CHECK: num_thunkify_calls(76)
 // CHECK: num_force_calls(76)
 // CHECK: num_construct_calls(76)
 
