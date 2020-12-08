@@ -87,23 +87,23 @@ struct InterpValue {
   }
 
   //============= MemRef ======================//
-  static InterpValue mem(MemRef mem) {
+  static InterpValue mem(MemRef *mem) {
     InterpValue v(InterpValueType::MemRef);
     v.mem_ = mem;
     return v;
   }
   InterpValue load(MemRef::KeyTy key) const {
     assert(this->type == InterpValueType::MemRef);
-    return mem_.load(key);
+    return mem_->load(key);
   }
   void store(MemRef::KeyTy key, InterpValue v) {
     assert(this->type == InterpValueType::MemRef);
-    mem_.store(key, v);
+    mem_->store(key, v);
   }
 
   int sizeOfDim(int i) {
     assert(this->type == InterpValueType::MemRef);
-    return mem_.sizeOfDim(i);
+    return mem_->sizeOfDim(i);
   }
 
   //============= Ref ======================//
@@ -232,7 +232,7 @@ struct InterpValue {
   }
 
   int i_;
-  MemRef mem_;
+  MemRef *mem_;
   std::vector<InterpValue> vs_;
   std::string s_;
   mlir::standalone::HaskLambdaOp lam; // ugh

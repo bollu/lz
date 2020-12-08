@@ -1,3 +1,4 @@
+// RUN: hask-opt --lz-interpret %s 
 // RUN: hask-opt --lz-worker-wrapper --affine-loop-fusion --canonicalize --inline --affine-loop-fusion %s
 // RUN: hask-opt --lz-worker-wrapper --affine-loop-fusion --canonicalize --inline --affine-loop-fusion %s | hask-opt --lz-interpret
 
@@ -30,6 +31,7 @@ module {
   }
 
 
+  // computes sum of numbers upto 1023?
   func @main () -> i64 {
     %seqf = constant @seq : (i64) ->  memref<?xi64>
     %size = std.constant 1024 : i64

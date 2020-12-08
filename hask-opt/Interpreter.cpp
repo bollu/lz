@@ -461,7 +461,7 @@ struct Interpreter {
       for (Value dimv : allocOp.getDynamicSizes()) {
         dims.push_back(env.lookup(allocOp.getLoc(), dimv).i());
       }
-      env.addNew(allocOp.getResult(), InterpValue::mem(MemRef(dims)));
+      env.addNew(allocOp.getResult(), InterpValue::mem(new MemRef(dims)));
       return;
     }
 
@@ -583,8 +583,12 @@ struct Interpreter {
     }
 
     if (auto ret = dyn_cast<mlir::AffineYieldOp>(op)) {
-      assert(ret.getNumOperands() == 0);
-      return TerminatorResult();
+      assert(ret.getNumOperands() <= 1);
+      if (ret.getNumOperands() == 0) {
+        return TerminatorResult();
+      } else if (ret.getNumOperands() == 1) {
+        return TerminatorResult(env.lookup(ret.getLoc(), ret.getOperand(0)));
+      }
     }
 
     InterpreterError err(op.getLoc());
