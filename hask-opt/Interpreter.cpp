@@ -140,17 +140,19 @@ private:
   std::vector<std::pair<mlir::Value, InterpValue>> env;
 };
 
-enum class TerminatorResultType { Branch, Return };
+enum class TerminatorResultType { Branch, ReturnValue, ReturnVoid };
 struct TerminatorResult {
   const TerminatorResultType type;
 
   TerminatorResult(Block *bbNext)
       : type(TerminatorResultType::Branch), bbNext_(bbNext) {}
   TerminatorResult(InterpValue returnValue)
-      : type(TerminatorResultType::Return), returnValue_(returnValue) {}
+      : type(TerminatorResultType::ReturnValue), returnValue_(returnValue) {}
+
+  explicit TerminatorResult() : type(TerminatorResultType::ReturnVoid) {}
 
   InterpValue returnValue() {
-    assert(type == TerminatorResultType::Return);
+    assert(type == TerminatorResultType::ReturnValue);
     assert(returnValue_);
     return returnValue_.getValue();
   }
@@ -186,8 +188,11 @@ struct Interpreter {
     llvm::errs().changeColor(llvm::raw_fd_ostream::GREEN);
     llvm::errs() << "--interpreting operation:--\n";
     llvm::errs().resetColor();
-
     op.print(llvm::errs());
+    llvm::errs() << "\n";
+    mlir::OpPrintingFlags printGeneric =
+        mlir::OpPrintingFlags().printGenericOpForm();
+    op.print(llvm::errs(), printGeneric);
     fprintf(stderr, "\n");
     fflush(stdout);
 
@@ -296,7 +301,7 @@ struct Interpreter {
         std::vector<InterpValue> args(scrutinee.closureArgBegin(),
                                       scrutinee.closureArgEnd());
         env.addNew(force.getResult(),
-                   interpretFunction(scrutineefn.ref(), args));
+                   *interpretFunction(scrutineefn.ref(), args));
         return;
       }
       assert(false && "unreachable");
@@ -318,8 +323,8 @@ struct Interpreter {
 
         // matched!
         env.addNew(case_.getResult(),
-                   interpretRegion(case_.getAltRHS(i),
-                                   scrutinee.constructorArgs(), env));
+                   *interpretRegion(case_.getAltRHS(i),
+                                    scrutinee.constructorArgs(), env));
         return;
       }
 
@@ -327,8 +332,8 @@ struct Interpreter {
       assert(case_.getDefaultAltIndex() && "neither match, nor default");
       llvm::errs() << __FUNCTION__ << ":" << __LINE__ << "\n";
       env.addNew(case_,
-                 interpretRegion(case_.getAltRHS(*case_.getDefaultAltIndex()),
-                                 {}, env));
+                 *interpretRegion(case_.getAltRHS(*case_.getDefaultAltIndex()),
+                                  {}, env));
       return;
     }
 
@@ -351,12 +356,12 @@ struct Interpreter {
           continue;
         }
         // matched!
-        env.addNew(caseInt, interpretRegion(caseInt.getAltRHS(i), {}, env));
+        env.addNew(caseInt, *interpretRegion(caseInt.getAltRHS(i), {}, env));
         return;
       }
 
       assert(caseInt.getDefaultAltIndex() && "neither match, nor default");
-      env.addNew(caseInt, interpretRegion(caseInt.getDefaultRHS(), {}, env));
+      env.addNew(caseInt, *interpretRegion(caseInt.getDefaultRHS(), {}, env));
       return;
     }
 
@@ -379,7 +384,7 @@ struct Interpreter {
       for (int i = 0; i < ap.getNumFnArguments(); ++i) {
         args.push_back(env.lookup(ap.getLoc(), ap.getFnArgument(i)));
       }
-      env.addNew(ap.getResult(), interpretFunction(fnval.ref(), args));
+      env.addNew(ap.getResult(), *interpretFunction(fnval.ref(), args));
       return;
     }
 
@@ -473,7 +478,7 @@ struct Interpreter {
       // TODO: generalize to more than 1 result
       assert(call.getNumResults() == 1);
       env.addNew(call.getResult(0),
-                 interpretFunction(call.getCallee().str(), args));
+                 *interpretFunction(call.getCallee().str(), args));
       return;
     }
 
@@ -497,6 +502,13 @@ struct Interpreter {
       return;
     }
 
+    if (auto dim = dyn_cast<mlir::DimOp>(op)) {
+      InterpValue ix = env.lookup(dim.getLoc(), dim.index());
+      InterpValue memref = env.lookup(dim.getLoc(), dim.memrefOrTensor());
+      env.addNew(dim.getResult(), InterpValue::i(memref.sizeOfDim(ix.i())));
+      return;
+    }
+
     //============= AffineOps ========================//
     // affine.for %arg1 = 0 to %0 {
     //   %2 = index_cast %arg1 : index to i64
@@ -509,9 +521,50 @@ struct Interpreter {
       const int lo = interpAffineBound(forop.getLoc(), lb, env);
       const int hi = interpAffineBound(forop.getLoc(), ub, env);
 
-      for (int i = lo; i <= hi; i += forop.getStep()) {
-        interpretRegion(forop.getRegion(), InterpValue::i(i), env);
+      llvm::Optional<InterpValue> out;
+      llvm::SmallVector<InterpValue, 4> iterArgs;
+      for (Value v : forop.getIterOperands()) {
+        iterArgs.push_back(env.lookup(forop.getLoc(), v));
       }
+      for (int i = lo; i < hi; i += forop.getStep()) {
+        llvm::SmallVector<InterpValue, 4> args;
+        args.push_back(InterpValue::i(i));
+        args.insert(args.end(), iterArgs.begin(), iterArgs.end());
+
+        // this style of copying the region on each interpretRegion()
+        // does not preserve loop carried stuff?
+        // TODO: this seems like a bug waiting to happen.
+        out = interpretRegion(forop.getRegion(), args, env);
+      }
+
+      assert(forop.getNumResults() <= 1);
+      // a => b <-> !a || b
+      assert(!(forop.getNumResults() == 1) || bool(out));
+      if (forop.getNumResults() == 1) {
+        env.addNew(forop.getResult(0), *out);
+      }
+      return;
+    }
+
+    if (auto store = mlir::dyn_cast<mlir::AffineStoreOp>(op)) {
+      // TODO: figure out if it's possible to merge with StoreOp
+      std::vector<InterpValue> args;
+      InterpValue memref = env.lookup(store.getLoc(), store.memref());
+      InterpValue v = env.lookup(store.getLoc(), store.value());
+      // TODO: generalize to multi dimensional indexes
+      InterpValue ix = env.lookup(store.getLoc(), *store.indices().begin());
+      memref.store({ix.i()}, v);
+      env.update(store.memref(), memref);
+      return;
+    }
+
+    if (auto load = dyn_cast<mlir::AffineLoadOp>(op)) {
+      std::vector<InterpValue> args;
+      InterpValue memref = env.lookup(load.getLoc(), load.memref());
+      InterpValue ix = env.lookup(load.getLoc(), *load.indices().begin());
+      llvm::errs() << "index: |" << ix.i() << "|\n";
+      InterpValue result = memref.load({ix.i()});
+      env.addNew(load.getResult(), result);
       return;
     }
 
@@ -522,13 +575,20 @@ struct Interpreter {
   TerminatorResult interpretTerminator(Operation &op, Env &env) {
     if (auto ret = dyn_cast<mlir::ReturnOp>(op)) {
       return TerminatorResult(env.lookup(ret.getLoc(), ret.getOperand(0)));
-    } else if (HaskReturnOp ret = dyn_cast<HaskReturnOp>(op)) {
+    }
+
+    if (auto ret = dyn_cast<HaskReturnOp>(op)) {
       // TODO: we assume we have only one return value
       return TerminatorResult(env.lookup(ret.getLoc(), ret.getOperand()));
-    } else {
-      InterpreterError err(op.getLoc());
-      err << "unknown terminator: |" << op << "|\n";
     }
+
+    if (auto ret = dyn_cast<mlir::AffineYieldOp>(op)) {
+      assert(ret.getNumOperands() == 0);
+      return TerminatorResult();
+    }
+
+    InterpreterError err(op.getLoc());
+    err << "unknown terminator: |" << op << "|\n";
     assert(false && "unreachable");
   }
 
@@ -549,13 +609,15 @@ struct Interpreter {
     assert(false && "unreachable location in InterpretBlock");
   }
 
-  InterpValue interpretRegion(Region &r, ArrayRef<InterpValue> args, Env env) {
+  llvm::Optional<InterpValue>
+  interpretRegion(Region &r, ArrayRef<InterpValue> args, Env env) {
     Env regionEnv(env);
 
     if (r.getNumArguments() != args.size()) {
       InFlightDiagnostic diag = r.getContext()->getDiagEngine().emit(
           r.getLoc(), DiagnosticSeverity::Error);
-      diag << "incorrect number of arguments. Given: |" << args.size() << "|\n";
+      diag << "incorrect number of arguments. Given: |" << args.size() << "|."
+           << "Expected: |" << r.getNumArguments() << "| \n";
       diag.report();
       assert(false && "unable to interpret region");
       exit(1);
@@ -570,16 +632,18 @@ struct Interpreter {
     while (1) {
       TerminatorResult term = interpretBlock(*bbCur, env);
       switch (term.type) {
-      case TerminatorResultType::Return:
-        return term.returnValue();
+      case TerminatorResultType::ReturnValue:
+        return {term.returnValue()};
+      case TerminatorResultType::ReturnVoid:
+        return {};
       case TerminatorResultType::Branch:
         bbCur = term.bbNext();
       }
     }
   }
 
-  InterpValue interpretFunction(std::string funcname,
-                                ArrayRef<InterpValue> args) {
+  llvm::Optional<InterpValue> interpretFunction(std::string funcname,
+                                                ArrayRef<InterpValue> args) {
     llvm::errs().changeColor(llvm::raw_fd_ostream::GREEN);
     llvm::errs() << "--interpreting function:|" << funcname.c_str() << "|--\n";
     llvm::errs().resetColor();
@@ -618,7 +682,7 @@ struct Interpreter {
     // rest are parameters
     SmallVector<InterpValue, 4> params(args.begin() + lam.getNumOperands(),
                                        args.end());
-    return interpretRegion(lam.getRegion(), params, env);
+    return *interpretRegion(lam.getRegion(), params, env);
   }
 
   Interpreter(ModuleOp module) : module(module){};
@@ -633,7 +697,7 @@ private:
 // interpret a module, and interpret the result as an integer. print it out.
 std::pair<InterpValue, InterpStats> interpretModule(ModuleOp module) {
   Interpreter I(module);
-  InterpValue val = I.interpretFunction("main", {});
+  InterpValue val = *I.interpretFunction("main", {});
   return {val, I.getStats()};
 };
 

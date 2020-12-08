@@ -37,7 +37,7 @@ template <typename T> struct MemRefT {
 
   T load(const KeyTy &key) const {
     llvm::Optional<T> ov = mem[_idx(key)];
-    assert(ov && "unable to find key");
+    assert(ov && "trying to load from index that has not been stored to!");
     return ov.getValue();
   }
 
@@ -45,6 +45,12 @@ template <typename T> struct MemRefT {
     const int i = _idx(key);
     assert(i < (int)mem.size());
     mem[i] = llvm::Optional<T>(v);
+  }
+
+  int sizeOfDim(int i) {
+    assert(i >= 0);
+    assert(i < (int)dims.size());
+    return dims[i];
   }
 
 private:
@@ -93,6 +99,11 @@ struct InterpValue {
   void store(MemRef::KeyTy key, InterpValue v) {
     assert(this->type == InterpValueType::MemRef);
     mem_.store(key, v);
+  }
+
+  int sizeOfDim(int i) {
+    assert(this->type == InterpValueType::MemRef);
+    return mem_.sizeOfDim(i);
   }
 
   //============= Ref ======================//
