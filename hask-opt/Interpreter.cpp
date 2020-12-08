@@ -88,9 +88,15 @@ InterpreterError &operator<<(InterpreterError &err, Operation &op) {
 
 struct Env {
 public:
-  void addNew(mlir::Value k, InterpValue v) {
+  void addNew(mlir::Value k, const InterpValue &v) {
     assert(!find(k));
     insert(k, v);
+  }
+  void addOrUpdate(mlir::Value k, const InterpValue &v) {
+    if (find(k))
+      update(k, v);
+    else
+      insert(k, v);
   }
 
   /// loc: location to throw error at
@@ -117,15 +123,24 @@ public:
 
 private:
   Optional<InterpValue> find(mlir::Value k) {
-    for (auto it : env) {
+    for (const auto &it : env) {
       if (it.first == k) {
         return {it.second};
       }
     }
     return {};
   }
-  void insert(mlir::Value k, InterpValue v) {
-    env.push_back(std::make_pair(k, v));
+  void insert(mlir::Value k, const InterpValue &v) { env.emplace_back(k, v); }
+  void update(mlir::Value k, const InterpValue &v) {
+    bool ok = false;
+    for (auto &it : env) {
+      if (it.first == k) {
+        it.second = v;
+        ok = true;
+        break;
+      }
+    }
+    assert(ok);
   }
   // you have got to be f***ing kidding me. Value doesn't have a < operator?
   std::vector<std::pair<mlir::Value, InterpValue>> env;
@@ -417,7 +432,7 @@ struct Interpreter {
       auto dims_ = allocOp.getType().getShape();
       MemRefIV::KeyTy dims(dims_.begin(), dims_.end());
       InterpValue v = [&]() {
-        if (allocOp.getType().isIntOrIndex()) {
+        if (allocOp.getType().getElementType().isIntOrIndex()) {
           return InterpValue::i(0);
         }
         {
@@ -432,11 +447,16 @@ struct Interpreter {
       return;
     }
     if (mlir::DimOp dimOp = mlir::dyn_cast<mlir::DimOp>(op)) {
-      auto v = env.lookup(dimOp.memrefOrTensor().getLoc(), dimOp.memrefOrTensor());
+      auto v =
+          env.lookup(dimOp.memrefOrTensor().getLoc(), dimOp.memrefOrTensor());
     }
 
     //============= AffineOps ========================//
-
+    // if (AffineForOp affineForOp = dyn_cast<AffineForOp>(op)) {
+    //   auto it = affineForOp.getInductionVar();
+    //   auto localVars = affineForOp.getIterOperands();
+    //   AffineBound lb = affineForOp.getLowerBound();
+    // }
 
     InterpreterError err(op.getLoc());
     err << "INTERPRETER ERROR: unknown operation: |" << op << "|\n";
