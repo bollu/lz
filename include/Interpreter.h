@@ -15,26 +15,42 @@ enum class InterpValueType {
   ThunkifiedValue,
 };
 
-template <class T> struct MemRef {
+template <typename T> struct MemRefT {
   using KeyTy = std::vector<int>;
+  MemRefT() {}
 
-  MemRef() : dims(), mem() {}
-  MemRef(const KeyTy &dims, T v) : dims(dims) {
+  MemRefT(const KeyTy &dims, T v) : dims(dims) {
+    assert(v);
     int size = 1;
     for (int d : dims)
       size *= d;
-    mem.assign(size, v);
+    mem.assign(size, {v});
   }
 
-  T at(const KeyTy &key) const { return mem[_idx(key)]; }
-  T &at(const KeyTy &key) { return mem[_idx(key)]; }
+  MemRefT(const KeyTy &dims) : dims(dims) {
+    int size = 1;
+    for (int d : dims) {size *= d; }
+    // TODO: mem.resize(size) CRASHES! WTF? Find out why and fix.
+    for(int i = 0; i < size; ++i) {
+      mem[i] = {};
+    }
+
+  }
+
+  T at(const KeyTy &key) const {
+    llvm::Optional<T> ov = mem[_idx(key)];
+    assert(ov && "unable to find key");
+    return ov.getValue();
+  }
 
 private:
   KeyTy dims;
-  std::vector<T> mem; // row-major storage
+  std::vector<llvm::Optional<T>> mem; // row-major storage
 
   int _idx(const KeyTy &key) const {
     int rank = dims.size();
+    assert(rank > 0 && "MemRef uninitialized");
+
     int idx = 0, prod = 1;
     for (int i = rank - 1; i >= 0; i--) {
       idx += prod * key[i];
@@ -43,7 +59,8 @@ private:
     return idx;
   }
 };
-using MemRefIV = MemRef<InterpValue>;
+
+using MemRef = MemRefT<InterpValue>;
 
 struct InterpValue {
   InterpValueType type;
@@ -60,13 +77,13 @@ struct InterpValue {
   }
 
   //============= MemRef ======================//
-  static InterpValue mem(MemRefIV mem) {
+  static InterpValue mem(MemRef mem) {
     InterpValue v(InterpValueType::MemRef);
     v.mem_ = mem;
     return v;
   }
-  InterpValue load(MemRefIV::KeyTy key) const { return mem_.at(key); }
-  void store(MemRefIV::KeyTy key, InterpValue v) { mem_.at(key) = v; }
+  InterpValue load(MemRef::KeyTy key) const { return mem_.at(key); }
+  void store(MemRef::KeyTy key, InterpValue v) { mem_.at(key) = v; }
 
   //============= Ref ======================//
   static InterpValue ref(std::string tag) {
@@ -194,7 +211,7 @@ struct InterpValue {
   }
 
   int i_;
-  MemRefIV mem_;
+  MemRef mem_;
   std::vector<InterpValue> vs_;
   std::string s_;
   mlir::standalone::HaskLambdaOp lam; // ugh

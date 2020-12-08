@@ -101,7 +101,7 @@ public:
 
   /// loc: location to throw error at
   /// k: value to lookup
-  InterpValue lookup(mlir::Location loc, mlir::Value k) {
+  InterpValue lookup(mlir::Location loc, mlir::Value k) const {
     // DiagnosticEngine &diagEngine = k.getContext()->getDiagEngine();
     auto it = find(k);
     if (!it) {
@@ -122,7 +122,7 @@ public:
   }
 
 private:
-  Optional<InterpValue> find(mlir::Value k) {
+  Optional<InterpValue> find(mlir::Value k) const {
     for (const auto &it : env) {
       if (it.first == k) {
         return {it.second};
@@ -171,6 +171,22 @@ private:
 };
 
 struct Interpreter {
+  // TODO: generalize to multi dimensional affine expressions
+  int interpAffineBound(Location loc, AffineBound b, const Env &env) {
+    AffineExpr expr = b.getMap().getResult(0);
+    if (auto c = expr.dyn_cast<AffineConstantExpr>()) {
+      return c.getValue();
+    }
+
+    if (auto s = expr.dyn_cast<AffineSymbolExpr>()) {
+      return env.lookup(loc, b.getOperand(s.getPosition())).i();
+    }
+
+    InterpreterError err(loc);
+    err << "unknown affine expression";
+    llvm::errs() << "unknown affine expression: |" << expr << "|\n";
+    assert(false && "unknown affine expression");
+  }
   // dispatch the correct interpret function.
   void interpretOperation(Operation &op, Env &env) {
     llvm::errs().changeColor(llvm::raw_fd_ostream::GREEN);
@@ -424,26 +440,20 @@ struct Interpreter {
       return;
     }
 
+    // NOTE: Indexes. We choose to track no difference between indexes
+    // and i64s.
     if (mlir::IndexCastOp indexCastOp = mlir::dyn_cast<IndexCastOp>(op)) {
       auto v = env.lookup(op.getLoc(), indexCastOp.getOperand());
       env.addNew(indexCastOp.getResult(), v);
+      return;
     }
+
     if (mlir::AllocOp allocOp = mlir::dyn_cast<mlir::AllocOp>(op)) {
       auto dims_ = allocOp.getType().getShape();
-      MemRefIV::KeyTy dims(dims_.begin(), dims_.end());
-      InterpValue v = [&]() {
-        if (allocOp.getType().getElementType().isIntOrIndex()) {
-          return InterpValue::i(0);
-        }
-        {
-          InterpreterError err(op.getLoc());
-          err << "INTERPRETER ERROR: unknown memref element type\n";
-        }
-        assert(false);
-      }();
-      auto mem = MemRefIV(dims, v);
-      env.addNew(allocOp.getResult(), InterpValue::mem(mem));
-
+      MemRef::KeyTy dims(dims_.begin(), dims_.end());
+      llvm::errs() << "allocOp:";
+      allocOp.print(llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
+      env.addNew(allocOp.getResult(), InterpValue::mem(MemRef(dims)));
       return;
     }
     if (mlir::DimOp dimOp = mlir::dyn_cast<mlir::DimOp>(op)) {
@@ -452,11 +462,22 @@ struct Interpreter {
     }
 
     //============= AffineOps ========================//
-    // if (AffineForOp affineForOp = dyn_cast<AffineForOp>(op)) {
-    //   auto it = affineForOp.getInductionVar();
-    //   auto localVars = affineForOp.getIterOperands();
-    //   AffineBound lb = affineForOp.getLowerBound();
+    // affine.for %arg1 = 0 to %0 {
+    //   %2 = index_cast %arg1 : index to i64
+    //   affine.store %2, %1[%arg1] : memref<?xi64>
     // }
+    // lb: |() -> (0)|; ub: |()[s0] -> (s0)|
+    if (mlir::AffineForOp forop = mlir::dyn_cast<mlir::AffineForOp>(op)) {
+      AffineBound lb = forop.getLowerBound();
+      AffineBound ub = forop.getUpperBound();
+      const int lo = interpAffineBound(forop.getLoc(), lb, env);
+      const int hi = interpAffineBound(forop.getLoc(), ub, env);
+
+      for (int i = lo; i <= hi; i += forop.getStep()) {
+        interpretRegion(forop.getRegion(), InterpValue::i(i), env);
+      }
+      return;
+    }
 
     InterpreterError err(op.getLoc());
     err << "INTERPRETER ERROR: unknown operation: |" << op << "|\n";
