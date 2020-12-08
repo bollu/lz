@@ -245,6 +245,7 @@ struct Interpreter {
 
     if (ApOp ap = dyn_cast<ApOp>(op)) {
       InterpValue fn = env.lookup(ap.getLoc(), ap.getFn());
+      // stats.num_thunkify_calls++;
 
       if (fn.type == InterpValueType::Ref) {
 
@@ -522,6 +523,8 @@ struct Interpreter {
       const int hi = interpAffineBound(forop.getLoc(), ub, env);
 
       llvm::Optional<InterpValue> out;
+      assert(forop.getNumIterOperands() <= 1);
+
       llvm::SmallVector<InterpValue, 4> iterArgs;
       for (Value v : forop.getIterOperands()) {
         iterArgs.push_back(env.lookup(forop.getLoc(), v));
@@ -535,6 +538,9 @@ struct Interpreter {
         // does not preserve loop carried stuff?
         // TODO: this seems like a bug waiting to happen.
         out = interpretRegion(forop.getRegion(), args, env);
+        if (out) {
+          iterArgs[0] = *out;
+        }
       }
 
       assert(forop.getNumResults() <= 1);
@@ -552,8 +558,14 @@ struct Interpreter {
       InterpValue memref = env.lookup(store.getLoc(), store.memref());
       InterpValue v = env.lookup(store.getLoc(), store.value());
       // TODO: generalize to multi dimensional indexes
-      InterpValue ix = env.lookup(store.getLoc(), *store.indices().begin());
-      memref.store({ix.i()}, v);
+      // #indices = 0 is a single cell of memory
+      assert(store.indices().size() <= 1);
+      if (store.indices().size() == 1) {
+        InterpValue ix = env.lookup(store.getLoc(), *store.indices().begin());
+        memref.store({ix.i()}, v);
+      } else {
+        memref.store({0}, v);
+      }
       env.update(store.memref(), memref);
       return;
     }
@@ -561,10 +573,15 @@ struct Interpreter {
     if (auto load = dyn_cast<mlir::AffineLoadOp>(op)) {
       std::vector<InterpValue> args;
       InterpValue memref = env.lookup(load.getLoc(), load.memref());
-      InterpValue ix = env.lookup(load.getLoc(), *load.indices().begin());
-      llvm::errs() << "index: |" << ix.i() << "|\n";
-      InterpValue result = memref.load({ix.i()});
-      env.addNew(load.getResult(), result);
+      // #indices = 0 is a single cell of memory
+      assert(load.indices().size() <= 1);
+      if (load.indices().size() == 1) {
+        InterpValue ix = env.lookup(load.getLoc(), *load.indices().begin());
+        env.addNew(load.getResult(), memref.load({ix.i()}));
+      } else {
+        env.addNew(load.getResult(), memref.load({0}));
+      }
+
       return;
     }
 

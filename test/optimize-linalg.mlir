@@ -1,6 +1,12 @@
-// RUN: hask-opt --lz-interpret %s 
-// RUN: hask-opt --lz-worker-wrapper --affine-loop-fusion --canonicalize --inline --affine-loop-fusion %s
-// RUN: hask-opt --lz-worker-wrapper --affine-loop-fusion --canonicalize --inline --affine-loop-fusion %s | hask-opt --lz-interpret
+// RUN: hask-opt --lz-interpret %s | FileCheck %s
+// RUN: hask-opt --lz-worker-wrapper --affine-loop-fusion --canonicalize --inline --affine-loop-fusion --lz-interpret %s | FileCheck %s --check-prefix=CHECK-WW
+// CHECK: 523776
+// CHECK: num_force_calls(2)
+// CHECK-WW: 523776
+// CHECK-WW: num_thunkify_calls(0)
+// CHECK-WW: num_force_calls(0)
+
+
 
 module {
 

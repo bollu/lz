@@ -25,7 +25,13 @@ Convert GHC Core to MLIR.
 
 # Log:  [newest] to [oldest]
 
-# Friday, Dec 13th
+# Tuesday, Dec 9th
+
+- I'm not tracking number of thunkifies correctly: `ap` should also count as
+  thunkify!
+
+
+# Friday, Dec 5th
 - Printing an operation in its generic form:
 
 ```cpp
@@ -36,7 +42,7 @@ assert(false);
 ```
 
 
-# Thursday, Dec 12th
+# Thursday, Dec 4th
 - Our transformation of outline/inline is very similar to converting a `while(c){..}`
   into an `if(c) { do{..}while(c)}`. What other "classical loop knowledge"
   can we take?

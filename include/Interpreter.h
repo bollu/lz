@@ -59,12 +59,13 @@ private:
 
   int _idx(const KeyTy &key) const {
     int rank = dims.size();
-    assert(rank > 0 && "MemRef uninitialized");
+    // rank = 0 a single cell.
+    assert(rank >= 0 && "MemRef must have non-negative rank.");
 
-    int idx = 0, prod = 1;
+    int idx = 0, stride = 1;
     for (int i = rank - 1; i >= 0; i--) {
-      idx += prod * key[i];
-      prod *= dims[i];
+      idx += stride * key[i];
+      stride *= dims[i];
     }
     return idx;
   }
