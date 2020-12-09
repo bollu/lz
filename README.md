@@ -28,8 +28,67 @@ Convert GHC Core to MLIR.
 # Tuesday, Dec 9th
 
 - I'm not tracking number of thunkifies correctly: `ap` should also count as
-  thunkify!
+  thunkify! Fixed this.
 
+- Now I'm trying to debug what's wrong with my `CaseOfFnInput`. Man it's a real
+  doozy. Consider the code:
+
+```rust
+def f(si: SimpleInt) -> SimpleInt {
+  let out = match si {
+    SimpleInt(i) =>
+      match i {
+        0 => return 42;
+        _ => {
+          let sidec = SimpleInt(i - 1);
+          let sj = f(sidec);
+          return match sj {
+            SimleInt(j) => return (j + 1); 
+          } 
+        }
+      }
+  };
+  outWrap = SimpleInt(out);
+  return out;
+}
+```
+
+Now the part that makes this annoying is that naively, what we want to do
+is to peel the case of `si` into a `fSimpleInt`, giving us
+of the `match si { SimpleInt(i) => fSimpleInt(i)}`. Then we want to
+replace all recursive calls `f(SimpleInt(y))` with `fSimpleInt(y)`. If
+we *naively* perform the translation, here's what we get:
+
+```rust
+def fSimpleInt(i: int) -> int {
+      match i {
+        0 => return 42;
+        _ => {
+          // let sidec = SimpleInt(i - 1);
+          let idec = i - 1;
+          // vvv WRONG TYPE! fSimpleInt returns an `int`,
+          // vvv but sj is a `SimpleInt`.
+          let sj = fSimpleInt(i - 1); 
+          return match sj {
+            SimpleInt(j) => return (j + 1); 
+          } 
+        }
+
+}
+def f(si: SimpleInt) -> SimpleInt {
+  let out = match si {
+    SimpleInt(i) => return fSimpleInt(i);
+  };
+  outWrap = SimpleInt(out);
+  return out;
+}
+```
+
+
+where did we go wrong?! A little thought shows us that the problem is that
+we didn't perform transfer of control flow correctly. What we *should* do
+is to copy *all the instructions in `f`* after the `match si { ... }` to
+decide how to return from `fSimpleInt`. aa;a;k
 
 # Friday, Dec 5th
 - Printing an operation in its generic form:
