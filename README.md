@@ -25,6 +25,23 @@ Convert GHC Core to MLIR.
 
 # Log:  [newest] to [oldest]
 
+# Wednesday Dec 10th
+
+What are the guarantees of the use/def chain? Does it guarantee us that the
+order of visiting expressions? If I have:
+
+```
+%a = ... 
+
+%b = f(%a) {
+    g(%a)
+  }
+```
+
+am I guaranteed that I will visit use `f` before use `g`? Ie, what is
+the semantics of the walk-the-use-*chain* with respect to nesting of regions.
+
+If I want to find the "first outermost use", how do I do so?
 # Tuesday, Dec 9th
 
 - I'm not tracking number of thunkifies correctly: `ap` should also count as

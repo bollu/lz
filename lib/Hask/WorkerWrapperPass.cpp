@@ -121,10 +121,6 @@ struct OutlineUknownForcePattern : public mlir::OpRewritePattern<ForceOp> {
       // For now, approximate.
       if (force.getOperation()->getBlock() !=
           &force.getParentRegion()->front()) {
-        ModuleOp mod = force.getParentOfType<ModuleOp>();
-        llvm::errs() << "\n=====\n";
-        llvm::errs() << mod;
-        llvm::errs() << "\n=====\n";
         assert(false && "force not in entry BB");
         return failure();
       }
@@ -164,8 +160,8 @@ struct ForceOfThunkifyPattern : public mlir::OpRewritePattern<ForceOp> {
     if (!thunkify) {
       return failure();
     }
-    //    assert(false && "force of thunkify");
     rewriter.replaceOp(force, thunkify.getOperand());
+
     return success();
   }
 };
@@ -412,9 +408,6 @@ struct OutlineRecursiveApEagerOfConstructorPattern
     SmallVector<Value, 4> improvedFnCallArgs(
         {constructedArgument.getOperand(0)});
 
-    llvm::errs() << "- ap: " << ap << "\n"
-                 << "-arg: " << constructedArgument << "\n";
-
     assert(parentfn.getNumArguments() == 1);
 
     BlockArgument arg = parentfn.getBody().getArgument(0);
@@ -493,20 +486,54 @@ struct OutlineRecursiveApEagerOfConstructorPattern
   }
 };
 
+// find the single case op of v that is at the same level as of v.
+// We can have other uses of v nested inside the case op that is found.
+// If there are multiple uses, then give up.
+CaseOp findSingleCaseOpUse(BlockArgument v, Region *r) {
+  CaseOp c;
+  for(auto it : v.getUsers()) {
+    if (!c) {
+      // the case is not a top-level case. ignored.
+      if (it->getParentRegion() != r) { continue; }
+      c = mlir::dyn_cast<CaseOp>(*it);
+    } else {
+      // we found an operation that is *not* the ancestor of the
+      // case of we believe is the corret one.
+      if (c.getOperation()->isAncestor(it)) { continue; }
+
+    }
+  }
+  return c;
+
+}
+
 // ==INPUT==
 // data Box { MkBox(int) }
 // @f(x: Box):
+// <STUFF-BEFORE-CASE>
 // case x of ...
-//   MkBox val -> <RHS-OF-CASE>
+//   MkBox val ->
+//      <RHS-OF-CASE-1>
 //      f(MkBox(y))
+//      <RHS-OF-CASE-2>
 // ==OUTPUT==
-// @fFoo(val: int):
-//   <RHS-OF-CASE>
+// @fBox(val: int):
+//   case (MkBox val) of ...
+//   <RHS-OF-CASE-1>
 //    ...
-//    fFoo(y)
+//    fBox(y)
+//    <RHS-OF-CASE-2>
+//  ----------
 //  @f(x):
+//    <STUFF-BEFORE-CASE>
 //    case x of
-//      MkBox val -> fFoo(val)
+//      MkBox val ->
+//        <RHS-OF-CASE-1>;
+//        fBox(val) <- here is where the problem comes. the
+//                               |computation of `val` could depend on other
+//                               | random stuff in <stuff-before-case>
+//         <RHS-OF-CASE-2>;
+//     ..
 // This not so easy! We need to carry all the values that are referenced
 // by the RHS *into* the outlined function x(oi2
 struct OutlineCaseOfFnInput : public mlir::OpRewritePattern<FuncOp> {
@@ -517,7 +544,6 @@ struct OutlineCaseOfFnInput : public mlir::OpRewritePattern<FuncOp> {
                   mlir::PatternRewriter &rewriter) const override {
     mlir::ModuleOp mod = parentfn.getParentOfType<ModuleOp>();
 
-    llvm::errs() << "Analysing function: |" << parentfn.getName() << "|\n";
     if (parentfn.getArguments().size() != 1) {
       return failure();
     }
@@ -528,32 +554,11 @@ struct OutlineCaseOfFnInput : public mlir::OpRewritePattern<FuncOp> {
     //   Foo x' -> ...
     //    default -> use x (2)
     // counts as TWO uses!
-    /*
-    if (!parentfn.getArgument(0).hasOneUse()) {
-      llvm::errs() << "function with argument of more than 1 use: " << parentfn
-                   << "\n";
-      assert(false);
-      return failure();
-    }
-    */
 
-    Value::use_iterator argUse = parentfn.getArgument(0).use_begin();
-    llvm::errs() << "argUse: |";
-    argUse.getUser()->print(llvm::errs());
-    llvm::errs() << "|\n";
-
-    mlir::standalone::CaseOp caseOfArg =
-        mlir::dyn_cast<CaseOp>(argUse.getUser());
-
+    mlir::standalone::CaseOp caseOfArg = findSingleCaseOpUse(parentfn.getArgument(0), &parentfn.getRegion());
     if (!caseOfArg) {
       return failure();
     }
-
-    llvm::errs() << "===module:===\n";
-    parentfn.getParentOp()->print(llvm::errs());
-    llvm::errs() << "======\n";
-
-    // llvm::errs() << "caseOfArg: |" << caseOfArg << "|\n";
 
     // TODO: generalize
     if (caseOfArg.getNumAlts() != 1) {
@@ -585,7 +590,8 @@ struct OutlineCaseOfFnInput : public mlir::OpRewritePattern<FuncOp> {
       return WalkResult::advance();
     }); // end walk
 
-    llvm::errs() << "Considering function: |" << parentfn.getName() << "| \n";
+    // llvm::errs() << "Considering function: |" << parentfn.getName() << "|
+    // \n";
 
     // llvm::errs() << "region:\n" << caseOfArg;
     // llvm::errs() << "\n===\n";
@@ -593,13 +599,7 @@ struct OutlineCaseOfFnInput : public mlir::OpRewritePattern<FuncOp> {
     // try to find ops that we need to copy
     bool canBeSelfContained = true;
     caseOfArg.getAltRHS(0).walk([&](Operation *op) {
-      llvm::errs() << "- op: ";
-      op->print(llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
-      llvm::errs() << "\n";
-
       for (Value v : op->getOperands()) {
-        llvm::errs() << "\t-" << v << "\n";
-
         if (caseOfArg.getAltRHS(0).isAncestor(v.getParentRegion())) {
           continue;
         }
@@ -631,7 +631,6 @@ struct OutlineCaseOfFnInput : public mlir::OpRewritePattern<FuncOp> {
       }
       callArgs.push_back(argConstruct.getOperand(0));
       rewriter.setInsertionPointAfter(call);
-
       ConstantOp outlinedFnNameSymbol = rewriter.create<ConstantOp>(
           call.getLoc(), outlinedFnty,
           mlir::FlatSymbolRefAttr::get(outlinedFnName, rewriter.getContext()));
@@ -639,61 +638,27 @@ struct OutlineCaseOfFnInput : public mlir::OpRewritePattern<FuncOp> {
           call.getLoc(), outlinedFnNameSymbol,
           outlinedFnty.getResult(0), // type of result
           callArgs);
-      // HaskConstructOp outlinedCallWrap = rewriter.create<HaskConstructOp>(
-      //     call.getLoc(), constructor.getDataConstructorName(),
-      //     outlinedCall.getResult());
       rewriter.replaceOp(call, outlinedCall.getResult());
     }
 
     // OK, now create the actually outlined function by cloning our function.
     // Then fixup the return by removing the constructor around the return.
     rewriter.setInsertionPointAfter(parentfn);
-    mlir::FuncOp outlinedFn = rewriter.create<FuncOp>(
-        rewriter.getUnknownLoc(), outlinedFnName, outlinedFnty);
-    outlinedFn.addEntryBlock();
-    rewriter.setInsertionPointToStart(&outlinedFn.getBody().front());
-    mlir::BlockAndValueMapping mapper;
+    mlir::FuncOp outlinedFn = parentfn.clone();
+    outlinedFn.setName(outlinedFnName);
+    outlinedFn.setType(outlinedFnty);
+    BlockArgument outlinedFnArg = outlinedFn.getArgument(0);
+    rewriter.setInsertionPointToStart(&outlinedFn.getRegion().front());
+    HaskConstructOp wrappedOutlinedFnArg = rewriter.create<HaskConstructOp>(
+        rewriter.getUnknownLoc(), caseOfArg.getAltLHS(0).getValue(),
+        outlinedFnArg);
+    outlinedFnArg.replaceAllUsesWith(wrappedOutlinedFnArg);
 
-    // try to find ops that we need to copy
-    caseOfArg.getAltRHS(0).walk([&](Operation *op) {
-      for (Value v : op->getOperands()) {
-        if (caseOfArg.getAltRHS(0).isAncestor(v.getParentRegion())) {
-          return WalkResult::advance();
-        }
-        // has different region as owner.
-        ConstantOp vconst = v.getDefiningOp<ConstantOp>();
-        if (vconst) {
-          // I want to call OpBuilder::clone
-          rewriter.clone(*vconst.getOperation(), mapper);
-          return WalkResult::advance();
-        }
-
-        assert(false && "must succeeed! Otherwise we should have bailed out");
-      }
-      return WalkResult::advance();
-    }); // end walk
-
-    // ===BEFORE==
-    // outlinedFn:
-    //   entry:
-    //     <constants>
-    //   DONE
-    // ===AFTER==
-    // outlinedFn:
-    //   entry(%v):
-    //     <constants>
-    //   bb1(%w):
-    //     ...
-    //   bb2: ...
-
-    caseOfArg.getAltRHS(0).cloneInto(&outlinedFn.getBody(), mapper);
-    rewriter.mergeBlocks(outlinedFn.getBody().front().getNextNode(),
-                         &outlinedFn.getBody().front(),
-                         outlinedFn.getBody().front().getArguments());
-
-    llvm::errs() << "===outlined fn:===\n";
-    outlinedFn.print(llvm::errs());
-    llvm::errs() << "\n\n";
+    llvm::errs() << "===Finished run: CaseOfFnInput===\n";
+    llvm::errs() << mod;
+    llvm::errs() << "\n===\n";
+    mod.push_back(outlinedFn);
+    rewriter.notifyOperationInserted(outlinedFn);
     return success();
   }
 };
@@ -840,8 +805,6 @@ struct CaseOfKnownIntPattern : public mlir::OpRewritePattern<CaseIntOp> {
     if (!constint) {
       return failure();
     }
-
-    llvm::errs() << "constint: | " << constint << "|\n";
 
     rewriter.setInsertionPoint(caseop);
     int altIx = *caseop.getAltIndexForConstInt(constint.getValue().getInt());
