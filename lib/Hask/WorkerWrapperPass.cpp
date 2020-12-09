@@ -491,20 +491,22 @@ struct OutlineRecursiveApEagerOfConstructorPattern
 // If there are multiple uses, then give up.
 CaseOp findSingleCaseOpUse(BlockArgument v, Region *r) {
   CaseOp c;
-  for(auto it : v.getUsers()) {
+  for (auto it : v.getUsers()) {
     if (!c) {
       // the case is not a top-level case. ignored.
-      if (it->getParentRegion() != r) { continue; }
+      if (it->getParentRegion() != r) {
+        continue;
+      }
       c = mlir::dyn_cast<CaseOp>(*it);
     } else {
       // we found an operation that is *not* the ancestor of the
       // case of we believe is the corret one.
-      if (c.getOperation()->isAncestor(it)) { continue; }
-
+      if (c.getOperation()->isAncestor(it)) {
+        continue;
+      }
     }
   }
   return c;
-
 }
 
 // ==INPUT==
@@ -555,7 +557,8 @@ struct OutlineCaseOfFnInput : public mlir::OpRewritePattern<FuncOp> {
     //    default -> use x (2)
     // counts as TWO uses!
 
-    mlir::standalone::CaseOp caseOfArg = findSingleCaseOpUse(parentfn.getArgument(0), &parentfn.getRegion());
+    mlir::standalone::CaseOp caseOfArg =
+        findSingleCaseOpUse(parentfn.getArgument(0), &parentfn.getRegion());
     if (!caseOfArg) {
       return failure();
     }
@@ -653,7 +656,8 @@ struct OutlineCaseOfFnInput : public mlir::OpRewritePattern<FuncOp> {
         rewriter.getUnknownLoc(), caseOfArg.getAltLHS(0).getValue(),
         outlinedFnArg);
 
-    llvm::SmallPtrSet<Operation*, 4> except = {wrappedOutlinedFnArg.getOperation()};
+    llvm::SmallPtrSet<Operation *, 4> except = {
+        wrappedOutlinedFnArg.getOperation()};
     outlinedFnArg.replaceAllUsesExcept(wrappedOutlinedFnArg, except);
 
     llvm::errs() << "===Finished run: CaseOfFnInput===\n";
@@ -679,6 +683,8 @@ struct OutlineReturnOfConstructor : public mlir::OpRewritePattern<FuncOp> {
                   mlir::PatternRewriter &rewriter) const override {
 
     // TODO: use postdom info.
+    llvm::errs() << "parentfn: " << parentfn.getName() << "\n";
+
     if (parentfn.getBlocks().size() != 1) {
       return failure();
     }
@@ -1078,17 +1084,17 @@ struct WorkerWrapperPass : public Pass {
   void runOnOperation() override {
     mlir::OwningRewritePatternList patterns;
     // force(ap) -> apeager. safe.
-    // patterns.insert<ForceOfKnownApPattern>(&getContext());
+    patterns.insert<ForceOfKnownApPattern>(&getContext());
     // force(thunkify) -> direct val. safe.
-    // patterns.insert<ForceOfThunkifyPattern>(&getContext());
+    patterns.insert<ForceOfThunkifyPattern>(&getContext());
     // apeager(f, x, y, z) -> inlined. safe.
-    // patterns.insert<InlineApEagerPattern>(&getContext());
+    patterns.insert<InlineApEagerPattern>(&getContext());
 
     // f(paramt): paramv = force(paramt); use paramv. Safe-ish, since
     // we immediately have a force as the first instruction.
     // 1. Write as FuncOp pattern
     // 2.  Write as closure.
-    // patterns.insert<OutlineRecursiveApEagerOfThunkPattern>(&getContext());
+    patterns.insert<OutlineRecursiveApEagerOfThunkPattern>(&getContext());
     // f(paramConstructor) = case paramConstructor of {
     // (Constructor paramValue) -> ..
     // }.
@@ -1096,25 +1102,25 @@ struct WorkerWrapperPass : public Pass {
     // instruction.
     // 1. Write as FuncOp pattern
     // 2. write as closure.
-    // patterns.insert<OutlineRecursiveApEagerOfConstructorPattern>(&getContext());
+    patterns.insert<OutlineRecursiveApEagerOfConstructorPattern>(&getContext());
     // same as above?
     patterns.insert<OutlineCaseOfFnInput>(&getContext());
     // f(x): .. return(Constructor(v)) -> outline the last paer. Safe ish,
     // since we only outline the final computation.
-    // patterns.insert<OutlineReturnOfConstructor>(&getContext());
+    patterns.insert<OutlineReturnOfConstructor>(&getContext());
     // f: case of {C1 -> D v1; C2 -> D v2; .. Cn -> D vn;} into
     //    f: D (case v of {C1 -> v1; C2 -> v2; .. Cn -> vn; }
     // Safe.
-    // patterns.insert<PeelConstructorsFromCasePattern>(&getContext());
+    patterns.insert<PeelConstructorsFromCasePattern>(&getContext());
     // Same as peel constructor from case for ints. safe.
-    // patterns.insert<PeelConstructorsFromCaseIntPattern>(&getContext());
+    patterns.insert<PeelConstructorsFromCaseIntPattern>(&getContext());
 
     // f: case (Ci vi) of { C1 w1 -> e1; C2 w2 -> e2 ... Cn wn -> en};
     //    f: ei[wi := vi].
     // safe
-    // patterns.insert<CaseOfKnownConstructorPattern>(&getContext());
+    patterns.insert<CaseOfKnownConstructorPattern>(&getContext());
     // same as Case of known constructor for ints. safe.
-    // patterns.insert<CaseOfKnownIntPattern>(&getContext());
+    patterns.insert<CaseOfKnownIntPattern>(&getContext());
 
     ::llvm::DebugFlag = true;
 
