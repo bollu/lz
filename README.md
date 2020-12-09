@@ -42,6 +42,10 @@ am I guaranteed that I will visit use `f` before use `g`? Ie, what is
 the semantics of the walk-the-use-*chain* with respect to nesting of regions.
 
 If I want to find the "first outermost use", how do I do so?
+
+
+- Seems like all I need to do was to go from `return` to `lz.return` and all
+  is well `:)`. 
 # Tuesday, Dec 9th
 
 - I'm not tracking number of thunkifies correctly: `ap` should also count as
