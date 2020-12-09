@@ -652,7 +652,9 @@ struct OutlineCaseOfFnInput : public mlir::OpRewritePattern<FuncOp> {
     HaskConstructOp wrappedOutlinedFnArg = rewriter.create<HaskConstructOp>(
         rewriter.getUnknownLoc(), caseOfArg.getAltLHS(0).getValue(),
         outlinedFnArg);
-    outlinedFnArg.replaceAllUsesWith(wrappedOutlinedFnArg);
+
+    llvm::SmallPtrSet<Operation*, 4> except = {wrappedOutlinedFnArg.getOperation()};
+    outlinedFnArg.replaceAllUsesExcept(wrappedOutlinedFnArg, except);
 
     llvm::errs() << "===Finished run: CaseOfFnInput===\n";
     llvm::errs() << mod;
