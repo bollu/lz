@@ -12,12 +12,12 @@ module {
   func @plus (%i : !lz.thunk<!lz.value>, %j: !lz.thunk<!lz.value>) -> !lz.value {
     %icons = lz.force(%i): !lz.value
     %reti = lz.case @SimpleInt %icons
-              [@SimpleInt -> { ^entry(%ival: !lz.value):
+              [@SimpleInt -> { ^entry(%ival: i64):
                 %jcons = lz.force(%j):!lz.value
                 %retj = lz.case @SimpleInt %jcons
-                  [@SimpleInt -> { ^entry(%jval: !lz.value):
-                    %sum_v = lz.primop_add(%ival, %jval)
-                    %boxed = lz.construct(@SimpleInt, %sum_v:!lz.value)
+                  [@SimpleInt -> { ^entry(%jval: i64):
+                    %sum_v = addi %ival, %jval : i64
+                    %boxed = lz.construct(@SimpleInt, %sum_v: i64)
                     lz.return %boxed : !lz.value
                   }]
                 lz.return %retj:!lz.value
@@ -26,15 +26,15 @@ module {
   }
 
   func @one () -> !lz.value {
-    %v = lz.make_i64(1)
-    %boxed = lz.construct(@SimpleInt, %v:!lz.value)
+    %v = constant 1 : i64
+    %boxed = lz.construct(@SimpleInt, %v: i64)
     return %boxed: !lz.value
   }
 
 
   func @two () -> !lz.value {
-    %v = lz.make_i64(2)
-    %boxed = lz.construct(@SimpleInt, %v:!lz.value)
+    %v = constant 2 : i64
+    %boxed = lz.construct(@SimpleInt, %v: i64)
     return %boxed: !lz.value
   }
 

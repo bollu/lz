@@ -20,10 +20,10 @@ module {
   //     let y = loop x -- builds a closure.
   //     in (k x y)
   func @main () -> !lz.value {
-    %lit_42 = lz.make_i64(42)
+    %lit_42 = constant 42 : i64
     // TODO: I need a think to transmute to different types.
     // Because we may want to "downcast" a ADT to a raw value
-    %xv = lz.construct(@X, %lit_42 : !lz.value)
+    %xv = lz.construct(@X, %lit_42 : i64)
     %x_t = lz.thunkify(%xv : !lz.value) :!lz.thunk<!lz.value>
 
     %loop = constant @loop : (!lz.thunk<!lz.value>) -> !lz.value

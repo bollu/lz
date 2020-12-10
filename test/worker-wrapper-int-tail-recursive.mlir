@@ -19,17 +19,17 @@ module {
   func @f (%i : !lz.thunk<!lz.value>) -> !lz.value {
       %icons = lz.force(%i): !lz.value
       %reti = lz.case @SimpleInt %icons 
-           [@SimpleInt -> { ^entry(%ihash: !lz.value):
+           [@SimpleInt -> { ^entry(%ihash: i64):
               %retj = lz.caseint %ihash
                   [0 -> {
-                        %fortytwo = lz.make_i64(42)
-                        %boxed = lz.construct(@SimpleInt, %fortytwo:!lz.value)
+                        %fortytwo = constant 42: i64
+                        %boxed = lz.construct(@SimpleInt, %fortytwo: i64)
                         lz.return %boxed : !lz.value
                   }]
                   [@default ->  {
-                        %one = lz.make_i64(1)
-                        %isub = lz.primop_sub(%ihash, %one)
-                        %boxed_isub = lz.construct(@SimpleInt, %isub: !lz.value)
+                        %one = constant 1: i64
+                        %isub = subi %ihash, %one: i64
+                        %boxed_isub = lz.construct(@SimpleInt, %isub: i64)
                         %boxed_isub_t = lz.thunkify(%boxed_isub : !lz.value) : !lz.thunk<!lz.value>
                         %f = constant @f : (!lz.thunk<!lz.value>) -> !lz.value
                         %rec_t = lz.ap(%f : (!lz.thunk<!lz.value>) -> !lz.value , %boxed_isub_t)
@@ -43,8 +43,8 @@ module {
 
   // 1 + 2 = 3
   func @main () -> !lz.value {
-      %v = lz.make_i64(5)
-      %v_box = lz.construct(@SimpleInt, %v:!lz.value)
+      %v = constant 5: i64
+      %v_box = lz.construct(@SimpleInt, %v: i64)
       %v_thunk = lz.thunkify(%v_box: !lz.value): !lz.thunk<!lz.value>
       %f = constant @f: (!lz.thunk<!lz.value>) -> !lz.value
       %out_t = lz.ap(%f : (!lz.thunk<!lz.value>) -> !lz.value, %v_thunk)

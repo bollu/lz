@@ -13,22 +13,21 @@ module {
   // f mi = case si of SimpleInt n -> case n of 0 -> SimpleInt 42; _ -> f (SimpleInt (ihash - 1))
   func @f (%sn: !lz.value) -> !lz.value {
     %reti = lz.case @SimpleInt %sn
-              [@SimpleInt ->  { ^entry(%n: !lz.value):
+              [@SimpleInt ->  { ^entry(%n: i64):
                 %v = lz.caseint %n
                 [0 : i64 -> {
-                  %forty_two = lz.make_i64(42)
-                  %forty_two_si = lz.construct(@SimpleInt, %forty_two: !lz.value)
+                  %forty_two = constant 42 : i64
+                  %forty_two_si = lz.construct(@SimpleInt, %forty_two: i64)
                   lz.return %forty_two_si : !lz.value
                 }]
                 [@default ->  {
-                  %one = lz.make_i64(1)
-                  %n_minus_1 = lz.primop_sub(%n, %one)
-                  %si_n_minus_1 = lz.construct(@SimpleInt, %n_minus_1: !lz.value)
+                  %one = constant 1 : i64
+                  %n_minus_1 = subi %n, %one : i64
+                  %si_n_minus_1 = lz.construct(@SimpleInt, %n_minus_1: i64)
                   %f = constant @f : (!lz.value) -> !lz.value
                   %ret = lz.apEager(%f: (!lz.value) -> !lz.value, %si_n_minus_1)
                   lz.return %ret :!lz.value
                 }]
-
                 lz.return %v : !lz.value
               }]
 
@@ -36,8 +35,8 @@ module {
   }
 
   func @main() -> !lz.value {
-    %three = lz.make_i64(3)
-    %n = lz.construct(@SimpleInt, %three:!lz.value)
+    %three = constant 3 : i64
+    %n = lz.construct(@SimpleInt, %three: i64)
     %f = constant @f : (!lz.value) -> !lz.value
     %out = lz.apEager(%f: (!lz.value) -> !lz.value, %n)
     return %out : !lz.value

@@ -6,42 +6,42 @@ module {
   // lz.make_data_constructor @"-#"
   // lz.make_data_constructor @"()"
 
-  func @fibstrict (%i: !lz.value) -> !lz.value {
+  func @fibstrict (%i: i64) -> i64 {
     %retval = lz.caseint  %i
                 [@default -> { ^entry: // todo: remove this defult
-                  %fib_rec = constant @fibstrict : (!lz.value) -> !lz.value
-                  %lit_one = lz.make_i64(1)
-                  %i_minus_one_v = lz.primop_sub(%i, %lit_one)
+                  %fib = constant @fibstrict : (i64) -> i64
+                  %lit_one = constant 1: i64
+                  %i_minus_one_v = subi %i, %lit_one : i64
 
-                  %fib_i_minus_one_t = lz.ap(%fib_rec: (!lz.value) ->  !lz.value, %i_minus_one_v)
-                  %fib_i_minus_one_v = lz.force(%fib_i_minus_one_t) : !lz.value
+                  %fib_i_minus_one_t = lz.ap(%fib: (i64) ->  i64, %i_minus_one_v)
+                  %fib_i_minus_one_v = lz.force(%fib_i_minus_one_t) : i64
 
-                  %lit_two = lz.make_i64(2)
-                  %i_minus_two_v = lz.primop_sub(%i, %lit_two)
-                  %fib_i_minus_two_t = lz.ap(%fib_rec: (!lz.value) -> !lz.value, %i_minus_two_v)
-                  %fib_i_minus_two_v = lz.force(%fib_i_minus_two_t) : !lz.value
+                  %lit_two = constant 2: i64
+                  %i_minus_two_v = subi %i, %lit_two : i64
+                  %fib_i_minus_two_t = lz.ap(%fib: (i64) -> i64, %i_minus_two_v)
+                  %fib_i_minus_two_v = lz.force(%fib_i_minus_two_t) : i64
 
-                  %fib_sum  = lz.primop_add(%fib_i_minus_one_v, %fib_i_minus_two_v)
-                  lz.return %fib_sum : !lz.value
+                  %fib_sum  = addi %fib_i_minus_one_v, %fib_i_minus_two_v: i64
+                  lz.return %fib_sum : i64
                 }]
                 [0 -> { ^entry:
-                  lz.return %i :!lz.value
+                  lz.return %i :i64
                 }]
                 [1 -> { ^entry:
-                  lz.return %i :!lz.value
+                  lz.return %i :i64
                 }]
 
-    return %retval  : !lz.value
+    return %retval: i64
   }
 
   // i:      0 1 2 3 4 5 6
   // fib(i): 0 1 1 2 3 5 8
   func @main () -> !lz.value {
-    %lit_6 = lz.make_i64(6)
-    %fib = constant @fibstrict   : (!lz.value) -> !lz.value
-    %out_v = lz.ap(%fib : (!lz.value) -> !lz.value, %lit_6)
-    %out_v_forced = lz.force(%out_v): !lz.value
-    %x = lz.construct(@X, %out_v_forced: !lz.value)
+    %lit_6 = std.constant 6 : i64
+    %fib = constant @fibstrict   : (i64) -> i64
+    %out_v = lz.ap(%fib : (i64) -> i64, %lit_6)
+    %out_v_forced = lz.force(%out_v): i64
+    %x = lz.construct(@X, %out_v_forced: i64)
     return %x : !lz.value
   }
 }

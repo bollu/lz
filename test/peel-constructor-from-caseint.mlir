@@ -7,7 +7,7 @@
 module {
   // case v of 1 -> SimpleInt 0; 0 -> SimpleInt 1; default -> SimpleInt 42
   // We want this to become: SimpleInt (case v of 0 -> -1; _ -> 42)
-  func @main (%v: !lz.value) -> !lz.value {
+  func @main (%v: i64) -> !lz.value {
       %w = lz.caseint %v
           [1 -> {
                 %zero = std.constant 0 : i64

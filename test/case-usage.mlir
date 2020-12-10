@@ -5,18 +5,18 @@
 // but we have %x = case { ... ret }; %y = nontrivial(%x)
 module {
   func @main () -> !lz.value {
-    %lit_43 = lz.make_i64(43)
+    %lit_43 = constant 43: i64
     %case_val = lz.caseint %lit_43
-                  [0 -> { ^entry(%ival: !lz.value):
-                    lz.return %ival: !lz.value
+                  [0 -> { ^entry(%ival: i64):
+                    lz.return %ival: i64
                   }]
                   [@default -> { ^entry: // ... or here?
-                    %lit_one = lz.make_i64(1)
-                    %pred = lz.primop_sub(%lit_43, %lit_one)
-                    lz.return %pred : !lz.value
+                    %lit_one = constant 1 : i64
+                    %pred = subi %lit_43, %lit_one : i64
+                    lz.return %pred : i64
                   }]
 
-    %x = lz.construct(@X, %case_val:!lz.value)
+    %x = lz.construct(@X, %case_val: i64)
     return %x : !lz.value
   }
 }

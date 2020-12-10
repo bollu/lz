@@ -26,36 +26,36 @@ module {
   //                  SimpleInt j# -> SimpleInt (j# +# 1)
   func @f (%icons : !lz.value) -> !lz.value {
     %reti = lz.case @SimpleInt %icons
-              [@SimpleInt -> { ^entry(%i: !lz.value):
+              [@SimpleInt -> { ^entry(%i: i64):
                 %retj = lz.caseint %i
                 [0 -> {
-                  %five = lz.make_i64(5)
-                  lz.return %five : !lz.value
+                  %five = constant 5: i64
+                  lz.return %five : i64
                 }]
                 [@default ->  {
-                  %one = lz.make_i64(1)
-                  %idecr = lz.primop_sub(%i, %one)
-                  %idecrbox = lz.construct(@SimpleInt, %idecr: !lz.value)
+                  %one = constant 1: i64
+                  %idecr = subi %i, %one: i64
+                  %idecrbox = lz.construct(@SimpleInt, %idecr: i64)
                   %f = constant @f: (!lz.value) -> !lz.value
                   %recv = lz.apEager(%f : (!lz.value) -> !lz.value , %idecrbox)
                   %out = lz.case @SimpleInt %recv
-                           [@SimpleInt -> { ^entry(%jhash: !lz.value):
-                             %onej = lz.make_i64(1)
-                             %jincr = lz.primop_add(%jhash, %onej)
-                             lz.return %jincr : !lz.value
+                           [@SimpleInt -> { ^entry(%jhash: i64):
+                             %onej = constant 1: i64
+                             %jincr = subi %jhash, %onej : i64
+                             lz.return %jincr : i64
                            }]
-                  lz.return %out : !lz.value
+                  lz.return %out : i64
                 }]
-                lz.return %retj :!lz.value
+                lz.return %retj: i64
               }]
-    %retibox = lz.construct(@SimpleInt, %reti: !lz.value)
+    %retibox = lz.construct(@SimpleInt, %reti: i64)
     lz.return %retibox : !lz.value
   }
 
   // 37 + 5 = 42
   func @main() -> !lz.value {
-    %v = lz.make_i64(37)
-    %vbox = lz.construct(@SimpleInt, %v:!lz.value)
+    %v = constant 37: i64
+    %vbox = lz.construct(@SimpleInt, %v: i64)
     %f = constant @f : (!lz.value) -> !lz.value
     %outv = lz.apEager(%f : (!lz.value) -> !lz.value, %vbox)
     lz.return %outv : !lz.value

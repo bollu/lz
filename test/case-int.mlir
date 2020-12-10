@@ -3,26 +3,26 @@
 // Test that case of int works.
 module {
   // strict function
-  func @prec (%ihash: !lz.value) -> !lz.value {
+  func @prec (%ihash: i64) -> i64 {
     // do we know that %ihash is an int here?
     %ret = lz.caseint %ihash
-             [0 -> { ^entry(%ival: !lz.value):
-               lz.return %ival : !lz.value
+             [0 -> { ^entry(%ival: i64):
+               lz.return %ival : i64
              }]
              [@default -> { ^entry: // ... or here?
-               %lit_one = lz.make_i64(1)
-               %pred = lz.primop_sub(%ihash, %lit_one)
-               lz.return %pred : !lz.value
+               %lit_one = constant 1 : i64
+               %pred = subi %ihash, %lit_one : i64
+               lz.return %pred : i64
              }]
-    return %ret : !lz.value
+    return %ret : i64
   }
 
   func @main() -> !lz.value {
-    %lit_42 = lz.make_i64(42)
-    %prec = constant @prec : (!lz.value) -> !lz.value
-    %out_v = lz.ap(%prec : (!lz.value) -> !lz.value, %lit_42)
-    %out_v_forced = lz.force(%out_v): !lz.value
-    %x = lz.construct(@X, %out_v_forced:!lz.value)
+    %lit_42 = constant 42 : i64
+    %prec = constant @prec : (i64) -> i64
+    %out_v = lz.ap(%prec : (i64) -> i64, %lit_42)
+    %out_v_forced = lz.force(%out_v): i64
+    %x = lz.construct(@X, %out_v_forced: i64)
     return %x  : !lz.value
   }
 }

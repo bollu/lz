@@ -18,14 +18,14 @@ module {
   }
 
   func @one() -> !lz.value {
-    %v = lz.make_i64(1)
-    %boxed = lz.construct(@SimpleInt, %v:!lz.value)
+    %v = std.constant 1: i64
+    %boxed = lz.construct(@SimpleInt, %v: i64)
     return %boxed : !lz.value
   }
 
   func @two() -> !lz.value {
-    %v = lz.make_i64(2)
-    %boxed = lz.construct(@SimpleInt, %v:!lz.value)
+    %v = std.constant 2: i64
+    %boxed = lz.construct(@SimpleInt, %v: i64)
     return %boxed : !lz.value
   }
 

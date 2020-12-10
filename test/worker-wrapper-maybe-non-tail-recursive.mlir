@@ -37,17 +37,17 @@ module {
         %nothing = lz.construct(@Nothing)
         lz.return %nothing :!lz.value
       }]
-      [@Just -> { ^entry(%ihash: !lz.value):
+      [@Just -> { ^entry(%ihash: i64):
         %retj = lz.caseint %ihash
           [0 -> {
-            %five = lz.make_i64(5)
-            %boxed = lz.construct(@Just, %five:!lz.value)
+            %five = constant 5: i64
+            %boxed = lz.construct(@Just, %five:i64)
             lz.return %boxed : !lz.value
           }]
           [@default ->  {
-            %one = lz.make_i64(1)
-            %isub = lz.primop_sub(%ihash, %one)
-            %boxed_isub = lz.construct(@Just, %isub: !lz.value)
+            %one = constant 1: i64
+            %isub = subi %ihash, %one: i64
+            %boxed_isub = lz.construct(@Just, %isub: i64)
             %boxed_isub_t = lz.thunkify(%boxed_isub : !lz.value) : !lz.thunk<!lz.value>
             %f = constant @f : (!lz.thunk<!lz.value>) -> !lz.value
             %rec_t = lz.ap(%f : (!lz.thunk<!lz.value>) -> !lz.value , %boxed_isub_t)
@@ -57,11 +57,11 @@ module {
                 %nothing = lz.construct(@Nothing)
                 lz.return %nothing : !lz.value
               }]
-              [@Just -> { ^entry(%jhash: !lz.value):
+              [@Just -> { ^entry(%jhash: i64):
                 // TODO: worried about capture semantics!
-                %one_inner = lz.make_i64(1)
-                %jhash_incr =  lz.primop_add(%jhash, %one_inner)
-                %boxed_jash_incr = lz.construct(@Just, %jhash_incr: !lz.value)
+                %one_inner = constant 1: i64
+                %jhash_incr =  addi %jhash, %one_inner: i64
+                %boxed_jash_incr = lz.construct(@Just, %jhash_incr: i64)
                 lz.return %boxed_jash_incr : !lz.value
               }]
             lz.return %out_v : !lz.value
@@ -73,8 +73,8 @@ module {
 
   // 37 + 5 = 42
   func @main() -> !lz.value {
-    %v = lz.make_i64(37)
-    %v_box = lz.construct(@Just, %v:!lz.value)
+    %v = constant 37: i64
+    %v_box = lz.construct(@Just, %v: i64)
     %v_thunk = lz.thunkify(%v_box: !lz.value): !lz.thunk<!lz.value>
     %f = constant @f : (!lz.thunk<!lz.value>) -> !lz.value
     %out_t = lz.ap(%f : (!lz.thunk<!lz.value>) -> !lz.value, %v_thunk)

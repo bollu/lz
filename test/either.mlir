@@ -22,13 +22,12 @@ module {
   }
 
   func @one () -> !lz.value {
-    %v = lz.make_i64(1)
-    %boxed = lz.construct(@SimpleInt, %v:!lz.value)
+    %v = std.constant 1 : i64
+    %boxed = lz.construct(@SimpleInt, %v: i64)
     return %boxed: !lz.value
   }
 
   func @leftOne () -> !lz.value {
-    // %ofn = lz.ref(@one) : !lz.fn<() -> !lz.value>
     %ofn = constant @one : () -> !lz.value
     %o = lz.ap(%ofn  : () -> !lz.value)
 

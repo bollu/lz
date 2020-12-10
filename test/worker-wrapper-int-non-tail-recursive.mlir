@@ -28,27 +28,27 @@ module {
   func @f (%i : !lz.thunk<!lz.value>) -> !lz.value {
     %icons = lz.force(%i): !lz.value
     %reti = lz.case @SimpleInt %icons
-              [@SimpleInt -> { ^entry(%ihash: !lz.value):
+              [@SimpleInt -> { ^entry(%ihash: i64):
                 %retj = lz.caseint %ihash
                 [0 -> {
-                  %five = lz.make_i64(5)
-                  %boxed = lz.construct(@SimpleInt, %five:!lz.value)
+                  %five = constant 5: i64
+                  %boxed = lz.construct(@SimpleInt, %five: i64)
                   lz.return %boxed : !lz.value
                 }]
                 [@default ->  {
-                  %one = lz.make_i64(1)
-                  %isub = lz.primop_sub(%ihash, %one)
-                  %boxed_isub = lz.construct(@SimpleInt, %isub: !lz.value)
+                  %one = constant 1: i64
+                  %isub = subi %ihash, %one: i64
+                  %boxed_isub = lz.construct(@SimpleInt, %isub: i64)
                   %boxed_isub_t = lz.thunkify(%boxed_isub : !lz.value) : !lz.thunk<!lz.value>
                   %f = constant @f: (!lz.thunk<!lz.value>) -> !lz.value
                   %rec_t = lz.ap(%f : (!lz.thunk<!lz.value>) -> !lz.value , %boxed_isub_t)
                   %rec_v = lz.force(%rec_t): !lz.value
                   // TODO: should `case` be a terminator?
                   %out = lz.case @SimpleInt %rec_v
-                           [@SimpleInt -> { ^entry(%jhash: !lz.value):
-                             %one_j = lz.make_i64(1)
-                             %jincr = lz.primop_add(%jhash, %one_j)
-                             %boxed_jincr = lz.construct(@SimpleInt, %jincr: !lz.value)
+                           [@SimpleInt -> { ^entry(%jhash: i64):
+                             %one_j = constant 1: i64
+                             %jincr = addi %jhash, %one_j: i64
+                             %boxed_jincr = lz.construct(@SimpleInt, %jincr: i64)
                              lz.return %boxed_jincr : !lz.value
                            }]
                   lz.return %out : !lz.value
@@ -60,8 +60,8 @@ module {
 
   // 37 + 5 = 42
   func @main() -> !lz.value {
-    %v = lz.make_i64(37)
-    %v_box = lz.construct(@SimpleInt, %v:!lz.value)
+    %v = constant 37: i64
+    %v_box = lz.construct(@SimpleInt, %v: i64)
     %v_thunk = lz.thunkify(%v_box: !lz.value): !lz.thunk<!lz.value>
     %f = constant @f : (!lz.thunk<!lz.value>) -> !lz.value
     %out_t = lz.ap(%f : (!lz.thunk<!lz.value>) -> !lz.value, %v_thunk)
