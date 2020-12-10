@@ -792,6 +792,12 @@ struct CaseOfKnownConstructorPattern : public mlir::OpRewritePattern<CaseOp> {
         *caseop.getAltIndexForConstructor(constructor.getDataConstructorName());
 
     InlinerInterface inliner(rewriter.getContext());
+
+    FuncOp parent = caseop.getParentOfType<FuncOp>();
+    llvm::errs() << "===parent:===\n";
+    parent.getOperation()->print(llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
+    llvm::errs() << "\n^^^^^^^^^^\n";
+
     LogicalResult isInlined =
         inlineRegion(inliner, &caseop.getAltRHS(altIx), caseop,
                      constructor.getOperands(), caseop.getResult());
@@ -809,13 +815,18 @@ struct CaseOfKnownIntPattern : public mlir::OpRewritePattern<CaseIntOp> {
   mlir::LogicalResult
   matchAndRewrite(CaseIntOp caseop,
                   mlir::PatternRewriter &rewriter) const override {
-    MakeI64Op constint = caseop.getScrutinee().getDefiningOp<MakeI64Op>();
+    ConstantOp constint = caseop.getScrutinee().getDefiningOp<ConstantOp>();
     if (!constint) {
       return failure();
     }
 
+    mlir::IntegerAttr val = constint.value().dyn_cast<mlir::IntegerAttr>();
+    if (!val) {
+      return failure();
+    }
+
     rewriter.setInsertionPoint(caseop);
-    int altIx = *caseop.getAltIndexForConstInt(constint.getValue().getInt());
+    int altIx = *caseop.getAltIndexForConstInt(val.getInt());
 
     InlinerInterface inliner(rewriter.getContext());
 

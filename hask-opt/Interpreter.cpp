@@ -197,27 +197,6 @@ struct Interpreter {
     fflush(stdout);
 
     //============= HaskOps ========================//
-    if (MakeI64Op mi64 = dyn_cast<MakeI64Op>(op)) {
-      env.addNew(mi64.getResult(), InterpValue::i(mi64.getValue().getInt()));
-      return;
-    }
-    if (HaskPrimopSubOp sub = dyn_cast<HaskPrimopSubOp>(op)) {
-      InterpValue a = env.lookup(sub.getLoc(), sub.getOperand(0));
-      InterpValue b = env.lookup(sub.getLoc(), sub.getOperand(1));
-      assert(a.type == InterpValueType::I64);
-      assert(b.type == InterpValueType::I64);
-      env.addNew(sub.getResult(), InterpValue::i(a.i() - b.i()));
-      return;
-    }
-    if (HaskPrimopAddOp add = dyn_cast<HaskPrimopAddOp>(op)) {
-      InterpValue a = env.lookup(add.getLoc(), add.getOperand(0));
-      InterpValue b = env.lookup(add.getLoc(), add.getOperand(1));
-      assert(a.type == InterpValueType::I64);
-      assert(b.type == InterpValueType::I64);
-      env.addNew(add.getResult(), InterpValue::i(a.i() + b.i()));
-      return;
-    }
-
     if (HaskConstructOp cons = dyn_cast<HaskConstructOp>(op)) {
       stats.num_construct_calls++;
       std::vector<InterpValue> vs;
@@ -230,11 +209,6 @@ struct Interpreter {
       return;
     }
 
-    if (TransmuteOp transmute = dyn_cast<TransmuteOp>(op)) {
-      env.addNew(transmute.getResult(),
-                 env.lookup(transmute.getLoc(), transmute.getOperand()));
-      return;
-    }
     if (ThunkifyOp thunkify = dyn_cast<ThunkifyOp>(op)) {
       stats.num_thunkify_calls++;
       env.addNew(thunkify.getResult(),
@@ -363,17 +337,6 @@ struct Interpreter {
 
       assert(caseInt.getDefaultAltIndex() && "neither match, nor default");
       env.addNew(caseInt, *interpretRegion(caseInt.getDefaultRHS(), {}, env));
-      return;
-    }
-
-    if (DefaultCaseOp default_ = dyn_cast<DefaultCaseOp>(op)) {
-      // TODO: check that this has only 1 constructor!
-      InterpValue scrutinee =
-          env.lookup(default_.getLoc(), default_.getScrutinee());
-      assert(scrutinee.type == InterpValueType::Constructor);
-      assert(scrutinee.constructorTag() == default_.getConstructorTag());
-      assert(scrutinee.constructorNumArgs() == 1);
-      env.addNew(default_.getResult(), scrutinee.constructorArg(0));
       return;
     }
 

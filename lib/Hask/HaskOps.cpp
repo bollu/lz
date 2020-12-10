@@ -267,6 +267,91 @@ void CaseOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
   state.addTypes(retty);
 };
 
+// === APEAGEROP OP ===
+// === APEAGEROP OP ===
+// === APEAGEROP OP ===
+// === APEAGEROP OP ===
+// === APEAGEROP OP ===
+
+ParseResult ApEagerOp::parse(OpAsmParser &parser, OperationState &result) {
+  // OpAsmParser::OperandType operand_fn;
+  OpAsmParser::OperandType op_fn;
+
+  // (<fn-arg>
+  if (parser.parseLParen()) {
+    return failure();
+  }
+
+  if (parser.parseOperand(op_fn)) {
+    return failure();
+  }
+  // : type
+  FunctionType ratorty;
+  if (parser.parseColonType<FunctionType>(ratorty)) {
+    return failure();
+  }
+
+  if (parser.resolveOperand(op_fn, ratorty, result.operands)) {
+    return failure();
+  }
+
+  FunctionType fnty = ratorty.dyn_cast<FunctionType>();
+  if (!fnty) {
+    InFlightDiagnostic err =
+        parser.emitError(parser.getCurrentLocation(),
+                         "expected function type, got non function type: [");
+    err << ratorty << "]";
+    return failure();
+  }
+  std::vector<Type> paramtys = fnty.getInputs();
+
+  for (int i = 0; i < (int)paramtys.size(); ++i) {
+    OpAsmParser::OperandType op;
+    if (parser.parseComma() || parser.parseOperand(op) ||
+        parser.resolveOperand(op, paramtys[i], result.operands)) {
+      return failure();
+    }
+  }
+
+  //)
+  if (parser.parseRParen())
+    return failure();
+
+  result.addTypes(fnty.getResult(0));
+  return success();
+};
+
+void ApEagerOp::print(OpAsmPrinter &p) {
+  p.printGenericOp(this->getOperation());
+  return;
+
+  p << getOperationName() << "(";
+  p << this->getFn() << " :" << this->getFn().getType();
+
+  for (int i = 0; i < this->getNumFnArguments(); ++i) {
+    p << ", " << this->getFnArgument(i);
+  }
+  p << ")";
+};
+
+void ApEagerOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                      Value fn, Type resultty,
+                      const SmallVectorImpl<Value> &params) {
+  // hack! we need to construct the type properly.
+  state.addOperands(fn);
+  // assert(fn.getType().isa<FunctionType>());
+  // FunctionType fnty = fn.getType().cast<FunctionType>();
+
+  // assert(params.size() == fnty.getInputs().size());
+  // for (int i = 0; i < (int)params.size(); ++i) {
+  //   assert(params[i].getType() == fnty.getInput(i) &&
+  //          "ApEagerOp argument type mismatch");
+  // }
+
+  state.addOperands(params);
+  state.addTypes(resultty);
+};
+
 // === LAMBDA OP ===
 // === LAMBDA OP ===
 // === LAMBDA OP ===
@@ -533,7 +618,7 @@ ParseResult CaseIntOp::parse(OpAsmParser &parser, OperationState &result) {
   OpAsmParser::OperandType scrutinee;
   if (parser.parseOperand(scrutinee))
     return failure();
-  if (parser.resolveOperand(scrutinee, parser.getBuilder().getType<ValueType>(),
+  if (parser.resolveOperand(scrutinee, parser.getBuilder().getI64Type(),
                             result.operands)) {
     return failure();
   }
