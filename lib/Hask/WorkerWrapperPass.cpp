@@ -49,7 +49,7 @@ void reallySetFunctionType(mlir::FuncOp f, mlir::FunctionType ty) {
   f.setType(ty);
   assert(f.getNumArguments() == ty.getNumInputs());
 
-  for(int i = 0; i < (int)f.getNumArguments(); ++i) {
+  for (int i = 0; i < (int)f.getNumArguments(); ++i) {
     f.getArgument(i).setType(ty.getInput(i));
   }
 }
@@ -786,6 +786,28 @@ struct OutlineReturnOfConstructor : public mlir::OpRewritePattern<FuncOp> {
   }
 };
 
+class AlwaysInlinerInterface : public InlinerInterface {
+public:
+  AlwaysInlinerInterface(MLIRContext *ctx) : InlinerInterface(ctx) {}
+
+  virtual void processInlinedBlocks(
+      iterator_range<Region::iterator> inlinedBlocks) override {}
+
+  bool isLegalToInline(Operation *call, Operation *callable,
+                       bool wouldBeCloned) const override {
+    return true;
+  };
+  bool isLegalToInline(Region *dest, Region *src, bool wouldBeCloned,
+                       BlockAndValueMapping &valueMapping) const override {
+    return true;
+  }
+  bool isLegalToInline(Operation *op, Region *dest, bool wouldBeCloned,
+                       BlockAndValueMapping &valueMapping) const override {
+    return true;
+  }
+  bool shouldAnalyzeRecursively(Operation *op) const override { return true; };
+};
+
 struct CaseOfKnownConstructorPattern : public mlir::OpRewritePattern<CaseOp> {
   CaseOfKnownConstructorPattern(mlir::MLIRContext *context)
       : OpRewritePattern<CaseOp>(context, /*benefit=*/1) {}
@@ -803,11 +825,15 @@ struct CaseOfKnownConstructorPattern : public mlir::OpRewritePattern<CaseOp> {
     int altIx =
         *caseop.getAltIndexForConstructor(constructor.getDataConstructorName());
 
-    InlinerInterface inliner(rewriter.getContext());
+    AlwaysInlinerInterface inliner(rewriter.getContext());
 
     ModuleOp mod = caseop.getParentOfType<ModuleOp>();
-    llvm::errs() << "===parent module:===\n";
-    mod.getOperation()->print(llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
+    (void)(mod);
+    FuncOp fn = caseop.getParentOfType<FuncOp>();
+
+    llvm::errs() << "===parent func:===\n";
+    fn.getOperation()->print(llvm::errs(),
+                             mlir::OpPrintingFlags().printGenericOpForm());
     llvm::errs() << "\n^^^^^^^^^^\n";
 
     LogicalResult isInlined =
