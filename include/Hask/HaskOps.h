@@ -48,38 +48,6 @@ public:
   void print(OpAsmPrinter &p);
 };
 
-class MakeI64Op
-    : public Op<MakeI64Op, OpTrait::OneResult, OpTrait::ZeroSuccessor,
-                MemoryEffectOpInterface::Trait> {
-public:
-  using Op::Op;
-  static StringRef getOperationName() { return "lz.make_i64"; };
-  static ParseResult parse(OpAsmParser &parser, OperationState &result);
-
-  IntegerAttr getValue() {
-    return this->getOperation()->getAttrOfType<IntegerAttr>("value");
-  }
-  void print(OpAsmPrinter &p);
-  void
-  getEffects(SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
-                 &effects) {}
-};
-
-class MakeStringOp
-    : public Op<MakeStringOp, OpTrait::OneResult, OpTrait::ZeroSuccessor,
-                MemoryEffectOpInterface::Trait> {
-public:
-  using Op::Op;
-  static StringRef getOperationName() { return "lz.make_string"; };
-  static ParseResult parse(OpAsmParser &parser, OperationState &result);
-
-  Attribute getValue() { return this->getOperation()->getAttr("value"); }
-  void print(OpAsmPrinter &p);
-  void
-  getEffects(SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
-                 &effects) {}
-};
-
 class ApOp
     : public Op<ApOp, OpTrait::OneResult, MemoryEffectOpInterface::Trait> {
 public:
@@ -163,6 +131,22 @@ public:
   Operation *resolveCallable() {
     assert(false && "unimplemented resolveCallable");
   }
+};
+
+class ThunkifyOp
+    : public Op<ThunkifyOp, OpTrait::OneResult, OpTrait::OneOperand,
+                MemoryEffectOpInterface::Trait> {
+public:
+  using Op::Op;
+  static StringRef getOperationName() { return "lz.thunkify"; };
+  static ParseResult parse(OpAsmParser &parser, OperationState &result);
+  Value getScrutinee() { return this->getOperation()->getOperand(0); }
+  void print(OpAsmPrinter &p);
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                    Value scrutinee);
+  void
+  getEffects(SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+                 &effects) {}
 };
 
 class CaseOp
@@ -278,26 +262,6 @@ public:
                     SmallVectorImpl<mlir::Region *> &rhss, mlir::Type retty);
 };
 
-class DefaultCaseOp : public Op<DefaultCaseOp, OpTrait::OneResult,
-                                MemoryEffectOpInterface::Trait> {
-public:
-  using Op::Op;
-  static StringRef getOperationName() { return "lz.defaultcase"; };
-  static ParseResult parse(OpAsmParser &parser, OperationState &result);
-  static const char *getCaseTypeKey() { return "constructorName"; }
-  std::string getConstructorTag() {
-    return this->getOperation()
-        ->getAttrOfType<FlatSymbolRefAttr>(getCaseTypeKey())
-        .getValue()
-        .str();
-  }
-  Value getScrutinee() { return this->getOperation()->getOperand(0); }
-  void print(OpAsmPrinter &p);
-  void
-  getEffects(SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
-                 &effects) {}
-};
-
 // LAMBDA OP
 class HaskLambdaOp : public Op<HaskLambdaOp, OpTrait::VariadicOperands,
                                OpTrait::OneResult, OpTrait::OneRegion> {
@@ -320,57 +284,6 @@ public:
   //  void verify();
 };
 
-/*
-class HaskRefOp
-    : public Op<HaskRefOp, OpTrait::OneResult, OpTrait::ZeroOperands,
-                MemoryEffectOpInterface::Trait> {
-public:
-  using Op::Op;
-  static StringRef getOperationName() { return "lz.ref"; };
-  llvm::StringRef getRef() {
-    return getAttrOfType<StringAttr>(::mlir::SymbolTable::getSymbolAttrName())
-        .getValue();
-  }
-
-  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                    std::string refname, Type retty);
-
-  static ParseResult parse(OpAsmParser &parser, OperationState &result);
-  void print(OpAsmPrinter &p);
-  LogicalResult verify();
-  void
-  getEffects(SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
-                 &effects) {}
-};
-*/
-
-// class HaskFuncOp : public Op<HaskFuncOp, OpTrait::ZeroOperands,
-//                              OpTrait::ZeroResult, OpTrait::OneRegion,
-//                              // OpTrait::AffineScope,
-//                              CallableOpInterface::Trait,
-//                              SymbolOpInterface::Trait, OpTrait::AffineScope>
-//                              {
-// public:
-//   using Op::Op;
-//   static StringRef getOperationName() { return "lz.func"; };
-//   Region &getBody() { return this->getRegion(); }
-//   void print(OpAsmPrinter &p);
-//   // MLIR TODO: expose this as part of the Callable interface.
-//   int getNumArguments() { return this->getBody().getNumArguments(); }
-//   llvm::StringRef getFuncName();
-//   HaskFnType getFunctionType();
-//   Type getReturnType();
-//
-//   bool isRecursive();
-//   static ParseResult parse(OpAsmParser &parser, OperationState &result);
-//   static const char *getReturnTypeAttributeKey() { return "retty"; }
-//   Region *getCallableRegion() { return &this->getRegion(); };
-//   ArrayRef<Type> getCallableResults() { return this->getReturnType(); };
-//
-//   static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
-//                     std::string FuncName, HaskFnType fnty);
-// };
-
 // replace case x of name { default -> ... } with name = force(x);
 class ForceOp : public Op<ForceOp, OpTrait::OneResult, OpTrait::OneOperand,
                           MemoryEffectOpInterface::Trait> {
@@ -387,36 +300,6 @@ public:
   getEffects(SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
                  &effects) {}
 };
-
-// class HaskADTOp
-//     : public Op<HaskADTOp, OpTrait::ZeroResult, OpTrait::ZeroOperands> {
-// public:
-//   using Op::Op;
-//   static StringRef getOperationName() { return "lz.adt"; };
-//   static ParseResult parse(OpAsmParser &parser, OperationState &result);
-//   void print(OpAsmPrinter &p);
-// };
-
-// do I need this? unclear.
-class HaskGlobalOp
-    : public Op<HaskGlobalOp, OpTrait::ZeroOperands, OpTrait::ZeroResult,
-                OpTrait::OneRegion, // OpTrait::IsIsolatedFromAbove,
-                SymbolOpInterface::Trait> {
-public:
-  using Op::Op;
-  static StringRef getOperationName() { return "lz.global"; };
-  Region &getRegion() { return this->getOperation()->getRegion(0); };
-  Type getType() {
-    Region &r = getRegion();
-    ReturnOp ret = dyn_cast<ReturnOp>(r.getBlocks().front().getTerminator());
-    assert(ret && "global does not have a return value");
-    return ret.getOperand(0).getType();
-  }
-  llvm::StringRef getGlobalName();
-  static ParseResult parse(OpAsmParser &parser, OperationState &result);
-  void print(OpAsmPrinter &p);
-};
-
 class HaskConstructOp
     : public Op<HaskConstructOp, OpTrait::OneResult, OpTrait::ZeroRegion,
                 MemoryEffectOpInterface::Trait> {
@@ -440,63 +323,6 @@ public:
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
                     StringRef constructorName, ValueRange args);
 
-  void
-  getEffects(SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
-                 &effects) {}
-};
-
-class HaskPrimopAddOp
-    : public Op<HaskPrimopAddOp, OpTrait::OneResult,
-                OpTrait::NOperands<2>::Impl, MemoryEffectOpInterface::Trait> {
-public:
-  using Op::Op;
-  static StringRef getOperationName() { return "lz.primop_add"; };
-  static ParseResult parse(OpAsmParser &parser, OperationState &result);
-  void print(OpAsmPrinter &p);
-  void
-  getEffects(SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
-                 &effects) {}
-};
-
-class HaskPrimopSubOp
-    : public Op<HaskPrimopSubOp, OpTrait::OneResult,
-                OpTrait::NOperands<2>::Impl, MemoryEffectOpInterface::Trait> {
-public:
-  using Op::Op;
-  static StringRef getOperationName() { return "lz.primop_sub"; };
-  static ParseResult parse(OpAsmParser &parser, OperationState &result);
-  void print(OpAsmPrinter &p);
-  void
-  getEffects(SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
-                 &effects) {}
-};
-
-class ThunkifyOp
-    : public Op<ThunkifyOp, OpTrait::OneResult, OpTrait::OneOperand,
-                MemoryEffectOpInterface::Trait> {
-public:
-  using Op::Op;
-  static StringRef getOperationName() { return "lz.thunkify"; };
-  static ParseResult parse(OpAsmParser &parser, OperationState &result);
-  Value getScrutinee() { return this->getOperation()->getOperand(0); }
-  void print(OpAsmPrinter &p);
-  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                    Value scrutinee);
-  void
-  getEffects(SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
-                 &effects) {}
-};
-
-class TransmuteOp
-    : public Op<TransmuteOp, OpTrait::OneResult, OpTrait::OneOperand,
-                MemoryEffectOpInterface::Trait> {
-public:
-  using Op::Op;
-  static StringRef getOperationName() { return "lz.transmute"; };
-  static ParseResult parse(OpAsmParser &parser, OperationState &result);
-  void print(OpAsmPrinter &p);
-  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                    Value scrutinee);
   void
   getEffects(SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
                  &effects) {}

@@ -46,23 +46,14 @@ HaskDialect::HaskDialect(mlir::MLIRContext *context)
   //       >();
   // clang-format off
   addOperations<
-    MakeI64Op,
     // DeclareDataConstructorOp,
     HaskReturnOp,
     ApOp,
-    ApEagerOp,
     CaseOp,
-    DefaultCaseOp,
     // HaskRefOp,
-    MakeStringOp,
     ForceOp,
-    HaskGlobalOp,
     HaskConstructOp,
-    HaskPrimopAddOp,
-    HaskPrimopSubOp,
     CaseIntOp,
-    ThunkifyOp,
-    TransmuteOp,
     HaskLambdaOp
   >();
   addTypes<

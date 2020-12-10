@@ -81,74 +81,6 @@ void HaskReturnOp::print(OpAsmPrinter &p) {
   p << getOperationName() << " " << getInput() << " : " << getInput().getType();
 };
 
-// === MakeI32 OP ===
-// === MakeI32 OP ===
-// === MakeI32 OP ===
-// === MakeI32 OP ===
-// === MakeI32 OP ===
-
-ParseResult MakeI64Op::parse(OpAsmParser &parser, OperationState &result) {
-  // mlir::OpAsmParser::OperandType i;
-  Attribute attr;
-  if (parser.parseLParen() ||
-      parser.parseAttribute(attr, "value", result.attributes) ||
-      parser.parseRParen())
-    return failure();
-  // result.addAttribute("value", attr);
-  // SmallVector<Value, 1> vi;
-  // parser.resolveOperand(i, parser.getBuilder().getIntegerType(32), vi);
-
-  // TODO: convert this to emitParserError, etc.
-  // assert (attr.getType().isSignedInteger() && "expected parameter to make_i32
-  // to be integer");
-
-  result.addTypes(parser.getBuilder().getType<ValueType>());
-  return success();
-};
-
-void MakeI64Op::print(OpAsmPrinter &p) {
-  p.printGenericOp(this->getOperation());
-  return;
-  p << getOperationName() << "(" << getValue() << ")";
-};
-
-// === MakeDataConstructor OP ===
-// === MakeDataConstructor OP ===
-// === MakeDataConstructor OP ===
-// === MakeDataConstructor OP ===
-// === MakeDataConstructor OP ===
-
-/*
-ParseResult DeclareDataConstructorOp::parse(OpAsmParser &parser, OperationState
-&result) {
-    // parser.parseAttribute(, parser.getBuilder().getStringAttr )
-    // if(parser.parseLess()) return failure();
-
-    StringAttr nameAttr;
-    if (parser.parseSymbolName(nameAttr,
-::mlir::SymbolTable::getSymbolAttrName(), result.attributes)) { return
-failure();
-    }
-    // if(parser.parseAttribute(attr, "name", result.attributes)) {
-    //     assert(false && "unable to parse attribute!");  return failure();
-    // }
-    // if(parser.parseGreater()) return failure();
-    // result.addTypes(parser.getBuilder().getType<UntypedType>());
-    return success();
-};
-
-llvm::StringRef DeclareDataConstructorOp::getDataConstructorName() {
-    return
-getAttrOfType<StringAttr>(::mlir::SymbolTable::getSymbolAttrName()).getValue();
-}
-
-void DeclareDataConstructorOp::print(OpAsmPrinter &p) {
-    p << getOperationName() << " ";
-    p.printSymbolName(getDataConstructorName());
-};
-
-*/
-
 // === APOP OP ===
 // === APOP OP ===
 // === APOP OP ===
@@ -235,91 +167,6 @@ void ApOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
   state.addOperands(fnname);
   state.addOperands(params);
   state.addTypes(builder.getType<ThunkType>(fn.getType().getResult(0)));
-};
-
-// === APEAGEROP OP ===
-// === APEAGEROP OP ===
-// === APEAGEROP OP ===
-// === APEAGEROP OP ===
-// === APEAGEROP OP ===
-
-ParseResult ApEagerOp::parse(OpAsmParser &parser, OperationState &result) {
-  // OpAsmParser::OperandType operand_fn;
-  OpAsmParser::OperandType op_fn;
-
-  // (<fn-arg>
-  if (parser.parseLParen()) {
-    return failure();
-  }
-
-  if (parser.parseOperand(op_fn)) {
-    return failure();
-  }
-  // : type
-  FunctionType ratorty;
-  if (parser.parseColonType<FunctionType>(ratorty)) {
-    return failure();
-  }
-
-  if (parser.resolveOperand(op_fn, ratorty, result.operands)) {
-    return failure();
-  }
-
-  FunctionType fnty = ratorty.dyn_cast<FunctionType>();
-  if (!fnty) {
-    InFlightDiagnostic err =
-        parser.emitError(parser.getCurrentLocation(),
-                         "expected function type, got non function type: [");
-    err << ratorty << "]";
-    return failure();
-  }
-  std::vector<Type> paramtys = fnty.getInputs();
-
-  for (int i = 0; i < (int)paramtys.size(); ++i) {
-    OpAsmParser::OperandType op;
-    if (parser.parseComma() || parser.parseOperand(op) ||
-        parser.resolveOperand(op, paramtys[i], result.operands)) {
-      return failure();
-    }
-  }
-
-  //)
-  if (parser.parseRParen())
-    return failure();
-
-  result.addTypes(fnty.getResult(0));
-  return success();
-};
-
-void ApEagerOp::print(OpAsmPrinter &p) {
-  p.printGenericOp(this->getOperation());
-  return;
-
-  p << getOperationName() << "(";
-  p << this->getFn() << " :" << this->getFn().getType();
-
-  for (int i = 0; i < this->getNumFnArguments(); ++i) {
-    p << ", " << this->getFnArgument(i);
-  }
-  p << ")";
-};
-
-void ApEagerOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                      Value fn, Type resultty,
-                      const SmallVectorImpl<Value> &params) {
-  // hack! we need to construct the type properly.
-  state.addOperands(fn);
-  // assert(fn.getType().isa<FunctionType>());
-  // FunctionType fnty = fn.getType().cast<FunctionType>();
-
-  // assert(params.size() == fnty.getInputs().size());
-  // for (int i = 0; i < (int)params.size(); ++i) {
-  //   assert(params[i].getType() == fnty.getInput(i) &&
-  //          "ApEagerOp argument type mismatch");
-  // }
-
-  state.addOperands(params);
-  state.addTypes(resultty);
 };
 
 // === CASESSA OP ===
@@ -420,50 +267,6 @@ void CaseOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
   state.addTypes(retty);
 };
 
-// === DEFAULTCASE OP ===
-// === DEFAULTCASE OP ===
-// === DEFAULTCASE OP ===
-// === DEFAULTCASE OP ===
-// === DEFAULTCASE OP ===
-// === DEFAULTCASE OP ===
-
-ParseResult DefaultCaseOp::parse(OpAsmParser &parser, OperationState &result) {
-  OpAsmParser::OperandType scrutinee;
-
-  if (parser.parseLParen()) {
-    return failure();
-  }
-  FlatSymbolRefAttr constructorName;
-  if (parser.parseAttribute<FlatSymbolRefAttr>(
-          constructorName, CaseOp::getCaseTypeKey(), result.attributes)) {
-    return failure();
-  }
-
-  parser.parseComma();
-  if (parser.parseOperand(scrutinee) || parser.parseRParen()) {
-    return failure();
-  }
-  Type retty;
-  if (parser.parseColonType(retty)) {
-    return failure();
-  }
-  parser.resolveOperand(
-      scrutinee, ValueType::get(parser.getBuilder().getContext()),
-      // ADTType::get(parser.getBuilder().getContext(), constructorName),
-      result.operands);
-
-  result.addTypes(retty);
-  return success();
-};
-
-void DefaultCaseOp::print(OpAsmPrinter &p) {
-  p << getOperationName() << "(";
-  p << this->getOperation()->getAttrOfType<FlatSymbolRefAttr>(
-      this->getCaseTypeKey());
-  p << ", " << this->getScrutinee() << ")"
-    << " : " << this->getResult().getType();
-};
-
 // === LAMBDA OP ===
 // === LAMBDA OP ===
 // === LAMBDA OP ===
@@ -558,290 +361,6 @@ void HaskLambdaOp::print(OpAsmPrinter &p) {
   p.printGenericOp(this->getOperation());
 }
 
-// === RECURSIVEREF OP ===
-// === RECURSIVEREF OP ===
-// === RECURSIVEREF OP ===
-// === RECURSIVEREF OP ===
-// === RECURSIVEREF OP ===
-
-// ParseResult HaskRefOp::parse(OpAsmParser &parser, OperationState &result) {
-//   StringAttr nameAttr;
-//   // ( <arg> ) : <type>
-//   Type ty;
-//   if (parser.parseLParen() ||
-//       parser.parseSymbolName(nameAttr,
-//       ::mlir::SymbolTable::getSymbolAttrName(),
-//                              result.attributes) ||
-//       parser.parseRParen() || parser.parseColonType(ty)) {
-//     return failure();
-//   }
-
-//   // TODO: extract this out as a separate function or something.
-//   if (!ty.isa<HaskType>()) {
-//     return parser.emitError(parser.getCurrentLocation(),
-//                             "expected a haskell type");
-//   }
-
-//   // if (!(ty.isa<ValueType>() || ty.isa<ThunkType>() || ty.isa<HaskFnType>()
-//   ||
-//   // ty.isa<UntypedType>())) {
-//   //     return parser.emitError(parser.getCurrentLocation(), "expected
-//   value,
-//   //     thunk, function, or untyped type");
-//   // }
-
-//   result.addTypes(ty);
-//   return success();
-// }
-
-// void HaskRefOp::print(OpAsmPrinter &p) {
-//   p.printGenericOp(this->getOperation());
-//   return;
-//   p << getOperationName() << "(";
-//   p.printSymbolName(this->getRef());
-//   p << ")"
-//     << " : " << this->getResult().getType();
-// };
-
-// LogicalResult HaskRefOp::verify() {
-//   return success();
-//   /*
-//   ModuleOp mod = this->getOperation()->getParentOfType<mlir::ModuleOp>();
-//   HaskFuncOp fn = mod.lookupSymbol<HaskFuncOp>(this->getRef());
-//   HaskGlobalOp global = mod.lookupSymbol<HaskGlobalOp>(this->getRef());
-//   if (fn) {
-//     // how do I attach an error message?
-//     if (fn.getFunctionType() == this->getResult().getType()) {
-//       return success();
-//     }
-//     llvm::errs() << "ERROR at HaskRefOp type verification:"
-//                  << "\n-mismatch of types at ref."
-//                  << "\n-Found from function at loc["
-//                  << " " << fn.getLoc() << "] "
-//                  << "name:" << this->getRef() << " type["
-//                  << fn.getFunctionType()
-//                  << "]\n"
-//                     "-Declared at ref as ["
-//                  << this->getLoc() << "] type[" <<
-//                  this->getResult().getType()
-//                  << "]\n";
-//     return failure();
-//   } else if (global) {
-//     if (global.getType() == this->getResult().getType()) {
-//       return success();
-//     }
-//     llvm::errs() << "ERROR at HaskRefOp type verification:"
-//                  << "\n-mismatch of types at ref."
-//                  << "\n-Found from global"
-//                  << " " << global.getLoc() << " "
-//                  << "name:" << this->getRef() << " [" << global.getType()
-//                  << "]\n"
-//                     "-Declared at ref as ["
-//                  << this->getLoc() << " " << *this << "]\n";
-//     return failure();
-//   } else {
-//     llvm::errs() << "ERROR at HaskRefOpVerification:"
-//                  << "\n-unable to find referenced function/global |"
-//                  << this->getRef() << "|\n";
-//     // TODO: forward declare stuff like +#
-//     return failure();
-//   }
-//   */
-// }
-
-// void HaskRefOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
-//                       std::string refname, Type retty) {
-//   state.addAttribute(::mlir::SymbolTable::getSymbolAttrName(),
-//                      builder.getStringAttr(refname));
-//   state.addTypes(retty);
-// }
-
-// === MakeString OP ===
-// === MakeString OP ===
-// === MakeString OP ===
-// === MakeString OP ===
-// === MakeString OP ===
-
-ParseResult MakeStringOp::parse(OpAsmParser &parser, OperationState &result) {
-  // mlir::OpAsmParser::OperandType i;
-  Attribute attr;
-
-  if (parser.parseLParen() ||
-      parser.parseAttribute(attr, "value", result.attributes) ||
-      parser.parseRParen())
-    return failure();
-  // result.addAttribute("value", attr);
-  // SmallVector<Value, 1> vi;
-  // parser.resolveOperand(i, parser.getBuilder().getIntegerType(32), vi);
-
-  // TODO: check if attr is string.
-
-  result.addTypes(parser.getBuilder().getType<ValueType>());
-  return success();
-};
-
-void MakeStringOp::print(OpAsmPrinter &p) {
-  p << "hask.make_string(" << getValue() << ")";
-};
-
-// === HASKFUNC OP ===
-// === HASKFUNC OP ===
-// === HASKFUNC OP ===
-// === HASKFUNC OP ===
-// === HASKFUNC OP ===
-
-// ParseResult HaskFuncOp::parse(OpAsmParser &parser, OperationState &result) {
-//
-//   StringAttr nameAttr;
-//   if (parser.parseSymbolName(nameAttr,
-//   ::mlir::SymbolTable::getSymbolAttrName(),
-//                              result.attributes)) {
-//     return failure();
-//   };
-//
-//   SmallVector<OpAsmParser::OperandType, 4> args;
-//   SmallVector<Type, 4> argTys;
-//   Type retty;
-//
-//   if (parser.parseLParen()) {
-//     return failure();
-//   }
-//
-//   if (succeeded(parser.parseOptionalRParen())) {
-//     // we have no params.
-//   } else {
-//     while (1) {
-//       OpAsmParser::OperandType arg;
-//       if (parser.parseRegionArgument(arg)) {
-//         return failure();
-//       };
-//       args.push_back(arg);
-//
-//       if (parser.parseColon()) {
-//         return failure();
-//       }
-//       Type argType;
-//       if (parser.parseType(argType)) {
-//         return failure();
-//       }
-//       argTys.push_back(argType);
-//       // if (!(argType.isa<ThunkType>() || argType.isa<ValueType>() ||
-//       //       argType.isa<HaskFnType>())) {
-//       //   return parser.emitError(arg.location,
-//       //                           "argument must either ValueType,
-//       ThunkType, "
-//       //                           "or HaskFnType");
-//       // }
-//
-//       if (succeeded(parser.parseOptionalRParen())) {
-//         break;
-//       } else if (parser.parseComma()) {
-//         return failure();
-//       }
-//     }
-//   }
-//
-//   // -> retty
-//   if (parser.parseArrow() || parser.parseType(retty)) {
-//     return failure();
-//   }
-//
-//   //  result.add
-//   result.addAttribute(HaskFuncOp::getReturnTypeAttributeKey(),
-//                       mlir::TypeAttr::get(retty));
-//   // result.addTypes(
-//
-//   Region *r = result.addRegion();
-//   if (parser.parseRegion(*r, {args}, {argTys})) {
-//     return failure();
-//   }
-//
-//   // result.addTypes(parser.getBuilder().getType<HaskFnType>(argTys, retty));
-//   return success();
-// };
-
-// Type HaskFuncOp::getReturnType() {
-//   return
-//   this->getAttrOfType<TypeAttr>(HaskFuncOp::getReturnTypeAttributeKey())
-//       .getValue();
-// }
-
-// HaskFnType HaskFuncOp::getFunctionType() {
-//   SmallVector<Type, 4> argTys(this->getRegion().getArgumentTypes());
-//   Type retty = this->getReturnType();
-//   assert(
-//       this->getAttrOfType<TypeAttr>(HaskFuncOp::getReturnTypeAttributeKey())
-//       && "found return type attribute!");
-//   assert(retty && "found return type!");
-//   return HaskFnType::get(this->getContext(), argTys, retty);
-// }
-
-// void HaskFuncOp::print(OpAsmPrinter &p) {
-//   p.printGenericOp(this->getOperation());
-//   return;
-//   p << "hask.func" << ' ';
-//   p.printSymbolName(getFuncName());
-//   // Print the body if this is not an external function.
-//   Region &body = this->getRegion();
-//   p << "(";
-//   for (int i = 0; i < (int)body.getNumArguments(); ++i) {
-//     p << body.getArgument(i) << " : " << body.getArgument(i).getType();
-//     if (i + 1 < (int)body.getNumArguments()) {
-//       p << ", ";
-//     }
-//   }
-//
-//   p << ") -> ";
-//   p << this->getReturnType();
-//
-//   assert(!body.empty());
-//   p.printRegion(body, /*printEntryBlockArgs=*/false,
-//                 /*printBlockTerminators=*/true);
-// }
-
-// llvm::StringRef HaskFuncOp::getFuncName() {
-//   return getAttrOfType<StringAttr>(::mlir::SymbolTable::getSymbolAttrName())
-//       .getValue();
-// }
-
-//! LambdaOp HaskFuncOp::getLambda() {
-//!   assert(this->getOperation()->getNumRegions() == 1 &&
-//!          "func needs exactly one region");
-//!   Region &region = this->getRegion();
-//!   // TODO: put this in a `verify` block.
-//!   assert(region.getBlocks().size() == 1 && "func has more than one BB");
-//!   Block &entry = region.front();
-//!   HaskReturnOp ret = cast<HaskReturnOp>(entry.getTerminator());
-//!   Value retval = ret.getInput();
-//!   return cast<LambdaOp>(retval.getDefiningOp());
-//! }
-
-// bool HaskFuncOp::isRecursive() {
-//   // https://mlir.llvm.org/docs/Tutorials/UnderstandingTheIRStructure/
-//   llvm::errs() << "Checking: isFunctionRecursive? " << this->getFuncName()
-//                << "\n";
-//   bool isrec = false;
-//   this->walk([&](HaskRefOp ref) {
-//     if (ref.getRef() == this->getFuncName()) {
-//       isrec = true;
-//       return WalkResult::interrupt();
-//     }
-//     return WalkResult::advance();
-//   });
-//   return isrec;
-// }
-
-// void HaskFuncOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
-//                        std::string FuncName, HaskFnType fntype) {
-//
-//   Region *r = state.addRegion();
-//   builder.createBlock(r, r->end(), fntype.getInputTypes());
-//   state.addAttribute(::mlir::SymbolTable::getSymbolAttrName(),
-//                      builder.getStringAttr(FuncName));
-//   state.addAttribute(HaskFuncOp::getReturnTypeAttributeKey(),
-//                      mlir::TypeAttr::get(fntype.getResultType()));
-// }
-
 // === FORCE OP ===
 // === FORCE OP ===
 // === FORCE OP ===
@@ -915,32 +434,6 @@ void ForceOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
 //   p << getOperationName();
 //   p << " " << this->getAttr("name") << " " << this->getAttr("constructors");
 // };
-
-// === GLOBAL OP ===
-// === GLOBAL OP ===
-// === GLOBAL OP ===
-// === GLOBAL OP ===
-// === GLOBAL OP ===
-
-ParseResult HaskGlobalOp::parse(OpAsmParser &parser, OperationState &result) {
-  StringAttr nameAttr;
-  if (parser.parseSymbolName(nameAttr, ::mlir::SymbolTable::getSymbolAttrName(),
-                             result.attributes)) {
-    return failure();
-  };
-
-  auto *body = result.addRegion();
-  return parser.parseRegion(*body, {}, ArrayRef<Type>());
-};
-
-void HaskGlobalOp::print(OpAsmPrinter &p) {
-  p << getOperationName() << ' ';
-  p.printSymbolName(getName());
-  Region &body = this->getRegion();
-  assert(!body.empty());
-  p.printRegion(body, /*printEntryBlockArgs=*/false,
-                /*printBlockTerminators=*/true);
-};
 
 // === CONSTRUCT OP ===
 // === CONSTRUCT OP ===
@@ -1029,58 +522,6 @@ void HaskConstructOp::build(mlir::OpBuilder &builder,
       FlatSymbolRefAttr::get(constructorName, builder.getContext()));
   state.addOperands(args);
   state.addTypes(ValueType::get(builder.getContext()));
-};
-
-// === PRIMOP ADD OP ===
-// === PRIMOP ADD OP ===
-// === PRIMOP ADD OP ===
-// === PRIMOP ADD OP ===
-// === PRIMOP ADD OP ===
-
-ParseResult HaskPrimopAddOp::parse(OpAsmParser &parser,
-                                   OperationState &result) {
-  OpAsmParser::OperandType lhs, rhs;
-  if (parser.parseLParen() || parser.parseOperand(lhs) || parser.parseComma() ||
-      parser.parseOperand(rhs) || parser.parseRParen()) {
-    return failure();
-  }
-  parser.resolveOperand(lhs, parser.getBuilder().getType<ValueType>(),
-                        result.operands);
-  parser.resolveOperand(rhs, parser.getBuilder().getType<ValueType>(),
-                        result.operands);
-  result.addTypes(parser.getBuilder().getType<ValueType>());
-  return success();
-};
-
-void HaskPrimopAddOp::print(OpAsmPrinter &p) {
-  p << this->getOperation()->getName() << "(" << this->getOperand(0) << ","
-    << this->getOperand(1) << ")";
-};
-
-// === PRIMOP SUB OP ===
-// === PRIMOP SUB OP ===
-// === PRIMOP SUB OP ===
-// === PRIMOP SUB OP ===
-// === PRIMOP SUB OP ===
-
-ParseResult HaskPrimopSubOp::parse(OpAsmParser &parser,
-                                   OperationState &result) {
-  OpAsmParser::OperandType lhs, rhs;
-  if (parser.parseLParen() || parser.parseOperand(lhs) || parser.parseComma() ||
-      parser.parseOperand(rhs) || parser.parseRParen()) {
-    return failure();
-  }
-  parser.resolveOperand(lhs, parser.getBuilder().getType<ValueType>(),
-                        result.operands);
-  parser.resolveOperand(rhs, parser.getBuilder().getType<ValueType>(),
-                        result.operands);
-  result.addTypes(parser.getBuilder().getType<ValueType>());
-  return success();
-};
-
-void HaskPrimopSubOp::print(OpAsmPrinter &p) {
-  p << this->getOperation()->getName() << "(" << this->getOperand(0) << ","
-    << this->getOperand(1) << ")";
 };
 
 // === CASE INT OP ===
@@ -1209,36 +650,6 @@ void ThunkifyOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
   state.addOperands(scrutinee);
   state.addTypes(builder.getType<ThunkType>(scrutinee.getType()));
 }
-
-// === TRANSMUTE OP ===
-// === TRANSMUTE OP ===
-// === TRANSMUTE OP ===
-// === TRANSMUTE OP ===
-// === TRANSMUTE OP ===
-
-ParseResult TransmuteOp::parse(OpAsmParser &parser, OperationState &result) {
-  OpAsmParser::OperandType scrutinee;
-  mlir::Type type, retty;
-
-  if (parser.parseLParen() || parser.parseOperand(scrutinee) ||
-      parser.parseColon() || parser.parseType(type) || parser.parseRParen() ||
-      parser.parseColon() || parser.parseType(retty)) {
-    return failure();
-  }
-
-  SmallVector<Value, 4> results;
-  if (parser.resolveOperand(scrutinee, type, results))
-    return failure();
-  result.addOperands(results);
-  result.addTypes(retty);
-  return success();
-};
-
-void TransmuteOp::print(OpAsmPrinter &p) {
-  p << getOperationName() << "(" << this->getOperand() << " :"
-    << this->getOperand().getType() << ")"
-    << ":" << this->getResult().getType();
-};
 
 // ==REWRITES==
 // ==REWRITES==
@@ -1403,44 +814,6 @@ mlir::LLVM::LLVMType haskToLLVMType(MLIRContext *context, Type t) {
   } */
   else {
     assert(false && "unknown haskell type");
-  }
-};
-
-// http://localhost:8000/structanonymous__namespace_02ConvertStandardToLLVM_8cpp_03_1_1FuncOpConversion.html#a9043f45e0e37eb828942ff867c4fe38d
-class HaskGlobalOpConversionPattern : public ConversionPattern {
-public:
-  explicit HaskGlobalOpConversionPattern(MLIRContext *context)
-      : ConversionPattern(HaskGlobalOp::getOperationName(), 1, context) {}
-
-  LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
-                  ConversionPatternRewriter &rewriter) const override {
-    using namespace mlir::LLVM;
-
-    // Operation *module = op->getParentOp();
-    // Now lower the [LambdaOp + HaskFuncOp together]
-    // TODO: deal with free floating lambads. This LambdaOp is going to
-    // become a top-level function. Other lambdas will become toplevel functions
-    // with synthetic names.
-    auto fn = cast<HaskGlobalOp>(op);
-
-    auto I8PtrTy = LLVMType::getInt8PtrTy(rewriter.getContext());
-    LLVMFuncOp llvmfn = rewriter.create<LLVMFuncOp>(
-        fn.getLoc(), fn.getName().str(), LLVMFunctionType::get(I8PtrTy, {}));
-
-    Block *llvmfnEntry = llvmfn.addEntryBlock();
-    rewriter.mergeBlocks(&fn.getRegion().getBlocks().front(), llvmfnEntry,
-                         llvmfnEntry->getArguments());
-    rewriter.eraseOp(op);
-
-    // TODO: consider building a struct with the default closure
-    // interface?
-    // {
-    //    mlir::LLVM::LLVMStructType closure0ArgsStruct;
-    //    rewriter.create<mlir::LLVM::GlobalOp>(fn.getLoc(), fn.getName(),
-    //                                          closure0ArgsStruct)
-
-    return success();
   }
 };
 
@@ -1776,26 +1149,6 @@ public:
   }
 };
 
-class MakeI64OpConversionPattern : public ConversionPattern {
-public:
-  explicit MakeI64OpConversionPattern(MLIRContext *context)
-      : ConversionPattern(MakeI64Op::getOperationName(), 1, context) {}
-
-  LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
-                  ConversionPatternRewriter &rewriter) const override {
-    MakeI64Op makei64 = cast<MakeI64Op>(op);
-    auto I64Ty = LLVM::LLVMType::getInt64Ty(rewriter.getContext());
-    Value v = rewriter.create<mlir::LLVM::ConstantOp>(makei64.getLoc(), I64Ty,
-                                                      makei64.getValue());
-    auto I8PtrTy = LLVM::LLVMType::getInt8PtrTy(rewriter.getContext());
-    rewriter.replaceOpWithNewOp<LLVM::IntToPtrOp>(makei64, I8PtrTy, v);
-    //    rewriter.replaceOpWithNewOp<mlir::ConstantOp>(op,rewriter.getI64Type(),
-    //    makei64.getValue());
-    return success();
-  }
-};
-
 static FlatSymbolRefAttr getOrInsertEvalClosure(PatternRewriter &rewriter,
                                                 ModuleOp module) {
   const std::string name = "evalClosure";
@@ -1835,70 +1188,6 @@ public:
     return success();
   }
 };
-
-// class HaskReturnOpConversionPattern : public ConversionPattern {
-// public:
-//   explicit HaskReturnOpConversionPattern(MLIRContext *context)
-//       : ConversionPattern(HaskReturnOp::getOperationName(), 1, context) {}
-//
-//   LogicalResult
-//   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
-//                   ConversionPatternRewriter &rewriter) const override {
-//     HaskReturnOp ret = cast<HaskReturnOp>(op);
-//     llvm::errs() << "running HaskReturnOpConversionPattern on: "
-//                  << op->getName() << " | " << op->getLoc() << "\n";
-//     using namespace mlir::LLVM;
-//     rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(ret, ret.getInput());
-//     return success();
-//   }
-// };
-
-// class HaskRefOpConversionPattern : public ConversionPattern {
-// public:
-//   explicit HaskRefOpConversionPattern(MLIRContext *context)
-//       : ConversionPattern(HaskRefOp::getOperationName(), 1, context) {}
-
-//   LogicalResult
-//   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
-//                   ConversionPatternRewriter &rewriter) const override {
-//     HaskRefOp ref = cast<HaskRefOp>(op);
-//     ModuleOp mod = ref.getParentOfType<ModuleOp>();
-
-//     llvm::errs() << "running HaskRefOpConversionPattern on: " <<
-//     op->getName()
-//                  << " | " << op->getLoc() << "\n";
-//     using namespace mlir::LLVM;
-
-//     auto I8PtrTy = mlir::LLVM::LLVMType::getInt8PtrTy(rewriter.getContext());
-
-//     Operation *referenced = mod.lookupSymbol(ref.getRef());
-//     assert(referenced && "reference does not exist");
-
-//     if (LLVMFuncOp llvmfn = dyn_cast<LLVMFuncOp>(referenced)) {
-//       LLVM::AddressOfOp addr = rewriter.create<LLVM::AddressOfOp>(
-//           op->getLoc(), llvmfn.getType().getPointerTo(), ref.getRef());
-//       rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(op, I8PtrTy, addr);
-//       return success();
-//     } else {
-//       // not yet converted.
-//       LLVMType llvmty;
-//       if (FuncOp fn = mod.lookupSymbol<FuncOp>(ref.getRef())) {
-//         llvmty =
-//             haskToLLVMType(rewriter.getContext(), ref.getResult().getType());
-
-//       } else if (mod.lookupSymbol<HaskGlobalOp>(ref.getRef())) {
-//         llvmty = LLVMType::getFunctionTy(I8PtrTy, {}, /*isVaridic=*/false);
-//       } else {
-//         assert(false && "unknown symbol");
-//       }
-//       LLVM::AddressOfOp addr = rewriter.create<LLVM::AddressOfOp>(
-//           op->getLoc(), llvmty, ref.getRef());
-//       rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(op, I8PtrTy, addr);
-//       return success();
-//     }
-//     return success();
-//   }
-// };
 
 [[maybe_unused]] static FlatSymbolRefAttr
 getOrInsertMalloc(PatternRewriter &rewriter, ModuleOp module) {
@@ -1983,59 +1272,6 @@ public:
     //                                     LLVMType::getInt8PtrTy(rewriter.getContext()),
     //                                     malloc,
     //                                     llvmFnArgs);
-
-    return success();
-  }
-};
-
-class HaskPrimopAddOpConversionPattern : public ConversionPattern {
-public:
-  explicit HaskPrimopAddOpConversionPattern(MLIRContext *context)
-      : ConversionPattern(HaskPrimopAddOp::getOperationName(), 1, context) {}
-
-  LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
-                  ConversionPatternRewriter &rewriter) const override {
-
-    using namespace mlir::LLVM;
-    HaskPrimopAddOp add = cast<HaskPrimopAddOp>(op);
-    auto I64Ty = LLVM::LLVMType::getInt64Ty(rewriter.getContext());
-    auto I8PtrTy = LLVMType::getInt8PtrTy(rewriter.getContext());
-
-    LLVM::PtrToIntOp lhs = rewriter.create<LLVM::PtrToIntOp>(
-        op->getLoc(), I64Ty, add.getOperand(0));
-    LLVM::PtrToIntOp rhs = rewriter.create<LLVM::PtrToIntOp>(
-        op->getLoc(), I64Ty, add.getOperand(1));
-
-    LLVM::AddOp out =
-        rewriter.create<LLVM::AddOp>(op->getLoc(), I64Ty, lhs, rhs);
-    rewriter.replaceOpWithNewOp<mlir::LLVM::IntToPtrOp>(op, I8PtrTy, out);
-
-    return success();
-  }
-};
-
-class HaskPrimopSubOpConversionPattern : public ConversionPattern {
-public:
-  explicit HaskPrimopSubOpConversionPattern(MLIRContext *context)
-      : ConversionPattern(HaskPrimopSubOp::getOperationName(), 1, context) {}
-
-  LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
-                  ConversionPatternRewriter &rewriter) const override {
-    using namespace mlir::LLVM;
-    HaskPrimopSubOp sub = cast<HaskPrimopSubOp>(op);
-    auto I64Ty = LLVM::LLVMType::getInt64Ty(rewriter.getContext());
-    auto I8PtrTy = LLVMType::getInt8PtrTy(rewriter.getContext());
-
-    LLVM::PtrToIntOp lhs = rewriter.create<LLVM::PtrToIntOp>(
-        op->getLoc(), I64Ty, sub.getOperand(0));
-    LLVM::PtrToIntOp rhs = rewriter.create<LLVM::PtrToIntOp>(
-        op->getLoc(), I64Ty, sub.getOperand(1));
-
-    LLVM::SubOp out =
-        rewriter.create<LLVM::SubOp>(op->getLoc(), I64Ty, lhs, rhs);
-    rewriter.replaceOpWithNewOp<mlir::LLVM::IntToPtrOp>(op, I8PtrTy, out);
 
     return success();
   }
@@ -2191,22 +1427,6 @@ public:
     return success();
   }
 };
-
-class TransmuteOpConversionPattern : public ConversionPattern {
-public:
-  explicit TransmuteOpConversionPattern(MLIRContext *context)
-      : ConversionPattern(TransmuteOp::getOperationName(), 1, context) {}
-
-  LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
-                  ConversionPatternRewriter &rewriter) const override {
-
-    TransmuteOp transmute = cast<TransmuteOp>(op);
-    rewriter.replaceOp(transmute, transmute.getOperand());
-    return success();
-  }
-};
-
 // === LowerHaskToLLVMPass ===
 // === LowerHaskToLLVMPass ===
 // === LowerHaskToLLVMPass ===
@@ -2251,7 +1471,6 @@ void LowerHaskToStandardPass::runOnOperation() {
   // target.addLegalOp<HaskRefOp>();
   // target.addLegalOp<HaskADTOp>();
   // target.addLegalOp<LambdaOp>();
-  // target.addLegalOp<HaskGlobalOp>();
   // target.addLegalOp<HaskReturnOp>();
   // target.addLegalOp<CaseOp>();
   // target.addLegalOp<ApOp>();
@@ -2260,20 +1479,15 @@ void LowerHaskToStandardPass::runOnOperation() {
 
   OwningRewritePatternList patterns;
   // patterns.insert<HaskFuncOpConversionPattern>(&getContext());
-  patterns.insert<HaskGlobalOpConversionPattern>(&getContext());
   patterns.insert<CaseOpConversionPattern>(&getContext());
   // patterns.insert<LambdaOpConversionPattern>(&getContext());
-  patterns.insert<MakeI64OpConversionPattern>(&getContext());
   // patterns.insert<HaskReturnOpConversionPattern>(&getContext());
   // patterns.insert<HaskRefOpConversionPattern>(&getContext());
   patterns.insert<HaskConstructOpConversionPattern>(&getContext());
   patterns.insert<ForceOpConversionPattern>(&getContext());
   patterns.insert<ApOpConversionPattern>(&getContext());
-  patterns.insert<HaskPrimopAddOpConversionPattern>(&getContext());
-  patterns.insert<HaskPrimopSubOpConversionPattern>(&getContext());
   patterns.insert<CaseIntOpConversionPattern>(&getContext());
   patterns.insert<ThunkifyOpConversionPattern>(&getContext());
-  patterns.insert<TransmuteOpConversionPattern>(&getContext());
 
   // llvm::errs() << "===Enabling Debugging...===\n";
   //::llvm::DebugFlag = true;
