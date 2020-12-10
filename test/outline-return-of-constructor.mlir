@@ -19,11 +19,11 @@
 
 module {        
   // f :: SimpleInt -> SimpleInt
-  // f i = case i of SimpleInt i# ->
+  // f i = SimpleInt (case i of SimpleInt i# ->
   //          case i# of
-  //            0 -> SimpleInt 5;
+  //            0 ->  5;
   //            _ -> case f ( SimpleInt(i# -# 1#)) of
-  //                  SimpleInt j# -> SimpleInt (j# +# 1)
+  //                  SimpleInt j# -> (j# +# 1))
   func @f (%icons : !lz.value) -> !lz.value {
     %reti = lz.case @SimpleInt %icons
               [@SimpleInt -> { ^entry(%i: i64):
@@ -41,7 +41,7 @@ module {
                   %out = lz.case @SimpleInt %recv
                            [@SimpleInt -> { ^entry(%jhash: i64):
                              %onej = constant 1: i64
-                             %jincr = subi %jhash, %onej : i64
+                             %jincr = addi %jhash, %onej : i64
                              lz.return %jincr : i64
                            }]
                   lz.return %out : i64

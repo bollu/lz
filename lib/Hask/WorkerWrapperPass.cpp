@@ -42,6 +42,18 @@
 namespace mlir {
 namespace standalone {
 
+// The nonsense that is MLIR only sets the type that is tracked by the
+// type *attribute* and not *the type of the entry block arguments.
+// This really sets the type of the entry block arguments as well.
+void reallySetFunctionType(mlir::FuncOp f, mlir::FunctionType ty) {
+  f.setType(ty);
+  assert(f.getNumArguments() == ty.getNumInputs());
+
+  for(int i = 0; i < (int)f.getNumArguments(); ++i) {
+    f.getArgument(i).setType(ty.getInput(i));
+  }
+}
+
 mlir::FlatSymbolRefAttr getConstantFnRefFromOp(mlir::ConstantOp constant) {
   return constant.getValue().dyn_cast<FlatSymbolRefAttr>();
 }
@@ -314,7 +326,7 @@ struct OutlineRecursiveApEagerOfThunkPattern
     // We first replace the reucrsive call, and *then* clone the function.
     FuncOp clonedfn = parentfn.clone();
     clonedfn.setName(clonedFnName);
-    clonedfn.setType(mkForcedFnType(called.getType()));
+    reallySetFunctionType(clonedfn, mkForcedFnType(called.getType()));
 
     // TODO: consider if going forward is more sensible or going back is
     // more sensible. Right now I am reaching forward, but perhaps
@@ -649,7 +661,7 @@ struct OutlineCaseOfFnInput : public mlir::OpRewritePattern<FuncOp> {
     rewriter.setInsertionPointAfter(parentfn);
     mlir::FuncOp outlinedFn = parentfn.clone();
     outlinedFn.setName(outlinedFnName);
-    outlinedFn.setType(outlinedFnty);
+    reallySetFunctionType(outlinedFn, outlinedFnty);
     BlockArgument outlinedFnArg = outlinedFn.getArgument(0);
     rewriter.setInsertionPointToStart(&outlinedFn.getRegion().front());
     HaskConstructOp wrappedOutlinedFnArg = rewriter.create<HaskConstructOp>(
@@ -762,7 +774,7 @@ struct OutlineReturnOfConstructor : public mlir::OpRewritePattern<FuncOp> {
     // <original inputs> -> unwrapped output
     mlir::FunctionType outlinedFnty = rewriter.getFunctionType(
         parentfn.getType().getInputs(), clonedConstructorArg.getType());
-    outlinedFn.setType(outlinedFnty);
+    reallySetFunctionType(outlinedFn, outlinedFnty);
     // return constructor(val) -> return val
     rewriter.setInsertionPointAfter(clonedRet);
     rewriter.replaceOpWithNewOp<HaskReturnOp>(clonedRet, clonedConstructorArg);
@@ -793,9 +805,9 @@ struct CaseOfKnownConstructorPattern : public mlir::OpRewritePattern<CaseOp> {
 
     InlinerInterface inliner(rewriter.getContext());
 
-    FuncOp parent = caseop.getParentOfType<FuncOp>();
-    llvm::errs() << "===parent:===\n";
-    parent.getOperation()->print(llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
+    ModuleOp mod = caseop.getParentOfType<ModuleOp>();
+    llvm::errs() << "===parent module:===\n";
+    mod.getOperation()->print(llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
     llvm::errs() << "\n^^^^^^^^^^\n";
 
     LogicalResult isInlined =

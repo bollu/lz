@@ -25,6 +25,74 @@ Convert GHC Core to MLIR.
 
 # Log:  [newest] to [oldest]
 
+# Thursday Dec 11th
+
+```
+    mlir::FuncOp outlinedFn = parentfn.clone();
+    outlinedFn.setName(outlinedFnName);
+    outlinedFn.setType(outlinedFnty);
+```
+
+this *does not set the type* correctly?!
+
+The full module:
+
+```
+"module"() ( {
+  "func"() ( {
+  ^bb0(%arg0: !lz.value):  // no predecessors
+    %c42_i64 = "std.constant"() {value = 42 : i64} : () -> i64
+    %c1_i64 = "std.constant"() {value = 1 : i64} : () -> i64
+    %f = "std.constant"() {value = @f_outline_case_arg} : () -> ((i64) -> !lz.value)
+    %0 = "lz.case"(%arg0) ( {
+    ^bb0(%arg1: i64):  // no predecessors
+      %1 = "lz.caseint"(%arg1) ( {
+        %2 = "lz.construct"(%c42_i64) {dataconstructor = @SimpleInt} : (i64) -> !lz.value
+        "lz.return"(%2) : (!lz.value) -> ()
+      },  {
+        %2 = "std.subi"(%arg1, %c1_i64) : (i64, i64) -> i64
+        %3 = "lz.apEager"(%f, %2) : ((i64) -> !lz.value, i64) -> !lz.value
+        "lz.return"(%3) : (!lz.value) -> ()
+      }) {alt0 = 0 : i64, alt1 = @default} : (i64) -> !lz.value
+      "lz.return"(%1) : (!lz.value) -> ()
+    }) {alt0 = @SimpleInt, constructorName = @SimpleInt} : (!lz.value) -> !lz.value
+    "std.return"(%0) : (!lz.value) -> ()
+  }) {sym_name = "f", type = (!lz.value) -> !lz.value} : () -> ()
+  "func"() ( {
+    %c3_i64 = "std.constant"() {value = 3 : i64} : () -> i64
+    %f = "std.constant"() {value = @f} : () -> ((!lz.value) -> !lz.value)
+    %0 = "lz.construct"(%c3_i64) {dataconstructor = @SimpleInt} : (i64) -> !lz.value
+    %1 = "lz.apEager"(%f, %0) : ((!lz.value) -> !lz.value, !lz.value) -> !lz.value
+    "std.return"(%1) : (!lz.value) -> ()
+  }) {sym_name = "main", type = () -> !lz.value} : () -> ()
+  "func"() ( {
+  ^bb0(%arg0: !lz.value):  // no predecessors
+    %0 = "lz.construct"(%arg0) {dataconstructor = @SimpleInt} : (!lz.value) -> !lz.value
+    %1 = "lz.case"(%0) ( {
+    ^bb0(%arg1: i64):  // no predecessors
+      %2 = "lz.caseint"(%arg1) ( {
+        %c42_i64 = "std.constant"() {value = 42 : i64} : () -> i64
+        %3 = "lz.construct"(%c42_i64) {dataconstructor = @SimpleInt} : (i64) -> !lz.value
+        "lz.return"(%3) : (!lz.value) -> ()
+      },  {
+        %c1_i64 = "std.constant"() {value = 1 : i64} : () -> i64
+        %3 = "std.subi"(%arg1, %c1_i64) : (i64, i64) -> i64
+        %f = "std.constant"() {value = @f_outline_case_arg} : () -> ((i64) -> !lz.value)
+        %4 = "lz.apEager"(%f, %3) : ((i64) -> !lz.value, i64) -> !lz.value
+        "lz.return"(%4) : (!lz.value) -> ()
+      }) {alt0 = 0 : i64, alt1 = @default} : (i64) -> !lz.value
+      "lz.return"(%2) : (!lz.value) -> ()
+    }) {alt0 = @SimpleInt, constructorName = @SimpleInt} : (!lz.value) -> !lz.value
+    "std.return"(%1) : (!lz.value) -> ()
+  }) {sym_name = "f_outline_case_arg", type = (i64) -> !lz.value} : () -> ()
+  "module_terminator"() : () -> ()
+}) : () -> ()
+```
+
+See that we had:
+- `{sym_name = "f_outline_case_arg", type = (i64) -> !lz.value} : () -> ()`
+- BUT the fucking entry BB type of this function is: `^bb0(%arg0: !lz.value):  // no predecessors`
+
 # Wednesday Dec 10th
 
 What are the guarantees of the use/def chain? Does it guarantee us that the

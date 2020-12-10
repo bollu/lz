@@ -25,19 +25,19 @@ func @f(%arg0: !lz.value) -> i64 {
       %6 = constant 1 : i64
       %7 = addi %5, %6: i64
       lz.return %7 : i64
-    }) {alt0 = 0 : i64, alt1 = @default} : (!lz.value) -> !lz.value
-    lz.return %1 : !lz.value
-  }) {alt0 = @SimpleInt, constructorName = @SimpleInt} : (!lz.value) -> !lz.value
+    }) {alt0 = 0 : i64, alt1 = @default} : (i64) -> i64
+    lz.return %1 : i64
+  }) {alt0 = @SimpleInt, constructorName = @SimpleInt} : (!lz.value) -> i64
   lz.return %0 : i64
 }
 
 // 37 + 5 = 42
 // main = f (SimpleInt 37)
-func @main() -> !lz.value {
+func @main() -> i64 {
   %i = constant 37: i64
   %ibox = lz.construct(@SimpleInt, %i: i64)
-  %f = constant @f : (!lz.value) -> !lz.value
-  %out = lz.apEager(%f : (!lz.value) -> !lz.value, %ibox)
-  return %out: !lz.value
+  %f = constant @f : (!lz.value) -> i64
+  %out = lz.apEager(%f : (!lz.value) -> i64, %ibox)
+  return %out: i64
 }
 
