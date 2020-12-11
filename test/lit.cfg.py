@@ -9,7 +9,6 @@ import tempfile
 import lit.formats
 import lit.util
 
-
 import lit.llvm
 lit.llvm.initialize(lit_config, config)
 

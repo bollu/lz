@@ -411,6 +411,28 @@ struct Interpreter {
       env.addNew(mul.getResult(), InterpValue::i(a.i() * b.i()));
       return;
     }
+    if (auto cmp = dyn_cast<mlir::CmpIOp>(op)) {
+      InterpValue a = env.lookup(cmp.getLoc(), cmp.getOperand(0));
+      InterpValue b = env.lookup(cmp.getLoc(), cmp.getOperand(1));
+      assert(a.type == InterpValueType::I64);
+      assert(b.type == InterpValueType::I64);
+      switch (cmp.predicate()) {
+      case CmpIPredicate::eq:
+        env.addNew(cmp.getResult(), InterpValue::i(a.i() == b.i()));
+        return;
+      case CmpIPredicate::ne:
+      case CmpIPredicate::slt:
+      case CmpIPredicate::sle:
+      case CmpIPredicate::sgt:
+      case CmpIPredicate::sge:
+      case CmpIPredicate::ult:
+      case CmpIPredicate::ule:
+      case CmpIPredicate::ugt:
+      case CmpIPredicate::uge:
+        assert(false && "unhandled compare predicate");
+      }
+      return;
+    }
 
     // NOTE: Indexes. We choose to track no difference between indexes
     // and i64s.
@@ -571,9 +593,26 @@ struct Interpreter {
       }
     }
 
+    if (auto condbr = dyn_cast<mlir::CondBranchOp>(op)) {
+      InterpValue cond = env.lookup(condbr.getLoc(), condbr.condition());
+      assert(cond.type == InterpValueType::I64);
+      if (cond.i() == 1) {
+        return TerminatorResult(condbr.trueDest());
+      } else {
+        return TerminatorResult(condbr.falseDest());
+      }
+    }
+
+    if (auto br = dyn_cast<mlir::BranchOp>(op)) {
+      return TerminatorResult(br.dest());
+    }
+
     InterpreterError err(op.getLoc());
-    err << "unknown terminator: |" << op << "|\n";
-    assert(false && "unreachable");
+    err << "INTERPRETER ERROR: unknown terminator";
+    llvm::errs() << "---uknown terminator:---\n";
+    op.print(llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
+    llvm::errs() << "\n^^^\n";
+    return TerminatorResult();
   }
 
   TerminatorResult interpretBlock(Block &block, Env &env) {

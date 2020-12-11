@@ -110,11 +110,14 @@ using namespace llvm::orc;
 ExitOnError ExitOnErr;
 
 int realmain(int argc, char **argv) {
-  mlir::registerAllPasses();
+  // mlir::registerAllPasses();
   mlir::standalone::registerWorkerWrapperPass();
+  mlir::registerInlinerPass();
+  mlir::registerCanonicalizerPass();
+  mlir::registerCSEPass();
   registerLzInterpretPass();
   mlir::DialectRegistry registry;
-  mlir::registerAllDialects(registry);
+  // mlir::registerAllDialects(registry);
 
   registry.insert<mlir::standalone::HaskDialect>();
   registry.insert<mlir::StandardOpsDialect>();

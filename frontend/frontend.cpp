@@ -972,8 +972,9 @@ struct ExprCase : public Expr {
 
 struct ExprIdentifier : public Expr {
   const string name;
-  ExprIdentifier(Span span, string name)
-      : Expr(span, ExprKind::Identifier), name(name) {}
+  bool strict;
+  ExprIdentifier(Span span, string name, bool strict)
+      : Expr(span, ExprKind::Identifier), name(name), strict(strict) {}
 
   OutFile &print(OutFile &out) const override {
     return out << name;
@@ -1238,7 +1239,7 @@ Expr *parseExprLeaf(Parser &in) {
       }
 
     } else {
-      return new ExprIdentifier(ident->span, ident->name);
+      return new ExprIdentifier(ident->span, ident->name, bool(strict));
     }
   }
 
