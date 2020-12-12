@@ -115,6 +115,8 @@ int realmain(int argc, char **argv) {
   mlir::registerInlinerPass();
   mlir::registerCanonicalizerPass();
   mlir::registerCSEPass();
+  mlir::registerAffinePasses();
+  mlir::registerAffineLoopFusionPass();
   registerLzInterpretPass();
   mlir::DialectRegistry registry;
   // mlir::registerAllDialects(registry);

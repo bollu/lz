@@ -1,7 +1,7 @@
 // RUN: hask-opt %s  --lz-interpret | FileCheck %s
 // RUN: hask-opt %s  |  hask-opt --lz-interpret | FileCheck %s
 // RUN: hask-opt %s  --lz-worker-wrapper --lz-interpret | FileCheck %s --check-prefix=CHECK-WW 
-// RUN: hask-opt %s  --lz-worker-wrapper | hask-opt --lz-interpret | FileCheck %s --check-prefix=CHECK-WW 
+// RXUXNX: hask-opt %s  --lz-worker-wrapper | hask-opt --lz-interpret | FileCheck %s --check-prefix=CHECK-WW 
 
 // Check that @plus works with SimpleInt works.
 // CHECK: constructor(SimpleInt 42)

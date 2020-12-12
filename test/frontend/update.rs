@@ -1,7 +1,6 @@
 // RUN: frontend %s -interpret
 
 // y = a*x + a
-
 fn add(a: i64, b: i64) -> !i64 {
     return match a {
         av => return 10;

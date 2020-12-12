@@ -1,6 +1,3 @@
-// RUN: hask-opt %s  -lz-interpret | FileCheck %s
-// RUN: hask-opt %s  | hask-opt -lz-interpret |  FileCheck %s
-// CHECK: 
 module {
   //A(0, n) = n + 1
   //A(m, 0) = A(m-1, 1)
@@ -30,11 +27,15 @@ module {
   }
 
   // Mimic the memref API: https://mlir.llvm.org/docs/Dialects/Standard/#stdget_global_memref-getglobalmemrefop
-  // globals must always be thunks.
+  // globals that are thunks must be updated after evaluation.
+  //  [if we dont care about the update, then we can simply represent as 
+  //   ack22: () -> i64]
+  // Q1: how to represent that this global should /shoulnt be updated?
   lz.global @ack22 : !lz.thunk<i64> {
     %two = constant 2 : i64
-    %ack = constant @ackermann   : (i64, i64) -> i64
-    lz.return %ackt : i64
+    %ack = constant @ackermann  : (i64, i64) -> i64
+    %out = std.call(%ack, %two, %two) : (i64, i64) -> i64
+    lz.return %out : i64
   }
 
   func @main () -> i64 {
@@ -46,4 +47,4 @@ module {
     %z = addi %x,  %y : i64
     return %z : i64
   }
-}
+}                                                                i64

@@ -72,3 +72,6 @@ public:
   }
   Type getElementType() { return *this->getImpl()->getElementType().data(); }
 };
+
+};
+};

@@ -606,6 +606,7 @@ void HaskConstructOp::build(mlir::OpBuilder &builder,
       HaskConstructOp::getDataConstructorAttrKey(),
       FlatSymbolRefAttr::get(constructorName, builder.getContext()));
   state.addOperands(args);
+  // return type.
   state.addTypes(ValueType::get(builder.getContext()));
 };
 

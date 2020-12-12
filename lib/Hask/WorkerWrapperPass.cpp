@@ -468,10 +468,7 @@ struct OutlineRecursiveApEagerOfConstructorPattern
     // 2. Build the cloned function that is an unboxed version of the
     //    case. Eliminate the case for the argument RHS.
     clonedfn.setName(clonedFnName);
-    // NOTE THE REPETITION!
-    clonedfn.getBody().getArgument(0).setType(
-        constructedArgument.getOperand(0).getType());
-    // clonedfn.setType(mkForcedFnType(called.getType()));
+    reallySetFunctionType(clonedfn, clonedFnTy);
 
     CaseOp caseClonedFnArg = cast<CaseOp>(
         clonedfn.getBody().getArgument(0).getUses().begin().getUser());
@@ -834,6 +831,13 @@ struct CaseOfKnownConstructorPattern : public mlir::OpRewritePattern<CaseOp> {
     llvm::errs() << "===parent func:===\n";
     fn.getOperation()->print(llvm::errs(),
                              mlir::OpPrintingFlags().printGenericOpForm());
+    llvm::errs() << "\n\n~~~~~~constructor:~~~~~~\n\n";
+    constructor.getOperation()->print(
+        llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
+
+    llvm::errs() << "\n\n~~~~~~case:~~~~~~\n\n";
+    caseop.getOperation()->print(llvm::errs(),
+                                 mlir::OpPrintingFlags().printGenericOpForm());
     llvm::errs() << "\n^^^^^^^^^^\n";
 
     LogicalResult isInlined =
@@ -1016,6 +1020,8 @@ struct PeelConstructorsFromCasePattern : public mlir::OpRewritePattern<CaseOp> {
           rets[i].getLoc(), constructors[i].getOperand(0)));
       rewriter.eraseOp(rets[i]);
     }
+    assert(newRets.size() > 0);
+    caseop.getResult().setType(newRets[0].getType());
 
     // OK, so all branches have a constructor. pull constructor out
     // after the case.
@@ -1100,6 +1106,10 @@ struct PeelConstructorsFromCaseIntPattern
           rets[i].getLoc(), constructors[i].getOperand(0)));
       rewriter.eraseOp(rets[i]);
     }
+
+    assert(newRets.size() > 0);
+    caseop.getResult().setType(newRets[0].getType());
+
 
     // OK, so all branches have a constructor. pull constructor out
     // after the case.

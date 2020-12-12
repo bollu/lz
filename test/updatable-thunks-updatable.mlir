@@ -1,6 +1,3 @@
-// RUN: hask-opt %s  -lz-interpret | FileCheck %s
-// RUN: hask-opt %s  | hask-opt -lz-interpret |  FileCheck %s
-// CHECK: 56
 module {
   //A(0, n) = n + 1
   //A(m, 0) = A(m-1, 1)
@@ -45,9 +42,13 @@ module {
   func @main () -> i64 {
     %two = constant 2 : i64
     %ackermann = constant @ackermann : (i64, i64) -> i64
+    // 1. If we function is pure, can we infer that we DONT need to 
+          update a thunk.
     // | Q1: how to represent that this thunk is updatable?
-    %ack22 = lz.ap(%ackermann : (i64, i64) -> i64, %two, %two)
-    %out = call @axpy (%ack22, %ack22, %ack22) : (!lz.thunk<i64>, !lz.thunk<i64>, !lz.thunk<i64>) -> i64
+    // | ackermann(2, 2)
+    %ack22 = lz.ap(%ackermann : (i64, i64) -> i64, %two, %two) 
+    %out = call @axpy (%ack22, %ack22, %ack22) 
+        : (!lz.thunk<i64>, !lz.thunk<i64>, !lz.thunk<i64>) -> i64
     return %out : i64
   }
 }

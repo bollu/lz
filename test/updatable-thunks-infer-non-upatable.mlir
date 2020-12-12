@@ -1,6 +1,3 @@
-// RUN: hask-opt %s  -lz-interpret | FileCheck %s
-// RUN: hask-opt %s  | hask-opt -lz-interpret |  FileCheck %s
-// CHECK: 
 module {
   //A(0, n) = n + 1
   //A(m, 0) = A(m-1, 1)
