@@ -1,8 +1,8 @@
 // RUN: frontend %s  -interpret | FileCheck %s
 // CHECK: value: constructor(Just 42)
-enum MaybeInt { Just(!i64), Nothing() };
+enum MaybeInt { Just(i64!), Nothing() };
 
-fn f(m: MaybeInt) -> MaybeInt {
+fn f(m: MaybeInt!) -> MaybeInt! {
     return match m {
         Just(i) => 
             return match i {

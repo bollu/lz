@@ -945,7 +945,15 @@ struct CaseLHSTupleStruct : public CaseLHS {
   }
 };
 
-enum class ExprKind { Case, Identifier, Integer, FnCall, Binop, Construct };
+enum class ExprKind {
+  Case,
+  Identifier,
+  Integer,
+  FnCall,
+  Binop,
+  Construct,
+  Force
+};
 
 struct Expr {
   const Span span;
@@ -972,9 +980,8 @@ struct ExprCase : public Expr {
 
 struct ExprIdentifier : public Expr {
   const string name;
-  bool strict;
-  ExprIdentifier(Span span, string name, bool strict)
-      : Expr(span, ExprKind::Identifier), name(name), strict(strict) {}
+  ExprIdentifier(Span span, string name)
+      : Expr(span, ExprKind::Identifier), name(name) {}
 
   OutFile &print(OutFile &out) const override {
     return out << name;
@@ -1052,20 +1059,18 @@ struct ExprConstruct : public Expr {
   static bool classof(const Expr *e) { return e->kind == ExprKind::Construct; }
 };
 
+// Is always lazy.
 struct ExprFnCall : public Expr {
   Identifier fnname;
   vector<Expr *> args;
-  bool strict;
 
-  ExprFnCall(Span span, Identifier fnname, vector<Expr *> args, bool strict)
-      : Expr(span, ExprKind::FnCall), fnname(fnname), args(args),
-        strict(strict){};
+  ExprFnCall(Span span, Identifier fnname, vector<Expr *> args)
+      : Expr(span, ExprKind::FnCall), fnname(fnname), args(args) {}
 
   OutFile &print(OutFile &out) const override {
     out << "[call ";
     out << fnname.name;
-    out << (strict ? "!" : "~");
-    out << " ";
+    out << "~ ";
     for (int i = 0; i < (ll)args.size(); ++i) {
       args[i]->print(out);
       if (i + 1 < (ll)args.size())
@@ -1076,6 +1081,20 @@ struct ExprFnCall : public Expr {
   }
 
   static bool classof(const Expr *e) { return e->kind == ExprKind::FnCall; }
+};
+
+struct ExprForce : public Expr {
+  Expr *inner;
+  ExprForce(Expr *inner) : Expr(inner->span, ExprKind::Force), inner(inner){};
+
+  OutFile &print(OutFile &out) const override {
+    out << "[force ";
+    inner->print(out);
+    out << " ]";
+    return out;
+  }
+
+  static bool classof(const Expr *e) { return e->kind == ExprKind::Force; }
 };
 
 enum class StmtKind { Return, Let };
@@ -1138,11 +1157,8 @@ struct Block {
 SurfaceType parseType(Parser &in) {
   Loc lbegin = in.getCurrentLoc();
   optional<Identifier> ident;
-  bool strict = false;
-  if (in.parseOptionalSigil("!")) {
-    strict = true;
-  }
   if ((ident = in.parseOptionalIdentifier())) {
+    const bool strict = bool(in.parseOptionalSigil("!"));
     return SurfaceType(Span(lbegin, in.getCurrentLoc()), *ident, strict);
   } else {
     in.addErrAtCurrentLoc("expected type.");
@@ -1210,7 +1226,10 @@ Expr *parseExprLeaf(Parser &in) {
   Loc lbegin = in.getCurrentLoc();
   std::optional<Identifier> ident = in.parseOptionalIdentifier();
   if (ident) {
-    optional<Span> strict = in.parseOptionalSigil("!");
+    optional<Span> strict;
+    if (islower(ident->name[0])) {
+      strict = in.parseOptionalSigil("!");
+    }
     // function call or constructor!
     optional<Span> open;
 
@@ -1231,15 +1250,23 @@ Expr *parseExprLeaf(Parser &in) {
       }
 
       if (islower(ident->name[0])) {
-        return new ExprFnCall(Span(lbegin, in.getCurrentLoc()), *ident, args,
-                              bool(strict));
+        Expr *e =
+            new ExprFnCall(Span(lbegin, in.getCurrentLoc()), *ident, args);
+        if (strict) {
+          e = new ExprForce(e);
+        }
+        return e;
       } else {
         return new ExprConstruct(Span(lbegin, in.getCurrentLoc()), *ident,
                                  args);
       }
 
     } else {
-      return new ExprIdentifier(ident->span, ident->name, bool(strict));
+      Expr *e = new ExprIdentifier(ident->span, ident->name);
+      if (strict) {
+        e = new ExprForce(e);
+      }
+      return e;
     }
   }
 
@@ -1546,12 +1573,14 @@ struct TypeContext {
 public:
   TypeContext(const char *raw_input) : raw_input(raw_input){};
 
-  void assertNonStrict(const IRType *t, Span span) {
-    if (!t->strict)
+  void assertNonStrict(const Expr *e, std::string errstr="") {
+    if (!e->type->strict) {
       return;
-    printfspan(span, raw_input, "expected lazy type, found strict type:\n");
-    t->print(cerr);
-    cerr << "\n";
+    }
+    printfspan(e->span, raw_input, "expected lazy type, found strict type for expression");
+    cerr << "\ntype:\n";
+    e->type->print(cerr);
+    cerr << "\n" << errstr << "\n";
     assert(false && "expected lazy type");
   }
 
@@ -1563,6 +1592,7 @@ public:
     cerr << "\n";
     assert(false && "expected strict type");
   }
+
 
   void assertTypeEquality(const IRType *defn, const IRType *use, Span span) {
     optional<IRTypeError *> err = defn->mismatch(use);
@@ -1653,18 +1683,18 @@ public:
 
   IRTypeInt *getIntType(bool strict) { return new IRTypeInt(strict); }
 
-  IRType *lookupTypeName(Identifier typenam) const {
-    auto it = typename2ty.find(typenam.name);
+  IRType *lookupSurfaceType(SurfaceType type) const {
+    auto it = typename2ty.find(type.tyname.name);
     if (it == typename2ty.end()) {
-      printfspan(typenam.span, raw_input, "unable to find type named: |%s|\n",
-                 typenam.name.c_str());
+      printfspan(type.span, raw_input, "unable to find type named: |%s|\n",
+                 type.tyname.name.c_str());
       // TODO: find some way to smuggle |raw_input| here.
       // raw_input? from where the fuck am I supposed to get that to print an
       // error? smh.
       assert(false && "unable to find type");
     }
-    return it->second;
-  }
+    return it->second->clone(type.strict);
+  };
 
   pair<IRTypeEnum *, IRTypeTuple *>
   lookupEnumFromConstrcutor(Identifier constructor) const {
@@ -1834,8 +1864,9 @@ void typeCheckExpr(TypeContext &tc, Expr *e) {
       tc.assertTypeEquality(fnty->argTys.get(i), fncall->args[i]->type,
                             fncall->args[i]->span);
     }
-    // set strictness info here.
-    fncall->type = fnty->retty->clone(fncall->strict);
+    // the type of the function is lazy. If there is strictness, it's going
+    // to be forced by a ! on the outside.
+    fncall->type = fnty->retty->clone(false);
     return;
   } // end function call.
 
@@ -1848,6 +1879,14 @@ void typeCheckExpr(TypeContext &tc, Expr *e) {
     eint->type = tc.getIntType(true);
     return;
   } // end integer
+
+  if (auto eforce = mlir::dyn_cast<ExprForce>(e)) {
+      typeCheckExpr(tc, eforce->inner);
+      tc.assertNonStrict(eforce->inner, "expression being forced must be lazy");
+      // this type will be forced.
+      eforce->type = eforce->inner->type->clone(true);
+      return;
+  } // end force
 
   cerr << "\n===unknown expr===\n";
   e->print(cerr);
@@ -1863,9 +1902,9 @@ void typeCheckBlock(TypeContext tc, Block *b) {
       if (let->type.strict) {
         tc.assertStrict(let->rhs->type, let->rhs->span);
       } else {
-        tc.assertNonStrict(let->rhs->type, let->rhs->span);
+        tc.assertNonStrict(let->rhs);
       }
-      IRType *declaredty = tc.lookupTypeName(let->type.tyname);
+      IRType *declaredty = tc.lookupSurfaceType(let->type);
       tc.assertTypeEquality(declaredty, let->rhs->type, let->span);
       tc.insertValue(let->name, let->rhs->type);
       continue;
@@ -1894,14 +1933,14 @@ void typeCheckBlock(TypeContext tc, Block *b) {
 // NOTE: this MUTATES THE MODULE! by changing `Fn.type` and `Expr.type` fields.-
 TypeContext typeCheckModule(const char *raw_input, Module &m) {
   TypeContext tcGlobal(raw_input);
-  tcGlobal.insertIRType("i64", new IRTypeInt(true));
+  tcGlobal.insertIRType("i64", new IRTypeInt(/*strict=*/false));
 
   // insert all structs as single constructor enums
   for (Struct s : m.structs) {
     StructFieldsTuple *fields = mlir::cast<StructFieldsTuple>(s.fields);
     vector<IRType *> fieldTys;
     for (SurfaceType t : fields->types) {
-      fieldTys.push_back(tcGlobal.lookupTypeName(t.tyname));
+      fieldTys.push_back(tcGlobal.lookupSurfaceType(t));
     }
 
     // a struct is an enum with a single constructor whose constructor
@@ -1920,7 +1959,7 @@ TypeContext typeCheckModule(const char *raw_input, Module &m) {
       StructFieldsTuple *fields = mlir::cast<StructFieldsTuple>(c.second);
       vector<IRType *> fieldTys;
       for (SurfaceType t : fields->types) {
-        fieldTys.push_back(tcGlobal.lookupTypeName(t.tyname));
+        fieldTys.push_back(tcGlobal.lookupSurfaceType(t));
       }
       constructor2Type.insert({c.first.name, new IRTypeTuple(fieldTys, true)});
     }
@@ -1939,9 +1978,9 @@ TypeContext typeCheckModule(const char *raw_input, Module &m) {
   for (Fn &f : m.fns) {
     vector<IRType *> argTys;
     for (Fn::Argument arg : f.args) {
-      argTys.push_back(tcGlobal.lookupTypeName(arg.second.tyname));
+      argTys.push_back(tcGlobal.lookupSurfaceType(arg.second));
     }
-    IRType *retty = tcGlobal.lookupTypeName(f.retty.tyname);
+    IRType *retty = tcGlobal.lookupSurfaceType(f.retty);
 
     // global *functions* are indeed values, not thunks (?)
     // Once again, we need a distinction between "types of stuff" and
@@ -1954,12 +1993,12 @@ TypeContext typeCheckModule(const char *raw_input, Module &m) {
   for (Fn &f : m.fns) {
     TypeContext tc = tcGlobal;
     for (Fn::Argument arg : f.args) {
-      tc.insertValue(arg.first, tc.lookupTypeName(arg.second.tyname));
+      tc.insertValue(arg.first, tc.lookupSurfaceType(arg.second));
     }
 
     // TODO: each block should have a scope; For now, fuck it.
     // we are in WHNF, so return type will always be a value.
-    IRType *retty = tc.lookupTypeName(f.retty.tyname);
+    IRType *retty = tc.lookupSurfaceType(f.retty);
     typeCheckBlock(tc, f.body);
     tc.assertTypeEquality(retty, f.body->type, f.retty.span);
   }
@@ -2153,11 +2192,14 @@ mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder,
     mlir::Value out = builder.create<mlir::standalone::ApOp>(
         builder.getUnknownLoc(), vf, args, mlirGenType(builder, fnty->retty));
 
-    if (call->strict) {
-      out = builder.create<mlir::standalone::ForceOp>(builder.getUnknownLoc(),
-                                                      out);
-    }
+    return out;
+  }
 
+  if (const ExprForce *force = mlir::dyn_cast<ExprForce>(e)) {
+    mlir::Value inner =
+        mlirGenExpr(force->inner, builder, scopeFn, scopeValue, tc);
+    mlir::Value out = builder.create<mlir::standalone::ForceOp>(
+        builder.getUnknownLoc(), inner);
     return out;
   }
 
