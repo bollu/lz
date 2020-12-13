@@ -41,7 +41,7 @@ GRINDialect &GRINType::getDialect() {
 GRINDialect::GRINDialect(mlir::MLIRContext *context)
     : Dialect(getDialectNamespace(), context, TypeID::get<GRINDialect>()) {
   // clang-format off
-  addOperations<GRINFetchOp, GRINStoreOp, GrinReturnOp, GRINUpdateOp>();
+  // addOperations<GRINFetchOp, GRINStoreOp, GrinReturnOp, GRINUpdateOp>();
   addTypes<BoxType>();
   // clang-format on
 }

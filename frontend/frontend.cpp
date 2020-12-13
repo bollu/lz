@@ -517,21 +517,21 @@ private:
 // notion of strictness (?)
 struct IRTypeEnum : public IRType {
   string name;
-  map<string, IRTypeTuple *> constructors;
+  map<string, IRTypeTuple *> constructor2type;
 
-  IRTypeEnum(string name, map<string, IRTypeTuple *> constructors, bool strict)
+  IRTypeEnum(string name, map<string, IRTypeTuple *> constructor2type, bool strict)
       : IRType(IRTypeKind::Enum, strict), name(name),
-        constructors(constructors) {}
+        constructor2type(constructor2type) {}
 
   IRType *clone(bool forced) const override {
-    return new IRTypeEnum(name, constructors, forced);
+    return new IRTypeEnum(name, constructor2type, forced);
   };
 
   void print(OutFile &f) const override {
     f << "[";
     f << (strict ? "!" : "~");
     f << "t-enum";
-    for (auto it : constructors) {
+    for (auto it : constructor2type) {
       f << "[struct" << it.first << " ";
       it.second->print(f);
       f << "]";
@@ -545,16 +545,16 @@ struct IRTypeEnum : public IRType {
     if (!otherEnum) {
       return new IRTypeErrorKindMismatch(this, other);
     }
-    for (auto itThis : this->constructors) {
-      auto itOther = otherEnum->constructors.find(itThis.first);
-      if (itOther == otherEnum->constructors.end()) {
+    for (auto itThis : this->constructor2type) {
+      auto itOther = otherEnum->constructor2type.find(itThis.first);
+      if (itOther == otherEnum->constructor2type.end()) {
         return new IRTypeErrorEnumMissingConstructor(this, other, itThis.first);
       }
     }
 
-    for (auto itOther : otherEnum->constructors) {
-      auto itThis = constructors.find(itOther.first);
-      if (itThis == constructors.end()) {
+    for (auto itOther : otherEnum->constructor2type) {
+      auto itThis = constructor2type.find(itOther.first);
+      if (itThis == constructor2type.end()) {
         return new IRTypeErrorEnumExtraConstructor(this, other, itOther.first);
       }
     }
@@ -1633,8 +1633,8 @@ public:
   IRTypeTuple *assertExpectedConstructorInEnum(IRTypeEnum *enumty,
                                                Identifier constructor,
                                                int size) {
-    auto it = enumty->constructors.find(constructor.name);
-    if (it == enumty->constructors.end()) {
+    auto it = enumty->constructor2type.find(constructor.name);
+    if (it == enumty->constructor2type.end()) {
       printfspan(constructor.span, raw_input,
                  "unable to find constructor |%s| in enum |%s|\n",
                  constructor.name.c_str(), enumty->name.c_str());
@@ -1700,8 +1700,8 @@ public:
   lookupEnumFromConstrcutor(Identifier constructor) const {
     for (auto itty : this->typename2ty) {
       IRTypeEnum *enumty = mlir::dyn_cast<IRTypeEnum>(itty.second);
-      auto itcons = enumty->constructors.find(constructor.name);
-      if (itcons == enumty->constructors.end()) {
+      auto itcons = enumty->constructor2type.find(constructor.name);
+      if (itcons == enumty->constructor2type.end()) {
         continue;
       }
       return {enumty, itcons->second};
@@ -1930,7 +1930,7 @@ void typeCheckBlock(TypeContext tc, Block *b) {
   }
 };
 
-// NOTE: this MUTATES THE MODULE! by changing `Fn.type` and `Expr.type` fields.-
+// NOTE: this MUTATES THE MODULE! by changing `Fn.type` and `Expr.type` fields.
 TypeContext typeCheckModule(const char *raw_input, Module &m) {
   TypeContext tcGlobal(raw_input);
   tcGlobal.insertIRType("i64", new IRTypeInt(/*strict=*/false));
@@ -1945,33 +1945,30 @@ TypeContext typeCheckModule(const char *raw_input, Module &m) {
 
     // a struct is an enum with a single constructor whose constructor
     // name is the same as the type name.
-    map<string, IRTypeTuple *> constructor2Type;
-    constructor2Type.insert({s.name.name, new IRTypeTuple(fieldTys, true)});
-    // TODO: asking for strictness on Enum is sort of nonsensical?
+    map<string, IRTypeTuple *> constructor2type;
+    constructor2type.insert({s.name.name, new IRTypeTuple(fieldTys, true)});
+
     tcGlobal.insertIRType(s.name.name,
-                          new IRTypeEnum(s.name.name, constructor2Type, true));
-    // add all constructors into the scope of the typechecker.
+                          new IRTypeEnum(s.name.name, constructor2type, true));
   }
 
   for (Enum e : m.enums) {
-    map<string, IRTypeTuple *> constructor2Type;
+    // need type declaration for recursive types.
+    IRTypeEnum *enumty = new IRTypeEnum(e.name.name, {}, true);
+    // insert the type.
+    tcGlobal.insertIRType(e.name.name, enumty);
+
+    map<string, IRTypeTuple *> constructor2type;
     for (Enum::EnumConstructor c : e.constructors) {
       StructFieldsTuple *fields = mlir::cast<StructFieldsTuple>(c.second);
       vector<IRType *> fieldTys;
       for (SurfaceType t : fields->types) {
         fieldTys.push_back(tcGlobal.lookupSurfaceType(t));
       }
-      constructor2Type.insert({c.first.name, new IRTypeTuple(fieldTys, true)});
+      constructor2type.insert({c.first.name, new IRTypeTuple(fieldTys, true)});
     }
 
-    // insert all constructors.
-    IRTypeEnum *enumty = new IRTypeEnum(e.name.name, constructor2Type, true);
-    // for (auto it : constructor2Type) {
-    //   tcGlobal.insertValue(it.first, enumty);
-    // }
-
-    // insert the type.
-    tcGlobal.insertIRType(e.name.name, enumty);
+    enumty->constructor2type = constructor2type;
   }
 
   // generate  all function types.

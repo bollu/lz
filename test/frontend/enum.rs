@@ -14,5 +14,6 @@ fn f(m: MaybeInt!) -> MaybeInt! {
 }
 
 fn main() -> MaybeInt {
-    return f!(Just(10));
+    let x : MaybeInt! = Just(10);
+    return f!(x);
 }

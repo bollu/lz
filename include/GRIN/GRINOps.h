@@ -36,8 +36,6 @@ class GRINStoreOp
 public:
   static StringRef getOperationName() { return "grn.store"; };
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
-  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                    Value v);
 };
 
 // %val = fetch %hp
@@ -55,12 +53,14 @@ class GRINBoxOp : public Op<GRINBoxOp, OpTrait::OneResult, OpTrait::VariadicOper
 public:
   static StringRef getOperationName() { return "grn.update"; };
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
-  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                    Value v);
+  void print(OpAsmPrinter &p);
 };
 
 // grn.unbox @Tag %node
 class GRINUnboxOp : public Op<GRINUnboxOp, OpTrait::VariadicResults, OpTrait::OneOperand> {
+  static StringRef getOperationName() { return "grn.unbox"; };
+  static ParseResult parse(OpAsmParser &parser, OperationState &result);
+  void print(OpAsmPrinter &p);
 };
 
 // update %hp, %val
@@ -68,8 +68,7 @@ class GRINUpdateOp : public Op<GRINUpdateOp, OpTrait::OneResult> {
 public:
   static StringRef getOperationName() { return "grn.update"; };
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
-  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                    Value v);
+  void print(OpAsmPrinter &p);
 };
 
 class GrinReturnOp
@@ -79,8 +78,6 @@ public:
   using Op::Op;
   static StringRef getOperationName() { return "grin.return"; };
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
-  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                    Value v);
 
   void print(OpAsmPrinter &p);
 };
