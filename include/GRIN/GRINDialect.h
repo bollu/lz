@@ -12,15 +12,10 @@ class GRINDialect : public mlir::Dialect {
 public:
   explicit GRINDialect(mlir::MLIRContext *ctx);
   mlir::Type parseType(mlir::DialectAsmParser &parser) const override;
-  void printType(mlir::Type type,
-                 mlir::DialectAsmPrinter &printer) const override;
-  mlir::Attribute parseAttribute(mlir::DialectAsmParser &parser,
-                                 Type type) const override;
-  void printAttribute(Attribute attr,
-                      DialectAsmPrinter &printer) const override;
-  static llvm::StringRef getDialectNamespace() { return "lz"; }
-  static llvm::StringRef getReturnTypeAttributeKey() { return "retty"; }
-  static bool isFunctionRecursive(FuncOp);
+  void printType(mlir::Type type, mlir::DialectAsmPrinter &printer) const override;
+  mlir::Attribute parseAttribute(mlir::DialectAsmParser &parser, Type type) const override;
+  void printAttribute(Attribute attr, DialectAsmPrinter &printer) const override;
+  static llvm::StringRef getDialectNamespace() { return "grn"; }
 };
 
 class GRINType : public Type {
@@ -38,39 +33,18 @@ public:
   GRINDialect &getDialect();
 };
 
-class ValueType
-    : public mlir::Type::TypeBase<ValueType, GRINType, TypeStorage> {
+class BoxType
+    : public mlir::Type::TypeBase<BoxType, GRINType, TypeStorage> {
 public:
   using Base::Base;
-  static ValueType get(MLIRContext *context) { return Base::get(context); }
+  static BoxType get(MLIRContext *context) { return Base::get(context); }
 };
 
-struct ThunkTypeStorage : public TypeStorage {
-  ThunkTypeStorage(ArrayRef<Type> const t) : t(t) {}
-
-  /// The hash key used for uniquing.
-  using KeyTy = ArrayRef<Type>;
-  bool operator==(const KeyTy &key) const { return key == t; }
-
-  /// Construction.
-  static ThunkTypeStorage *construct(TypeStorageAllocator &allocator,
-                                     const KeyTy &key) {
-    return new (allocator.allocate<ThunkTypeStorage>())
-        ThunkTypeStorage(allocator.copyInto(key));
-  }
-
-  ArrayRef<Type> getElementType() const { return t; }
-  ArrayRef<Type> const t;
-};
-
-class ThunkType
-    : public mlir::Type::TypeBase<ThunkType, GRINType, ThunkTypeStorage> {
+class HeapNodeType
+    : public mlir::Type::TypeBase<HeapNodeType, GRINType, TypeStorage> {
 public:
   using Base::Base;
-  static ThunkType get(MLIRContext *context, Type elemty) {
-    return Base::get(context, elemty);
-  }
-  Type getElementType() { return *this->getImpl()->getElementType().data(); }
+  static HeapNodeType get(MLIRContext *context) { return Base::get(context); }
 };
 
 };

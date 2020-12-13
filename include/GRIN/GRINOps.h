@@ -30,24 +30,59 @@ namespace grin {
 // #define GET_OP_CLASSES
 // #include "Hask/HaskOps.h.inc"
 
-// %hpnew = store(%val, %hp)
-class GRINStoreOp : public Op<GRINStoreOp, OpTrait::OneResult> {};
-// %val = fetch(%hpnod)
-class GRINFetchOp : public Op<GRINFetchOp, OpTrait::OneResult> {};
-// update(%hpnod, %valnew)
-class GRINUpdateOp : public Op<GRINUpdateOp, OpTrait::OneResult> {};
+// %hp = store %val
+class GRINStoreOp
+    : public Op<GRINStoreOp, OpTrait::OneResult, OpTrait::OneOperand> {
+public:
+  static StringRef getOperationName() { return "grn.store"; };
+  static ParseResult parse(OpAsmParser &parser, OperationState &result);
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                    Value v);
+};
+
+// %val = fetch %hp
+class GRINFetchOp
+    : public Op<GRINFetchOp, OpTrait::OneResult, OpTrait::OneOperand> {
+public:
+  static StringRef getOperationName() { return "grn.fetch"; };
+  static ParseResult parse(OpAsmParser &parser, OperationState &result);
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                    Value v);
+};
+
+// grn.box @Tag 
+class GRINBoxOp : public Op<GRINBoxOp, OpTrait::OneResult, OpTrait::VariadicOperands> {
+public:
+  static StringRef getOperationName() { return "grn.update"; };
+  static ParseResult parse(OpAsmParser &parser, OperationState &result);
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                    Value v);
+};
+
+// grn.unbox @Tag %node
+class GRINUnboxOp : public Op<GRINUnboxOp, OpTrait::VariadicResults, OpTrait::OneOperand> {
+};
+
+// update %hp, %val
+class GRINUpdateOp : public Op<GRINUpdateOp, OpTrait::OneResult> {
+public:
+  static StringRef getOperationName() { return "grn.update"; };
+  static ParseResult parse(OpAsmParser &parser, OperationState &result);
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                    Value v);
+};
 
 class GrinReturnOp
     : public Op<GrinReturnOp, OpTrait::ZeroResult, OpTrait::ZeroSuccessor,
                 OpTrait::IsTerminator, OpTrait::OneOperand> {
 public:
   using Op::Op;
-  static StringRef getOperationName() { return "lz.return"; };
-  Value getInput() { return this->getOperation()->getOperand(0); }
-  Type getType() { return this->getInput().getType(); }
+  static StringRef getOperationName() { return "grin.return"; };
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
                     Value v);
 
   void print(OpAsmPrinter &p);
-}
+};
+} // namespace grin
+} // namespace mlir
