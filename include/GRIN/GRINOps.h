@@ -65,6 +65,8 @@ public:
 // grn.unbox @Tag %node
 class GRINUnboxOp
     : public Op<GRINUnboxOp, OpTrait::VariadicResults, OpTrait::OneOperand> {
+public:
+  using Op::Op;
   static StringRef getOperationName() { return "grn.unbox"; };
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   void print(OpAsmPrinter &p);
@@ -79,15 +81,5 @@ public:
   void print(OpAsmPrinter &p);
 };
 
-class GrinReturnOp
-    : public Op<GrinReturnOp, OpTrait::ZeroResult, OpTrait::ZeroSuccessor,
-                OpTrait::IsTerminator, OpTrait::OneOperand> {
-public:
-  using Op::Op;
-  static StringRef getOperationName() { return "grin.return"; };
-  static ParseResult parse(OpAsmParser &parser, OperationState &result);
-
-  void print(OpAsmPrinter &p);
-};
 } // namespace grin
 } // namespace mlir

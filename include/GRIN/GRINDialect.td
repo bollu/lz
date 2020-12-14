@@ -17,7 +17,7 @@ include "mlir/IR/OpBase.td"
 
 def GRIN_Dialect : Dialect {
     let name = "grin";
-    let cppNamespace = "standalone";
+    let cppNamespace = "grin";
 }
 
 //===----------------------------------------------------------------------===//

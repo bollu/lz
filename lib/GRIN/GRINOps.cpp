@@ -19,8 +19,15 @@
 #define DEBUG_TYPE "grin-ops"
 #include "llvm/Support/Debug.h"
 
-namespace mlir {
-namespace grin {
+using namespace mlir;
+using namespace mlir::grin;
+
+// STORE OP
+// STORE OP
+// STORE OP
+// STORE OP
+// STORE OP
+
 ParseResult GRINStoreOp::parse(OpAsmParser &parser, OperationState &result) {
   return failure();
 };
@@ -30,5 +37,28 @@ void GRINStoreOp::print(OpAsmPrinter &p) {
   return;
 };
 
-} // namespace grin
-} // namespace mlir
+// UNBOX OP
+// UNBOX OP
+// UNBOX OP
+// UNBOX OP
+// UNBOX OP
+ParseResult GRINUnboxOp::parse(OpAsmParser &parser, OperationState &result) {
+  FlatSymbolRefAttr boxname;
+  parser.parseAttribute<FlatSymbolRefAttr>(boxname);
+  result.addAttribute("value", boxname);
+  SmallVector<OpAsmParser::OperandType, 8> ops;
+  SmallVector<Type, 8> tys;
+
+  if (parser.parseOperandList(ops, OpAsmParser::Delimiter::None) ||
+      parser.parseColonTypeList(tys) ||
+      parser.resolveOperands(ops, tys, parser.getCurrentLocation(),
+                             result.operands)) {
+    return failure();
+  }
+  return success();
+};
+
+void GRINUnboxOp::print(OpAsmPrinter &p) {
+  p.printGenericOp(this->getOperation());
+  return;
+};

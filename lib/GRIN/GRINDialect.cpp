@@ -21,9 +21,6 @@
 
 using namespace mlir;
 using namespace mlir::grin;
-//===----------------------------------------------------------------------===//
-// Hask type.
-//===----------------------------------------------------------------------===//
 
 bool GRINType::classof(Type type) {
   return llvm::isa<GRINDialect>(type.getDialect());
@@ -32,15 +29,10 @@ bool GRINType::classof(Type type) {
 GRINDialect &GRINType::getDialect() {
   return static_cast<GRINDialect &>(Type::getDialect());
 }
-
-//===----------------------------------------------------------------------===//
-// Hask dialect.
-//===----------------------------------------------------------------------===//
-
 GRINDialect::GRINDialect(mlir::MLIRContext *context)
     : Dialect(getDialectNamespace(), context, TypeID::get<GRINDialect>()) {
   // clang-format off
-  addOperations<GRINStoreOp>();
+  addOperations<GRINStoreOp, GRINUnboxOp>();
   addTypes<BoxType>();
 
   // clang-format on
@@ -82,3 +74,44 @@ void GRINDialect::printAttribute(Attribute attr, DialectAsmPrinter &p) const {
   assert(attr);
   assert(false && "unknown attribute");
 }
+
+// STORE OP
+// STORE OP
+// STORE OP
+// STORE OP
+// STORE OP
+
+ParseResult GRINStoreOp::parse(OpAsmParser &parser, OperationState &result) {
+  return failure();
+};
+
+void GRINStoreOp::print(OpAsmPrinter &p) {
+  p.printGenericOp(this->getOperation());
+  return;
+};
+
+// UNBOX OP
+// UNBOX OP
+// UNBOX OP
+// UNBOX OP
+// UNBOX OP
+ParseResult GRINUnboxOp::parse(OpAsmParser &parser, OperationState &result) {
+  FlatSymbolRefAttr boxname;
+  parser.parseAttribute<FlatSymbolRefAttr>(boxname);
+  result.addAttribute("value", boxname);
+  SmallVector<OpAsmParser::OperandType, 8> ops;
+  SmallVector<Type, 8> tys;
+
+  if (parser.parseOperandList(ops, OpAsmParser::Delimiter::None) ||
+      parser.parseColonTypeList(tys) ||
+      parser.resolveOperands(ops, tys, parser.getCurrentLocation(),
+                             result.operands)) {
+    return failure();
+  }
+  return success();
+};
+
+void GRINUnboxOp::print(OpAsmPrinter &p) {
+  p.printGenericOp(this->getOperation());
+  return;
+};

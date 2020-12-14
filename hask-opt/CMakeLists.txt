@@ -17,6 +17,7 @@ add_llvm_executable(hask-opt hask-opt.cpp Interpreter.cpp Runtime.cpp)
 llvm_update_compile_flags(hask-opt)
 target_link_libraries(hask-opt PRIVATE
         ${dialect_libs}
+        MLIRGRIN
         ${conversion_libs}
         MLIRTranslation
         MLIROptLib
