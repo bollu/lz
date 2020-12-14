@@ -1,5 +1,6 @@
 add_mlir_dialect_library(MLIRGRIN
         GRINDialect.cpp
+        GRINOps.cpp
         ADDITIONAL_HEADER_DIRS
         ${PROJECT_SOURCE_DIR}/include/GRIN
         DEPENDS

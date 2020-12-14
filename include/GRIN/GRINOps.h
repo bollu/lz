@@ -34,24 +34,29 @@ namespace grin {
 class GRINStoreOp
     : public Op<GRINStoreOp, OpTrait::OneResult, OpTrait::OneOperand> {
 public:
+  using Op::Op;
   static StringRef getOperationName() { return "grn.store"; };
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
+  void print(OpAsmPrinter &p);
 };
 
 // %val = fetch %hp
 class GRINFetchOp
     : public Op<GRINFetchOp, OpTrait::OneResult, OpTrait::OneOperand> {
 public:
+  using Op::Op;
   static StringRef getOperationName() { return "grn.fetch"; };
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
                     Value v);
+  void print(OpAsmPrinter &p);
 };
 
 // grn.box @Tag
 class GRINBoxOp
     : public Op<GRINBoxOp, OpTrait::OneResult, OpTrait::VariadicOperands> {
 public:
+  using Op::Op;
   static StringRef getOperationName() { return "grn.update"; };
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   void print(OpAsmPrinter &p);
@@ -68,6 +73,7 @@ class GRINUnboxOp
 // update %hp, %val
 class GRINUpdateOp : public Op<GRINUpdateOp, OpTrait::OneResult> {
 public:
+  using Op::Op;
   static StringRef getOperationName() { return "grn.update"; };
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   void print(OpAsmPrinter &p);
