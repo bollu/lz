@@ -1109,7 +1109,6 @@ struct PeelConstructorsFromCaseIntPattern
     assert(newRets.size() > 0);
     caseop.getResult().setType(newRets[0].getType());
 
-
     // OK, so all branches have a constructor. pull constructor out
     // after the case.
     rewriter.setInsertionPointAfter(caseop);

@@ -59,7 +59,7 @@ void GRINDialect::printType(mlir::Type type, mlir::DialectAsmPrinter &p) const {
   if (type.isa<BoxType>()) {
     p << "box";
   } else if (type.isa<HeapNodeType>()) {
-      p << "hp";
+    p << "hp";
   } else {
     assert(false && "unknown type");
   }

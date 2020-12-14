@@ -48,8 +48,9 @@ public:
                     Value v);
 };
 
-// grn.box @Tag 
-class GRINBoxOp : public Op<GRINBoxOp, OpTrait::OneResult, OpTrait::VariadicOperands> {
+// grn.box @Tag
+class GRINBoxOp
+    : public Op<GRINBoxOp, OpTrait::OneResult, OpTrait::VariadicOperands> {
 public:
   static StringRef getOperationName() { return "grn.update"; };
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
@@ -57,7 +58,8 @@ public:
 };
 
 // grn.unbox @Tag %node
-class GRINUnboxOp : public Op<GRINUnboxOp, OpTrait::VariadicResults, OpTrait::OneOperand> {
+class GRINUnboxOp
+    : public Op<GRINUnboxOp, OpTrait::VariadicResults, OpTrait::OneOperand> {
   static StringRef getOperationName() { return "grn.unbox"; };
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   void print(OpAsmPrinter &p);

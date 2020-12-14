@@ -519,7 +519,8 @@ struct IRTypeEnum : public IRType {
   string name;
   map<string, IRTypeTuple *> constructor2type;
 
-  IRTypeEnum(string name, map<string, IRTypeTuple *> constructor2type, bool strict)
+  IRTypeEnum(string name, map<string, IRTypeTuple *> constructor2type,
+             bool strict)
       : IRType(IRTypeKind::Enum, strict), name(name),
         constructor2type(constructor2type) {}
 
@@ -1573,11 +1574,12 @@ struct TypeContext {
 public:
   TypeContext(const char *raw_input) : raw_input(raw_input){};
 
-  void assertNonStrict(const Expr *e, std::string errstr="") {
+  void assertNonStrict(const Expr *e, std::string errstr = "") {
     if (!e->type->strict) {
       return;
     }
-    printfspan(e->span, raw_input, "expected lazy type, found strict type for expression");
+    printfspan(e->span, raw_input,
+               "expected lazy type, found strict type for expression");
     cerr << "\ntype:\n";
     e->type->print(cerr);
     cerr << "\n" << errstr << "\n";
@@ -1592,7 +1594,6 @@ public:
     cerr << "\n";
     assert(false && "expected strict type");
   }
-
 
   void assertTypeEquality(const IRType *defn, const IRType *use, Span span) {
     optional<IRTypeError *> err = defn->mismatch(use);
@@ -1881,11 +1882,11 @@ void typeCheckExpr(TypeContext &tc, Expr *e) {
   } // end integer
 
   if (auto eforce = mlir::dyn_cast<ExprForce>(e)) {
-      typeCheckExpr(tc, eforce->inner);
-      tc.assertNonStrict(eforce->inner, "expression being forced must be lazy");
-      // this type will be forced.
-      eforce->type = eforce->inner->type->clone(true);
-      return;
+    typeCheckExpr(tc, eforce->inner);
+    tc.assertNonStrict(eforce->inner, "expression being forced must be lazy");
+    // this type will be forced.
+    eforce->type = eforce->inner->type->clone(true);
+    return;
   } // end force
 
   cerr << "\n===unknown expr===\n";
