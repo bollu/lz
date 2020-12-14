@@ -62,7 +62,7 @@ jobs:
           # cmake $GITHUB_WORKSPACE/mlir-standalone-template -DCMAKE_BUILD_TYPE=Debug ${{ env.CMAKE_FLAGS }}
           cmake --build . -j$(nproc) # --target check-standalone-opt -- -j$(nproc)
           export PATH=$PATH:$GITHUB_WORKSPACE/mlir-standalone-template/sanitizer-build/bin
-          # cd $GITHUB_WORKSPACE/mlir-standalone-template/test && $GITHUB_WORKSPACE/llvm-project/build/bin/llvm-lit . -v
+          cd $GITHUB_WORKSPACE/mlir-standalone-template/test && $GITHUB_WORKSPACE/llvm-project/build/bin/llvm-lit . -v
       - name: Release build
         run: |
           export PATH=$PATH:$GITHUB_WORKSPACE/llvm-project/prefix/bin
@@ -72,5 +72,5 @@ jobs:
           cmake $GITHUB_WORKSPACE/mlir-standalone-template -DCMAKE_BUILD_TYPE=Release ${{ env.CMAKE_FLAGS }}
           cmake --build . -j$(nproc) # --target check-standalone-opt -- -j$(nproc)
           export PATH=$PATH:$GITHUB_WORKSPACE/mlir-standalone-template/build/bin
-          # cd $GITHUB_WORKSPACE/mlir-standalone-template/test && $GITHUB_WORKSPACE/llvm-project/build/bin/llvm-lit .
+          cd $GITHUB_WORKSPACE/mlir-standalone-template/test && $GITHUB_WORKSPACE/llvm-project/build/bin/llvm-lit .
 
