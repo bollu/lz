@@ -85,8 +85,16 @@ struct ForceOpConversionPattern : public mlir::ConversionPattern {
   }
 };
 
-class HaskToLLVMTypeConverter : public mlir::TypeConverter {
-  using TypeConverter::TypeConverter;
+class HaskToLLVMTypeConverter : public mlir::LLVMTypeConverter {
+public:
+  using LLVMTypeConverter::LLVMTypeConverter;
+
+  HaskToLLVMTypeConverter(MLIRContext *ctx) : mlir::LLVMTypeConverter(ctx) {
+    // Convert ThunkType to I8PtrTy.
+    addConversion([](ThunkType type) -> Type {
+      return LLVM::LLVMType::getInt8PtrTy(type.getContext());
+    });
+  };
 };
 
 namespace {
@@ -105,7 +113,7 @@ struct LowerHaskToLLVMPass : public Pass {
     LLVMConversionTarget target(getContext());
     target.addLegalOp<ModuleOp, ModuleTerminatorOp>();
 
-    mlir::LLVMTypeConverter typeConverter(&getContext());
+    HaskToLLVMTypeConverter typeConverter(&getContext());
     mlir::OwningRewritePatternList patterns;
 
     // OK why is it not able to legalize func? x(
