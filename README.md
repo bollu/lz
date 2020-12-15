@@ -83,6 +83,49 @@ module  {
 See that `%arg0` is `!lz.thunk<i64>`. I guess I need to teach the `LLVMTypeConverter`
 than a `!lz.thunk` is a void pointer? This kind of thing is deeply annoying.
 
+Amazing, it seems the `linalg` dialect doesn't know how to legalize `dim`?
+Or I'm being amazingly stupid. Don't know which:
+
+```
+// lower-linalg.mlir
+lower-linalg.mlir:17:10: error: failed to legalize operation 'std.dim'
+    %N = dim %buffer, %c0 : memref<?xi64>
+         ^
+lower-linalg.mlir:17:10: note: see current operation: %3 = "std.dim"(%1, %c0) : (memref<?xi64>, index) -> index
+
+module  {
+  func @sum(%arg0: !lz.thunk<memref<?xi64>>) -> i64 {
+    %0 = "lz.force"(%arg0) : (!lz.thunk<memref<?xi64>>) -> memref<?xi64>
+    %c0 = constant 0 : index
+    %1 = dim %0, %c0 : memref<?xi64>
+    %c0_i64 = constant 0 : i64
+    %2 = affine.for %arg1 = 0 to %1 iter_args(%arg2 = %c0_i64) -> (i64) {
+      %3 = affine.load %0[%arg1] : memref<?xi64>
+      %4 = addi %arg2, %3 : i64
+      affine.yield %4 : i64
+    }
+    return %2 : i64
+  }
+  func @seq(%arg0: i64) -> memref<?xi64> {
+    %0 = index_cast %arg0 : i64 to index
+    %1 = alloc(%0) : memref<?xi64>
+    affine.for %arg1 = 0 to %0 {
+      %2 = index_cast %arg1 : index to i64
+      affine.store %2, %1[%arg1] : memref<?xi64>
+    }
+    return %1 : memref<?xi64>
+  }
+  func @main() -> i64 {
+    %f = constant @seq : (i64) -> memref<?xi64>
+    %c1024_i64 = constant 1024 : i64
+    %0 = "lz.ap"(%f, %c1024_i64) : ((i64) -> memref<?xi64>, i64) -> !lz.thunk<memref<?xi64>>
+    %f_0 = constant @sum : (!lz.thunk<memref<?xi64>>) -> i64
+    %1 = "lz.ap"(%f_0, %0) : ((!lz.thunk<memref<?xi64>>) -> i64, !lz.thunk<memref<?xi64>>) -> !lz.thunk<i64>
+    %2 = "lz.force"(%1) : (!lz.thunk<i64>) -> i64
+    return %2 : i64
+  }
+}
+```
 
 # Thursday Dec 11th
 
