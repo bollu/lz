@@ -25,6 +25,65 @@ Convert GHC Core to MLIR.
 
 # Log:  [newest] to [oldest]
 
+# Wednesday Dec 16th
+
+```
+lower-linalg.mlir:14:3: error: failed to legalize operation 'func'
+  func @sum(%buffert: !lz.thunk<memref<?xi64>>) -> i64 {
+```
+
+- WHAT DOES IT FUCKING MEAN? If I try to ask it to lower a dummy `foo.mlir`:
+
+```
+//foo.mlir
+module {
+  func @main () -> i64 {
+    %size = std.constant 1024 : i64
+    return %size : i64
+  }
+}
+```
+
+it succeeds!
+
+```
+[I] /home/bollu/work/mlir/lz/test/ToLLVM > ninja -C ~/work/mlir/lz/build/ &&  hask-opt --lz-lower-to-llvm foo.mlir
+module  {
+  llvm.func @main() -> !llvm.i64 {
+    %0 = llvm.mlir.constant(1024 : i64) : !llvm.i64
+    llvm.return %0 : !llvm.i64
+  }
+}
+```
+
+I suspect that it's because of the `lz.thunk` in the type?
+
+Yes indeed. Consider this:
+
+```
+[I] /home/bollu/work/mlir/lz/test/ToLLVM > ninja -C ~/work/mlir/lz/build/ &&  hask-opt --lz-lower-to-llvm foo.mlir
+
+foo.mlir:6:3: error: failed to legalize operation 'func'
+  func @main (%x: !lz.thunk<i64>) -> i64 {
+  ^
+foo.mlir:6:3: note: see current operation: "func"() ( {
+^bb0(%arg0: !lz.thunk<i64>):  // no predecessors
+  %c1024_i64 = "std.constant"() {value = 1024 : i64} : () -> i64
+  "std.return"(%c1024_i64) : (i64) -> ()
+}) {sym_name = "main", type = (!lz.thunk<i64>) -> i64} : () -> ()
+===Hask -> LLVM lowering failed===
+module  {
+  func @main(%arg0: !lz.thunk<i64>) -> i64 {
+    %c1024_i64 = constant 1024 : i64
+    return %c1024_i64 : i64
+  }
+}
+```
+
+See that `%arg0` is `!lz.thunk<i64>`. I guess I need to teach the `LLVMTypeConverter`
+than a `!lz.thunk` is a void pointer? This kind of thing is deeply annoying.
+
+
 # Thursday Dec 11th
 
 ```

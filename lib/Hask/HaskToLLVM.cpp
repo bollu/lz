@@ -33,6 +33,8 @@
 #include "mlir/Pass/PassRegistry.h"
 #include "mlir/Transforms/DialectConversion.h"
 // https://github.com/llvm/llvm-project/blob/80d7ac3bc7c04975fd444e9f2806e4db224f2416/mlir/examples/toy/Ch6/toyc.cpp
+#include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
+#include "mlir/Conversion/SCFToStandard/SCFToStandard.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -44,8 +46,44 @@
 #define DEBUG_TYPE "hask-ops"
 #include "llvm/Support/Debug.h"
 
+// https://github.com/llvm/llvm-project/blob/a048e2fa1d0285a3582bd224d5652dbf1dc91cb4/mlir/examples/toy/Ch6/mlir/LowerToLLVM.cpp
+
 namespace mlir {
 namespace standalone {
+
+static FlatSymbolRefAttr getOrInsertEvalClosure(PatternRewriter &rewriter,
+                                                ModuleOp m) {
+  const std::string name = "evalClosure";
+  if (m.lookupSymbol<LLVM::LLVMFuncOp>(name)) {
+    return SymbolRefAttr::get(name, rewriter.getContext());
+  }
+
+  auto I8PtrTy = LLVM::LLVMType::getInt8PtrTy(rewriter.getContext());
+  auto I8PtrToI8PtrTy = LLVM::LLVMType::getFunctionTy(I8PtrTy, I8PtrTy,
+                                                      /*isVarArg=*/false);
+
+  // Insert the printf function into the body of the parent m.
+  PatternRewriter::InsertionGuard insertGuard(rewriter);
+  rewriter.setInsertionPointToStart(m.getBody());
+  rewriter.create<LLVM::LLVMFuncOp>(m.getLoc(), name, I8PtrToI8PtrTy);
+  return SymbolRefAttr::get(name, rewriter.getContext());
+}
+
+struct ForceOpConversionPattern : public mlir::ConversionPattern {
+  explicit ForceOpConversionPattern(MLIRContext *context)
+      : ConversionPattern(ForceOp::getOperationName(), 1, context) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> rands,
+                  ConversionPatternRewriter &rewriter) const override {
+    ForceOp f = cast<ForceOp>(op);
+    rewriter.replaceOpWithNewOp<LLVM::CallOp>(
+        op, LLVM::LLVMType::getInt8PtrTy(rewriter.getContext()),
+        getOrInsertEvalClosure(rewriter, f.getParentOfType<ModuleOp>()),
+        f.getScrutinee());
+    return success();
+  }
+};
 
 class HaskToLLVMTypeConverter : public mlir::TypeConverter {
   using TypeConverter::TypeConverter;
@@ -64,14 +102,20 @@ struct LowerHaskToLLVMPass : public Pass {
   }
 
   void runOnOperation() override {
-    mlir::ConversionTarget target(getContext());
-    target.addLegalDialect<mlir::LLVM::LLVMDialect>();
-    target.addLegalOp<mlir::ModuleOp, mlir::ModuleTerminatorOp>();
-    target.addIllegalDialect<HaskDialect>();
+    LLVMConversionTarget target(getContext());
+    target.addLegalOp<ModuleOp, ModuleTerminatorOp>();
+
     mlir::LLVMTypeConverter typeConverter(&getContext());
     mlir::OwningRewritePatternList patterns;
 
-    mlir::populateStdToLLVMConversionPatterns(typeConverter, patterns);
+    // OK why is it not able to legalize func? x(
+    populateAffineToStdConversionPatterns(patterns, &getContext());
+    populateLoopToStdConversionPatterns(patterns, &getContext());
+    populateStdToLLVMConversionPatterns(typeConverter, patterns);
+
+    patterns.insert<ForceOpConversionPattern>(&getContext());
+    ::llvm::DebugFlag = true;
+
     if (failed(mlir::applyFullConversion(getOperation(), target,
                                          std::move(patterns)))) {
       llvm::errs() << "===Hask -> LLVM lowering failed===\n";
@@ -79,6 +123,8 @@ struct LowerHaskToLLVMPass : public Pass {
       llvm::errs() << "\n===\n";
       signalPassFailure();
     };
+
+    ::llvm::DebugFlag = false;
   };
 };
 } // end anonymous namespace.

@@ -67,6 +67,9 @@ int main(int argc, char **argv) {
   mlir::registerCSEPass();
   mlir::registerAffinePasses();
   mlir::registerAffineLoopFusionPass();
+  mlir::registerConvertStandardToLLVMPass();
+  mlir::registerConvertAffineToStandardPass();
+
   registerLzInterpretPass();
 
   mlir::DialectRegistry registry;
