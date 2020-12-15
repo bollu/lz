@@ -71,7 +71,7 @@ int main(int argc, char **argv) {
 
   mlir::DialectRegistry registry;
   // mlir::registerAllDialects(registry);
-
+  registry.insert<mlir::LLVM::LLVMDialect>();
   registry.insert<mlir::standalone::HaskDialect>();
   registry.insert<mlir::grin::GRINDialect>();
   registry.insert<mlir::StandardOpsDialect>();
