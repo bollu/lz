@@ -48,5 +48,11 @@ public:
   static HeapNodeType get(MLIRContext *context) { return Base::get(context); }
 };
 
+class TagType : public mlir::Type::TypeBase<TagType, GRINType, TypeStorage> {
+public:
+  using Base::Base;
+  static TagType get(MLIRContext *context) { return Base::get(context); }
+};
+
 }; // namespace grin
 }; // namespace mlir
