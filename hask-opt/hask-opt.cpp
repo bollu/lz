@@ -61,12 +61,14 @@ ExitOnError ExitOnErr;
 int main(int argc, char **argv) {
   // mlir::registerAllPasses();
   mlir::standalone::registerWorkerWrapperPass();
+  mlir::standalone::registerLowerHaskToLLVMPass();
   mlir::registerInlinerPass();
   mlir::registerCanonicalizerPass();
   mlir::registerCSEPass();
   mlir::registerAffinePasses();
   mlir::registerAffineLoopFusionPass();
   registerLzInterpretPass();
+
   mlir::DialectRegistry registry;
   // mlir::registerAllDialects(registry);
 

@@ -328,13 +328,12 @@ public:
                  &effects) {}
 };
 
-// lower lz.to standard.
-std::unique_ptr<mlir::Pass> createLowerHaskToStandardPass();
-// lower lz.standard to LLVM by eliminating all the junk.
-std::unique_ptr<mlir::Pass> createLowerHaskStandardToLLVMPass();
+// lower lz to LLVM by eliminating all the junk.
+std::unique_ptr<mlir::Pass> createLowerHaskToLLVMPass();
 // canonicalize, eliminating all intermediate waste.
 std::unique_ptr<mlir::Pass> createWorkerWrapperPass();
 
+void registerLowerHaskToLLVMPass();
 void registerWorkerWrapperPass();
 } // namespace standalone
 } // namespace mlir

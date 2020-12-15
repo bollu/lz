@@ -1,15 +1,15 @@
 add_mlir_dialect_library(MLIRHask
-        HaskDialect.cpp
-        HaskOps.cpp
-        WorkerWrapperPass.cpp
-        HaskToLLVM.cpp
+HaskDialect.cpp
+HaskOps.cpp
+WorkerWrapperPass.cpp
+HaskToLLVM.cpp
 
-        ADDITIONAL_HEADER_DIRS
-        ${PROJECT_SOURCE_DIR}/include/Hask
+ADDITIONAL_HEADER_DIRS
+${PROJECT_SOURCE_DIR}/include/Hask
 
-        DEPENDS
-        MLIRHaskOpsIncGen
+DEPENDS
+MLIRHaskOpsIncGen
 
-	LINK_LIBS PUBLIC
-	MLIRIR
-	)
+LINK_LIBS PUBLIC
+MLIRIR
+)
