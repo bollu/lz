@@ -25,6 +25,92 @@ Convert GHC Core to MLIR.
 
 # Log:  [newest] to [oldest]
 
+# Thursday Dec 17th
+
+Wow, does the MLIR legalizer literally erase ops it doesn't understand?!
+
+```
+    Legalizing operation : 'scf.if'(0x60f0000009a8) {
+      * Fold {
+      } -> FAILURE : unable to fold
+
+      * Pattern : 'scf.if -> ()' {
+        ** Insert  : 'std.br'(0x60c0000046c0)
+        ** Insert  : 'std.br'(0x60e000000820)
+        ** Erase   : 'lz.return'(0x60c000004480)
+```
+
+which leads me down the line to "unknown terminator". Yeah, if you erase
+my terminator, you sure as hell won't know! This leads to the error:
+
+```
+Error: KNOWN NON TERMINATOR:%14 = scf.if %13 -> (!lz.value) {
+^bb1(%15: i64):  // no predecessors
+  %c1_i64 = constant 1 : i64
+  %16 = addi %15, %c1_i64 : i64
+  %17 = "lz.construct"(%16) {dataconstructor = @Just} : (i64) -> !lz.value
+  lz.return %17 : !lz.value
+}
+
+ERROR IN OPERATION:
+%9 = scf.if %6 -> (!lz.value) {
+} else {
+  %10 = llvm.mlir.addressof @Just : !llvm.ptr<array<4 x i8>>
+  %11 = llvm.mlir.constant(0 : index) : !llvm.i64
+  %12 = llvm.getelementptr %10[%11, %11] : (!llvm.ptr<array<4 x i8>>, !llvm.i64, !llvm.i64) -> !llvm.ptr<i8>
+  %13 = llvm.call @isConstructorTagEq(%1, %12) : (!lz.value, !llvm.ptr<i8>) -> !llvm.i1
+  %14 = scf.if %13 -> (!lz.value) {
+  ^bb1(%15: i64):  // no predecessors
+    %c1_i64 = constant 1 : i64
+    %16 = addi %15, %c1_i64 : i64
+    %17 = "lz.construct"(%16) {dataconstructor = @Just} : (i64) -> !lz.value
+    lz.return %17 : !lz.value
+  }
+}
+```
+
+- MLIR todo: Add `hasTerminator()` and `getOptionalTerminator()` to deal with still-in-construction OPS
+
+I was doing something naive like:
+
+```cpp
+void convertReturnsToYields(mlir::Region *r, mlir::PatternRewriter &rewriter) {
+  for (Block &b : r->getBlocks()) {
+    HaskReturnOp ret = mlir::dyn_cast<HaskReturnOp>(b.getTerminator());
+    if (!ret) {
+      continue;
+    }
+    llvm::errs() << "vvvvvbefore convertReturnsToYields:vvvvv\n";
+    b.print(llvm::errs());
+
+    rewriter.setInsertionPointAfter(ret);
+    rewriter.replaceOpWithNewOp<mlir::scf::YieldOp>(ret.getOperation(),
+                                                    ret.getOperand());
+
+    llvm::errs() << "===after convertReturnsToYields:=====\n";
+    b.print(llvm::errs());
+    llvm::errs() << "\n^^^^^\n";
+  }
+}
+```
+
+against an op:
+
+```
+Error: EMPTY BB!
+
+ERROR IN OPERATION:
+%7 = "scf.if"(%6) ( {
+^bb1:  // no predecessors
+  %8 = "lz.construct"() {dataconstructor = @Nothing} : () -> !lz.value
+  "lz.return"(%8) : (!lz.value) -> ()
+},  {
+}) : (!llvm.i1) -> !lz.value
+hask-opt: /home/bollu/work/mlir/llvm-project/mlir/lib/IR/Block.cpp:231: mlir::Operation* mlir::Block::getTerminator(): Assertion `!empty() && !back().isKnownNonTerminator()' faile
+```
+
+which ofc will not work since the else block is empty `x(`.
+
 # Wednesday Dec 16th
 
 ```

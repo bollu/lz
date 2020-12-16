@@ -15,8 +15,10 @@
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/StandardTypes.h"
 #include "mlir/IR/Types.h"
+#include "mlir/IR/Verifier.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
+
 #include <mlir/Parser.h>
 #include <sstream>
 
@@ -156,44 +158,77 @@ getOrInsertExtractConstructorArg(PatternRewriter &rewriter, ModuleOp module) {
   return SymbolRefAttr::get(name, rewriter.getContext());
 }
 
+// legalize a region that has been inlined into an scf.if by converting
+// all lz.return() s into scf.yield() s
+void convertReturnsToYields(mlir::Region *r, mlir::PatternRewriter &rewriter) {
+  for (Block &b : r->getBlocks()) {
+    if (b.empty()) {
+      continue;
+    }
+    HaskReturnOp ret = mlir::dyn_cast<HaskReturnOp>(b.back());
+    if (!ret) {
+      continue;
+    }
+    llvm::errs() << "vvvvvbefore convertReturnsToYields:vvvvv\n";
+    b.print(llvm::errs());
+
+    rewriter.setInsertionPointAfter(ret);
+    rewriter.replaceOpWithNewOp<mlir::scf::YieldOp>(ret.getOperation(),
+                                                    ret.getOperand());
+    // rewriter.eraseOp(ret);
+
+    llvm::errs() << "===after convertReturnsToYields:=====\n";
+    b.print(llvm::errs());
+    llvm::errs() << "\n^^^^^\n";
+  }
+}
+
 struct CaseOpConversionPattern : public mlir::ConversionPattern {
   explicit CaseOpConversionPattern(MLIRContext *context)
-      : ConversionPattern(ForceOp::getOperationName(), 1, context) {}
+      : ConversionPattern(CaseOp::getOperationName(), 1, context) {}
 
-  LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> rands,
-                  ConversionPatternRewriter &rewriter) const override {
-    auto caseop = cast<CaseOp>(op);
-    ModuleOp mod = op->getParentOfType<ModuleOp>();
-    const Optional<int> defaultIx = caseop.getDefaultAltIndex();
+  llvm::Optional<scf::IfOp>
+  genCaseAlt(mlir::standalone::CaseOp caseop, int i,
+             ConversionPatternRewriter &rewriter) const {
+    ModuleOp mod = caseop.getParentOfType<ModuleOp>();
+    const llvm::Optional<int> defaultIx = caseop.getDefaultAltIndex();
 
-    rewriter.setInsertionPointAfter(op);
+    if (i == caseop.getNumAlts()) {
+      assert(defaultIx);
+      mlir::BlockAndValueMapping mapper;
+      // TODO: map arguments.
+      caseop.getAltRHS(*defaultIx)
+          .cloneInto(rewriter.getInsertionBlock()->getParent(), mapper);
+      convertReturnsToYields(rewriter.getInsertionBlock()->getParent(),
+                             rewriter);
+      return {};
 
-    scf::IfOp replacement;
-    for (int i = 0; i < caseop.getNumAlts(); ++i) {
-      if (defaultIx && i == *defaultIx) {
-        continue;
+    } else {
+      // skip default here, generate it at the end.
+      if (i == defaultIx) {
+        return genCaseAlt(caseop, i + 1, rewriter);
       }
 
-      FlatSymbolRefAttr isConsTagEqFn =
-          getOrInsertIsConstructorTagEq(rewriter, mod);
+      // check if equal
+      const bool hasNext =
+          (i + 1 < caseop.getNumAlts()) || bool(caseop.getDefaultAltIndex());
+
+      // isConsTagEq(scrutinee, lhs-tag)
+      FlatSymbolRefAttr fn = getOrInsertIsConstructorTagEq(rewriter, mod);
       Value lhs = getOrCreateGlobalString(caseop.getLoc(), rewriter,
                                           caseop.getAltLHS(i).getValue(),
                                           caseop.getAltLHS(i).getValue(), mod);
-      SmallVector<Value, 4> isConsTagEqArgs{caseop.getScrutinee(), lhs};
+
+      SmallVector<Value, 4> params{caseop.getScrutinee(), lhs};
       LLVM::CallOp isEq = rewriter.create<LLVM::CallOp>(
-          caseop.getLoc(), LLVM::LLVMType::getInt1Ty(rewriter.getContext()),
-          isConsTagEqFn, isConsTagEqArgs);
+          caseop.getLoc(), LLVM::LLVMType::getInt1Ty(rewriter.getContext()), fn,
+          params);
 
-      const bool createElse = (i + 1 < caseop.getNumAlts()) || defaultIx;
-      scf::IfOp ite =
-          rewriter.create<mlir::scf::IfOp>(caseop.getLoc(), isEq.getResult(0),
-                                           /* createelse=*/createElse);
-      if (!replacement) {
-        replacement = ite;
-      }
+      scf::IfOp ite = rewriter.create<mlir::scf::IfOp>(
+          /*return types=*/caseop.getLoc(), caseop.getResult().getType(),
+          /*cond=*/isEq.getResult(0),
+          /* createelse=*/hasNext);
 
-      // ===THEN BLOCK===
       rewriter.setInsertionPointToStart(&ite.thenRegion().front());
 
       mlir::BlockAndValueMapping mapper;
@@ -211,24 +246,38 @@ struct CaseOpConversionPattern : public mlir::ConversionPattern {
         mapper.map(ite.thenRegion().getArgument(i), call.getResult(0));
       }
       caseop.getAltRHS(i).cloneInto(&ite.thenRegion(), mapper);
+      convertReturnsToYields(&ite.thenRegion(), rewriter);
 
-      // ===ELSE BLOCK===
-      if (createElse) {
+      if (hasNext) {
         rewriter.setInsertionPointToStart(&ite.elseRegion().front());
+        llvm::Optional<scf::IfOp> caseladder =
+            genCaseAlt(caseop, i + 1, rewriter);
+        if (caseladder) {
+          rewriter.setInsertionPointAfter(caseladder->getOperation());
+          rewriter.create<scf::YieldOp>(caseop.getLoc(),
+                                        caseladder->getResults());
+        }
       }
+      return {ite};
     }
+  }
 
-    // ===DEFAULT CASE===
-    if (defaultIx) {
-      mlir::BlockAndValueMapping mapper;
-      // TODO: map arguments.
-      caseop.getAltRHS(*defaultIx)
-          .cloneInto(rewriter.getInsertionBlock()->getParent(), mapper);
-    }
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> rands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto caseop = cast<CaseOp>(op);
 
-    // ===FINAL REPLACEMENT===
-    rewriter.replaceOp(caseop, replacement.getResults());
-    rewriter.eraseOp(caseop);
+    rewriter.setInsertionPointAfter(op);
+    mlir::Optional<scf::IfOp> caseladder = genCaseAlt(caseop, 0, rewriter);
+    assert(caseladder);
+    llvm::errs() << "vvvvvvcase op (before)vvvvvv\n";
+    caseop.dump();
+    llvm::errs() << "======case op (after)======\n";
+    caseladder->dump();
+    llvm::errs() << "^^^^^^^^^caseop[before/after]^^^^^^^^^\n";
+
+    rewriter.replaceOp(caseop, caseladder->getResults());
+
     return success();
   }
 };
@@ -276,10 +325,16 @@ struct LowerHaskToLLVMPass : public Pass {
     populateStdToLLVMConversionPatterns(typeConverter, patterns);
 
     patterns.insert<ForceOpConversionPattern>(&getContext());
+    patterns.insert<CaseOpConversionPattern>(&getContext());
     ::llvm::DebugFlag = true;
 
-    if (failed(mlir::applyFullConversion(getOperation(), target,
-                                         std::move(patterns)))) {
+    // applyPartialConversion
+    bool didfail = failed(
+        mlir::applyFullConversion(getOperation(), target, std::move(patterns)));
+
+    didfail |= failed(mlir::verify(getOperation()));
+
+    if (didfail) {
       llvm::errs() << "===Hask -> LLVM lowering failed===\n";
       getOperation()->print(llvm::errs());
       llvm::errs() << "\n===\n";
