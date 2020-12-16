@@ -51,6 +51,31 @@
 namespace mlir {
 namespace standalone {
 
+static Value getOrCreateGlobalString(Location loc, OpBuilder &builder,
+                                     StringRef name, StringRef value,
+                                     ModuleOp module) {
+  // Create the global at the entry of the module.
+  LLVM::GlobalOp global;
+  if (!(global = module.lookupSymbol<LLVM::GlobalOp>(name))) {
+    OpBuilder::InsertionGuard insertGuard(builder);
+    builder.setInsertionPointToStart(module.getBody());
+    auto type = LLVM::LLVMType::getArrayTy(
+        LLVM::LLVMType::getInt8Ty(builder.getContext()), value.size());
+    global = builder.create<LLVM::GlobalOp>(loc, type, /*isConstant=*/true,
+                                            LLVM::Linkage::Internal, name,
+                                            builder.getStringAttr(value));
+  }
+
+  // Get the pointer to the first character in the global string.
+  Value globalPtr = builder.create<LLVM::AddressOfOp>(loc, global);
+  Value cst0 = builder.create<LLVM::ConstantOp>(
+      loc, LLVM::LLVMType::getInt64Ty(builder.getContext()),
+      builder.getIntegerAttr(builder.getIndexType(), 0));
+  return builder.create<LLVM::GEPOp>(
+      loc, LLVM::LLVMType::getInt8PtrTy(builder.getContext()), globalPtr,
+      ArrayRef<Value>({cst0, cst0}));
+}
+
 static FlatSymbolRefAttr getOrInsertEvalClosure(PatternRewriter &rewriter,
                                                 ModuleOp m) {
   const std::string name = "evalClosure";
@@ -85,6 +110,129 @@ struct ForceOpConversionPattern : public mlir::ConversionPattern {
   }
 };
 
+// isConstructorTagEq(TAG : char *, constructor: void * -> bool)
+static FlatSymbolRefAttr
+getOrInsertIsConstructorTagEq(PatternRewriter &rewriter, ModuleOp module) {
+  const std::string name = "isConstructorTagEq";
+  if (module.lookupSymbol<LLVM::LLVMFuncOp>(name)) {
+    return SymbolRefAttr::get(name, rewriter.getContext());
+  }
+
+  auto llvmI8PtrTy = LLVM::LLVMType::getInt8PtrTy(rewriter.getContext());
+  auto llvmI1Ty = LLVM::LLVMType::getInt1Ty(rewriter.getContext());
+
+  // constructor, string constructor name
+  SmallVector<mlir::LLVM::LLVMType, 4> argsTy{llvmI8PtrTy, llvmI8PtrTy};
+  auto llvmFnType = LLVM::LLVMType::getFunctionTy(llvmI1Ty, argsTy,
+                                                  /*isVarArg=*/false);
+
+  // Insert the printf function into the body of the parent module.
+  PatternRewriter::InsertionGuard insertGuard(rewriter);
+  rewriter.setInsertionPointToStart(module.getBody());
+  rewriter.create<LLVM::LLVMFuncOp>(module.getLoc(), name, llvmFnType);
+  return SymbolRefAttr::get(name, rewriter.getContext());
+}
+
+// extractConstructorArgN(constructor: void *, arg_ix: int) -> bool)
+static FlatSymbolRefAttr
+getOrInsertExtractConstructorArg(PatternRewriter &rewriter, ModuleOp module) {
+  const std::string name = "extractConstructorArg";
+  if (module.lookupSymbol<LLVM::LLVMFuncOp>(name)) {
+    return SymbolRefAttr::get(name, rewriter.getContext());
+  }
+
+  auto llvmI8PtrTy = LLVM::LLVMType::getInt8PtrTy(rewriter.getContext());
+  auto llvmI64Ty = LLVM::LLVMType::getInt64Ty(rewriter.getContext());
+
+  // string constructor name, <n> arguments.
+  SmallVector<mlir::LLVM::LLVMType, 4> argsTy{llvmI8PtrTy, llvmI64Ty};
+  auto llvmFnType = LLVM::LLVMType::getFunctionTy(llvmI8PtrTy, argsTy,
+                                                  /*isVarArg=*/false);
+
+  // Insert the printf function into the body of the parent module.
+  PatternRewriter::InsertionGuard insertGuard(rewriter);
+  rewriter.setInsertionPointToStart(module.getBody());
+  rewriter.create<LLVM::LLVMFuncOp>(module.getLoc(), name, llvmFnType);
+  return SymbolRefAttr::get(name, rewriter.getContext());
+}
+
+struct CaseOpConversionPattern : public mlir::ConversionPattern {
+  explicit CaseOpConversionPattern(MLIRContext *context)
+      : ConversionPattern(ForceOp::getOperationName(), 1, context) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> rands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto caseop = cast<CaseOp>(op);
+    ModuleOp mod = op->getParentOfType<ModuleOp>();
+    const Optional<int> defaultIx = caseop.getDefaultAltIndex();
+
+    rewriter.setInsertionPointAfter(op);
+
+    scf::IfOp replacement;
+    for (int i = 0; i < caseop.getNumAlts(); ++i) {
+      if (defaultIx && i == *defaultIx) {
+        continue;
+      }
+
+      FlatSymbolRefAttr isConsTagEqFn =
+          getOrInsertIsConstructorTagEq(rewriter, mod);
+      Value lhs = getOrCreateGlobalString(caseop.getLoc(), rewriter,
+                                          caseop.getAltLHS(i).getValue(),
+                                          caseop.getAltLHS(i).getValue(), mod);
+      SmallVector<Value, 4> isConsTagEqArgs{caseop.getScrutinee(), lhs};
+      LLVM::CallOp isEq = rewriter.create<LLVM::CallOp>(
+          caseop.getLoc(), LLVM::LLVMType::getInt1Ty(rewriter.getContext()),
+          isConsTagEqFn, isConsTagEqArgs);
+
+      const bool createElse = (i + 1 < caseop.getNumAlts()) || defaultIx;
+      scf::IfOp ite =
+          rewriter.create<mlir::scf::IfOp>(caseop.getLoc(), isEq.getResult(0),
+                                           /* createelse=*/createElse);
+      if (!replacement) {
+        replacement = ite;
+      }
+
+      // ===THEN BLOCK===
+      rewriter.setInsertionPointToStart(&ite.thenRegion().front());
+
+      mlir::BlockAndValueMapping mapper;
+
+      // arg(j) := extractConstructorArg(scrutinee, j)
+      for (int j = 0; j < (int)ite.thenRegion().getNumArguments(); ++j) {
+        Value jv = rewriter.create<LLVM::ConstantOp>(
+            caseop.getLoc(), LLVM::LLVMType::getInt64Ty(rewriter.getContext()),
+            rewriter.getI64IntegerAttr(i));
+        SmallVector<Value, 2> args = {caseop.getScrutinee(), jv};
+        FlatSymbolRefAttr fn = getOrInsertExtractConstructorArg(rewriter, mod);
+        LLVM::CallOp call = rewriter.create<LLVM::CallOp>(
+            caseop.getLoc(),
+            LLVM::LLVMType::getInt8PtrTy(rewriter.getContext()), fn, args);
+        mapper.map(ite.thenRegion().getArgument(i), call.getResult(0));
+      }
+      caseop.getAltRHS(i).cloneInto(&ite.thenRegion(), mapper);
+
+      // ===ELSE BLOCK===
+      if (createElse) {
+        rewriter.setInsertionPointToStart(&ite.elseRegion().front());
+      }
+    }
+
+    // ===DEFAULT CASE===
+    if (defaultIx) {
+      mlir::BlockAndValueMapping mapper;
+      // TODO: map arguments.
+      caseop.getAltRHS(*defaultIx)
+          .cloneInto(rewriter.getInsertionBlock()->getParent(), mapper);
+    }
+
+    // ===FINAL REPLACEMENT===
+    rewriter.replaceOp(caseop, replacement.getResults());
+    rewriter.eraseOp(caseop);
+    return success();
+  }
+};
+
 class HaskToLLVMTypeConverter : public mlir::LLVMTypeConverter {
 public:
   using LLVMTypeConverter::LLVMTypeConverter;
@@ -92,6 +240,12 @@ public:
   HaskToLLVMTypeConverter(MLIRContext *ctx) : mlir::LLVMTypeConverter(ctx) {
     // Convert ThunkType to I8PtrTy.
     addConversion([](ThunkType type) -> Type {
+      return LLVM::LLVMType::getInt8PtrTy(type.getContext());
+    });
+
+    // TODO: We really want to know the ADT that this represents so we can
+    // figure out storage requirements. For now, hack it, say `void*`.
+    addConversion([](ValueType type) -> Type {
       return LLVM::LLVMType::getInt8PtrTy(type.getContext());
     });
   };
