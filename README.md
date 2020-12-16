@@ -111,6 +111,17 @@ hask-opt: /home/bollu/work/mlir/llvm-project/mlir/lib/IR/Block.cpp:231: mlir::Op
 
 which ofc will not work since the else block is empty `x(`.
 
+
+- PROTIP: switch between `applyPartialConversion` and `applyFullConversion` to debug
+  what the fuck is going on. They give _different_ error messages. When one is useless,
+  the other tends to be useful.
+
+
+- So the API can only deal with incorrect types from `src -> target` not `target -> target`.
+  This is _really_ problematic.  For example, say that we want `i64 -> !llvm.i64`. But sometimes,
+  we want to have a `!llvm.i64 -> !llvm.ptr<i8>` since we are marshalling an `int` into a pointer
+  using `inttoptr`. This conversion is impossible to perform(?) using the MLIR lowering.
+
 # Wednesday Dec 16th
 
 ```

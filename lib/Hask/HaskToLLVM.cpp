@@ -282,6 +282,57 @@ struct CaseOpConversionPattern : public mlir::ConversionPattern {
   }
 };
 
+class HaskConstructOpConversionPattern : public ConversionPattern {
+public:
+  explicit HaskConstructOpConversionPattern(MLIRContext *context)
+      : ConversionPattern(HaskConstructOp::getOperationName(), 1, context) {}
+
+  static FlatSymbolRefAttr getOrInsertMkConstructor(PatternRewriter &rewriter,
+                                                    ModuleOp module, int n) {
+    const std::string name = "mkConstructor" + std::to_string(n);
+    if (module.lookupSymbol<LLVM::LLVMFuncOp>(name)) {
+      return SymbolRefAttr::get(name, rewriter.getContext());
+    }
+
+    auto llvmI8PtrTy = LLVM::LLVMType::getInt8PtrTy(rewriter.getContext());
+
+    // string constructor name, <n> arguments.
+    SmallVector<mlir::LLVM::LLVMType, 4> argsTy(n + 1, llvmI8PtrTy);
+    auto llvmFnType = LLVM::LLVMType::getFunctionTy(llvmI8PtrTy, argsTy,
+                                                    /*isVarArg=*/false);
+
+    // Insert the printf function into the body of the parent module.
+    PatternRewriter::InsertionGuard insertGuard(rewriter);
+    rewriter.setInsertionPointToStart(module.getBody());
+    rewriter.create<LLVM::LLVMFuncOp>(module.getLoc(), name, llvmFnType);
+    return SymbolRefAttr::get(name, rewriter.getContext());
+  }
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    HaskConstructOp cons = cast<HaskConstructOp>(op);
+    ModuleOp mod = cons.getParentOfType<ModuleOp>();
+
+    using namespace mlir::LLVM;
+
+    FlatSymbolRefAttr fn = getOrInsertMkConstructor(
+        rewriter, op->getParentOfType<ModuleOp>(), cons.getNumOperands());
+
+    Value name = getOrCreateGlobalString(cons.getLoc(), rewriter,
+                                         cons.getDataConstructorName(),
+                                         cons.getDataConstructorName(), mod);
+    SmallVector<Value, 4> args = {name};
+    for (int i = 0; i < cons.getNumOperands(); ++i) {
+      args.push_back(cons.getOperand(i));
+    }
+
+    rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
+        op, LLVMType::getInt8PtrTy(rewriter.getContext()), fn, args);
+    return success();
+  }
+};
+
 class HaskToLLVMTypeConverter : public mlir::LLVMTypeConverter {
 public:
   using LLVMTypeConverter::LLVMTypeConverter;
@@ -296,6 +347,84 @@ public:
     // figure out storage requirements. For now, hack it, say `void*`.
     addConversion([](ValueType type) -> Type {
       return LLVM::LLVMType::getInt8PtrTy(type.getContext());
+    });
+
+    addArgumentMaterialization([](OpBuilder &rewriter,
+                                  mlir::LLVM::LLVMPointerType voidptrty,
+                                  ValueRange vals,
+                                  Location loc) -> mlir::Optional<Value> {
+      assert(false && "trying to materialize arg");
+      LLVM::LLVMIntegerType ptrElemInt =
+          voidptrty.getElementType().dyn_cast<mlir::LLVM::LLVMIntegerType>();
+      if (!ptrElemInt) {
+        return {};
+      }
+      if (ptrElemInt.getBitWidth() != 8) {
+        return {};
+      }
+      // so we have a void* as source type.
+
+      // now we need a single value;
+      if (vals.size() != 1) {
+        return {};
+      }
+      Value val = vals[0];
+
+      // check that value is an integer that we can convert to void*
+      mlir::LLVM::LLVMIntegerType valty =
+          val.getType().dyn_cast<mlir::LLVM::LLVMIntegerType>();
+      if (!valty) {
+        return {};
+      }
+
+      // cast int to ptr
+      mlir::LLVM::IntToPtrOp out =
+          rewriter.create<mlir::LLVM::IntToPtrOp>(loc, voidptrty, val);
+      return {out.getResult()};
+    });
+
+        addTargetMaterialization([](OpBuilder &rewriter,
+                                mlir::LLVM::LLVMPointerType voidptrty,
+                                ValueRange vals,
+                                Location loc) -> mlir::Optional<Value> {
+      llvm::errs() << "vvvvvv=trying to materialize target:vvvvvv\n";
+      llvm::errs() << "-";
+      voidptrty.print(llvm::errs());
+      llvm::errs() << "\n";
+      llvm::errs() << "-vals: " << vals.size() << "|";
+      if (vals.size() == 1) {
+        vals[0].print(llvm::errs());
+      }
+      llvm::errs() << "\n^^^^^^^^^^^^\n";
+      getchar();
+
+      LLVM::LLVMIntegerType ptrElemInt =
+          voidptrty.getElementType().dyn_cast<mlir::LLVM::LLVMIntegerType>();
+      if (!ptrElemInt) {
+        return {};
+      }
+      if (ptrElemInt.getBitWidth() != 8) {
+        return {};
+      }
+      // so we have a void* as source type.
+
+      // now we need a single value;
+      if (vals.size() != 1) {
+        return {};
+      }
+      Value val = vals[0];
+
+      // check that value is an integer that we can convert to void*
+      // mlir::LLVM::LLVMIntegerType valty =
+      //     val.getType().dyn_cast<mlir::LLVM::LLVMIntegerType>();
+      // if (!valty) {
+      //   return {};
+      // }
+
+      // cast int to ptr
+      mlir::LLVM::IntToPtrOp out =
+          rewriter.create<mlir::LLVM::IntToPtrOp>(loc, voidptrty, val);
+      return {out.getResult()};
     });
   };
 };
@@ -326,11 +455,13 @@ struct LowerHaskToLLVMPass : public Pass {
 
     patterns.insert<ForceOpConversionPattern>(&getContext());
     patterns.insert<CaseOpConversionPattern>(&getContext());
+    patterns.insert<HaskConstructOpConversionPattern>(&getContext());
+
     ::llvm::DebugFlag = true;
 
     // applyPartialConversion
-    bool didfail = failed(
-        mlir::applyFullConversion(getOperation(), target, std::move(patterns)));
+    bool didfail = failed(mlir::applyPartialConversion(getOperation(), target,
+                                                       std::move(patterns)));
 
     didfail |= failed(mlir::verify(getOperation()));
 
