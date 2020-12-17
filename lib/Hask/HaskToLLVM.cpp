@@ -200,9 +200,6 @@ struct CaseOpConversionPattern : public mlir::ConversionPattern {
       // TODO: map arguments.
       caseop.getAltRHS(*defaultIx)
           .cloneInto(rewriter.getInsertionBlock()->getParent(), mapper);
-      // typeConverter->convertBlockSignature(
-      //     &rewriter.getInsertionBlock()->getParent()->front());
-
       convertReturnsToYields(rewriter.getInsertionBlock()->getParent(),
                              rewriter);
       return {};
@@ -251,19 +248,12 @@ struct CaseOpConversionPattern : public mlir::ConversionPattern {
       }
 
       caseop.getAltRHS(i).cloneInto(&ite.thenRegion(), mapper);
-      llvm::Optional<TypeConverter::SignatureConversion> conversion =
-          typeConverter->convertBlockSignature(&ite.thenRegion().front());
-      assert(conversion);
+      // vvvv This makes the program crash!
+      mlir::FailureOr<mlir::Block *> convertedEntryBB =
+          rewriter.convertRegionTypes(&caseop.getAltRHS(i),
+                                      *(this->typeConverter));
+      assert(succeeded(convertedEntryBB) && "unable to convert region types");
 
-      llvm::errs() << "\n-converted types: |";
-      for (Type t : conversion->getConvertedTypes()) {
-        t.print(llvm::errs());
-        llvm::errs() << " ";
-      }
-      llvm::errs() << "|\n";
-      getchar();
-      assert(false);
-      convertReturnsToYields(&ite.thenRegion(), rewriter);
 
       if (hasNext) {
         rewriter.setInsertionPointToStart(&ite.elseRegion().front());
@@ -292,6 +282,7 @@ struct CaseOpConversionPattern : public mlir::ConversionPattern {
     llvm::errs() << "======case op (after)======\n";
     caseladder->dump();
     llvm::errs() << "^^^^^^^^^caseop[before/after]^^^^^^^^^\n";
+    getchar();
 
     rewriter.replaceOp(caseop, caseladder->getResults());
 
@@ -366,6 +357,7 @@ public:
   }
 };
 
+/*
 class I64ToI8PtrConversionPattern : public ConversionPattern {
 public:
   explicit I64ToI8PtrConversionPattern(TypeConverter &tc)
@@ -389,6 +381,7 @@ public:
     return changed ? success() : failure();
   }
 };
+*/
 
 class HaskToLLVMTypeConverter : public mlir::LLVMTypeConverter {
 public:
@@ -488,7 +481,7 @@ struct LowerHaskToLLVMPass : public Pass {
     patterns.insert<CaseOpConversionPattern>(typeConverter, &getContext());
     patterns.insert<HaskConstructOpConversionPattern>(typeConverter,
                                                       &getContext());
-    patterns.insert<I64ToI8PtrConversionPattern>(typeConverter);
+//    patterns.insert<I64ToI8PtrConversionPattern>(typeConverter);
 
     ::llvm::DebugFlag = true;
 
