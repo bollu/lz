@@ -48,7 +48,6 @@
 #define DEBUG_TYPE "hask-ops"
 #include "llvm/Support/Debug.h"
 
-
 // https://github.com/llvm/llvm-project/blob/a048e2fa1d0285a3582bd224d5652dbf1dc91cb4/mlir/examples/toy/Ch6/mlir/LowerToLLVM.cpp
 // https://github.com/llvm/llvm-project/blob/706d992cedaf2ca3190e4445015da62faf2db544/mlir/lib/Conversion/StandardToLLVM/StandardToLLVM.cpp
 
@@ -106,6 +105,8 @@ struct ForceOpConversionPattern : public mlir::ConversionPattern {
   matchAndRewrite(Operation *op, ArrayRef<Value> rands,
                   ConversionPatternRewriter &rewriter) const override {
     ForceOp f = cast<ForceOp>(op);
+    rewriter.setInsertionPointAfter(f);
+
     rewriter.replaceOpWithNewOp<LLVM::CallOp>(
         op, LLVM::LLVMType::getInt8PtrTy(rewriter.getContext()),
         getOrInsertEvalClosure(rewriter, f.getParentOfType<ModuleOp>()),
@@ -251,9 +252,8 @@ struct CaseOpConversionPattern : public mlir::ConversionPattern {
         mapper.map(ite.thenRegion().getArgument(i), call.getResult(0));
       }
 
-
-
-      rewriter.cloneRegionBefore(caseop.getAltRHS(i), ite.thenRegion(), ite.thenRegion().end(), mapper);
+      rewriter.cloneRegionBefore(caseop.getAltRHS(i), ite.thenRegion(),
+                                 ite.thenRegion().end(), mapper);
 
       // caseop.getAltRHS(i).cloneInto(&ite.thenRegion(), mapper);
       // vvvv This makes the program crash!
@@ -469,6 +469,63 @@ public:
   };
 };
 
+class ApOpConversionPattern : public ConversionPattern {
+public:
+  explicit ApOpConversionPattern(TypeConverter &tc, MLIRContext *context)
+      : ConversionPattern(ApOp::getOperationName(), 1, tc, context) {}
+
+  static FlatSymbolRefAttr getOrInsertMkClosure(PatternRewriter &rewriter,
+                                                ModuleOp module, int n) {
+
+    const std::string name = "mkClosure_capture0_args" + std::to_string(n);
+    if (module.lookupSymbol<LLVM::LLVMFuncOp>(name)) {
+      return SymbolRefAttr::get(name, rewriter.getContext());
+    }
+
+    auto I8PtrTy = LLVM::LLVMType::getInt8PtrTy(rewriter.getContext());
+    llvm::SmallVector<LLVM::LLVMType, 4> argTys(n + 1, I8PtrTy);
+    auto llvmFnType = LLVM::LLVMType::getFunctionTy(I8PtrTy, argTys,
+                                                    /*isVarArg=*/false);
+
+    // Insert the printf function into the body of the parent module.
+    PatternRewriter::InsertionGuard insertGuard(rewriter);
+    rewriter.setInsertionPointToStart(module.getBody());
+    rewriter.create<LLVM::LLVMFuncOp>(module.getLoc(), name, llvmFnType);
+    return SymbolRefAttr::get(name, rewriter.getContext());
+  }
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    using namespace mlir::LLVM;
+    ApOp ap = cast<ApOp>(op);
+    ModuleOp module = ap.getParentOfType<ModuleOp>();
+
+    llvm::errs() << __FUNCTION__ << ":" << __LINE__ << "\n";
+    // LLVMType kparamty =
+    //     haskToLLVMType(rewriter.getContext(), ap.getResult().getType());
+
+    rewriter.setInsertionPointAfter(ap);
+    SmallVector<Value, 4> llvmFnArgs;
+    // llvmFnArgs.push_back(transmuteToVoidPtr(ap.getFn(), rewriter,
+    // ap.getLoc()));
+    llvmFnArgs.push_back(ap.getFn());
+
+    for (int i = 0; i < ap.getNumFnArguments(); ++i) {
+      // llvmFnArgs.push_back(
+      //     transmuteToVoidPtr(ap.getFnArgument(i), rewriter, ap.getLoc()));
+      llvmFnArgs.push_back(ap.getFnArgument(i));
+    }
+
+    FlatSymbolRefAttr mkclosure =
+        getOrInsertMkClosure(rewriter, module, ap.getNumFnArguments());
+    rewriter.replaceOpWithNewOp<LLVM::CallOp>(
+        op, LLVMType::getInt8PtrTy(rewriter.getContext()), mkclosure,
+        llvmFnArgs);
+    return success();
+  }
+};
+
 namespace {
 struct LowerHaskToLLVMPass : public Pass {
   LowerHaskToLLVMPass() : Pass(mlir::TypeID::get<LowerHaskToLLVMPass>()){};
@@ -497,7 +554,9 @@ struct LowerHaskToLLVMPass : public Pass {
     patterns.insert<CaseOpConversionPattern>(typeConverter, &getContext());
     patterns.insert<HaskConstructOpConversionPattern>(typeConverter,
                                                       &getContext());
-//    patterns.insert<I64ToI8PtrConversionPattern>(typeConverter);
+    patterns.insert<ApOpConversionPattern>(typeConverter, &getContext());
+
+    //    patterns.insert<I64ToI8PtrConversionPattern>(typeConverter);
 
     ::llvm::DebugFlag = true;
 
@@ -517,7 +576,6 @@ struct LowerHaskToLLVMPass : public Pass {
       llvm::errs() << "\n===\n";
       signalPassFailure();
     }
-
 
     ::llvm::DebugFlag = false;
   };
