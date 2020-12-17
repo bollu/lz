@@ -25,7 +25,7 @@ module {
                   %n_minus_1 = subi %n, %one : i64
                   %si_n_minus_1 = lz.construct(@SimpleInt, %n_minus_1: i64)
                   %f = constant @f : (!lz.value) -> !lz.value
-                  %ret = lz.apEager(%f: (!lz.value) -> !lz.value, %si_n_minus_1)
+                  %ret = call @f (%si_n_minus_1) :  (!lz.value) -> !lz.value
                   lz.return %ret :!lz.value
                 }]
                 lz.return %v : !lz.value
@@ -38,7 +38,7 @@ module {
     %three = constant 3 : i64
     %n = lz.construct(@SimpleInt, %three: i64)
     %f = constant @f : (!lz.value) -> !lz.value
-    %out = lz.apEager(%f: (!lz.value) -> !lz.value, %n)
+    %out = call @f (%n) :  (!lz.value) -> !lz.value
     return %out : !lz.value
   }
 }

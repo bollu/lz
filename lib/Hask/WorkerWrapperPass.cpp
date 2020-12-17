@@ -84,6 +84,7 @@ struct ForceOfKnownApPattern : public mlir::OpRewritePattern<ForceOp> {
     // if (!ref) {
     //   return failure();
     // }
+
     FlatSymbolRefAttr apfnname = getConstantFnRefFromValue(ap.getFn());
     if (!apfnname) {
       return failure();
@@ -96,10 +97,10 @@ struct ForceOfKnownApPattern : public mlir::OpRewritePattern<ForceOp> {
     // cannot inline a recursive function. Can replace with
     // an apEager
     rewriter.setInsertionPoint(ap);
-    ApEagerOp eager = rewriter.create<ApEagerOp>(ap.getLoc(), ap.getFn(),
-                                                 fn.getType().getResult(0),
-                                                 ap.getFnArguments());
-    rewriter.replaceOp(force, eager.getResult());
+    CallOp eager =
+        rewriter.create<CallOp>(ap.getLoc(), apfnname.getValue(),
+                                fn.getType().getResults(), ap.getFnArguments());
+    rewriter.replaceOp(force, eager.getResults());
     return success();
   };
 };
@@ -177,26 +178,20 @@ struct ForceOfThunkifyPattern : public mlir::OpRewritePattern<ForceOp> {
   }
 };
 
-struct InlineApEagerPattern : public mlir::OpRewritePattern<ApEagerOp> {
-  InlineApEagerPattern(mlir::MLIRContext *context)
-      : OpRewritePattern<ApEagerOp>(context, /*benefit=*/1) {}
+struct InlineCallPattern : public mlir::OpRewritePattern<CallOp> {
+  InlineCallPattern(mlir::MLIRContext *context)
+      : OpRewritePattern<CallOp>(context, /*benefit=*/1) {}
   mlir::LogicalResult
-  matchAndRewrite(ApEagerOp ap,
-                  mlir::PatternRewriter &rewriter) const override {
+  matchAndRewrite(CallOp ap, mlir::PatternRewriter &rewriter) const override {
 
     FuncOp parent = ap.getParentOfType<FuncOp>();
     ModuleOp mod = ap.getParentOfType<ModuleOp>();
 
-    FlatSymbolRefAttr apfn = getConstantFnRefFromValue(ap.getFn());
-    if (!apfn) {
+    if (parent.getName() == ap.getCallee()) {
       return failure();
     }
 
-    if (parent.getName() == apfn.getValue().str()) {
-      return failure();
-    }
-
-    FuncOp called = mod.lookupSymbol<FuncOp>(apfn);
+    FuncOp called = mod.lookupSymbol<FuncOp>(ap.getCallee());
     assert(called && "unable to find called function.");
 
     // TODO: setup mapping for arguments in mapper
@@ -206,9 +201,10 @@ struct InlineApEagerPattern : public mlir::OpRewritePattern<ApEagerOp> {
     //   g() { f(); } -> g() { stmt; f(); } -> g { stmt; stmt; f(); } -> ...
     InlinerInterface inliner(rewriter.getContext());
     if (!HaskDialect::isFunctionRecursive(called)) {
-      LogicalResult isInlined = inlineRegion(
-          inliner, &called.getBody(), ap, ap.getFnArguments(), ap.getResult());
+      LogicalResult isInlined = inlineRegion(inliner, &called.getBody(), ap,
+                                             ap.getOperands(), ap.getResults());
       assert(succeeded(isInlined) && "unable to inline");
+      rewriter.eraseOp(ap);
       return success();
     } else {
       return failure();
@@ -248,37 +244,31 @@ FunctionType mkForcedFnType(FunctionType fty) {
 // into an "immediate" function call.
 
 struct OutlineRecursiveApEagerOfThunkPattern
-    : public mlir::OpRewritePattern<ApEagerOp> {
+    : public mlir::OpRewritePattern<CallOp> {
   OutlineRecursiveApEagerOfThunkPattern(mlir::MLIRContext *context)
-      : OpRewritePattern<ApEagerOp>(context, /*benefit=*/1) {}
+      : OpRewritePattern<CallOp>(context, /*benefit=*/1) {}
   mlir::LogicalResult
-  matchAndRewrite(ApEagerOp ap,
-                  mlir::PatternRewriter &rewriter) const override {
+  matchAndRewrite(CallOp ap, mlir::PatternRewriter &rewriter) const override {
 
     FuncOp parentfn = ap.getParentOfType<FuncOp>();
     ModuleOp mod = ap.getParentOfType<ModuleOp>();
 
-    FlatSymbolRefAttr apfnname = getConstantFnRefFromValue(ap.getFn());
-    if (!apfnname) {
-      return failure();
-    }
-
     // if the call is not recursive, bail
-    if (parentfn.getName() != apfnname.getValue().str()) {
+    if (parentfn.getName() != ap.getCallee()) {
       return failure();
     }
 
     // called == parentfn?
-    FuncOp called = mod.lookupSymbol<FuncOp>(apfnname);
+    FuncOp called = mod.lookupSymbol<FuncOp>(ap.getCallee());
     assert(called && "unable to find called function.");
 
-    if (ap.getNumFnArguments() != 1) {
+    if (ap.getNumOperands() != 1) {
       assert(false && "cannot handle functions with multiple args just yet");
     }
 
     SmallVector<Value, 4> clonedFnCallArgs;
     ThunkifyOp thunkifiedArgument =
-        ap.getFnArgument(0).getDefiningOp<ThunkifyOp>();
+        ap.getOperand(0).getDefiningOp<ThunkifyOp>();
     if (!thunkifiedArgument) {
       return failure();
     }
@@ -314,12 +304,12 @@ struct OutlineRecursiveApEagerOfThunkPattern
     // assert(original.getValue().isa<mlir::SymbolRefAttr>() && "is a symbol
     // ref");
 
-    ConstantOp clonedFnRef = rewriter.create<ConstantOp>(
-        rewriter.getUnknownLoc(), mkForcedFnType(called.getType()),
-        mlir::FlatSymbolRefAttr::get(clonedFnName, rewriter.getContext()));
+    // ConstantOp clonedFnRef = rewriter.create<ConstantOp>(
+    //     rewriter.getUnknownLoc(), mkForcedFnType(called.getType()),
+    //     mlir::FlatSymbolRefAttr::get(clonedFnName, rewriter.getContext()));
 
-    rewriter.replaceOpWithNewOp<ApEagerOp>(
-        ap, clonedFnRef, called.getType().getResult(0), clonedFnCallArgs);
+    rewriter.replaceOpWithNewOp<CallOp>(
+        ap, clonedFnName, called.getType().getResults(), clonedFnCallArgs);
 
     // TODO: this disastrous house of cards depends on the order of cloning.
     // We first replace the reucrsive call, and *then* clone the function.
@@ -381,35 +371,28 @@ struct OutlineRecursiveApEagerOfThunkPattern
 //  %inv = extract(%inc) : V
 //  apEager(@frec, inv)
 struct OutlineRecursiveApEagerOfConstructorPattern
-    : public mlir::OpRewritePattern<ApEagerOp> {
+    : public mlir::OpRewritePattern<CallOp> {
   OutlineRecursiveApEagerOfConstructorPattern(mlir::MLIRContext *context)
-      : OpRewritePattern<ApEagerOp>(context, /*benefit=*/1) {}
+      : OpRewritePattern<CallOp>(context, /*benefit=*/1) {}
   mlir::LogicalResult
-  matchAndRewrite(ApEagerOp ap,
-                  mlir::PatternRewriter &rewriter) const override {
+  matchAndRewrite(CallOp ap, mlir::PatternRewriter &rewriter) const override {
     FuncOp parentfn = ap.getParentOfType<FuncOp>();
     ModuleOp mod = ap.getParentOfType<ModuleOp>();
 
-    mlir::FlatSymbolRefAttr ref = getConstantFnRefFromValue(ap.getFn());
-    // auto ref = ap.getFn().getDefiningOp<HaskRefOp>();
-    if (!ref) {
-      return failure();
-    }
-
     // if the call is not recursive, bail
-    if (parentfn.getName() != ref.getValue().str()) {
+    if (parentfn.getName() != ap.getCallee()) {
       return failure();
     }
 
-    FuncOp called = mod.lookupSymbol<FuncOp>(ref);
+    FuncOp called = mod.lookupSymbol<FuncOp>(ap.getCallee());
     assert(called && "unable to find called function.");
 
-    if (ap.getNumFnArguments() != 1) {
+    if (ap.getNumOperands() != 1) {
       assert(false && "cannot handle functions with multiple args just yet");
     }
 
     HaskConstructOp constructedArgument =
-        ap.getFnArgument(0).getDefiningOp<HaskConstructOp>();
+        ap.getOperand(0).getDefiningOp<HaskConstructOp>();
     if (!constructedArgument) {
       return failure();
     }
@@ -447,10 +430,10 @@ struct OutlineRecursiveApEagerOfConstructorPattern
         clonedFnCallArgTys, called.getType().getResult(0),
         rewriter.getContext());
 
-    ConstantOp clonedFnRef = rewriter.create<ConstantOp>(
-        ap.getFn().getLoc(), clonedFnTy,
-        mlir::FlatSymbolRefAttr::get(clonedFnName, rewriter.getContext()));
-
+    // ConstantOp clonedFnRef = rewriter.create<ConstantOp>(
+    //     ap.().getLoc(), clonedFnTy,
+    //     mlir::FlatSymbolRefAttr::get(clonedFnName, rewriter.getContext()));
+    // ConstantOp clonedFnRef;
     // HaskRefOp clonedFnRef = rewriter.create<HaskRefOp>(
     //     ref.getLoc(), clonedFnName,
     //     FunctionType::get(
@@ -460,8 +443,8 @@ struct OutlineRecursiveApEagerOfConstructorPattern
     // HaskFnType::get(mod.getContext(), clonedFnCallArgTys,
     //                 parentfn.getType().cast<FunctionType>().getResult(0)));
 
-    rewriter.replaceOpWithNewOp<ApEagerOp>(
-        ap, clonedFnRef, called.getType().getResult(0), clonedFnCallArgs);
+    rewriter.replaceOpWithNewOp<CallOp>(
+        ap, clonedFnName, called.getType().getResult(0), clonedFnCallArgs);
     FuncOp clonedfn = parentfn.clone();
 
     // 2. Build the cloned function that is an unboxed version of the
@@ -517,7 +500,7 @@ CaseOp findSingleCaseOpUse(BlockArgument v, Region *r) {
   return c;
 }
 
-// ==INPUT==
+// ==INPUT==-
 // data Box { MkBox(int) }
 // @f(x: Box):
 // <STUFF-BEFORE-CASE>
@@ -592,9 +575,9 @@ struct OutlineCaseOfFnInput : public mlir::OpRewritePattern<FuncOp> {
       return failure();
     }
 
-    llvm::SmallVector<ApEagerOp, 2> recursiveCalls;
-    parentfn.walk([&](ApEagerOp call) {
-      if (call.getFnName() != parentfn.getName()) {
+    llvm::SmallVector<CallOp, 2> recursiveCalls;
+    parentfn.walk([&](CallOp call) {
+      if (call.getCallee() != parentfn.getName()) {
         return WalkResult::advance();
       }
       recursiveCalls.push_back(call);
@@ -631,25 +614,26 @@ struct OutlineCaseOfFnInput : public mlir::OpRewritePattern<FuncOp> {
       return failure();
     }
 
-    for (ApEagerOp call : recursiveCalls) {
+    for (CallOp call : recursiveCalls) {
       llvm::SmallVector<Value, 4> callArgs;
       // replace call = f(argConstruct = Constructor(v)) with fConstructor(v);
       HaskConstructOp argConstruct =
-          call.getFnArgument(0).getDefiningOp<HaskConstructOp>();
+          call.getOperand(0).getDefiningOp<HaskConstructOp>();
 
       if (!argConstruct) {
         continue;
       }
       callArgs.push_back(argConstruct.getOperand(0));
       rewriter.setInsertionPointAfter(call);
-      ConstantOp outlinedFnNameSymbol = rewriter.create<ConstantOp>(
-          call.getLoc(), outlinedFnty,
-          mlir::FlatSymbolRefAttr::get(outlinedFnName, rewriter.getContext()));
-      ApEagerOp outlinedCall = rewriter.create<ApEagerOp>(
-          call.getLoc(), outlinedFnNameSymbol,
-          outlinedFnty.getResult(0), // type of result
-          callArgs);
-      rewriter.replaceOp(call, outlinedCall.getResult());
+      // ConstantOp outlinedFnNameSymbol = rewriter.create<ConstantOp>(
+      //     call.getLoc(), outlinedFnty,
+      //     mlir::FlatSymbolRefAttr::get(outlinedFnName,
+      //     rewriter.getContext()));
+      CallOp outlinedCall =
+          rewriter.create<CallOp>(call.getLoc(), outlinedFnName,
+                                  outlinedFnty.getResults(), // type of result
+                                  callArgs);
+      rewriter.replaceOp(call, outlinedCall.getResults());
     }
 
     // OK, now create the actually outlined function by cloning our function.
@@ -724,35 +708,36 @@ struct OutlineReturnOfConstructor : public mlir::OpRewritePattern<FuncOp> {
       return failure();
     }
 
-    llvm::SmallVector<ApEagerOp, 2> recursiveCalls;
+    llvm::SmallVector<CallOp, 2> recursiveCalls;
     // replace all recursive calls f() with. constructor(f_outline())
-    parentfn.walk([&](ApEagerOp call) {
-      if (call.getFnName() != parentfn.getName()) {
+    parentfn.walk([&](CallOp call) {
+      if (call.getCallee() != parentfn.getName()) {
         return WalkResult::advance();
       }
       recursiveCalls.push_back(call);
       return WalkResult::advance();
     }); // end walk
 
-    for (ApEagerOp call : recursiveCalls) {
+    for (CallOp call : recursiveCalls) {
       llvm::SmallVector<Value, 4> callArgs;
-      for (int i = 0; i < call.getNumFnArguments(); ++i) {
-        callArgs.push_back(call.getFnArgument(i));
+      for (int i = 0; i < (int)call.getNumOperands(); ++i) {
+        callArgs.push_back(call.getOperand(i));
       }
       rewriter.setInsertionPointAfter(call);
-      ConstantOp outlinedFnNameSymbol = rewriter.create<ConstantOp>(
-          call.getLoc(),
-          rewriter.getFunctionType(parentfn.getType().getInputs(),
-                                   constructor.getOperand(0).getType()),
-          mlir::FlatSymbolRefAttr::get(outlinedFnName, rewriter.getContext()));
+      // ConstantOp outlinedFnNameSymbol = rewriter.create<ConstantOp>(
+      //     call.getLoc(),
+      //     rewriter.getFunctionType(parentfn.getType().getInputs(),
+      //                              constructor.getOperand(0).getType()),
+      //     mlir::FlatSymbolRefAttr::get(outlinedFnName,
+      //     rewriter.getContext()));
 
-      ApEagerOp outlinedCall = rewriter.create<ApEagerOp>(
-          call.getLoc(), outlinedFnNameSymbol,
+      CallOp outlinedCall = rewriter.create<CallOp>(
+          call.getLoc(), outlinedFnName,
           constructor.getOperand(0).getType(), // type of result
           callArgs);
       HaskConstructOp outlinedCallWrap = rewriter.create<HaskConstructOp>(
           call.getLoc(), constructor.getDataConstructorName(),
-          outlinedCall.getResult());
+          outlinedCall.getResults());
       rewriter.replaceOp(call, outlinedCallWrap.getResult());
     }
     // OK, now create the actually outlined function by cloning our function.
@@ -890,71 +875,6 @@ struct CaseOfKnownIntPattern : public mlir::OpRewritePattern<CaseIntOp> {
   };
 }; // namespace standalone
 
-// @f {
-//   x = ...
-//    ybox = apEager(@f, x);
-//    z = case ybox of { Box y -> g(y); };
-//    return construct(Box, z)
-// }
-// Convert to:
-// @funbox {
-//  ...
-//   return z
-// }
-// @f {
-//  y = apEager(@funbox, x)
-//  z = g(y)
-// return construct(Box, z)
-// }
-struct CaseOfBoxedRecursiveApWithFinalConstruct
-    : public mlir::OpRewritePattern<CaseOp> {
-  CaseOfBoxedRecursiveApWithFinalConstruct(mlir::MLIRContext *context)
-      : OpRewritePattern<CaseOp>(context, /*benefit=*/1) {}
-
-  mlir::LogicalResult
-  matchAndRewrite(CaseOp caseop,
-                  mlir::PatternRewriter &rewriter) const override {
-
-    FuncOp fn = caseop.getParentOfType<FuncOp>();
-
-    // case(ap(..., ))
-    ApEagerOp apeager = caseop.getScrutinee().getDefiningOp<ApEagerOp>();
-    if (!apeager) {
-      return failure();
-    }
-
-    mlir::FlatSymbolRefAttr ref = getConstantFnRefFromValue(apeager.getFn());
-    // HaskRefOp ref = apeager.getFn().getDefiningOp<HaskRefOp>();
-    if (!ref) {
-      return failure();
-    }
-
-    if (ref.getValue() != fn.getName()) {
-      return failure();
-    }
-
-    // figure out if the return value is always a `hask.construct(...)`
-    // TODO: generalize
-    if (fn.getBody().getBlocks().size() != 1) {
-      return failure();
-    }
-
-    // find the return operations
-    HaskReturnOp ret = dyn_cast<HaskReturnOp>(
-        fn.getBody().getBlocks().front().getTerminator());
-    if (!ret) {
-      return failure();
-    }
-
-    HaskConstructOp construct =
-        ret.getOperand().getDefiningOp<HaskConstructOp>();
-    if (!construct) {
-      return failure();
-    }
-
-    assert(false && "case of boxed recursive ap eager");
-  }
-};
 // ===INPUT===
 // @f(box: List) = case List of Nil -> Foo y; Cons x xs -> Foo z
 // ===OUTPUT====
@@ -1145,7 +1065,8 @@ struct WorkerWrapperPass : public Pass {
     // force(thunkify) -> direct val. safe.
     patterns.insert<ForceOfThunkifyPattern>(&getContext());
     // apeager(f, x, y, z) -> inlined. safe.
-    patterns.insert<InlineApEagerPattern>(&getContext());
+
+    // patterns.insert<InlineCallPattern>(&getContext());
 
     // f(paramt): paramv = force(paramt); use paramv. Safe-ish, since
     // we immediately have a force as the first instruction.

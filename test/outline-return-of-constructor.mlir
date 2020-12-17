@@ -37,7 +37,7 @@ module {
                   %idecr = subi %i, %one: i64
                   %idecrbox = lz.construct(@SimpleInt, %idecr: i64)
                   %f = constant @f: (!lz.value) -> !lz.value
-                  %recv = lz.apEager(%f : (!lz.value) -> !lz.value , %idecrbox)
+                  %recv = std.call @f (%idecrbox) : (!lz.value) -> !lz.value
                   %out = lz.case @SimpleInt %recv
                            [@SimpleInt -> { ^entry(%jhash: i64):
                              %onej = constant 1: i64
@@ -57,7 +57,7 @@ module {
     %v = constant 37: i64
     %vbox = lz.construct(@SimpleInt, %v: i64)
     %f = constant @f : (!lz.value) -> !lz.value
-    %outv = lz.apEager(%f : (!lz.value) -> !lz.value, %vbox)
+    %outv = std.call @f (%vbox) : (!lz.value) -> !lz.value
     lz.return %outv : !lz.value
   }
 }

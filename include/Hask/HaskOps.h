@@ -84,54 +84,55 @@ public:
 };
 
 // https://mlir.llvm.org/docs/Interfaces/
-class ApEagerOp
-    : public Op<ApEagerOp, OpTrait::OneResult, MemoryEffectOpInterface::Trait,
-                CallOpInterface::Trait> {
-public:
-  using Op::Op;
-  static StringRef getOperationName() { return "lz.apEager"; };
+// class ApEagerOp
+//     : public Op<ApEagerOp, OpTrait::OneResult,
+//     MemoryEffectOpInterface::Trait,
+//                 CallOpInterface::Trait> {
+// public:
+//   using Op::Op;
+//   static StringRef getOperationName() { return "lz.apEager"; };
 
-  std::string getFnName() {
-    ConstantOp nameOp = getFn().getDefiningOp<ConstantOp>();
-    FlatSymbolRefAttr nameAttr = nameOp.getValue().cast<FlatSymbolRefAttr>();
-    return nameAttr.getValue().str();
-  }
+//   std::string getFnName() {
+//     ConstantOp nameOp = getFn().getDefiningOp<ConstantOp>();
+//     FlatSymbolRefAttr nameAttr = nameOp.getValue().cast<FlatSymbolRefAttr>();
+//     return nameAttr.getValue().str();
+//   }
 
-  Value getFn() { return this->getOperation()->getOperand(0); };
-  int getNumFnArguments() {
-    return this->getOperation()->getNumOperands() - 1;
-  };
-  Value getFnArgument(int i) {
-    return this->getOperation()->getOperand(i + 1);
-  };
+//   Value getFn() { return this->getOperation()->getOperand(0); };
+//   int getNumFnArguments() {
+//     return this->getOperation()->getNumOperands() - 1;
+//   };
+//   Value getFnArgument(int i) {
+//     return this->getOperation()->getOperand(i + 1);
+//   };
 
-  SmallVector<Value, 4> getFnArguments() {
-    SmallVector<Value, 4> args;
-    for (int i = 0; i < getNumFnArguments(); ++i) {
-      args.push_back(getFnArgument(i));
-    }
-    return args;
-  }
-  void
-  getEffects(SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
-                 &effects) {}
+//   SmallVector<Value, 4> getFnArguments() {
+//     SmallVector<Value, 4> args;
+//     for (int i = 0; i < getNumFnArguments(); ++i) {
+//       args.push_back(getFnArgument(i));
+//     }
+//     return args;
+//   }
+//   void
+//   getEffects(SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+//                  &effects) {}
 
-  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                    Value fn, Type resultty,
-                    const SmallVectorImpl<Value> &params);
-  static ParseResult parse(OpAsmParser &parser, OperationState &result);
-  void print(OpAsmPrinter &p);
+//   static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
+//                     Value fn, Type resultty,
+//                     const SmallVectorImpl<Value> &params);
+//   static ParseResult parse(OpAsmParser &parser, OperationState &result);
+//   void print(OpAsmPrinter &p);
 
-  CallInterfaceCallable getCallableForCallee() {
-    assert(false && "unimplement getCallableForCallee");
-  };
-  Operation::operand_range getArgOperands() {
-    assert(false && "unimplemented getArgOperands");
-  };
-  Operation *resolveCallable() {
-    assert(false && "unimplemented resolveCallable");
-  }
-};
+//   CallInterfaceCallable getCallableForCallee() {
+//     assert(false && "unimplement getCallableForCallee");
+//   };
+//   Operation::operand_range getArgOperands() {
+//     assert(false && "unimplemented getArgOperands");
+//   };
+//   Operation *resolveCallable() {
+//     assert(false && "unimplemented resolveCallable");
+//   }
+// };
 
 class ThunkifyOp
     : public Op<ThunkifyOp, OpTrait::OneResult, OpTrait::OneOperand,

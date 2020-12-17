@@ -340,18 +340,6 @@ struct Interpreter {
       return;
     }
 
-    if (ApEagerOp ap = dyn_cast<ApEagerOp>(op)) {
-      InterpValue fnval = env.lookup(ap.getLoc(), ap.getFn());
-      assert(fnval.type == InterpValueType::Ref);
-
-      std::vector<InterpValue> args;
-      for (int i = 0; i < ap.getNumFnArguments(); ++i) {
-        args.push_back(env.lookup(ap.getLoc(), ap.getFnArgument(i)));
-      }
-      env.addNew(ap.getResult(), *interpretFunction(fnval.ref(), args));
-      return;
-    }
-
     if (HaskLambdaOp lam = dyn_cast<HaskLambdaOp>(op)) {
       std::vector<InterpValue> args;
       for (int i = 0; i < (int)lam.getNumOperands(); ++i) {
