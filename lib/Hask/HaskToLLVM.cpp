@@ -184,8 +184,9 @@ void convertReturnsToYields(mlir::Region *r, mlir::PatternRewriter &rewriter) {
 }
 
 struct CaseOpConversionPattern : public mlir::ConversionPattern {
-  explicit CaseOpConversionPattern(MLIRContext *context)
-      : ConversionPattern(CaseOp::getOperationName(), 1, context) {}
+  explicit CaseOpConversionPattern(mlir::TypeConverter &tc,
+                                   MLIRContext *context)
+      : ConversionPattern(CaseOp::getOperationName(), 1, tc, context) {}
 
   llvm::Optional<scf::IfOp>
   genCaseAlt(mlir::standalone::CaseOp caseop, int i,
@@ -199,6 +200,9 @@ struct CaseOpConversionPattern : public mlir::ConversionPattern {
       // TODO: map arguments.
       caseop.getAltRHS(*defaultIx)
           .cloneInto(rewriter.getInsertionBlock()->getParent(), mapper);
+      // typeConverter->convertBlockSignature(
+      //     &rewriter.getInsertionBlock()->getParent()->front());
+
       convertReturnsToYields(rewriter.getInsertionBlock()->getParent(),
                              rewriter);
       return {};
@@ -245,7 +249,20 @@ struct CaseOpConversionPattern : public mlir::ConversionPattern {
             LLVM::LLVMType::getInt8PtrTy(rewriter.getContext()), fn, args);
         mapper.map(ite.thenRegion().getArgument(i), call.getResult(0));
       }
+
       caseop.getAltRHS(i).cloneInto(&ite.thenRegion(), mapper);
+      llvm::Optional<TypeConverter::SignatureConversion> conversion =
+          typeConverter->convertBlockSignature(&ite.thenRegion().front());
+      assert(conversion);
+
+      llvm::errs() << "\n-converted types: |";
+      for (Type t : conversion->getConvertedTypes()) {
+        t.print(llvm::errs());
+        llvm::errs() << " ";
+      }
+      llvm::errs() << "|\n";
+      getchar();
+      assert(false);
       convertReturnsToYields(&ite.thenRegion(), rewriter);
 
       if (hasNext) {
@@ -284,8 +301,10 @@ struct CaseOpConversionPattern : public mlir::ConversionPattern {
 
 class HaskConstructOpConversionPattern : public ConversionPattern {
 public:
-  explicit HaskConstructOpConversionPattern(MLIRContext *context)
-      : ConversionPattern(HaskConstructOp::getOperationName(), 1, context) {}
+  explicit HaskConstructOpConversionPattern(TypeConverter &tc,
+                                            MLIRContext *context)
+      : ConversionPattern(HaskConstructOp::getOperationName(), 1, tc, context) {
+  }
 
   static FlatSymbolRefAttr getOrInsertMkConstructor(PatternRewriter &rewriter,
                                                     ModuleOp module, int n) {
@@ -324,12 +343,50 @@ public:
                                          cons.getDataConstructorName(), mod);
     SmallVector<Value, 4> args = {name};
     for (int i = 0; i < cons.getNumOperands(); ++i) {
-      args.push_back(cons.getOperand(i));
+      // this is the 'rator / 'rand terminology from the LISP folks.
+      Value rand = cons.getOperand(i);
+      LLVM::LLVMType ty = this->getTypeConverter()
+                              ->convertType(rand.getType())
+                              .dyn_cast<LLVM::LLVMType>();
+      assert(ty);
+      assert(ty.isIntegerTy() || ty.isPointerTy());
+
+      if (ty.isIntegerTy()) {
+        rewriter.setInsertionPointAfterValue(rand);
+        rand = rewriter.create<LLVM::IntToPtrOp>(
+            rand.getLoc(), LLVM::LLVMType::getInt8PtrTy(rewriter.getContext()),
+            rand);
+      }
+      args.push_back(rand);
     }
 
     rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
         op, LLVMType::getInt8PtrTy(rewriter.getContext()), fn, args);
     return success();
+  }
+};
+
+class I64ToI8PtrConversionPattern : public ConversionPattern {
+public:
+  explicit I64ToI8PtrConversionPattern(TypeConverter &tc)
+      : ConversionPattern(1, tc, MatchAnyOpTypeTag()) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    bool changed = false;
+    for (int i = 0; i < (int)op->getNumResults(); ++i) {
+      LLVM::LLVMIntegerType opResultTy =
+          op->getResult(i).getType().dyn_cast<mlir::LLVM::LLVMIntegerType>();
+      if (!opResultTy) {
+        continue;
+      }
+
+      // TODO: how do I check that the use site wants an I64Ptr?
+      return failure();
+    }
+
+    return changed ? success() : failure();
   }
 };
 
@@ -343,17 +400,28 @@ public:
       return LLVM::LLVMType::getInt8PtrTy(type.getContext());
     });
 
+    // convert LLVM::I64Type to LLVM::I8PtrTy
+    /*
+    addConversion([](LLVM::LLVMIntegerType type) -> Type {
+      return LLVM::LLVMType::getInt8PtrTy(type.getContext());
+    });
+    */
+
+    addConversion([](mlir::IntegerType type) -> Type {
+      return LLVM::LLVMType::getInt8PtrTy(type.getContext());
+    });
+
     // TODO: We really want to know the ADT that this represents so we can
     // figure out storage requirements. For now, hack it, say `void*`.
     addConversion([](ValueType type) -> Type {
       return LLVM::LLVMType::getInt8PtrTy(type.getContext());
     });
 
+    // arguments: i64 -> llvm.i8ptr
     addArgumentMaterialization([](OpBuilder &rewriter,
                                   mlir::LLVM::LLVMPointerType voidptrty,
                                   ValueRange vals,
                                   Location loc) -> mlir::Optional<Value> {
-      assert(false && "trying to materialize arg");
       LLVM::LLVMIntegerType ptrElemInt =
           voidptrty.getElementType().dyn_cast<mlir::LLVM::LLVMIntegerType>();
       if (!ptrElemInt) {
@@ -370,23 +438,11 @@ public:
       }
       Value val = vals[0];
 
-      // check that value is an integer that we can convert to void*
-      mlir::LLVM::LLVMIntegerType valty =
-          val.getType().dyn_cast<mlir::LLVM::LLVMIntegerType>();
-      if (!valty) {
+      if (!val.getType().isa<mlir::LLVM::LLVMIntegerType>() ||
+          val.getType().isa<mlir::IntegerType>()) {
         return {};
       }
 
-      // cast int to ptr
-      mlir::LLVM::IntToPtrOp out =
-          rewriter.create<mlir::LLVM::IntToPtrOp>(loc, voidptrty, val);
-      return {out.getResult()};
-    });
-
-        addTargetMaterialization([](OpBuilder &rewriter,
-                                mlir::LLVM::LLVMPointerType voidptrty,
-                                ValueRange vals,
-                                Location loc) -> mlir::Optional<Value> {
       llvm::errs() << "vvvvvv=trying to materialize target:vvvvvv\n";
       llvm::errs() << "-";
       voidptrty.print(llvm::errs());
@@ -395,36 +451,11 @@ public:
       if (vals.size() == 1) {
         vals[0].print(llvm::errs());
       }
+
       llvm::errs() << "\n^^^^^^^^^^^^\n";
       getchar();
 
-      LLVM::LLVMIntegerType ptrElemInt =
-          voidptrty.getElementType().dyn_cast<mlir::LLVM::LLVMIntegerType>();
-      if (!ptrElemInt) {
-        return {};
-      }
-      if (ptrElemInt.getBitWidth() != 8) {
-        return {};
-      }
-      // so we have a void* as source type.
-
-      // now we need a single value;
-      if (vals.size() != 1) {
-        return {};
-      }
-      Value val = vals[0];
-
-      // check that value is an integer that we can convert to void*
-      // mlir::LLVM::LLVMIntegerType valty =
-      //     val.getType().dyn_cast<mlir::LLVM::LLVMIntegerType>();
-      // if (!valty) {
-      //   return {};
-      // }
-
-      // cast int to ptr
-      mlir::LLVM::IntToPtrOp out =
-          rewriter.create<mlir::LLVM::IntToPtrOp>(loc, voidptrty, val);
-      return {out.getResult()};
+      return {rewriter.create<mlir::LLVM::IntToPtrOp>(loc, voidptrty, val)};
     });
   };
 };
@@ -454,8 +485,10 @@ struct LowerHaskToLLVMPass : public Pass {
     populateStdToLLVMConversionPatterns(typeConverter, patterns);
 
     patterns.insert<ForceOpConversionPattern>(&getContext());
-    patterns.insert<CaseOpConversionPattern>(&getContext());
-    patterns.insert<HaskConstructOpConversionPattern>(&getContext());
+    patterns.insert<CaseOpConversionPattern>(typeConverter, &getContext());
+    patterns.insert<HaskConstructOpConversionPattern>(typeConverter,
+                                                      &getContext());
+    patterns.insert<I64ToI8PtrConversionPattern>(typeConverter);
 
     ::llvm::DebugFlag = true;
 

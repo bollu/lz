@@ -122,6 +122,60 @@ which ofc will not work since the else block is empty `x(`.
   we want to have a `!llvm.i64 -> !llvm.ptr<i8>` since we are marshalling an `int` into a pointer
   using `inttoptr`. This conversion is impossible to perform(?) using the MLIR lowering.
 
+
+```
+lower-case.mlir:6:15: error: 'llvm.call' op operand type mismatch for operand 1: '!llvm.i64' != '!llvm.ptr<i8>'
+    %boxedx = lz.construct(@Just, %x: i64)
+              ^
+lower-case.mlir:6:15: note: see current operation: %4 = "llvm.call"(%3, %0) {callee = @mkConstructor1} : (!llvm.ptr<i8>, !llvm.i64) -> !llvm.ptr<i8>
+===Hask -> LLVM lowering failed===
+module  {
+  llvm.mlir.global internal constant @Nothing("Nothing")
+  llvm.func @isConstructorTagEq(!llvm.ptr<i8>, !llvm.ptr<i8>) -> !llvm.i1
+  llvm.mlir.global internal constant @Just("Just")
+  llvm.func @mkConstructor1(!llvm.ptr<i8>, !llvm.ptr<i8>) -> !llvm.ptr<i8>
+  llvm.func @main() -> !llvm.ptr<i8> {
+    %0 = llvm.mlir.constant(42 : i64) : !llvm.i64
+    %1 = llvm.mlir.addressof @Just : !llvm.ptr<array<4 x i8>>
+    %2 = llvm.mlir.constant(0 : index) : !llvm.i64
+    %3 = llvm.getelementptr %1[%2, %2] : (!llvm.ptr<array<4 x i8>>, !llvm.i64, !llvm.i64) -> !llvm.ptr<i8>
+    %4 = llvm.call @mkConstructor1(%3, %0) : (!llvm.ptr<i8>, !llvm.i64) -> !llvm.ptr<i8>
+    %5 = llvm.mlir.addressof @Nothing : !llvm.ptr<array<7 x i8>>
+    %6 = llvm.mlir.constant(0 : index) : !llvm.i64
+    %7 = llvm.getelementptr %5[%6, %6] : (!llvm.ptr<array<7 x i8>>, !llvm.i64, !llvm.i64) -> !llvm.ptr<i8>
+    %8 = llvm.call @isConstructorTagEq(%4, %7) : (!llvm.ptr<i8>, !llvm.ptr<i8>) -> !llvm.i1
+    llvm.cond_br %8, ^bb1, ^bb3
+  ^bb1:  // pred: ^bb0
+  ^bb2:  // no predecessors
+    %9 = "lz.construct"() {dataconstructor = @Nothing} : () -> !lz.value
+    %10 = llvm.inttoptr %9 : !lz.value to !llvm.ptr<i8>
+    llvm.br ^bb8(%10 : !llvm.ptr<i8>)
+  ^bb3:  // pred: ^bb0
+    %11 = llvm.mlir.addressof @Just : !llvm.ptr<array<4 x i8>>
+    %12 = llvm.mlir.constant(0 : index) : !llvm.i64
+    %13 = llvm.getelementptr %11[%12, %12] : (!llvm.ptr<array<4 x i8>>, !llvm.i64, !llvm.i64) -> !llvm.ptr<i8>
+    %14 = llvm.call @isConstructorTagEq(%4, %13) : (!llvm.ptr<i8>, !llvm.ptr<i8>) -> !llvm.i1
+    llvm.cond_br %14, ^bb4, ^bb6
+  ^bb4:  // pred: ^bb3
+  ^bb5(%15: !llvm.i64):  // no predecessors
+    %c1_i64 = constant 1 : i64
+    %16 = "std.addi"(%15, %c1_i64) : (!llvm.i64, i64) -> i64
+    %17 = "lz.construct"(%16) {dataconstructor = @Just} : (i64) -> !lz.value
+    %18 = llvm.inttoptr %17 : !lz.value to !llvm.ptr<i8>
+    llvm.br ^bb6(%18 : !llvm.ptr<i8>)
+  ^bb6(%19: !llvm.ptr<i8>):  // 2 preds: ^bb3, ^bb5
+    llvm.br ^bb7
+  ^bb7:  // pred: ^bb6
+    %20 = llvm.inttoptr %19 : !llvm.ptr<i8> to !llvm.ptr<i8>
+    llvm.br ^bb8(%20 : !llvm.ptr<i8>)
+  ^bb8(%21: !llvm.ptr<i8>):  // 2 preds: ^bb2, ^bb7
+    llvm.br ^bb9
+  ^bb9:  // pred: ^bb8
+    llvm.return %21 : !llvm.ptr<i8>
+  }
+}
+```
+
 # Wednesday Dec 16th
 
 ```
