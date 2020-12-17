@@ -21,9 +21,13 @@ Convert GHC Core to MLIR.
 - Refactor to make type annotations less annoying. In particular, `ap`
   should not need type of function, only type of arguments and return type
 - Remove the `hask.primop_*`. It's useless. Just use native `int`s.
+- Benchmarks: https://benchmarksgame-team.pages.debian.net/benchmarksgame/program/binarytrees-ghc-7.html
 
 
 # Log:  [newest] to [oldest]
+
+# Friday Dec 18th
+
 
 # Thursday Dec 17th
 

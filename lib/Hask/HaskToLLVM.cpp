@@ -232,6 +232,8 @@ struct CaseOpConversionPattern : public mlir::ConversionPattern {
           /*cond=*/isEq.getResult(0),
           /* createelse=*/hasNext);
 
+      // TODO: When do I need root updates?
+      rewriter.startRootUpdate(ite);
       rewriter.setInsertionPointToStart(&ite.thenRegion().front());
 
       mlir::BlockAndValueMapping mapper;
@@ -272,6 +274,8 @@ struct CaseOpConversionPattern : public mlir::ConversionPattern {
                                         caseladder->getResults());
         }
       }
+      // TODO: When do I need root updates?
+      rewriter.finalizeRootUpdate(ite);
       return {ite};
     }
   }
@@ -499,7 +503,7 @@ struct LowerHaskToLLVMPass : public Pass {
 
     // applyPartialConversion | applyFullConversion
 
-    if (failed(mlir::applyFullConversion(getOperation(), target,
+    if (failed(mlir::applyPartialConversion(getOperation(), target,
                                             std::move(patterns)))) {
       llvm::errs() << "===Hask -> LLVM lowering failed at Conversion===\n";
       getOperation()->print(llvm::errs());
