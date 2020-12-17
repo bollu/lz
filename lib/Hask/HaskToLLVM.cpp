@@ -48,7 +48,9 @@
 #define DEBUG_TYPE "hask-ops"
 #include "llvm/Support/Debug.h"
 
+
 // https://github.com/llvm/llvm-project/blob/a048e2fa1d0285a3582bd224d5652dbf1dc91cb4/mlir/examples/toy/Ch6/mlir/LowerToLLVM.cpp
+// https://github.com/llvm/llvm-project/blob/706d992cedaf2ca3190e4445015da62faf2db544/mlir/lib/Conversion/StandardToLLVM/StandardToLLVM.cpp
 
 namespace mlir {
 namespace standalone {
@@ -247,13 +249,18 @@ struct CaseOpConversionPattern : public mlir::ConversionPattern {
         mapper.map(ite.thenRegion().getArgument(i), call.getResult(0));
       }
 
-      caseop.getAltRHS(i).cloneInto(&ite.thenRegion(), mapper);
+
+
+      rewriter.cloneRegionBefore(caseop.getAltRHS(i), ite.thenRegion(), ite.thenRegion().end(), mapper);
+
+      // caseop.getAltRHS(i).cloneInto(&ite.thenRegion(), mapper);
       // vvvv This makes the program crash!
+      /*
       mlir::FailureOr<mlir::Block *> convertedEntryBB =
-          rewriter.convertRegionTypes(&caseop.getAltRHS(i),
+          rewriter.convertRegionTypes(&ite.thenRegion(),
                                       *(this->typeConverter));
       assert(succeeded(convertedEntryBB) && "unable to convert region types");
-
+      */
 
       if (hasNext) {
         rewriter.setInsertionPointToStart(&ite.elseRegion().front());
@@ -351,6 +358,7 @@ public:
       args.push_back(rand);
     }
 
+    rewriter.setInsertionPointAfter(cons);
     rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
         op, LLVMType::getInt8PtrTy(rewriter.getContext()), fn, args);
     return success();
@@ -400,9 +408,11 @@ public:
     });
     */
 
+    /*
     addConversion([](mlir::IntegerType type) -> Type {
       return LLVM::LLVMType::getInt8PtrTy(type.getContext());
     });
+    */
 
     // TODO: We really want to know the ADT that this represents so we can
     // figure out storage requirements. For now, hack it, say `void*`.
@@ -411,6 +421,7 @@ public:
     });
 
     // arguments: i64 -> llvm.i8ptr
+    /*
     addArgumentMaterialization([](OpBuilder &rewriter,
                                   mlir::LLVM::LLVMPointerType voidptrty,
                                   ValueRange vals,
@@ -450,6 +461,7 @@ public:
 
       return {rewriter.create<mlir::LLVM::IntToPtrOp>(loc, voidptrty, val)};
     });
+*/
   };
 };
 
@@ -485,18 +497,23 @@ struct LowerHaskToLLVMPass : public Pass {
 
     ::llvm::DebugFlag = true;
 
-    // applyPartialConversion
-    bool didfail = failed(mlir::applyPartialConversion(getOperation(), target,
-                                                       std::move(patterns)));
+    // applyPartialConversion | applyFullConversion
 
-    didfail |= failed(mlir::verify(getOperation()));
-
-    if (didfail) {
-      llvm::errs() << "===Hask -> LLVM lowering failed===\n";
+    if (failed(mlir::applyFullConversion(getOperation(), target,
+                                            std::move(patterns)))) {
+      llvm::errs() << "===Hask -> LLVM lowering failed at Conversion===\n";
       getOperation()->print(llvm::errs());
       llvm::errs() << "\n===\n";
       signalPassFailure();
     };
+
+    if (failed(mlir::verify(getOperation()))) {
+      llvm::errs() << "===Hask -> LLVM lowering failed at Verification===\n";
+      getOperation()->print(llvm::errs());
+      llvm::errs() << "\n===\n";
+      signalPassFailure();
+    }
+
 
     ::llvm::DebugFlag = false;
   };
