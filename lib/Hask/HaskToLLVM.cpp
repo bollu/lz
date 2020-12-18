@@ -186,29 +186,27 @@ struct CaseOpConversionPattern : public mlir::ConversionPattern {
   }
 
   // extractConstructorArgN(constructor: void *, arg_ix: int) -> bool)
-  // static FlatSymbolRefAttr
-  // getOrInsertExtractConstructorArg(PatternRewriter &rewriter, ModuleOp
-  // module)
-  // {
-  //   const std::string name = "extractConstructorArg";
-  //   if (module.lookupSymbol<LLVM::LLVMFuncOp>(name)) {
-  //     return SymbolRefAttr::get(name, rewriter.getContext());
-  //   }
+  static FlatSymbolRefAttr
+  getOrInsertExtractConstructorArg(PatternRewriter &rewriter, ModuleOp module) {
+    const std::string name = "extractConstructorArg";
+    if (module.lookupSymbol<LLVM::LLVMFuncOp>(name)) {
+      return SymbolRefAttr::get(name, rewriter.getContext());
+    }
 
-  //   auto llvmI8PtrTy = LLVM::LLVMType::getInt8PtrTy(rewriter.getContext());
-  //   auto llvmI64Ty = LLVM::LLVMType::getInt64Ty(rewriter.getContext());
+    auto llvmI8PtrTy = LLVM::LLVMType::getInt8PtrTy(rewriter.getContext());
+    auto llvmI64Ty = LLVM::LLVMType::getInt64Ty(rewriter.getContext());
 
-  //   // string constructor name, <n> arguments.
-  //   SmallVector<mlir::LLVM::LLVMType, 4> argsTy{llvmI8PtrTy, llvmI64Ty};
-  //   auto llvmFnType = LLVM::LLVMType::getFunctionTy(llvmI8PtrTy, argsTy,
-  //                                                   /*isVarArg=*/false);
+    // string constructor name, <n> arguments.
+    SmallVector<mlir::LLVM::LLVMType, 4> argsTy{llvmI8PtrTy, llvmI64Ty};
+    auto llvmFnType = LLVM::LLVMType::getFunctionTy(llvmI8PtrTy, argsTy,
+                                                    /*isVarArg=*/false);
 
-  //   // Insert the printf function into the body of the parent module.
-  //   PatternRewriter::InsertionGuard insertGuard(rewriter);
-  //   rewriter.setInsertionPointToStart(module.getBody());
-  //   rewriter.create<LLVM::LLVMFuncOp>(module.getLoc(), name, llvmFnType);
-  //   return SymbolRefAttr::get(name, rewriter.getContext());
-  // }
+    // Insert the printf function into the body of the parent module.
+    PatternRewriter::InsertionGuard insertGuard(rewriter);
+    rewriter.setInsertionPointToStart(module.getBody());
+    rewriter.create<LLVM::LLVMFuncOp>(module.getLoc(), name, llvmFnType);
+    return SymbolRefAttr::get(name, rewriter.getContext());
+  }
 
   // return the order in which we should generate case alts.
   static std::vector<int> getAltGenerationOrder(CaseOp caseop) {
@@ -226,19 +224,48 @@ struct CaseOpConversionPattern : public mlir::ConversionPattern {
     return ixs;
   }
 
+  // make a call to extractConstructorArg(...)
+  static LLVM::CallOp
+  mkCallExtractConstructorArg(Value constructor, int argix, ModuleOp mod,
+                              ConversionPatternRewriter &rewriter) {
+    FlatSymbolRefAttr fn = getOrInsertExtractConstructorArg(rewriter, mod);
+    Value argixv = rewriter.create<LLVM::ConstantOp>(
+        rewriter.getUnknownLoc(),
+        LLVM::LLVMType::getInt64Ty(rewriter.getContext()),
+        rewriter.getI64IntegerAttr(argix));
+    SmallVector<Value, 2> args = {constructor, argixv};
+    LLVM::CallOp call = rewriter.create<LLVM::CallOp>(
+        rewriter.getUnknownLoc(),
+        LLVM::LLVMType::getInt8PtrTy(rewriter.getContext()), fn, args);
+    return call;
+  }
+
+  // fill the region `out` with the ith RHS of the caseop.
   void genCaseAltRHS(Region *out, CaseOp caseop, int i,
                      ConversionPatternRewriter &rewriter) const {
-    // assert(out->empty());
+    ModuleOp mod = caseop.getParentOfType<ModuleOp>();
     assert(out->args_empty());
-    // out->getBlocks().clear();
+    assert(out->getBlocks().size() == 1);
+    llvm::SmallVector<Value, 4> rhsVals;
+
+    rewriter.setInsertionPointToEnd(&out->front());
+    for (int argix = 0; argix < (int)caseop.getAltRHS(i).getNumArguments();
+         ++argix) {
+      rhsVals.push_back(mkCallExtractConstructorArg(caseop.getScrutinee(),
+                                                    argix, mod, rewriter)
+                            .getResult(0));
+    }
 
     mlir::BlockAndValueMapping mapper;
     rewriter.cloneRegionBefore(caseop.getAltRHS(i), *out, out->end(), mapper);
     convertReturnsToYields(out, rewriter);
     rewriter.mergeBlocks(out->getBlocks().front().getNextNode(),
-                         &out->getBlocks().front(), {});
+                         &out->getBlocks().front(), rhsVals);
   }
 
+  // generate the order[i]th case alt of caseop, We need this `order` thing to
+  // make sure we generate the default case last. I guess we don't need it if we
+  // are sure that people always write the default case last? whatever.
   scf::IfOp genCaseAlt(mlir::standalone::CaseOp caseop, int i,
                        const std::vector<int> &order,
                        ConversionPatternRewriter &rewriter) const {
