@@ -654,6 +654,23 @@ public:
   }
 };
 
+class ApEagerOpConversionPattern : public ConversionPattern {
+public:
+  explicit ApEagerOpConversionPattern(TypeConverter &tc, MLIRContext *context)
+      : ConversionPattern(ApEagerOp::getOperationName(), 1, tc, context) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    using namespace mlir::LLVM;
+    ApEagerOp ap = cast<ApEagerOp>(op);
+    rewriter.setInsertionPointAfter(ap);
+    rewriter.replaceOpWithNewOp<mlir::CallOp>(
+        ap, ap.getFnName(), ap.getResult().getType(), ap.getFnArguments());
+    return success();
+  }
+};
+
 class HaskReturnOpConversionPattern : public ConversionPattern {
 public:
   explicit HaskReturnOpConversionPattern(TypeConverter &tc,
@@ -699,6 +716,7 @@ struct LowerHaskToLLVMPass : public Pass {
     patterns.insert<HaskConstructOpConversionPattern>(typeConverter,
                                                       &getContext());
     patterns.insert<ApOpConversionPattern>(typeConverter, &getContext());
+    patterns.insert<ApEagerOpConversionPattern>(typeConverter, &getContext());
     patterns.insert<HaskReturnOpConversionPattern>(typeConverter,
                                                    &getContext());
 
