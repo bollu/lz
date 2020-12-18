@@ -28,6 +28,23 @@ Convert GHC Core to MLIR.
 
 # Friday Dec 18th
 
+```
+lower-case-single-alt-no-args.mlir:9:10: error: 'scf.if' op expects region #0 to have 0 or 1 blocks
+    %y = lz.case @Maybe %boxedx
+         ^
+lower-case-single-alt-no-args.mlir:9:10: note: see current operation: %8 = "scf.if"(%7) ( {
+^bb1:  // no predecessors
+  %9 = "llvm.mlir.addressof"() {global_name = @Nothing} : () -> !llvm.ptr<array<7 x i8>>
+  %10 = "llvm.mlir.constant"() {value = 0 : index} : () -> !llvm.i64
+  %11 = "llvm.getelementptr"(%9, %10, %10) : (!llvm.ptr<array<7 x i8>>, !llvm.i64, !llvm.i64) -> !llvm.ptr<i8>
+  %12 = "llvm.call"(%11) {callee = @mkConstructor0} : (!llvm.ptr<i8>) -> !llvm.ptr<i8>
+  "scf.yield"(%12) : (!llvm.ptr<i8>) -> ()
+},  {
+}) : (!llvm.i1) -> !llvm.ptr<i8>
+```
+
+What does it mean! It clearly has a single basic block `^bb1`!
+
 
 # Thursday Dec 17th
 

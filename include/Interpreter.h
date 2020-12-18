@@ -13,6 +13,8 @@ enum class InterpValueType {
   Constructor,
   Ref,
   ThunkifiedValue,
+  HpNode,         // heap node for grin.
+  ConstructorTag, // constructor tag, reified for grin.
 };
 
 // we need the template nonsense to break the loop between `MemRef`
@@ -223,7 +225,8 @@ struct InterpValue {
   }
 
   std::string constructorTag() const {
-    assert(type == InterpValueType::Constructor);
+    assert(type == InterpValueType::Constructor ||
+           type == InterpValueType::ConstructorTag);
     return s_;
   }
 
@@ -232,8 +235,36 @@ struct InterpValue {
     return vs_;
   }
 
+  //============= HeapNode ======================//
+  static InterpValue hpnode(InterpValue c) {
+    // only boxed values can be stored on the heap!
+    assert(c.type == InterpValueType::Constructor);
+    InterpValue v(InterpValueType::HpNode);
+    v.hpNodeValue = new InterpValue(c);
+    return v;
+  }
+  InterpValue hpnodeLoad() const {
+    assert(this->type == InterpValueType::HpNode);
+    return *hpNodeValue;
+  }
+  void hpnodeUpdate(InterpValue c) {
+    assert(this->type == InterpValueType::HpNode);
+    assert(c.type == InterpValueType::Constructor);
+    *this->hpNodeValue = c;
+  }
+
+  //============= Constructor Tag ======================//
+  static InterpValue constructorTag(std::string tag) {
+    InterpValue v(InterpValueType::ConstructorTag);
+    v.s_ = tag;
+    return v;
+  }
+
+  // getter already declared in constructorTag();
+
   int i_;
   MemRef *mem_;
+  InterpValue *hpNodeValue; // interp value this heap node is pointing to. ugh.
   std::vector<InterpValue> vs_;
   std::string s_;
   mlir::standalone::HaskLambdaOp lam; // ugh

@@ -1,4 +1,5 @@
 #include "Interpreter.h"
+#include "GRIN/GRINOps.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/StandardTypes.h"
@@ -110,12 +111,12 @@ public:
     auto it = find(k);
     if (!it) {
       InterpreterError err(k.getLoc());
-      llvm::errs() << "unable to find key: |";
+      llvm::errs() << "\n\n===unable to find key: |";
       k.print(llvm::errs());
-      llvm::errs() << "|\n";
-      llvm::errs() << "owning block:\n";
+      llvm::errs() << "|====\n";
+      llvm::errs() << "\n====owning block:=====\n";
       k.getParentBlock()->print(llvm::errs());
-      llvm::errs() << "owning op:\n";
+      llvm::errs() << "\n=====owning op:=====\n";
       k.getParentBlock()->getParentOp()->print(llvm::errs());
 
       llvm::errs() << "\n";
@@ -570,6 +571,87 @@ struct Interpreter {
       return;
     }
 
+    //============= GRINOps ========================//
+    if (auto box = dyn_cast<grin::GRINBoxOp>(op)) {
+      stats.num_construct_calls++;
+      std::vector<InterpValue> vs;
+      for (int i = 0; i < (int)box.getNumOperands(); ++i) {
+        vs.push_back(env.lookup(box.getLoc(), box.getOperand(i)));
+      }
+      env.addNew(box.getResult(),
+                 InterpValue::constructor(box.getDataConstructorName(), vs));
+      return;
+    }
+
+    if (auto store = dyn_cast<grin::GRINStoreOp>(op)) {
+      InterpValue tostore = env.lookup(store.getLoc(), store.getOperand());
+      env.addNew(store.getResult(), InterpValue::hpnode(tostore));
+      return;
+    }
+
+    if (auto fetch = dyn_cast<grin::GRINFetchOp>(op)) {
+      InterpValue hpnod = env.lookup(fetch.getLoc(), fetch.getOperand());
+      env.addNew(fetch.getResult(), hpnod.hpnodeLoad());
+      return;
+    }
+
+    if (auto unboxtag = dyn_cast<grin::GRINUnboxTagOp>(op)) {
+      InterpValue box = env.lookup(unboxtag.getLoc(), unboxtag.getOperand());
+      env.addNew(unboxtag.getResult(),
+                 InterpValue::constructorTag(box.constructorTag()));
+      return;
+    }
+
+    if (auto caseop = dyn_cast<grin::GRINCaseOp>(op)) {
+      InterpValue scrutinee =
+          env.lookup(caseop.getOperand().getLoc(), caseop.getOperand());
+      assert(scrutinee.type == InterpValueType::ConstructorTag);
+
+      for (int i = 0; i < (int)caseop.getNumAlts(); ++i) {
+        if (caseop.getAltTag(i) != scrutinee.constructorTag()) {
+          continue;
+        }
+        // TODO: handle "default"
+        llvm::Optional<InterpValue> retval =
+            interpretRegion(caseop.getRegion(i), {}, env);
+        // TODO: handle case that doesn't return anything?
+        assert(retval);
+        // TODO: handle multiple result
+        env.addNew(caseop.getResult(0), *retval);
+        return;
+      }
+      InterpreterError err(op.getLoc());
+      err << "INTERPRETER ERROR: unknown case scrutinee: |"
+          << scrutinee.constructorTag() << "|\n";
+      return;
+    }
+
+    if (auto unboxix = dyn_cast<grin::GRINUnboxIxOp>(op)) {
+      InterpValue box = env.lookup(unboxix.getLoc(), unboxix.getBox());
+      InterpValue ix = env.lookup(unboxix.getLoc(), unboxix.getIx());
+      env.addNew(unboxix.getResult(), box.constructorArg(ix.i()));
+      return;
+    }
+
+    if (auto unbox = dyn_cast<grin::GRINUnboxOp>(op)) {
+      InterpValue box = env.lookup(unbox.getLoc(), unbox.getBox());
+      assert(box.type == InterpValueType::Constructor);
+      assert((int)unbox.getNumResults() == (int)box.constructorNumArgs());
+      assert(box.constructorTag() == unbox.getTag());
+
+      for (int i = 0; i < (int)unbox.getNumResults(); ++i) {
+        env.addNew(unbox.getResult(i), box.constructorArg(i));
+      }
+      return;
+    }
+
+    if (auto upd = dyn_cast<grin::GRINUpdateOp>(op)) {
+      InterpValue hpnode = env.lookup(upd.getLoc(), upd.getHeapNode());
+      InterpValue box = env.lookup(upd.getLoc(), upd.getBox());
+      hpnode.hpnodeUpdate(box);
+      return;
+    }
+
     InterpreterError err(op.getLoc());
     err << "INTERPRETER ERROR: unknown operation:\n|" << op << "|\n";
   };
@@ -582,6 +664,12 @@ struct Interpreter {
     if (auto ret = dyn_cast<HaskReturnOp>(op)) {
       // TODO: we assume we have only one return value
       return TerminatorResult(env.lookup(ret.getLoc(), ret.getOperand()));
+    }
+
+    if (auto ret = dyn_cast<grin::GRINReturnOp>(op)) {
+      assert(ret.getNumOperands() == 1);
+      // TODO: we assume we have only one return value
+      return TerminatorResult(env.lookup(ret.getLoc(), ret.getOperand(0)));
     }
 
     if (auto ret = dyn_cast<mlir::AffineYieldOp>(op)) {

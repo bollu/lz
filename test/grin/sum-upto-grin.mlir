@@ -1,6 +1,9 @@
-// RUN: hask-opt --lz-interpret %s
-// Fig 7 from paper
-//    The GRIN Project: A Highly Optimising Back End for Lazy Functional Languages
+// Fig 7 from paper:
+//  | The GRIN Project: 
+//  | A Highly Optimising Back End for Lazy Functional Languages
+// RUN: hask-opt --lz-interpret %s | FileCheck %s
+// CHECK: 55
+
 module {
     func @int_add(%x: !grn.box, %y: !grn.box) -> !grn.box {
        %xv = grn.unbox @Cint, %x : i64
@@ -10,9 +13,9 @@ module {
        grn.return %out : !grn.box
     }
     func @main() -> i64 {
-        %one = constant 1 : i64
-        %intone = grn.box @Cint, %one : i64
-        %t1 = grn.store %intone
+        %zero = constant 0 : i64
+        %intzero = grn.box @Cint, %zero : i64
+        %t1 = grn.store %intzero
 
         %ten = constant 10 : i64
         %intten = grn.box @Cint, %ten : i64
@@ -21,7 +24,7 @@ module {
         %upto = grn.box @Fupto, %t1, %t2 : !grn.hp, !grn.hp
         %t3 = grn.store %upto
 
-        %sum = grn.box @Sum, %t3 : !grn.hp
+        %sum = grn.box @Fsum, %t3 : !grn.hp
         %t4 = grn.store %sum
 
         %res = std.call @eval(%t4) : (!grn.hp) -> !grn.box

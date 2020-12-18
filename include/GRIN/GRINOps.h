@@ -59,6 +59,9 @@ public:
   using Op::Op;
   static StringRef getOperationName() { return "grn.box"; };
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
+  std::string getDataConstructorName() {
+    return this->getAttrOfType<FlatSymbolRefAttr>("value").getValue().str();
+  }
   void print(OpAsmPrinter &p);
 };
 
@@ -80,6 +83,8 @@ public:
   static StringRef getOperationName() { return "grn.unboxix"; };
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   void print(OpAsmPrinter &p);
+  Value getBox() { return getOperand(0); }
+  Value getIx() { return getOperand(1); }
 };
 
 // grn.unbox @Tag %node
@@ -89,12 +94,19 @@ public:
   using Op::Op;
   static StringRef getOperationName() { return "grn.unbox"; };
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
+  Value getBox() { return getOperand(); }
+  std::string getTag() {
+    FlatSymbolRefAttr v =
+        getOperation()->getAttrOfType<FlatSymbolRefAttr>("value");
+    assert(v);
+    return v.getValue().str();
+  }
   void print(OpAsmPrinter &p);
 };
 
 // grn.return %val1, ..., %valn
-class GRINReturnOp
-    : public Op<GRINReturnOp, OpTrait::IsTerminator, OpTrait::VariadicResults> {
+class GRINReturnOp : public Op<GRINReturnOp, OpTrait::IsTerminator,
+                               OpTrait::ZeroResult, OpTrait::VariadicOperands> {
 public:
   using Op::Op;
   static StringRef getOperationName() { return "grn.return"; };
@@ -109,6 +121,14 @@ public:
   using Op::Op;
   static StringRef getOperationName() { return "grn.case"; };
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
+  unsigned int getNumAlts() { return getOperation()->getNumRegions(); }
+  std::string getAltTag(int i) {
+    assert(i < (int)getNumAlts());
+    FlatSymbolRefAttr v = getOperation()->getAttrOfType<FlatSymbolRefAttr>(
+        "alt" + std::to_string(i));
+    assert(v);
+    return v.getValue().str();
+  }
   void print(OpAsmPrinter &p);
 };
 
@@ -120,6 +140,8 @@ public:
   static StringRef getOperationName() { return "grn.update"; };
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   void print(OpAsmPrinter &p);
+  Value getHeapNode() { return this->getOperand(0); }
+  Value getBox() { return this->getOperand(1); }
 };
 
 } // namespace grin
