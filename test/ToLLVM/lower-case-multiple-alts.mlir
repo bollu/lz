@@ -15,7 +15,7 @@ module {
           //   %boxed_jash_incr = lz.construct(@Just, %jhash_incr: i64)
           //   lz.return %boxed_jash_incr : !lz.value
           // }]
-    lz.return %y  : !lz.value
+    return %y  : !lz.value
   }
 }
 
