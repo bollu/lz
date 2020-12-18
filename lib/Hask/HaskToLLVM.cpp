@@ -132,52 +132,6 @@ struct ForceOpConversionPattern : public mlir::ConversionPattern {
   }
 };
 
-// isConstructorTagEq(TAG : char *, constructor: void * -> bool)
-static FlatSymbolRefAttr
-getOrInsertIsConstructorTagEq(PatternRewriter &rewriter, ModuleOp module) {
-  const std::string name = "isConstructorTagEq";
-  if (module.lookupSymbol<LLVM::LLVMFuncOp>(name)) {
-    return SymbolRefAttr::get(name, rewriter.getContext());
-  }
-
-  auto llvmI8PtrTy = LLVM::LLVMType::getInt8PtrTy(rewriter.getContext());
-  auto llvmI1Ty = LLVM::LLVMType::getInt1Ty(rewriter.getContext());
-
-  // constructor, string constructor name
-  SmallVector<mlir::LLVM::LLVMType, 4> argsTy{llvmI8PtrTy, llvmI8PtrTy};
-  auto llvmFnType = LLVM::LLVMType::getFunctionTy(llvmI1Ty, argsTy,
-                                                  /*isVarArg=*/false);
-
-  // Insert the printf function into the body of the parent module.
-  PatternRewriter::InsertionGuard insertGuard(rewriter);
-  rewriter.setInsertionPointToStart(module.getBody());
-  rewriter.create<LLVM::LLVMFuncOp>(module.getLoc(), name, llvmFnType);
-  return SymbolRefAttr::get(name, rewriter.getContext());
-}
-
-// extractConstructorArgN(constructor: void *, arg_ix: int) -> bool)
-static FlatSymbolRefAttr
-getOrInsertExtractConstructorArg(PatternRewriter &rewriter, ModuleOp module) {
-  const std::string name = "extractConstructorArg";
-  if (module.lookupSymbol<LLVM::LLVMFuncOp>(name)) {
-    return SymbolRefAttr::get(name, rewriter.getContext());
-  }
-
-  auto llvmI8PtrTy = LLVM::LLVMType::getInt8PtrTy(rewriter.getContext());
-  auto llvmI64Ty = LLVM::LLVMType::getInt64Ty(rewriter.getContext());
-
-  // string constructor name, <n> arguments.
-  SmallVector<mlir::LLVM::LLVMType, 4> argsTy{llvmI8PtrTy, llvmI64Ty};
-  auto llvmFnType = LLVM::LLVMType::getFunctionTy(llvmI8PtrTy, argsTy,
-                                                  /*isVarArg=*/false);
-
-  // Insert the printf function into the body of the parent module.
-  PatternRewriter::InsertionGuard insertGuard(rewriter);
-  rewriter.setInsertionPointToStart(module.getBody());
-  rewriter.create<LLVM::LLVMFuncOp>(module.getLoc(), name, llvmFnType);
-  return SymbolRefAttr::get(name, rewriter.getContext());
-}
-
 // legalize a region that has been inlined into an scf.if by converting
 // all lz.return() s into scf.yield() s
 void convertReturnsToYields(mlir::Region *r, mlir::PatternRewriter &rewriter) {
@@ -208,39 +162,97 @@ struct CaseOpConversionPattern : public mlir::ConversionPattern {
                                    MLIRContext *context)
       : ConversionPattern(CaseOp::getOperationName(), 1, tc, context) {}
 
-  llvm::Optional<scf::IfOp>
-  genCaseAlt(mlir::standalone::CaseOp caseop, int i,
-             ConversionPatternRewriter &rewriter) const {
-    ModuleOp mod = caseop.getParentOfType<ModuleOp>();
-    const llvm::Optional<int> defaultIx = caseop.getDefaultAltIndex();
+  // isConstructorTagEq(TAG : char *, constructor: void * -> bool)
+  static FlatSymbolRefAttr
+  getOrInsertIsConstructorTagEq(PatternRewriter &rewriter, ModuleOp module) {
+    const std::string name = "isConstructorTagEq";
+    if (module.lookupSymbol<LLVM::LLVMFuncOp>(name)) {
+      return SymbolRefAttr::get(name, rewriter.getContext());
+    }
 
-    if (i == caseop.getNumAlts()) {
-      assert(defaultIx);
-      mlir::BlockAndValueMapping mapper;
-      // TODO: map arguments.
-      caseop.getAltRHS(*defaultIx)
-          .cloneInto(rewriter.getInsertionBlock()->getParent(), mapper);
-      convertReturnsToYields(rewriter.getInsertionBlock()->getParent(),
-                             rewriter);
-      return {};
+    auto llvmI8PtrTy = LLVM::LLVMType::getInt8PtrTy(rewriter.getContext());
+    auto llvmI1Ty = LLVM::LLVMType::getInt1Ty(rewriter.getContext());
 
-    } else {
-      // skip default here, generate it at the end.
-      if (i == defaultIx) {
-        return genCaseAlt(caseop, i + 1, rewriter);
+    // constructor, string constructor name
+    SmallVector<mlir::LLVM::LLVMType, 4> argsTy{llvmI8PtrTy, llvmI8PtrTy};
+    auto llvmFnType = LLVM::LLVMType::getFunctionTy(llvmI1Ty, argsTy,
+                                                    /*isVarArg=*/false);
+
+    // Insert the printf function into the body of the parent module.
+    PatternRewriter::InsertionGuard insertGuard(rewriter);
+    rewriter.setInsertionPointToStart(module.getBody());
+    rewriter.create<LLVM::LLVMFuncOp>(module.getLoc(), name, llvmFnType);
+    return SymbolRefAttr::get(name, rewriter.getContext());
+  }
+
+  // extractConstructorArgN(constructor: void *, arg_ix: int) -> bool)
+  // static FlatSymbolRefAttr
+  // getOrInsertExtractConstructorArg(PatternRewriter &rewriter, ModuleOp
+  // module)
+  // {
+  //   const std::string name = "extractConstructorArg";
+  //   if (module.lookupSymbol<LLVM::LLVMFuncOp>(name)) {
+  //     return SymbolRefAttr::get(name, rewriter.getContext());
+  //   }
+
+  //   auto llvmI8PtrTy = LLVM::LLVMType::getInt8PtrTy(rewriter.getContext());
+  //   auto llvmI64Ty = LLVM::LLVMType::getInt64Ty(rewriter.getContext());
+
+  //   // string constructor name, <n> arguments.
+  //   SmallVector<mlir::LLVM::LLVMType, 4> argsTy{llvmI8PtrTy, llvmI64Ty};
+  //   auto llvmFnType = LLVM::LLVMType::getFunctionTy(llvmI8PtrTy, argsTy,
+  //                                                   /*isVarArg=*/false);
+
+  //   // Insert the printf function into the body of the parent module.
+  //   PatternRewriter::InsertionGuard insertGuard(rewriter);
+  //   rewriter.setInsertionPointToStart(module.getBody());
+  //   rewriter.create<LLVM::LLVMFuncOp>(module.getLoc(), name, llvmFnType);
+  //   return SymbolRefAttr::get(name, rewriter.getContext());
+  // }
+
+  // return the order in which we should generate case alts.
+  static std::vector<int> getAltGenerationOrder(CaseOp caseop) {
+    std::vector<int> ixs;
+    llvm::Optional<int> defaultix = caseop.getDefaultAltIndex();
+    for (int i = 0; i < caseop.getNumAlts(); ++i) {
+      if (defaultix && *defaultix == i) {
+        continue;
       }
+      ixs.push_back(i);
+    }
+    if (defaultix) {
+      ixs.push_back(*defaultix);
+    }
+    return ixs;
+  }
 
-      // check if equal
-      const bool hasNext =
-          (i + 1 < caseop.getNumAlts()) || bool(caseop.getDefaultAltIndex());
+  void genCaseAltRHS(Region *out, CaseOp caseop, int i,
+                     ConversionPatternRewriter &rewriter) const {
+    // assert(out->empty());
+    assert(out->args_empty());
+    out->getBlocks().clear();
 
-      // isConsTagEq(scrutinee, lhs-tag)
-      FlatSymbolRefAttr fn = getOrInsertIsConstructorTagEq(rewriter, mod);
-      Value lhs = getOrCreateGlobalString(caseop.getLoc(), rewriter,
-                                          caseop.getAltLHS(i).getValue(),
-                                          caseop.getAltLHS(i).getValue(), mod);
+    mlir::BlockAndValueMapping mapper;
+    rewriter.cloneRegionBefore(caseop.getAltRHS(i), *out, out->end(), mapper);
+    convertReturnsToYields(out, rewriter);
+  }
 
-      SmallVector<Value, 4> params{caseop.getScrutinee(), lhs};
+  scf::IfOp genCaseAlt(mlir::standalone::CaseOp caseop, int i,
+                       const std::vector<int> &order,
+                       ConversionPatternRewriter &rewriter) const {
+    ModuleOp mod = caseop.getParentOfType<ModuleOp>();
+
+    // isConsTagEq(scrutinee, lhs-tag)
+    FlatSymbolRefAttr fn = getOrInsertIsConstructorTagEq(rewriter, mod);
+    Value lhs = getOrCreateGlobalString(
+        caseop.getLoc(), rewriter, caseop.getAltLHS(order[i]).getValue(),
+        caseop.getAltLHS(order[i]).getValue(), mod);
+
+    SmallVector<Value, 4> params{caseop.getScrutinee(), lhs};
+
+    // check if equal
+    const bool hasNext = (i + 1 < (int)order.size());
+    if (hasNext) {
       LLVM::CallOp isEq = rewriter.create<LLVM::CallOp>(
           caseop.getLoc(), LLVM::LLVMType::getInt1Ty(rewriter.getContext()), fn,
           params);
@@ -248,52 +260,43 @@ struct CaseOpConversionPattern : public mlir::ConversionPattern {
       scf::IfOp ite = rewriter.create<mlir::scf::IfOp>(
           /*return types=*/caseop.getLoc(), caseop.getResult().getType(),
           /*cond=*/isEq.getResult(0),
-          /* createelse=*/hasNext);
+          /* createelse=*/true);
 
-      // TODO: When do I need root updates?
-      rewriter.startRootUpdate(ite);
-      rewriter.setInsertionPointToStart(&ite.thenRegion().front());
+      genCaseAltRHS(&ite.thenRegion(), caseop, order[i], rewriter);
 
-      mlir::BlockAndValueMapping mapper;
+      rewriter.setInsertionPointToEnd(&ite.elseRegion().front());
+      scf::IfOp caseladder = genCaseAlt(caseop, i + 1, order, rewriter);
 
-      // arg(j) := extractConstructorArg(scrutinee, j)
-      for (int j = 0; j < (int)ite.thenRegion().getNumArguments(); ++j) {
-        Value jv = rewriter.create<LLVM::ConstantOp>(
-            caseop.getLoc(), LLVM::LLVMType::getInt64Ty(rewriter.getContext()),
-            rewriter.getI64IntegerAttr(i));
-        SmallVector<Value, 2> args = {caseop.getScrutinee(), jv};
-        FlatSymbolRefAttr fn = getOrInsertExtractConstructorArg(rewriter, mod);
-        LLVM::CallOp call = rewriter.create<LLVM::CallOp>(
-            caseop.getLoc(),
-            LLVM::LLVMType::getInt8PtrTy(rewriter.getContext()), fn, args);
-        mapper.map(ite.thenRegion().getArgument(i), call.getResult(0));
-      }
+      rewriter.setInsertionPointAfter(caseladder);
+      rewriter.create<scf::YieldOp>(rewriter.getUnknownLoc(),
+                                    caseladder.getResults());
+      return ite;
 
-      rewriter.cloneRegionBefore(caseop.getAltRHS(i), ite.thenRegion(),
-                                 ite.thenRegion().end(), mapper);
+    } else { // default or final else
+      // generate dummy if condition
 
-      // caseop.getAltRHS(i).cloneInto(&ite.thenRegion(), mapper);
-      // vvvv This makes the program crash!
-      /*
-      mlir::FailureOr<mlir::Block *> convertedEntryBB =
-          rewriter.convertRegionTypes(&ite.thenRegion(),
-                                      *(this->typeConverter));
-      assert(succeeded(convertedEntryBB) && "unable to convert region types");
-      */
+      Value True = rewriter.create<ConstantOp>(
+          rewriter.getUnknownLoc(),
+          rewriter.getIntegerAttr(rewriter.getI1Type(), 1));
+      scf::IfOp ite = rewriter.create<mlir::scf::IfOp>(
+          caseop.getLoc(),
+          /*return types=*/caseop.getResult().getType(),
+          /*cond=*/True,
+          /* createelse=*/true);
 
-      if (hasNext) {
-        rewriter.setInsertionPointToStart(&ite.elseRegion().front());
-        llvm::Optional<scf::IfOp> caseladder =
-            genCaseAlt(caseop, i + 1, rewriter);
-        if (caseladder) {
-          rewriter.setInsertionPointAfter(caseladder->getOperation());
-          rewriter.create<scf::YieldOp>(caseop.getLoc(),
-                                        caseladder->getResults());
-        }
-      }
-      // TODO: When do I need root updates?
-      rewriter.finalizeRootUpdate(ite);
-      return {ite};
+      genCaseAltRHS(&ite.thenRegion(), caseop, order[i], rewriter);
+
+      rewriter.setInsertionPointToEnd(&ite.elseRegion().front());
+      // TODO: unreachable is defined to be ZeroResult, but it's really
+      // VariadicResult?
+      auto undef = rewriter.create<HaskUndefOp>(rewriter.getUnknownLoc(),
+                                                caseop.getResult().getType());
+      rewriter.create<scf::YieldOp>(rewriter.getUnknownLoc(),
+                                    undef.getResult());
+
+      // rewriter.create<LLVM::UnreachableOp>(rewriter.getUnknownLoc());
+      rewriter.setInsertionPointAfter(ite);
+      return ite;
     }
   }
 
@@ -303,19 +306,29 @@ struct CaseOpConversionPattern : public mlir::ConversionPattern {
     auto caseop = cast<CaseOp>(op);
 
     rewriter.setInsertionPointAfter(op);
-    mlir::Optional<scf::IfOp> caseladder = genCaseAlt(caseop, 0, rewriter);
-    assert(caseladder);
+    const std::vector<int> order = getAltGenerationOrder(caseop);
+    scf::IfOp caseladder = genCaseAlt(caseop, 0, order, rewriter);
     llvm::errs() << "vvvvvvcase op (before)vvvvvv\n";
     caseop.dump();
     llvm::errs() << "======case op (after)======\n";
-    caseladder->dump();
-    llvm::errs() << "^^^^^^^^^caseop[before/after]^^^^^^^^^\n";
+    caseladder.print(llvm::errs(),
+                     mlir::OpPrintingFlags().printGenericOpForm());
+    llvm::errs() << "\n^^^^^^^^^caseop[before/after]^^^^^^^^^\n";
+    getchar();
 
-    rewriter.replaceOp(caseop, caseladder->getResults());
+    // caseop.getResult().replaceAllUsesWith(caseladder.getResult(0));
+    // rewriter.eraseOp(caseop);
+    rewriter.replaceOp(caseop, caseladder.getResults());
+
+    llvm::errs() << "\nvvvvvvcase op parent [after inline]vvvvvv\n";
+    caseladder.getParentOp()->print(
+        llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
+    llvm::errs() << "\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
+    getchar();
 
     return success();
   }
-};
+}; // namespace standalone
 
 class HaskConstructOpConversionPattern : public ConversionPattern {
 public:
@@ -458,10 +471,9 @@ public:
     // i8* -> i64
     /* TODO: how to use the function like this?
     auto i8ptrtoi64 = [](OpBuilder &rewriter,
-                         mlir::LLVM::LLVMIntegerType resultty, ValueRange vals,
-                         Location loc) -> mlir::Optional<Value> {
-      if (resultty.getBitWidth() != 64) {
-        return {};
+                         mlir::LLVM::LLVMIntegerType resultty, ValueRange
+    vals, Location loc) -> mlir::Optional<Value> { if (resultty.getBitWidth()
+    != 64) { return {};
       }
 
       // now we need a single value;
@@ -701,7 +713,8 @@ struct LowerHaskToLLVMPass : public Pass {
 
   void runOnOperation() override {
     LLVMConversionTarget target(getContext());
-    target.addLegalOp<ModuleOp, ModuleTerminatorOp>();
+    target.addLegalOp<ModuleOp, ModuleTerminatorOp, scf::IfOp, scf::YieldOp,
+                      ConstantOp, HaskUndefOp>();
 
     HaskToLLVMTypeConverter typeConverter(&getContext());
     mlir::OwningRewritePatternList patterns;
@@ -726,8 +739,8 @@ struct LowerHaskToLLVMPass : public Pass {
 
     // applyPartialConversion | applyFullConversion
 
-    if (failed(mlir::applyFullConversion(getOperation(), target,
-                                         std::move(patterns)))) {
+    if (failed(mlir::applyPartialConversion(getOperation(), target,
+                                            std::move(patterns)))) {
       llvm::errs() << "===Hask -> LLVM lowering failed at Conversion===\n";
       getOperation()->print(llvm::errs());
       llvm::errs() << "\n===\n";

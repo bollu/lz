@@ -2,16 +2,16 @@
 // RUN: hask-opt %s  --lz-interpret | FileCheck --check-prefix=CHECK-OUT %s
 // RUN: hask-opt %s  --lz-lower-to-llvm 
 // Test that case of int works.
-// CHECK-OUT: constructor(Nothing )
+// CHECK-OUT: 10
 module {
-  func @main() -> !lz.value {
+  func @main() -> i64 {
     %boxedx = lz.construct(@Nothing)
     %y = lz.case @Maybe %boxedx
-          [@Nothing -> { ^entry:
-            %nothing = lz.construct(@Nothing)
-            lz.return %nothing : !lz.value
+          [@Nothing -> { 
+            %one = constant 10 : i64
+            lz.return %one : i64
           }]
-    lz.return %y  : !lz.value
+    lz.return %y  : i64
   }
 }
 
