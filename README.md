@@ -46,6 +46,22 @@ lower-case-single-alt-no-args.mlir:9:10: note: see current operation: %8 = "scf.
 What does it mean! It clearly has a single basic block `^bb1`!
 
 
+For reasons I don't understand well, 
+
+```
+module {
+func @main() -> i1 {
+    %foo = constant 1 : i1
+    lz.return %foo : i1
+}
+}
+```
+
+can NEVER be lowered directly to LLVM? The problem is that essentially, if I 
+convert an `lz.return` to an `std.return` the `std.return` fails??? I have
+no idea why. Anyway, it seems like I should only use `lz.return` inside a `case`.
+Fuck my pattern matches.
+
 # Thursday Dec 17th
 
 Wow, does the MLIR legalizer literally erase ops it doesn't understand?!

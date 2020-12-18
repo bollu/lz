@@ -230,11 +230,13 @@ struct CaseOpConversionPattern : public mlir::ConversionPattern {
                      ConversionPatternRewriter &rewriter) const {
     // assert(out->empty());
     assert(out->args_empty());
-    out->getBlocks().clear();
+    // out->getBlocks().clear();
 
     mlir::BlockAndValueMapping mapper;
     rewriter.cloneRegionBefore(caseop.getAltRHS(i), *out, out->end(), mapper);
     convertReturnsToYields(out, rewriter);
+    rewriter.mergeBlocks(out->getBlocks().front().getNextNode(),
+                         &out->getBlocks().front(), {});
   }
 
   scf::IfOp genCaseAlt(mlir::standalone::CaseOp caseop, int i,
@@ -683,22 +685,6 @@ public:
   }
 };
 
-class HaskReturnOpConversionPattern : public ConversionPattern {
-public:
-  explicit HaskReturnOpConversionPattern(TypeConverter &tc,
-                                         MLIRContext *context)
-      : ConversionPattern(HaskReturnOp::getOperationName(), 1, tc, context) {}
-
-  LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
-                  ConversionPatternRewriter &rewriter) const override {
-    HaskReturnOp ret = cast<HaskReturnOp>(op);
-    using namespace mlir::LLVM;
-    rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(ret, ret.getInput());
-    return success();
-  }
-};
-
 namespace {
 struct LowerHaskToLLVMPass : public Pass {
   LowerHaskToLLVMPass() : Pass(mlir::TypeID::get<LowerHaskToLLVMPass>()){};
@@ -712,9 +698,14 @@ struct LowerHaskToLLVMPass : public Pass {
   }
 
   void runOnOperation() override {
-    LLVMConversionTarget target(getContext());
-    target.addLegalOp<ModuleOp, ModuleTerminatorOp, scf::IfOp, scf::YieldOp,
-                      ConstantOp, HaskUndefOp>();
+    // LLVMConversionTarget target(getContext());
+    ConversionTarget target(getContext());
+    target.addIllegalDialect<HaskDialect>();
+    target.addLegalDialect<StandardOpsDialect>();
+    target.addLegalDialect<mlir::LLVM::LLVMDialect>();
+    target.addLegalDialect<scf::SCFDialect>();
+    target.addLegalOp<ModuleOp, ModuleTerminatorOp>();
+    target.addLegalOp<HaskUndefOp>();
 
     HaskToLLVMTypeConverter typeConverter(&getContext());
     mlir::OwningRewritePatternList patterns;
@@ -722,7 +713,7 @@ struct LowerHaskToLLVMPass : public Pass {
     // OK why is it not able to legalize func? x(
     populateAffineToStdConversionPatterns(patterns, &getContext());
     populateLoopToStdConversionPatterns(patterns, &getContext());
-    populateStdToLLVMConversionPatterns(typeConverter, patterns);
+    // populateStdToLLVMConversionPatterns(typeConverter, patterns);
 
     patterns.insert<ForceOpConversionPattern>(typeConverter, &getContext());
     patterns.insert<CaseOpConversionPattern>(typeConverter, &getContext());
@@ -730,10 +721,6 @@ struct LowerHaskToLLVMPass : public Pass {
                                                       &getContext());
     patterns.insert<ApOpConversionPattern>(typeConverter, &getContext());
     patterns.insert<ApEagerOpConversionPattern>(typeConverter, &getContext());
-    patterns.insert<HaskReturnOpConversionPattern>(typeConverter,
-                                                   &getContext());
-
-    //    patterns.insert<I64ToI8PtrConversionPattern>(typeConverter);
 
     ::llvm::DebugFlag = true;
 

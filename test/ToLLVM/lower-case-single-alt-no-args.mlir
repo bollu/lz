@@ -9,9 +9,9 @@ module {
     %y = lz.case @Maybe %boxedx
           [@Nothing -> { 
             %one = constant 10 : i64
-            lz.return %one : i64
+            lz.return %one : i64 // to only be used inside a case.
           }]
-    lz.return %y  : i64
+    return %y  : i64
   }
 }
 

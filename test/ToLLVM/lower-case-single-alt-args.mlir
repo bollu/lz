@@ -17,7 +17,7 @@ module {
             %boxednew = lz.construct(@Just, %jhash : i64)
             lz.return %boxednew : !lz.value
           }]
-    lz.return %y  : !lz.value
+    return %y  : !lz.value
   }
 }
 
