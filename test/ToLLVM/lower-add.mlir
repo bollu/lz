@@ -10,4 +10,11 @@ module {
     %boxedx = lz.construct(@Just, %y: i64)
     return %boxedx  : !lz.value
   }
+
+  func @main2() -> i64 {
+    %one = constant 1 : i64
+    %x = constant 41 : i64
+    %y = addi %x, %one: i64
+    return %y  : i64
+  }
 }

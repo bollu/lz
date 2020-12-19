@@ -57,10 +57,18 @@ func @main() -> i1 {
 }
 ```
 
-can NEVER be lowered directly to LLVM? The problem is that essentially, if I 
-convert an `lz.return` to an `std.return` the `std.return` fails??? I have
-no idea why. Anyway, it seems like I should only use `lz.return` inside a `case`.
-Fuck my pattern matches.
+- can NEVER be lowered directly to LLVM? The problem is that essentially, if I 
+   convert an `lz.return` to an `std.return` the `std.return` fails??? I have
+   no idea why. Anyway, it seems like I should only use `lz.return` inside a `case`.
+    Fuck my pattern matches.
+
+- Joy, this means that I need to convert the outermost `lz.return` to an `std.return`
+  everywhere.
+
+
+##### The solution
+
+- First lower `lz` to `standard+SCF`. Have that then be lowered to `LLVM`.
 
 # Thursday Dec 17th
 

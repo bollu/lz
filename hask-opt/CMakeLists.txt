@@ -18,6 +18,7 @@ llvm_update_compile_flags(hask-opt)
 target_link_libraries(hask-opt PRIVATE
         ${dialect_libs}
         MLIRGRIN
+        MLIRPointer
         ${conversion_libs}
         MLIRTranslation
         MLIROptLib

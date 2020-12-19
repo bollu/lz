@@ -143,17 +143,9 @@ void convertReturnsToYields(mlir::Region *r, mlir::PatternRewriter &rewriter) {
     if (!ret) {
       continue;
     }
-    llvm::errs() << "vvvvvbefore convertReturnsToYields:vvvvv\n";
-    b.print(llvm::errs());
-
     rewriter.setInsertionPointAfter(ret);
     rewriter.replaceOpWithNewOp<mlir::scf::YieldOp>(ret.getOperation(),
                                                     ret.getOperand());
-    // rewriter.eraseOp(ret);
-
-    llvm::errs() << "===after convertReturnsToYields:=====\n";
-    b.print(llvm::errs());
-    llvm::errs() << "\n^^^^^\n";
   }
 }
 
@@ -185,7 +177,7 @@ struct CaseOpConversionPattern : public mlir::ConversionPattern {
     return SymbolRefAttr::get(name, rewriter.getContext());
   }
 
-  // extractConstructorArgN(constructor: void *, arg_ix: int) -> bool)
+  // extractConstructorArgN(constructor: void *, arg_ix: int) -> void*)
   static FlatSymbolRefAttr
   getOrInsertExtractConstructorArg(PatternRewriter &rewriter, ModuleOp module) {
     const std::string name = "extractConstructorArg";
@@ -225,7 +217,7 @@ struct CaseOpConversionPattern : public mlir::ConversionPattern {
   }
 
   // make a call to extractConstructorArg(...)
-  static LLVM::CallOp
+  static Value
   mkCallExtractConstructorArg(Value constructor, int argix, ModuleOp mod,
                               ConversionPatternRewriter &rewriter) {
     FlatSymbolRefAttr fn = getOrInsertExtractConstructorArg(rewriter, mod);
@@ -237,7 +229,7 @@ struct CaseOpConversionPattern : public mlir::ConversionPattern {
     LLVM::CallOp call = rewriter.create<LLVM::CallOp>(
         rewriter.getUnknownLoc(),
         LLVM::LLVMType::getInt8PtrTy(rewriter.getContext()), fn, args);
-    return call;
+    return call.getResult(0);
   }
 
   // fill the region `out` with the ith RHS of the caseop.
@@ -252,12 +244,12 @@ struct CaseOpConversionPattern : public mlir::ConversionPattern {
     for (int argix = 0; argix < (int)caseop.getAltRHS(i).getNumArguments();
          ++argix) {
       rhsVals.push_back(mkCallExtractConstructorArg(caseop.getScrutinee(),
-                                                    argix, mod, rewriter)
-                            .getResult(0));
+                                                    argix, mod, rewriter));
     }
 
-    mlir::BlockAndValueMapping mapper;
-    rewriter.cloneRegionBefore(caseop.getAltRHS(i), *out, out->end(), mapper);
+    // rewriter.cloneRegionBefore(caseop.getAltRHS(i), *out, out->end(),
+    // mapper);
+    rewriter.inlineRegionBefore(caseop.getAltRHS(i), *out, out->end());
     convertReturnsToYields(out, rewriter);
     rewriter.mergeBlocks(out->getBlocks().front().getNextNode(),
                          &out->getBlocks().front(), rhsVals);
@@ -307,11 +299,12 @@ struct CaseOpConversionPattern : public mlir::ConversionPattern {
       Value True = rewriter.create<ConstantOp>(
           rewriter.getUnknownLoc(),
           rewriter.getIntegerAttr(rewriter.getI1Type(), 1));
-      scf::IfOp ite = rewriter.create<mlir::scf::IfOp>(
-          caseop.getLoc(),
-          /*return types=*/caseop.getResult().getType(),
-          /*cond=*/True,
-          /* createelse=*/true);
+      scf::IfOp ite =
+          rewriter.create<mlir::scf::IfOp>(caseop.getLoc(),
+                                           /*return types=*/
+                                           caseop.getResult().getType(),
+                                           /*cond=*/True,
+                                           /* createelse=*/true);
 
       genCaseAltRHS(&ite.thenRegion(), caseop, order[i], rewriter);
 
@@ -322,8 +315,6 @@ struct CaseOpConversionPattern : public mlir::ConversionPattern {
                                                 caseop.getResult().getType());
       rewriter.create<scf::YieldOp>(rewriter.getUnknownLoc(),
                                     undef.getResult());
-
-      // rewriter.create<LLVM::UnreachableOp>(rewriter.getUnknownLoc());
       rewriter.setInsertionPointAfter(ite);
       return ite;
     }
@@ -349,8 +340,8 @@ struct CaseOpConversionPattern : public mlir::ConversionPattern {
     // rewriter.eraseOp(caseop);
     rewriter.replaceOp(caseop, caseladder.getResults());
 
-    llvm::errs() << "\nvvvvvvcase op parent [after inline]vvvvvv\n";
-    caseladder.getParentOp()->print(
+    llvm::errs() << "\nvvvvvvcase op module [after inline]vvvvvv\n";
+    caseladder.getParentOfType<ModuleOp>().print(
         llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
     llvm::errs() << "\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
     getchar();
@@ -366,25 +357,26 @@ public:
       : ConversionPattern(HaskConstructOp::getOperationName(), 1, tc, context) {
   }
 
+  // mkConstructor: String x [!lz.value^n] -> !lz.value
   static FlatSymbolRefAttr getOrInsertMkConstructor(PatternRewriter &rewriter,
                                                     ModuleOp module, int n) {
     const std::string name = "mkConstructor" + std::to_string(n);
-    if (module.lookupSymbol<LLVM::LLVMFuncOp>(name)) {
+    if (module.lookupSymbol<FuncOp>(name)) {
       return SymbolRefAttr::get(name, rewriter.getContext());
     }
 
-    auto llvmI8PtrTy = LLVM::LLVMType::getInt8PtrTy(rewriter.getContext());
+    // auto llvmI8PtrTy = LLVM::LLVMType::getInt8PtrTy(rewriter.getContext());
 
     // string constructor name, <n> arguments.
-    SmallVector<mlir::LLVM::LLVMType, 4> argsTy(n + 1, llvmI8PtrTy);
-    auto llvmFnType = LLVM::LLVMType::getFunctionTy(llvmI8PtrTy, argsTy,
-                                                    /*isVarArg=*/false);
+    // SmallVector<mlir::LLVM::LLVMType, 4> argsTy(n + 1, llvmI8PtrTy);
+    // auto llvmFnType = LLVMType::getFunctionTy(llvmI8PtrTy, argsTy,
+    // /*isVarArg=*/false);
 
     // Insert the printf function into the body of the parent module.
-    PatternRewriter::InsertionGuard insertGuard(rewriter);
-    rewriter.setInsertionPointToStart(module.getBody());
-    rewriter.create<LLVM::LLVMFuncOp>(module.getLoc(), name, llvmFnType);
-    return SymbolRefAttr::get(name, rewriter.getContext());
+    // PatternRewriter::InsertionGuard insertGuard(rewriter);
+    // rewriter.setInsertionPointToStart(module.getBody());
+    // rewriter.create<LLVM::LLVMFuncOp>(module.getLoc(), name, llvmFnType);
+    // return SymbolRefAttr::get(name, rewriter.getContext());
   }
 
   LogicalResult
@@ -463,6 +455,10 @@ public:
       return LLVM::LLVMType::getInt8PtrTy(type.getContext());
     });
 
+    addConversion([](ValueType type) -> Type {
+      return LLVM::LLVMType::getInt8PtrTy(type.getContext());
+    });
+
     // convert LLVM::I64Type to LLVM::I8PtrTy
 
     // addConversion([](LLVM::LLVMIntegerType type) -> llvm::Optional<Type> {
@@ -493,9 +489,11 @@ public:
 
     // TODO: We really want to know the ADT that this represents so we can
     // figure out storage requirements. For now, hack it, say `void*`.
+    /*
     addConversion([](ValueType type) -> Type {
       return LLVM::LLVMType::getInt8PtrTy(type.getContext());
     });
+    */
 
     // i8* -> i64
     /* TODO: how to use the function like this?
@@ -531,6 +529,7 @@ public:
     // Oh fuck me, I deserve hell for this. I keep a reference to `this`
     // so I can query myself what the type of `vals` is *supposed* to be
     // in the target x(
+    /*
     addTargetMaterialization(
         [&](OpBuilder &rewriter, mlir::LLVM::LLVMIntegerType resultty,
             ValueRange vals, Location loc) -> mlir::Optional<Value> {
@@ -557,6 +556,7 @@ public:
 
           return {rewriter.create<mlir::LLVM::PtrToIntOp>(loc, resultty, val)};
         });
+
 
     // T1* -> T2*
     // Oh fuck me, I deserve hell for this. I keep a reference to `this`
@@ -586,6 +586,7 @@ public:
 
       return {rewriter.create<mlir::LLVM::BitcastOp>(loc, resultty, vals[0])};
     });
+    */
 
     // arguments: i64 -> llvm.i8ptr
     /*
@@ -712,6 +713,21 @@ public:
   }
 };
 
+struct HaskReturnOpConversionPattern : public mlir::ConversionPattern {
+  explicit HaskReturnOpConversionPattern(TypeConverter &tc,
+                                         MLIRContext *context)
+      : ConversionPattern(HaskReturnOp::getOperationName(), 1, tc, context) {}
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    using namespace mlir::LLVM;
+    HaskReturnOp ret = cast<HaskReturnOp>(op);
+    rewriter.setInsertionPointAfter(ret);
+    rewriter.replaceOpWithNewOp<mlir::scf::YieldOp>(ret, ret.getOperand());
+    return success();
+  }
+};
+
 namespace {
 struct LowerHaskToLLVMPass : public Pass {
   LowerHaskToLLVMPass() : Pass(mlir::TypeID::get<LowerHaskToLLVMPass>()){};
@@ -725,12 +741,12 @@ struct LowerHaskToLLVMPass : public Pass {
   }
 
   void runOnOperation() override {
-    // LLVMConversionTarget target(getContext());
-    ConversionTarget target(getContext());
-    target.addIllegalDialect<HaskDialect>();
-    target.addLegalDialect<StandardOpsDialect>();
-    target.addLegalDialect<mlir::LLVM::LLVMDialect>();
-    target.addLegalDialect<scf::SCFDialect>();
+    LLVMConversionTarget target(getContext());
+    // ConversionTarget target(getContext());
+    // target.addIllegalDialect<HaskDialect>();
+    // target.addLegalDialect<StandardOpsDialect>();
+    // target.addLegalDialect<mlir::LLVM::LLVMDialect>();
+    // target.addLegalDialect<scf::SCFDialect>();
     target.addLegalOp<ModuleOp, ModuleTerminatorOp>();
     target.addLegalOp<HaskUndefOp>();
 
@@ -740,7 +756,7 @@ struct LowerHaskToLLVMPass : public Pass {
     // OK why is it not able to legalize func? x(
     populateAffineToStdConversionPatterns(patterns, &getContext());
     populateLoopToStdConversionPatterns(patterns, &getContext());
-    // populateStdToLLVMConversionPatterns(typeConverter, patterns);
+    populateStdToLLVMConversionPatterns(typeConverter, patterns);
 
     patterns.insert<ForceOpConversionPattern>(typeConverter, &getContext());
     patterns.insert<CaseOpConversionPattern>(typeConverter, &getContext());
@@ -748,7 +764,8 @@ struct LowerHaskToLLVMPass : public Pass {
                                                       &getContext());
     patterns.insert<ApOpConversionPattern>(typeConverter, &getContext());
     patterns.insert<ApEagerOpConversionPattern>(typeConverter, &getContext());
-
+    patterns.insert<HaskReturnOpConversionPattern>(typeConverter,
+                                                   &getContext());
     ::llvm::DebugFlag = true;
 
     // applyPartialConversion | applyFullConversion

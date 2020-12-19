@@ -33,6 +33,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include "Pointer/PointerDialect.h"
 #include "GRIN/GRINDialect.h"
 #include "Hask/HaskDialect.h"
 #include "Hask/HaskOps.h"
@@ -78,6 +79,7 @@ int main(int argc, char **argv) {
   registry.insert<mlir::LLVM::LLVMDialect>();
   registry.insert<mlir::standalone::HaskDialect>();
   registry.insert<mlir::grin::GRINDialect>();
+  registry.insert<mlir::ptr::GRINDialect>();
   registry.insert<mlir::StandardOpsDialect>();
   registry.insert<mlir::AffineDialect>();
   registry.insert<mlir::scf::SCFDialect>();
