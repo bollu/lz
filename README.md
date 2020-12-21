@@ -70,6 +70,98 @@ func @main() -> i1 {
 
 - First lower `lz` to `standard+SCF`. Have that then be lowered to `LLVM`.
 
+# Friday Dec 18th
+
+
+
+##### Pretty sure I have an MLIR bug. 
+
+Say I have the source IR:
+
+```
+module {
+  func @main() {
+    %y = constant 42 : i64
+    %boxy = lz.construct(@Just, %y: i64) // check box of i64
+    return
+  }
+}
+```
+
+What needs to happen is for us to insert a lower form of `construct` that
+deals with pointers directly, and for the `%y : i64` to get converted
+with an `inttoptr` operation. On adding the correct materialization:
+
+```cpp
+// int -> !ptr.void
+addTargetMaterialization([&](OpBuilder &rewriter, ptr::VoidPtrType resultty,
+                              ValueRange vals,
+                              Location loc) -> mlir::Optional<Value> {
+  if (vals.size() != 1 || !vals[0].getType().isa<IntegerType>()) {
+    return {};
+  }
+
+  ptr::PtrIntToPtrOp op = rewriter.create<ptr::PtrIntToPtrOp>(loc, vals[0]);
+  return op.getResult();
+});
+```
+
+I get the failure:
+
+```cpp
+module  {
+  func private @mkConstructor1(!ptr.char, !ptr.void) -> !ptr.void
+  func @main() {
+    %c42_i64 = constant 42 : i64
+    %0 = "ptr.inttoptr"(%c42_i64) : (i64) -> !ptr.void
+    %1 = "ptr.string"() {value = "Just"} : () -> !ptr.char
+    %2 = "lz.construct"(%c42_i64) {dataconstructor = @Just} : (i64) -> !lz.value
+    // vvv %c42_i64 should be %0 vvv!
+    %3 = call @mkConstructor1(%1, %c42_i64) : (!ptr.char, i64) -> !ptr.void
+    return
+  }
+}
+```
+
+which is illegal! The `%c42_i64` should have been _replaced_ by `%0` at its use
+site in `@mkConstructor1: (!ptr.char, !ptr.void) -> !ptr.void` but it is not!  
+
+- I need to perform the *technically illegal* (according to what MLIR asks us to do):
+
+```cpp
+// int -> !ptr.void
+addTargetMaterialization([&](OpBuilder &rewriter, ptr::VoidPtrType resultty,
+                              ValueRange vals,
+                              Location loc) -> mlir::Optional<Value> {
+  if (vals.size() != 1 || !vals[0].getType().isa<IntegerType>()) {
+    return {};
+  }
+
+  ptr::PtrIntToPtrOp op = rewriter.create<ptr::PtrIntToPtrOp>(loc, vals[0]);
+  llvm::SmallPtrSet<Operation *, 1> exceptions;
+  exceptions.insert(op);
+
+  // vvv isn't this a hack? why do I need this?
+  vals[0].replaceAllUsesExcept(op.getResult(), exceptions);
+  return op.getResult();
+});
+```
+
+to get the correct IR:
+
+```cpp
+module  {
+  func private @mkConstructor1(!ptr.char, !ptr.void) -> !ptr.void
+  func @main() {
+    %c42_i64 = constant 42 : i64
+    %0 = "ptr.inttoptr"(%c42_i64) : (i64) -> !ptr.void
+    %1 = "ptr.string"() {value = "Just"} : () -> !ptr.char
+    %2 = call @mkConstructor1(%1, %0) : (!ptr.char, !ptr.void) -> !ptr.void
+    return
+  }
+}
+```
+
 # Thursday Dec 17th
 
 Wow, does the MLIR legalizer literally erase ops it doesn't understand?!

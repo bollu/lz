@@ -349,9 +349,10 @@ public:
   using Op::Op;
   static StringRef getOperationName() { return "lz.value2ptr"; };
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
-  void print(OpAsmPrinter &p);
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                    Type resultty);
+                    Value vint);
+
+  void print(OpAsmPrinter &p);
   void
   getEffects(SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
                  &effects) {}
@@ -365,8 +366,6 @@ public:
   static StringRef getOperationName() { return "lz.thunk2ptr"; };
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   void print(OpAsmPrinter &p);
-  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                    Type resultty);
   void
   getEffects(SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
                  &effects) {}

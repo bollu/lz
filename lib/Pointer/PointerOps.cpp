@@ -21,26 +21,3 @@
 
 using namespace mlir;
 using namespace mlir::ptr;
-
-// %ptr = inttoptr %i
-class PtrIntToPtrOp
-    : public Op<PtrIntToPtrOp, OpTrait::OneResult, OpTrait::OneOperand> {
-public:
-  using Op::Op;
-  static StringRef getOperationName() { return "ptr.inttoptr"; };
-  static ParseResult parse(OpAsmParser &parser, OperationState &result);
-  void print(OpAsmPrinter &p);
-};
-
-
-
-// %ptr = ptrtoint %i
-class PtrPtrToIntOp
-    : public Op<PtrIntToPtrOp, OpTrait::OneResult, OpTrait::OneOperand> {
-public:
-  using Op::Op;
-  static StringRef getOperationName() { return "ptr.ptrtoint"; };
-  static ParseResult parse(OpAsmParser &parser, OperationState &result);
-  void print(OpAsmPrinter &p);
-};
-

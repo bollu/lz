@@ -33,11 +33,11 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include "Pointer/PointerDialect.h"
 #include "GRIN/GRINDialect.h"
 #include "Hask/HaskDialect.h"
 #include "Hask/HaskOps.h"
 #include "Interpreter.h"
+#include "Pointer/PointerDialect.h"
 #include "Runtime.h"
 
 // conversion

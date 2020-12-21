@@ -32,29 +32,78 @@ PtrDialect &PtrType::getDialect() {
 PtrDialect::PtrDialect(mlir::MLIRContext *context)
     : Dialect(getDialectNamespace(), context, TypeID::get<PtrDialect>()) {
   // clang-format off
-  // addOperations<PtrStoreOp
-  //               , PtrUnboxOp
-  //               , PtrBoxOp
-  //               , PtrReturnOp
-  //               , PtrUnboxTagOp
-  //               , PtrCaseOp
-  //               , PtrUnboxIxOp
-  //               , PtrFetchOp
-  //               , PtrUpdateOp>();
-  addTypes<VoidPtrType>();
+  addOperations<PtrIntToPtrOp, PtrStringOp>();
+  addTypes<VoidPtrType, CharPtrType>();
 
   // clang-format on
 }
 
 mlir::Type PtrDialect::parseType(mlir::DialectAsmParser &parser) const {
-  if (succeeded(parser.parseOptionalKeyword("void"))) {
+  if (succeeded(parser.parseOptionalKeyword("void"))) { // !ptr.void
     return VoidPtrType::get(parser.getBuilder().getContext());
-  } 
+  }
+  if (succeeded(parser.parseOptionalKeyword("char"))) { // !ptr.char
+    return CharPtrType::get(parser.getBuilder().getContext());
+  }
+
   return Type();
 }
 
 void PtrDialect::printType(mlir::Type type, mlir::DialectAsmPrinter &p) const {
   if (type.isa<VoidPtrType>()) {
-    p << "void";
+    p << "void"; // !ptr.void
+    return;
   }
+
+  if (type.isa<CharPtrType>()) {
+    p << "char"; // !ptr.char
+    return;
+  }
+
+  assert(false && "unknown type to print");
 }
+
+// === INT TO PTR ===
+// === INT TO PTR ===
+// === INT TO PTR ===
+// === INT TO PTR ===
+// === INT TO PTR ===
+
+void PtrIntToPtrOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                          Value vint) {
+  assert(vint.getType().isa<IntegerType>());
+  state.addOperands(vint);
+  state.addTypes(VoidPtrType::get(builder.getContext()));
+};
+
+void PtrIntToPtrOp::print(OpAsmPrinter &p) {
+  p.printGenericOp(this->getOperation());
+};
+
+// === STRING OP ===
+// === STRING OP ===
+// === STRING OP ===
+// === STRING OP ===
+// === STRING OP ===
+
+void PtrStringOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                        const char *str) {
+  state.addAttribute("value", builder.getStringAttr(str));
+  state.addTypes(CharPtrType::get(builder.getContext()));
+};
+
+void PtrStringOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                        std::string str) {
+  state.addAttribute("value", builder.getStringAttr(str));
+  state.addTypes(CharPtrType::get(builder.getContext()));
+};
+
+void PtrStringOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                        llvm::StringRef str) {
+  state.addAttribute("value", builder.getStringAttr(str));
+  state.addTypes(CharPtrType::get(builder.getContext()));
+};
+
+void PtrStringOp::print(OpAsmPrinter &p) {
+  p.printGenericOp(this->getOperation());
+};
