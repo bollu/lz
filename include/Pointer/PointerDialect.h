@@ -8,51 +8,38 @@ namespace mlir {
 namespace ptr {
 
 
-class GRINDialect : public mlir::Dialect {
+class PtrDialect : public mlir::Dialect {
 public:
-  explicit GRINDialect(mlir::MLIRContext *ctx);
+  explicit PtrDialect(mlir::MLIRContext *ctx);
   mlir::Type parseType(mlir::DialectAsmParser &parser) const override;
   void printType(mlir::Type type,
                  mlir::DialectAsmPrinter &printer) const override;
-  mlir::Attribute parseAttribute(mlir::DialectAsmParser &parser,
-                                 Type type) const override;
-  void printAttribute(Attribute attr,
-                      DialectAsmPrinter &printer) const override;
-  static llvm::StringRef getDialectNamespace() { return "grn"; }
+  // mlir::Attribute parseAttribute(mlir::DialectAsmParser &parser,
+  //                               Type type) const override;
+  // void printAttribute(Attribute attr,
+  //                     DialectAsmPrinter &printer) const override;
+  static llvm::StringRef getDialectNamespace() { return "ptr"; }
 };
 
-class GRINType : public Type {
+class PtrType : public Type {
 public:
   /// Inherit base constructors.
   using Type::Type;
 
   /// Support for PointerLikeTypeTraits.
   using Type::getAsOpaquePointer;
-  static GRINType getFromOpaquePointer(const void *ptr) {
-    return GRINType(static_cast<ImplType *>(const_cast<void *>(ptr)));
+  static PtrType getFromOpaquePointer(const void *ptr) {
+    return PtrType(static_cast<ImplType *>(const_cast<void *>(ptr)));
   }
   /// Support for isa/cast.
   static bool classof(Type type);
-  GRINDialect &getDialect();
+  PtrDialect &getDialect();
 };
 
-class BoxType : public mlir::Type::TypeBase<BoxType, GRINType, TypeStorage> {
+class VoidPtrType : public mlir::Type::TypeBase<VoidPtrType, PtrType, TypeStorage> {
 public:
   using Base::Base;
-  static BoxType get(MLIRContext *context) { return Base::get(context); }
-};
-
-class HeapNodeType
-    : public mlir::Type::TypeBase<HeapNodeType, GRINType, TypeStorage> {
-public:
-  using Base::Base;
-  static HeapNodeType get(MLIRContext *context) { return Base::get(context); }
-};
-
-class TagType : public mlir::Type::TypeBase<TagType, GRINType, TypeStorage> {
-public:
-  using Base::Base;
-  static TagType get(MLIRContext *context) { return Base::get(context); }
+  static VoidPtrType get(MLIRContext *context) { return Base::get(context); }
 };
 
 }; // namespace grin

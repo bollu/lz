@@ -131,7 +131,6 @@ template <typename T> OutFile &operator<<(OutFile &out, const T &v) {
 static OutFile cerr(stderr);
 static OutFile cout(stdout);
 
-// L for location
 struct Loc {
   const char *filename;
   ll si, line, col;

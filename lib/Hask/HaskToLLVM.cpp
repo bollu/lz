@@ -365,18 +365,18 @@ public:
       return SymbolRefAttr::get(name, rewriter.getContext());
     }
 
-    // auto llvmI8PtrTy = LLVM::LLVMType::getInt8PtrTy(rewriter.getContext());
+    auto llvmI8PtrTy = LLVM::LLVMType::getInt8PtrTy(rewriter.getContext());
 
     // string constructor name, <n> arguments.
-    // SmallVector<mlir::LLVM::LLVMType, 4> argsTy(n + 1, llvmI8PtrTy);
-    // auto llvmFnType = LLVMType::getFunctionTy(llvmI8PtrTy, argsTy,
-    // /*isVarArg=*/false);
+    SmallVector<LLVM::LLVMType, 4> argsTy(n + 1, llvmI8PtrTy);
+    auto llvmFnType = LLVM::LLVMType::getFunctionTy(llvmI8PtrTy, argsTy,
+                                                    /*isVarArg=*/false);
 
-    // Insert the printf function into the body of the parent module.
-    // PatternRewriter::InsertionGuard insertGuard(rewriter);
-    // rewriter.setInsertionPointToStart(module.getBody());
-    // rewriter.create<LLVM::LLVMFuncOp>(module.getLoc(), name, llvmFnType);
-    // return SymbolRefAttr::get(name, rewriter.getContext());
+    // Insert the printf function into the body of the parent
+    PatternRewriter::InsertionGuard insertGuard(rewriter);
+    rewriter.setInsertionPointToStart(module.getBody());
+    rewriter.create<LLVM::LLVMFuncOp>(module.getLoc(), name, llvmFnType);
+    return SymbolRefAttr::get(name, rewriter.getContext());
   }
 
   LogicalResult
