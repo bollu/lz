@@ -144,5 +144,6 @@ public:
   Value getBox() { return this->getOperand(1); }
 };
 
+
 } // namespace grin
 } // namespace mlir

@@ -342,6 +342,35 @@ public:
                  &effects) {}
 };
 
+class HaskValueToPtrOp
+    : public Op<HaskValueToPtrOp, OpTrait::OneOperand, OpTrait::OneResult,
+                MemoryEffectOpInterface::Trait> {
+public:
+  using Op::Op;
+  static StringRef getOperationName() { return "lz.value2ptr"; };
+  static ParseResult parse(OpAsmParser &parser, OperationState &result);
+  void print(OpAsmPrinter &p);
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                    Type resultty);
+  void
+  getEffects(SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+                 &effects) {}
+};
+
+class HaskThunkToPtrOp
+    : public Op<HaskThunkToPtrOp, OpTrait::OneOperand, OpTrait::OneResult,
+                MemoryEffectOpInterface::Trait> {
+public:
+  using Op::Op;
+  static StringRef getOperationName() { return "lz.thunk2ptr"; };
+  static ParseResult parse(OpAsmParser &parser, OperationState &result);
+  void print(OpAsmPrinter &p);
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                    Type resultty);
+  void
+  getEffects(SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+                 &effects) {}
+};
 
 // lower lz to LLVM by eliminating all the junk.
 std::unique_ptr<mlir::Pass> createLowerHaskToLLVMPass();

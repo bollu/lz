@@ -8,6 +8,7 @@
 
 #include "Hask/HaskOps.h"
 #include "Hask/HaskDialect.h"
+#include "Pointer/PointerOps.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
@@ -759,6 +760,39 @@ void HaskUndefOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
                         Type retty) {
   state.addTypes(retty);
 }
+
+// === VALUE TO PTR OP===
+// === VALUE TO PTR OP===
+// === VALUE TO PTR OP===
+// === VALUE TO PTR OP===
+// === VALUE TO PTR OP===
+ParseResult HaskValueToPtrOp::parse(OpAsmParser &parser,
+                                    OperationState &result) {
+  OpAsmParser::OperandType rand; // ope'rand
+  if (parser.parseOperand(rand) ||
+      parser.resolveOperand(rand,
+                            ValueType::get(parser.getBuilder().getContext()),
+                            result.operands)) {
+    return failure();
+  }
+  result.addTypes(ptr::VoidPtrType::get(parser.getBuilder().getContext()));
+  return success();
+};
+
+void HaskValueToPtrOp::print(OpAsmPrinter &p) {
+  p.printGenericOp(this->getOperation());
+};
+
+void HaskValueToPtrOp::build(mlir::OpBuilder &builder,
+                             mlir::OperationState &state, Type retty) {
+  state.addTypes(retty);
+}
+
+// === THUNK TO PTR OP ===
+// === THUNK TO PTR OP ===
+// === THUNK TO PTR OP ===
+// === THUNK TO PTR OP ===
+// === THUNK TO PTR OP ===
 
 } // namespace standalone
 } // namespace mlir
