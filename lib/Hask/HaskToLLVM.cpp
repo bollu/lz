@@ -470,7 +470,7 @@ public:
       exceptions.insert(op);
 
       // vvv isn't this a hack? why do I need this?
-      // vals[0].replaceAllUsesExcept(op.getResult(), exceptions);
+      vals[0].replaceAllUsesExcept(op.getResult(), exceptions);
       return op.getResult();
     });
 
