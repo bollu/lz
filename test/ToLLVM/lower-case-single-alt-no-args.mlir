@@ -4,14 +4,14 @@
 // Test that case of int works.
 // CHECK-OUT: 10
 module {
-  func @main() {
+  func @main() -> i32 {
     %boxedx = lz.construct(@Nothing)
     %y = lz.case @Maybe %boxedx
           [@Nothing -> { 
             %one = constant 10 : i32
             lz.return %one : i32 // to only be used inside a case.
           }]
-    return
+    return %y : i32
   }
 }
 

@@ -13,6 +13,7 @@ Convert GHC Core to MLIR.
 - GHC plugin that strictifies/unboxes most things and prints out the new
   file.
 - IORefs are bad
+- Example GHC perf slide because of laziness: https://gitlab.haskell.org/ghc/ghc/-/issues/19102#note_319557
 
 
 

@@ -118,31 +118,31 @@ bool isI8Ptr(Type ty) {
   return elem.getBitWidth() == 8;
 }
 
-static Value getOrCreateGlobalString(Location loc, OpBuilder &builder,
-                                     StringRef name, StringRef value,
-                                     ModuleOp module) {
-  // Create the global at the entry of the module.
-  LLVM::GlobalOp global;
-  if (!(global = module.lookupSymbol<LLVM::GlobalOp>(name))) {
-    OpBuilder::InsertionGuard insertGuard(builder);
-    builder.setInsertionPointToStart(module.getBody());
-    auto type = LLVM::LLVMType::getArrayTy(
-        LLVM::LLVMType::getInt8Ty(builder.getContext()), value.size());
-    global = builder.create<LLVM::GlobalOp>(loc, type, /*isConstant=*/true,
-                                            LLVM::Linkage::Internal, name,
-                                            builder.getStringAttr(value));
-  }
-
-  // Get the pointer to the first character in the global string.
-  Value globalPtr = builder.create<LLVM::AddressOfOp>(loc, global);
-  Value cst0 = builder.create<LLVM::ConstantOp>(
-      loc, LLVM::LLVMType::getInt64Ty(builder.getContext()),
-      builder.getIntegerAttr(builder.getIndexType(), 0));
-  return builder.create<LLVM::GEPOp>(
-      loc, LLVM::LLVMType::getInt8PtrTy(builder.getContext()), globalPtr,
-      ArrayRef<Value>({cst0, cst0}));
-}
-
+// static Value getOrCreateGlobalString(Location loc, OpBuilder &builder,
+//                                      StringRef name, StringRef value,
+//                                      ModuleOp module) {
+//   // Create the global at the entry of the module.
+//   LLVM::GlobalOp global;
+//   if (!(global = module.lookupSymbol<LLVM::GlobalOp>(name))) {
+//     OpBuilder::InsertionGuard insertGuard(builder);
+//     builder.setInsertionPointToStart(module.getBody());
+//     auto type = LLVM::LLVMType::getArrayTy(
+//         LLVM::LLVMType::getInt8Ty(builder.getContext()), value.size());
+//     global = builder.create<LLVM::GlobalOp>(loc, type,true,
+//                                             LLVM::Linkage::Internal, name,
+//                                             builder.getStringAttr(value));
+//   }
+//
+//   // Get the pointer to the first character in the global string.
+//   Value globalPtr = builder.create<LLVM::AddressOfOp>(loc, global);
+//   Value cst0 = builder.create<LLVM::ConstantOp>(
+//       loc, LLVM::LLVMType::getInt64Ty(builder.getContext()),
+//       builder.getIntegerAttr(builder.getIndexType(), 0));
+//   return builder.create<LLVM::GEPOp>(
+//       loc, LLVM::LLVMType::getInt8PtrTy(builder.getContext()), globalPtr,
+//       ArrayRef<Value>({cst0, cst0}));
+// }
+//
 struct ForceOpConversionPattern : public mlir::ConversionPattern {
   explicit ForceOpConversionPattern(TypeConverter &tc, MLIRContext *context)
       : ConversionPattern(ForceOp::getOperationName(), 1, tc, context) {}
@@ -207,30 +207,29 @@ struct CaseOpConversionPattern : public mlir::ConversionPattern {
                                    MLIRContext *context)
       : ConversionPattern(CaseOp::getOperationName(), 1, tc, context) {}
 
-  // isConstructorTagEq(TAG : char *, constructor: void * -> bool)
-  static FlatSymbolRefAttr
-  getOrInsertIsConstructorTagEq(PatternRewriter &rewriter, ModuleOp module) {
+  // isConstructorTagEq(TAG : !ptr.char, constructor: !ptr.void) -> i1
+  static FuncOp getOrInsertIsConstructorTagEq(PatternRewriter &rewriter,
+                                              ModuleOp module) {
+    MLIRContext *context = rewriter.getContext();
     const std::string name = "isConstructorTagEq";
-    if (module.lookupSymbol<LLVM::LLVMFuncOp>(name)) {
-      return SymbolRefAttr::get(name, rewriter.getContext());
+    if (mlir::FuncOp fn = module.lookupSymbol<FuncOp>(name)) {
+      return fn;
     }
 
-    auto llvmI8PtrTy = LLVM::LLVMType::getInt8PtrTy(rewriter.getContext());
-    auto llvmI1Ty = LLVM::LLVMType::getInt1Ty(rewriter.getContext());
-
     // constructor, string constructor name
-    SmallVector<mlir::LLVM::LLVMType, 4> argsTy{llvmI8PtrTy, llvmI8PtrTy};
-    auto llvmFnType = LLVM::LLVMType::getFunctionTy(llvmI1Ty, argsTy,
-                                                    /*isVarArg=*/false);
-
+    SmallVector<Type, 4> argtys{ptr::CharPtrType::get(context),
+                                ptr::VoidPtrType::get(context)};
+    Type retty = ptr::VoidPtrType::get(context);
+    auto llvmFnType = rewriter.getFunctionType(argtys, retty);
     // Insert the printf function into the body of the parent module.
     PatternRewriter::InsertionGuard insertGuard(rewriter);
     rewriter.setInsertionPointToStart(module.getBody());
-    rewriter.create<LLVM::LLVMFuncOp>(module.getLoc(), name, llvmFnType);
-    return SymbolRefAttr::get(name, rewriter.getContext());
+    FuncOp fn = rewriter.create<FuncOp>(module.getLoc(), name, llvmFnType);
+    fn.setPrivate();
+    return fn;
   }
 
-  // extractConstructorArgN(constructor: void *, arg_ix: int) -> void*)
+  // extractConstructorArgN(constructor: !ptr.void, arg_ix: int) -> !ptr.void
   static FlatSymbolRefAttr
   getOrInsertExtractConstructorArg(PatternRewriter &rewriter, ModuleOp module) {
     const std::string name = "extractConstructorArg";
@@ -311,25 +310,25 @@ struct CaseOpConversionPattern : public mlir::ConversionPattern {
   // generate the order[i]th case alt of caseop, We need this `order` thing to
   // make sure we generate the default case last. I guess we don't need it if we
   // are sure that people always write the default case last? whatever.
-  scf::IfOp genCaseAlt(mlir::standalone::CaseOp caseop, int i,
+  scf::IfOp genCaseAlt(mlir::standalone::CaseOp caseop, Value scrutinee, int i,
                        const std::vector<int> &order,
                        ConversionPatternRewriter &rewriter) const {
     ModuleOp mod = caseop.getParentOfType<ModuleOp>();
 
     // isConsTagEq(scrutinee, lhs-tag)
-    FlatSymbolRefAttr fn = getOrInsertIsConstructorTagEq(rewriter, mod);
-    Value lhs = getOrCreateGlobalString(
-        caseop.getLoc(), rewriter, caseop.getAltLHS(order[i]).getValue(),
-        caseop.getAltLHS(order[i]).getValue(), mod);
+    FuncOp fn = getOrInsertIsConstructorTagEq(rewriter, mod);
+    // Value lhs = getOrCreateGlobalString(
+    //     caseop.getLoc(), rewriter, caseop.getAltLHS(order[i]).getValue(),
+    //     caseop.getAltLHS(order[i]).getValue(), mod);
 
-    SmallVector<Value, 4> params{caseop.getScrutinee(), lhs};
+    Value lhs = rewriter.create<ptr::PtrStringOp>(
+        caseop.getLoc(), caseop.getAltLHS(order[i]).getValue());
+    SmallVector<Value, 4> params{scrutinee, lhs};
 
     // check if equal
     const bool hasNext = (i + 1 < (int)order.size());
     if (hasNext) {
-      LLVM::CallOp isEq = rewriter.create<LLVM::CallOp>(
-          caseop.getLoc(), LLVM::LLVMType::getInt1Ty(rewriter.getContext()), fn,
-          params);
+      CallOp isEq = rewriter.create<CallOp>(caseop.getLoc(), fn, params);
 
       scf::IfOp ite = rewriter.create<mlir::scf::IfOp>(
           /*return types=*/caseop.getLoc(), caseop.getResult().getType(),
@@ -339,7 +338,8 @@ struct CaseOpConversionPattern : public mlir::ConversionPattern {
       genCaseAltRHS(&ite.thenRegion(), caseop, order[i], rewriter);
 
       rewriter.setInsertionPointToEnd(&ite.elseRegion().front());
-      scf::IfOp caseladder = genCaseAlt(caseop, i + 1, order, rewriter);
+      scf::IfOp caseladder =
+          genCaseAlt(caseop, scrutinee, i + 1, order, rewriter);
 
       rewriter.setInsertionPointAfter(caseladder);
       rewriter.create<scf::YieldOp>(rewriter.getUnknownLoc(),
@@ -378,9 +378,11 @@ struct CaseOpConversionPattern : public mlir::ConversionPattern {
                   ConversionPatternRewriter &rewriter) const override {
     auto caseop = cast<CaseOp>(op);
 
+    assert(rands.size() == 1);
+
     rewriter.setInsertionPointAfter(op);
     const std::vector<int> order = getAltGenerationOrder(caseop);
-    scf::IfOp caseladder = genCaseAlt(caseop, 0, order, rewriter);
+    scf::IfOp caseladder = genCaseAlt(caseop, rands[0], 0, order, rewriter);
     llvm::errs() << "vvvvvvcase op (before)vvvvvv\n";
     caseop.dump();
     llvm::errs() << "======case op (after)======\n";
@@ -648,6 +650,8 @@ struct LowerHaskToLLVMPass : public Pass {
     // target.addLegalDialect<HaskDialect>();
     // target.addIllegalOp<HaskConstructOp>();
 
+    target.addLegalOp<HaskUndefOp>();
+
     target.addLegalDialect<StandardOpsDialect>();
     // target.addLegalDialect<mlir::LLVM::LLVMDialect>();
     target.addLegalDialect<scf::SCFDialect>();
@@ -685,7 +689,7 @@ struct LowerHaskToLLVMPass : public Pass {
     // populateStdToLLVMConversionPatterns(typeConverter, patterns);
 
     // patterns.insert<ForceOpConversionPattern>(typeConverter, &getContext());
-    // patterns.insert<CaseOpConversionPattern>(typeConverter, &getContext());
+    patterns.insert<CaseOpConversionPattern>(typeConverter, &getContext());
     patterns.insert<HaskConstructOpConversionPattern>(typeConverter,
                                                       &getContext());
 
