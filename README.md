@@ -26,6 +26,25 @@ Convert GHC Core to MLIR.
 
 # Log:  [newest] to [oldest]
 
+# Monday 21st december
+
+- Then you read the API to see the nugget:
+
+```cpp
+  /// Replaces the result op with a new op that is created without verification.
+  /// The result values of the two ops must be the same types.
+  template <typename OpTy, typename... Args>
+  void replaceOpWithNewOp(Operation *op, Args &&... args) {
+    auto newOp = create<OpTy>(op->getLoc(), std::forward<Args>(args)...);
+    replaceOpWithResultsOfAnotherOp(op, newOp.getOperation());
+  }
+```
+
+
+- `The result values of the two ops must be the same types.` :(
+- What a waste of a day, I lost an entire night on this?! Fuck me.
+- Why does `async` have a `CallOpConversionPattern`? This is bizarre.
+
 # Friday Dec 18th
 
 ```
