@@ -55,6 +55,20 @@
 namespace mlir {
 namespace standalone {
 
+FunctionType convertFunctionType(FunctionType fnty, TypeConverter &tc,
+                                 OpBuilder &builder) {
+  SmallVector<Type, 4> argtys;
+  for (Type t : fnty.getInputs()) {
+    argtys.push_back(tc.convertType(t));
+  }
+
+  SmallVector<Type, 4> rettys;
+  for (Type t : fnty.getResults()) {
+    rettys.push_back(tc.convertType(t));
+  }
+  return builder.getFunctionType(argtys, rettys);
+};
+
 // class HaskToLLVMTypeConverter : public mlir::LLVMTypeConverter {
 class HaskToLLVMTypeConverter : public mlir::TypeConverter {
 public:
@@ -179,19 +193,12 @@ public:
     FuncOp owner = constant.getParentOfType<FuncOp>();
 
     FunctionType fnty = constant.getResult().getType().dyn_cast<FunctionType>();
-    llvm::errs() << "===\n===\nasked to lower incorrect constant op:\n===\n";
-    SmallVector<Type, 4> argtys;
-    for (Type t : fnty.getInputs()) {
-      argtys.push_back(typeConverter->convertType(t));
-    }
+    assert(fnty);
 
-    SmallVector<Type, 4> rettys;
-    for (Type t : fnty.getResults()) {
-      rettys.push_back(typeConverter->convertType(t));
-    }
+    FunctionType outty = convertFunctionType(fnty, *typeConverter, rewriter);
 
-    FunctionType outty = rewriter.getFunctionType(argtys, rettys);
-
+    llvm::errs() << "\n===old op:===\n";
+    constant.print(llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
     llvm::errs() << "\nnew type: |" << outty << "|\n";
     getchar();
     assert(fnty && "was asked to lower a constant op that's not a reference to "
@@ -764,11 +771,8 @@ public:
     Type retty = ptr::VoidPtrType::get(ctx);
     FunctionType fnty = rewriter.getFunctionType(argTys, retty);
 
-    // Insert the printf function into the body of the parent module.
     PatternRewriter::InsertionGuard insertGuard(rewriter);
     rewriter.setInsertionPointToStart(module.getBody());
-    FuncOp fn = rewriter.create<FuncOp>(module.getLoc(), name, fnty);
-    fn.setPrivate();
     return fn;
   }
 
@@ -858,19 +862,34 @@ struct LowerHaskToLLVMPass : public Pass {
     target.addLegalOp<ModuleOp, ModuleTerminatorOp>();
 
     target.addDynamicallyLegalOp<ConstantOp>([](ConstantOp op) {
+      llvm::errs() << "\n\nchecking if legal:|";
+      op.print(llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
+
       auto funcType = op.getType().dyn_cast<FunctionType>();
       if (!funcType) {
+        llvm::errs() << "| true;\n";
+        getchar();
         return true;
       }
 
       for (auto &arg : llvm::enumerate(funcType.getInputs())) {
-        if (arg.value().isa<HaskType>())
+        if (arg.value().isa<HaskType>()) {
+          llvm::errs() << "| false;\n";
+          getchar();
+
           return false;
+        }
       }
       for (auto &arg : llvm::enumerate(funcType.getResults())) {
-        if (arg.value().isa<HaskType>())
+        if (arg.value().isa<HaskType>()) {
+          llvm::errs() << "| false;\n";
+          getchar();
+
           return false;
+        }
       }
+      llvm::errs() << "| true;\n";
+      getchar();
       return true;
     });
 
