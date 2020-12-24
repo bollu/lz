@@ -79,14 +79,35 @@ public:
         FunctionType::get(inputs.getConvertedTypes(),
                           results.getConvertedTypes(), funcOp.getContext());
 
-    // Replace the function by a function with an updated signature
+    // // Replace the function by a function with an updated signature
+    // BlockAndValueMapping mapper;
     auto newFuncOp = rewriter.create<FuncOp>(loc, funcOp.getName(), funcType);
+
+    // // map old args to new args.
+    // for (int i = 0; i < (int)funcOp.getNumArguments(); ++i) {
+    //   mapper.map(funcOp.getArgument(i), newFuncOp.getArgument(i));
+    // }
+
+    // rewriter.cloneRegionBefore(funcOp.getBody(), newFuncOp.getBody(),
+    //                            newFuncOp.end(), mapper);
+
     rewriter.inlineRegionBefore(funcOp.getBody(), newFuncOp.getBody(),
                                 newFuncOp.end());
 
+    if (failed(rewriter.convertRegionTypes(&newFuncOp.getBody(), *typeConverter,
+                                           &inputs))) {
+      assert(false && "unable to convert the function's region");
+      return failure();
+    }
+
     // Convert the signature and delete the original operation
-    rewriter.applySignatureConversion(&newFuncOp.getBody(), inputs);
+    // rewriter.applySignatureConversion(&newFuncOp.getBody(), inputs);
     rewriter.eraseOp(funcOp);
+
+    llvm::errs() << "\n===\n";
+    newFuncOp.print(llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
+    llvm::errs() << "\n===\n";
+    getchar();
     return success();
   }
 };
@@ -147,40 +168,43 @@ struct ForceOpConversionPattern : public mlir::ConversionPattern {
   explicit ForceOpConversionPattern(TypeConverter &tc, MLIRContext *context)
       : ConversionPattern(ForceOp::getOperationName(), 1, tc, context) {}
 
-  // void* -> void*
-  static FlatSymbolRefAttr getOrInsertEvalClosure(PatternRewriter &rewriter,
-                                                  ModuleOp m) {
+  // !ptr.void -> !ptr.void
+  static FuncOp getOrInsertEvalClosure(PatternRewriter &rewriter, ModuleOp m) {
     const std::string name = "evalClosure";
-    if (m.lookupSymbol<LLVM::LLVMFuncOp>(name)) {
-      return SymbolRefAttr::get(name, rewriter.getContext());
+    if (FuncOp fn = m.lookupSymbol<FuncOp>(name)) {
+      return fn;
     }
 
-    auto I8PtrTy = LLVM::LLVMType::getInt8PtrTy(rewriter.getContext());
-    auto I8PtrToI8PtrTy = LLVM::LLVMType::getFunctionTy(I8PtrTy, I8PtrTy,
-                                                        /*isVarArg=*/false);
+    MLIRContext *context = rewriter.getContext();
+    Type argty = ptr::VoidPtrType::get(context);
+    Type retty = ptr::VoidPtrType::get(context);
+    FunctionType fnty = rewriter.getFunctionType(argty, retty);
 
     PatternRewriter::InsertionGuard insertGuard(rewriter);
     rewriter.setInsertionPointToStart(m.getBody());
-    rewriter.create<LLVM::LLVMFuncOp>(m.getLoc(), name, I8PtrToI8PtrTy);
-    return SymbolRefAttr::get(name, rewriter.getContext());
+    FuncOp fn = rewriter.create<FuncOp>(m.getLoc(), name, fnty);
+    fn.setPrivate();
+    return fn;
   }
 
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> rands,
                   ConversionPatternRewriter &rewriter) const override {
-    ForceOp f = cast<ForceOp>(op);
-    rewriter.setInsertionPointAfter(f);
+    // ForceOp force = mlir::dyn_cast<ForceOp>(op);
+    ModuleOp mod = op->getParentOfType<ModuleOp>();
+    FuncOp evalClosure = getOrInsertEvalClosure(rewriter, mod);
+    rewriter.setInsertionPointAfter(op);
 
-    LLVM::CallOp force = rewriter.create<LLVM::CallOp>(
-        op->getLoc(), LLVM::LLVMType::getInt8PtrTy(rewriter.getContext()),
-        getOrInsertEvalClosure(rewriter, f.getParentOfType<ModuleOp>()),
-        f.getScrutinee());
+    // vvv HACK: I ought not need this!
+    //    SmallVector<Value, 4> args(rands.begin(), rands.end());
+    CallOp call = rewriter.create<CallOp>(op->getLoc(), evalClosure);
 
-    // materialize a conversion from i8* -> i64 if necessary
-    Type outty = typeConverter->convertType(f.getResult().getType());
-    Value out = typeConverter->materializeTargetConversion(
-        rewriter, f.getLoc(), outty, force.getResult(0));
-    rewriter.replaceOp(f, out);
+    Value out = call.getResult(0);
+    // Convert the result of the force back to the source
+    // vvv HACK: I shouldn't have to call this manually?!
+    // out = typeConverter->materializeSourceConversion(
+    //     rewriter, out.getLoc(), force.getResult().getType(), out);
+    rewriter.replaceOp(op, out);
     return success();
   }
 };
@@ -230,26 +254,25 @@ struct CaseOpConversionPattern : public mlir::ConversionPattern {
   }
 
   // extractConstructorArgN(constructor: !ptr.void, arg_ix: int) -> !ptr.void
-  static FlatSymbolRefAttr
-  getOrInsertExtractConstructorArg(PatternRewriter &rewriter, ModuleOp module) {
+  static FuncOp getOrInsertExtractConstructorArg(PatternRewriter &rewriter,
+                                                 ModuleOp module) {
+    MLIRContext *context = rewriter.getContext();
+
     const std::string name = "extractConstructorArg";
-    if (module.lookupSymbol<LLVM::LLVMFuncOp>(name)) {
-      return SymbolRefAttr::get(name, rewriter.getContext());
+    if (FuncOp fn = module.lookupSymbol<FuncOp>(name)) {
+      return fn;
     }
 
-    auto llvmI8PtrTy = LLVM::LLVMType::getInt8PtrTy(rewriter.getContext());
-    auto llvmI64Ty = LLVM::LLVMType::getInt64Ty(rewriter.getContext());
+    SmallVector<Type, 4> argsTy{ptr::VoidPtrType::get(context),
+                                rewriter.getI64Type()};
+    Type retty = ptr::VoidPtrType::get(context);
+    FunctionType fnty = rewriter.getFunctionType(argsTy, retty);
 
-    // string constructor name, <n> arguments.
-    SmallVector<mlir::LLVM::LLVMType, 4> argsTy{llvmI8PtrTy, llvmI64Ty};
-    auto llvmFnType = LLVM::LLVMType::getFunctionTy(llvmI8PtrTy, argsTy,
-                                                    /*isVarArg=*/false);
-
-    // Insert the printf function into the body of the parent module.
     PatternRewriter::InsertionGuard insertGuard(rewriter);
     rewriter.setInsertionPointToStart(module.getBody());
-    rewriter.create<LLVM::LLVMFuncOp>(module.getLoc(), name, llvmFnType);
-    return SymbolRefAttr::get(name, rewriter.getContext());
+    FuncOp fn = rewriter.create<FuncOp>(module.getLoc(), name, fnty);
+    fn.setPrivate();
+    return fn;
   }
 
   // return the order in which we should generate case alts.
@@ -272,15 +295,15 @@ struct CaseOpConversionPattern : public mlir::ConversionPattern {
   static Value
   mkCallExtractConstructorArg(Value constructor, int argix, ModuleOp mod,
                               ConversionPatternRewriter &rewriter) {
-    FlatSymbolRefAttr fn = getOrInsertExtractConstructorArg(rewriter, mod);
-    Value argixv = rewriter.create<LLVM::ConstantOp>(
-        rewriter.getUnknownLoc(),
-        LLVM::LLVMType::getInt64Ty(rewriter.getContext()),
-        rewriter.getI64IntegerAttr(argix));
+    FuncOp fn = getOrInsertExtractConstructorArg(rewriter, mod);
+    Value argixv = rewriter.create<ConstantIntOp>(rewriter.getUnknownLoc(),
+                                                  argix, rewriter.getI64Type());
+    // Value argixv = rewriter.create<LLVM::ConstantOp>(
+    //     rewriter.getUnknownLoc(),
+    //     LLVM::LLVMType::getInt64Ty(rewriter.getContext()),
+    //     rewriter.getI64IntegerAttr(argix));
     SmallVector<Value, 2> args = {constructor, argixv};
-    LLVM::CallOp call = rewriter.create<LLVM::CallOp>(
-        rewriter.getUnknownLoc(),
-        LLVM::LLVMType::getInt8PtrTy(rewriter.getContext()), fn, args);
+    CallOp call = rewriter.create<CallOp>(rewriter.getUnknownLoc(), fn, args);
     return call.getResult(0);
   }
 
@@ -512,9 +535,19 @@ public:
       return ptr::VoidPtrType::get(type.getContext());
     });
 
+    // lz.thunk -> ptr.void
+    addConversion([](ThunkType type) -> Type {
+      return ptr::VoidPtrType::get(type.getContext());
+    });
+
     // int -> !ptr.void
     addConversion([](IntegerType type) -> Type {
       return ptr::VoidPtrType::get(type.getContext());
+    });
+
+    // !ptr.void -> !int
+    addConversion([](ptr::VoidPtrType type) -> Type {
+      return IntegerType::get(64, type.getContext());
     });
 
     // int -> !ptr.void
@@ -531,6 +564,24 @@ public:
 
       // vvv HACK/MLIRBUG: isn't this a hack? why do I need this?
       // vals[0].replaceAllUsesExcept(op.getResult(), exceptions);
+      return op.getResult();
+    });
+
+    // !ptr.void -> int
+    addSourceMaterialization([&](OpBuilder &rewriter, IntegerType resultty,
+                                 ValueRange vals,
+                                 Location loc) -> Optional<Value> {
+      if (vals.size() != 1 || !vals[0].getType().isa<ptr::VoidPtrType>()) {
+        return {};
+      }
+
+      ptr::PtrPtrToIntOp op =
+          rewriter.create<ptr::PtrPtrToIntOp>(loc, vals[0], resultty);
+
+      llvm::errs() << "op: ";
+      op.dump();
+      llvm::errs() << "\n";
+      getchar();
       return op.getResult();
     });
   };
@@ -688,10 +739,10 @@ struct LowerHaskToLLVMPass : public Pass {
     populateLoopToStdConversionPatterns(patterns, &getContext());
     // populateStdToLLVMConversionPatterns(typeConverter, patterns);
 
-    // patterns.insert<ForceOpConversionPattern>(typeConverter, &getContext());
-    patterns.insert<CaseOpConversionPattern>(typeConverter, &getContext());
-    patterns.insert<HaskConstructOpConversionPattern>(typeConverter,
-                                                      &getContext());
+    patterns.insert<ForceOpConversionPattern>(typeConverter, &getContext());
+    // patterns.insert<CaseOpConversionPattern>(typeConverter, &getContext());
+    // patterns.insert<HaskConstructOpConversionPattern>(typeConverter,
+    // &getContext());
 
     patterns.insert<FuncOpLowering>(typeConverter, &getContext());
     patterns.insert<ReturnOpLowering>(typeConverter, &getContext());

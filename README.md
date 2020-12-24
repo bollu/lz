@@ -26,6 +26,59 @@ Convert GHC Core to MLIR.
 
 
 # Log:  [newest] to [oldest]
+# Thursday 24th Dec
+
+```
+===
+"func"() ( {
+^bb0(%arg0: !ptr.void, %arg1: !ptr.void):  // no predecessors
+  %0 = "lz.force"(<<UNKNOWN SSA VALUE>>) : (!lz.thunk<i64>) -> i64
+  %1 = "lz.force"(<<UNKNOWN SSA VALUE>>) : (!lz.thunk<i64>) -> i64
+  "std.return"(%0) : (i64) -> ()
+}) {sym_name = "f", type = (!ptr.void, !ptr.void) -> !ptr.void} : () -> ()
+===
+```
+
+- The call `rewriter.applySignatureConversion(&newFuncOp.getBody(), inputs);` seems
+  to completely fuck up arguments?! Without it, the new function is identical to the
+  old one.
+
+- The correct API is `if (failed(rewriter.convertRegionTypes(&newFuncOp.getBody(), *typeConverter, &inputs)))`,
+  as I learnt from `StandardToLLVM::FuncOpConversionBase`.
+
+
+- In a `ForceOp`, should I *manually* call the source materializer? That seems janky as fuck!
+   Becase the `ForceOp` lowers to a thing that returns `!ptr.void`, but it should be `!i64`.
+
+```
+    // vvv HACK: I shouldn't have to call this manually?!
+    typeConverter->materializeSourceConversion(builder, out.getLoc(), )
+```
+
+
+What the blazes is this error now?
+
+```
+** Insert  : 'ptr.ptrtoint'(0x60c0000040c0)
+hask-opt: /usr/local/include/mlir/IR/Builders.h:400: OpTy mlir::OpBuilder::create(mlir::Location, Args &&...) [OpTy = mlir::ptr::PtrPtrToIntOp, Args = <mlir::Value, mlir::IntegerType &>]: Assertion `result && "builder didn't return the right type"' failed.
+```
+
+The location it fails at:
+
+```cpp
+// MLIR/IR/Builders.h
+OpTy create(Location location, Args &&... args) {
+    ...
+    OpTy::build(*this, state, std::forward<Args>(args)...);
+    auto *op = createOperation(state);
+    auto result = dyn_cast<OpTy>(op);
+    assert(result && "builder didn't return the right type");
+    ...
+}
+```
+
+How the fuck can `create` fail?! 
+
 
 # Monday 21st december
 

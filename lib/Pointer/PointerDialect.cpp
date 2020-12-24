@@ -32,7 +32,7 @@ PtrDialect &PtrType::getDialect() {
 PtrDialect::PtrDialect(mlir::MLIRContext *context)
     : Dialect(getDialectNamespace(), context, TypeID::get<PtrDialect>()) {
   // clang-format off
-  addOperations<PtrIntToPtrOp, PtrStringOp>();
+  addOperations<PtrIntToPtrOp, PtrPtrToIntOp, PtrStringOp>();
   addTypes<VoidPtrType, CharPtrType>();
 
   // clang-format on
@@ -77,6 +77,25 @@ void PtrIntToPtrOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
 };
 
 void PtrIntToPtrOp::print(OpAsmPrinter &p) {
+  p.printGenericOp(this->getOperation());
+};
+
+// === PTR TO INT ===
+// === PTR TO INT ===
+// === PTR TO INT ===
+// === PTR TO INT ===
+// === PTR TO INT ===
+
+void PtrPtrToIntOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                          Value vptr, IntegerType ity) {
+  assert(vptr.getType().isa<VoidPtrType>() &&
+         "expected argument to be a void pointer type");
+  state.addOperands(vptr);
+  state.addTypes(ity);
+};
+
+void
+PtrPtrToIntOp::print(OpAsmPrinter &p) {
   p.printGenericOp(this->getOperation());
 };
 

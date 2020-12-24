@@ -69,7 +69,7 @@ public:
   static StringRef getOperationName() { return "ptr.ptrtoint"; };
   // static ParseResult parse(OpAsmParser &parser, OperationState &result);
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                    Value vptr);
+                    Value vptr, IntegerType ity);
   void print(OpAsmPrinter &p);
 };
 
