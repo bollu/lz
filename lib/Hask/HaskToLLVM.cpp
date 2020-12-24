@@ -539,11 +539,14 @@ struct CaseOpConversionPattern : public mlir::ConversionPattern {
 }; // namespace standalone
 
 class HaskConstructOpConversionPattern : public ConversionPattern {
+private:
+  HaskToLLVMTypeConverter &tc;
+
 public:
-  explicit HaskConstructOpConversionPattern(TypeConverter &tc,
+  explicit HaskConstructOpConversionPattern(HaskToLLVMTypeConverter &tc,
                                             MLIRContext *context)
-      : ConversionPattern(HaskConstructOp::getOperationName(), 1, tc, context) {
-  }
+      : ConversionPattern(HaskConstructOp::getOperationName(), 1, tc, context),
+        tc(tc) {}
 
   // mkConstructor: !ptr.char x [!ptr.void^n] -> !ptr.void
   static FuncOp getOrInsertMkConstructor(PatternRewriter &rewriter,
@@ -583,19 +586,15 @@ public:
     Value name = rewriter.create<ptr::PtrStringOp>(
         cons.getLoc(), cons.getDataConstructorName());
     SmallVector<Value, 4> args = {name};
-    // args.push_back(operands);
-    args.insert(args.end(), operands.begin(), operands.end());
-    llvm::errs() << "\nvvvvv" << __PRETTY_FUNCTION__ << "beforevvvvv\n";
-    fn.getParentOp()->dump();
 
     rewriter.setInsertionPointAfter(cons);
-    CallOp call = rewriter.create<CallOp>(cons.getLoc(), fn, args);
-    rewriter.replaceOp(cons, call.getResults());
-    llvm::errs() << "\n==after==\n";
-    fn.getParentOp()->dump();
-    llvm::errs() << "\n^^^^^^^\n";
 
-    getchar();
+    for (int i = 0; i < (int)operands.size(); ++i) {
+      args.insert(args.end(), tc.toVoidPointer(rewriter, operands[i]));
+    }
+
+    CallOp call = rewriter.create<CallOp>(cons.getLoc(), fn, args);
+    rewriter.replaceOp(cons, call.getResult(0));
     return success();
   }
 };
@@ -780,8 +779,8 @@ struct LowerHaskToLLVMPass : public Pass {
 
     patterns.insert<ForceOpConversionPattern>(typeConverter, &getContext());
     // patterns.insert<CaseOpConversionPattern>(typeConverter, &getContext());
-    // patterns.insert<HaskConstructOpConversionPattern>(typeConverter,
-    // &getContext());
+    patterns.insert<HaskConstructOpConversionPattern>(typeConverter,
+                                                      &getContext());
 
     patterns.insert<FuncOpLowering>(typeConverter, &getContext());
     patterns.insert<ReturnOpLowering>(typeConverter, &getContext());
