@@ -823,8 +823,14 @@ public:
     using namespace mlir::LLVM;
     ApEagerOp ap = cast<ApEagerOp>(op);
     rewriter.setInsertionPointAfter(ap);
-    rewriter.replaceOpWithNewOp<mlir::CallOp>(
-        ap, ap.getFnName(), ap.getResult().getType(), ap.getFnArguments());
+
+    Value fn = operands[0];
+    SmallVector<Value, 4> args;
+    for (int i = 1; i < (int)operands.size(); ++i) {
+      args.push_back(operands[i]);
+    }
+
+    rewriter.replaceOpWithNewOp<mlir::CallIndirectOp>(ap, fn, args);
     return success();
   }
 };
@@ -873,33 +879,23 @@ struct LowerHaskToLLVMPass : public Pass {
     target.addLegalOp<ModuleOp, ModuleTerminatorOp>();
 
     target.addDynamicallyLegalOp<ConstantOp>([](ConstantOp op) {
-      llvm::errs() << "\n\nchecking if legal:|";
-      op.print(llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
-
       auto funcType = op.getType().dyn_cast<FunctionType>();
       if (!funcType) {
-        llvm::errs() << "| true;\n";
-        getchar();
         return true;
       }
 
       for (auto &arg : llvm::enumerate(funcType.getInputs())) {
         if (arg.value().isa<HaskType>()) {
-          llvm::errs() << "| false;\n";
-          getchar();
 
           return false;
         }
       }
       for (auto &arg : llvm::enumerate(funcType.getResults())) {
         if (arg.value().isa<HaskType>()) {
-          llvm::errs() << "| false;\n";
-          getchar();
 
           return false;
         }
       }
-      llvm::errs() << "| true;\n";
       getchar();
       return true;
     });
@@ -942,8 +938,7 @@ struct LowerHaskToLLVMPass : public Pass {
     patterns.insert<ReturnOpLowering>(typeConverter, &getContext());
 
     patterns.insert<ApOpConversionPattern>(typeConverter, &getContext());
-    // patterns.insert<ApEagerOpConversionPattern>(typeConverter,
-    // &getContext());
+    patterns.insert<ApEagerOpConversionPattern>(typeConverter, &getContext());
     // patterns.insert<HaskReturnOpConversionPattern>(typeConverter,
     //                                                &getContext());
     ::llvm::DebugFlag = true;
