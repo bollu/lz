@@ -55,6 +55,113 @@
 namespace mlir {
 namespace standalone {
 
+// class HaskToLLVMTypeConverter : public mlir::LLVMTypeConverter {
+class HaskToLLVMTypeConverter : public mlir::TypeConverter {
+public:
+  // using LLVMTypeConverter::LLVMTypeConverter;
+  using TypeConverter::convertType;
+
+  HaskToLLVMTypeConverter(MLIRContext *ctx) {
+    // Convert ThunkType to I8PtrTy.
+    // addConversion([](ThunkType type) -> Type {
+    //   return LLVM::LLVMType::getInt8PtrTy(type.getContext());
+    // });
+
+    addConversion([](Type type) { return type; });
+
+    // lz.value -> ptr.void
+    addConversion([](ValueType type) -> Type {
+      return ptr::VoidPtrType::get(type.getContext());
+    });
+
+    // lz.thunk -> ptr.void
+    addConversion([](ThunkType type) -> Type {
+      return ptr::VoidPtrType::get(type.getContext());
+    });
+
+    // int->!ptr.void
+    /*
+    addConversion([](IntegerType type) -> Type {
+      return ptr::VoidPtrType::get(type.getContext());
+    });
+    */
+
+    // !ptr.void -> !int
+    /*
+    addConversion([](ptr::VoidPtrType type) -> Type {
+      return IntegerType::get(64, type.getContext());
+    });
+    */
+
+    // int -> !ptr.void
+    /*
+    addTargetMaterialization([&](OpBuilder &rewriter, ptr::VoidPtrType resultty,
+                                 ValueRange vals,
+                                 Location loc) -> Optional<Value> {
+      if (vals.size() != 1 || !vals[0].getType().isa<IntegerType>()) {
+        return {};
+      }
+
+      ptr::PtrIntToPtrOp op = rewriter.create<ptr::PtrIntToPtrOp>(loc, vals[0]);
+      llvm::SmallPtrSet<Operation *, 1> exceptions;
+      exceptions.insert(op);
+
+      // vvv HACK/MLIRBUG: isn't this a hack? why do I need this?
+      // vals[0].replaceAllUsesExcept(op.getResult(), exceptions);
+      return op.getResult();
+    });
+    */
+
+    // !ptr.void -> int
+    /*
+    addSourceMaterialization([&](OpBuilder &rewriter, IntegerType resultty,
+                                 ValueRange vals,
+                                 Location loc) -> Optional<Value> {
+      if (vals.size() != 1 || !vals[0].getType().isa<ptr::VoidPtrType>()) {
+        return {};
+      }
+
+      ptr::PtrPtrToIntOp op =
+          rewriter.create<ptr::PtrPtrToIntOp>(loc, vals[0], resultty);
+
+      llvm::errs() << "op: ";
+      op.dump();
+      llvm::errs() << "\n";
+      getchar();
+      return op.getResult();
+    });
+    */
+  };
+
+  // convert a thing to a void pointer.
+  Value toVoidPointer(OpBuilder &builder, Value src) {
+    if (src.getType().isa<ptr::VoidPtrType>()) {
+      return src;
+    }
+    if (src.getType().isa<IntegerType>()) {
+      ptr::PtrIntToPtrOp op =
+          builder.create<ptr::PtrIntToPtrOp>(builder.getUnknownLoc(), src);
+      return op;
+    }
+
+    assert(false && "unknown type to convert to void pointer");
+  };
+
+  // convert to `retty` from a void pointer.
+  Value fromVoidPointer(OpBuilder &builder, Value src, Type retty) {
+    if (retty.isa<ptr::VoidPtrType>()) {
+      return src;
+    }
+    if (IntegerType it = retty.dyn_cast<IntegerType>()) {
+      ptr::PtrPtrToIntOp op =
+          builder.create<ptr::PtrPtrToIntOp>(builder.getUnknownLoc(), src, it);
+      return op;
+    }
+
+    assert(false && "unknown type to convert from void pointer");
+  };
+};
+
 // https://github.com/spcl/open-earth-compiler/blob/master/lib/Conversion/StencilToStandard/ConvertStencilToStandard.cpp#L45
 class FuncOpLowering : public ConversionPattern {
 public:
@@ -103,11 +210,6 @@ public:
     // Convert the signature and delete the original operation
     // rewriter.applySignatureConversion(&newFuncOp.getBody(), inputs);
     rewriter.eraseOp(funcOp);
-
-    llvm::errs() << "\n===\n";
-    newFuncOp.print(llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
-    llvm::errs() << "\n===\n";
-    getchar();
     return success();
   }
 };
@@ -165,8 +267,12 @@ bool isI8Ptr(Type ty) {
 // }
 //
 struct ForceOpConversionPattern : public mlir::ConversionPattern {
-  explicit ForceOpConversionPattern(TypeConverter &tc, MLIRContext *context)
-      : ConversionPattern(ForceOp::getOperationName(), 1, tc, context) {}
+  explicit ForceOpConversionPattern(HaskToLLVMTypeConverter &tc,
+                                    MLIRContext *context)
+      : ConversionPattern(ForceOp::getOperationName(), 1, tc, context), tc(tc) {
+  }
+
+  HaskToLLVMTypeConverter &tc;
 
   // !ptr.void -> !ptr.void
   static FuncOp getOrInsertEvalClosure(PatternRewriter &rewriter, ModuleOp m) {
@@ -190,21 +296,25 @@ struct ForceOpConversionPattern : public mlir::ConversionPattern {
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> rands,
                   ConversionPatternRewriter &rewriter) const override {
-    // ForceOp force = mlir::dyn_cast<ForceOp>(op);
+    ForceOp force = mlir::dyn_cast<ForceOp>(op);
     ModuleOp mod = op->getParentOfType<ModuleOp>();
     FuncOp evalClosure = getOrInsertEvalClosure(rewriter, mod);
     rewriter.setInsertionPointAfter(op);
 
     // vvv HACK: I ought not need this!
     //    SmallVector<Value, 4> args(rands.begin(), rands.end());
-    CallOp call = rewriter.create<CallOp>(op->getLoc(), evalClosure);
+    CallOp call = rewriter.create<CallOp>(op->getLoc(), evalClosure, rands);
 
-    Value out = call.getResult(0);
-    // Convert the result of the force back to the source
-    // vvv HACK: I shouldn't have to call this manually?!
-    // out = typeConverter->materializeSourceConversion(
-    //     rewriter, out.getLoc(), force.getResult().getType(), out);
-    rewriter.replaceOp(op, out);
+    rewriter.setInsertionPointAfter(call);
+    Value out = tc.fromVoidPointer(rewriter, call.getResult(0),
+                                   tc.convertType(force.getResult().getType()));
+
+    llvm::errs() << "\n===\n";
+    force.getParentOfType<FuncOp>().print(
+        llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
+    llvm::errs() << "\n===\n";
+    rewriter.replaceOp(force, out);
+
     return success();
   }
 };
@@ -515,77 +625,6 @@ public:
   }
 };
 */
-
-// class HaskToLLVMTypeConverter : public mlir::LLVMTypeConverter {
-class HaskToLLVMTypeConverter : public mlir::TypeConverter {
-public:
-  // using LLVMTypeConverter::LLVMTypeConverter;
-  using TypeConverter::convertType;
-
-  HaskToLLVMTypeConverter(MLIRContext *ctx) {
-    // Convert ThunkType to I8PtrTy.
-    // addConversion([](ThunkType type) -> Type {
-    //   return LLVM::LLVMType::getInt8PtrTy(type.getContext());
-    // });
-
-    addConversion([](Type type) { return type; });
-
-    // lz.value -> ptr.void
-    addConversion([](ValueType type) -> Type {
-      return ptr::VoidPtrType::get(type.getContext());
-    });
-
-    // lz.thunk -> ptr.void
-    addConversion([](ThunkType type) -> Type {
-      return ptr::VoidPtrType::get(type.getContext());
-    });
-
-    // int -> !ptr.void
-    addConversion([](IntegerType type) -> Type {
-      return ptr::VoidPtrType::get(type.getContext());
-    });
-
-    // !ptr.void -> !int
-    addConversion([](ptr::VoidPtrType type) -> Type {
-      return IntegerType::get(64, type.getContext());
-    });
-
-    // int -> !ptr.void
-    addTargetMaterialization([&](OpBuilder &rewriter, ptr::VoidPtrType resultty,
-                                 ValueRange vals,
-                                 Location loc) -> Optional<Value> {
-      if (vals.size() != 1 || !vals[0].getType().isa<IntegerType>()) {
-        return {};
-      }
-
-      ptr::PtrIntToPtrOp op = rewriter.create<ptr::PtrIntToPtrOp>(loc, vals[0]);
-      llvm::SmallPtrSet<Operation *, 1> exceptions;
-      exceptions.insert(op);
-
-      // vvv HACK/MLIRBUG: isn't this a hack? why do I need this?
-      // vals[0].replaceAllUsesExcept(op.getResult(), exceptions);
-      return op.getResult();
-    });
-
-    // !ptr.void -> int
-    addSourceMaterialization([&](OpBuilder &rewriter, IntegerType resultty,
-                                 ValueRange vals,
-                                 Location loc) -> Optional<Value> {
-      if (vals.size() != 1 || !vals[0].getType().isa<ptr::VoidPtrType>()) {
-        return {};
-      }
-
-      ptr::PtrPtrToIntOp op =
-          rewriter.create<ptr::PtrPtrToIntOp>(loc, vals[0], resultty);
-
-      llvm::errs() << "op: ";
-      op.dump();
-      llvm::errs() << "\n";
-      getchar();
-      return op.getResult();
-    });
-  };
-};
 
 class ApOpConversionPattern : public ConversionPattern {
 public:

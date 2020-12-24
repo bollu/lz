@@ -1,9 +1,13 @@
 // Test lowering force.
 // RUN: hask-opt %s --lz-lower-to-llvm
 module {
-  func @f (%i : !lz.thunk<i64>, %j : !lz.thunk<!lz.value>) -> i64 {
-    %ival = lz.force(%i): i64
-    %jval = lz.force(%j): !lz.value
-    return %ival : i64
+  func @f (%t : !lz.thunk<!lz.value>) -> !lz.value {
+    %v = lz.force(%t) : !lz.value
+    return %v : !lz.value
+  }
+
+  func @g (%t : !lz.thunk<i64>) -> i64 {
+    %v = lz.force(%t): i64
+    return %v : i64
   }
 }
