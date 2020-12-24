@@ -237,7 +237,9 @@ public:
     // The problem is that I can't copy *all* attributes, because Type
     // is also an attribute x(.
 
-    newFuncOp.setAttr("sym_visibility", funcOp.getAttr("sym_visibility"));
+    if (Attribute visibility = funcOp.getAttr("sym_visibility")) {
+      newFuncOp.setAttr("sym_visibility", visibility);
+    }
     // newFuncOp.setAttrs(funcOp.getAttrs());
     rewriter.inlineRegionBefore(funcOp.getBody(), newFuncOp.getBody(),
                                 newFuncOp.end());
