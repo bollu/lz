@@ -63,7 +63,7 @@ public:
 
 // %ptr = ptrtoint %i
 class PtrPtrToIntOp
-    : public Op<PtrIntToPtrOp, OpTrait::OneResult, OpTrait::OneOperand> {
+    : public Op<PtrPtrToIntOp, OpTrait::OneResult, OpTrait::OneOperand> {
 public:
   using Op::Op;
   static StringRef getOperationName() { return "ptr.ptrtoint"; };
