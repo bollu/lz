@@ -591,6 +591,25 @@ See that we had:
 - `{sym_name = "f_outline_case_arg", type = (i64) -> !lz.value} : () -> ()`
 - BUT the fucking entry BB type of this function is: `^bb0(%arg0: !lz.value):  // no predecessors`
 
+
+- I was hoping the `TypeConverter` did the "sensible thing" on trying to lower `FunctionType`.
+  But alas, it does not, probably for flexibility.
+
+```cpp
+Type resultTy = typeConverter->convertType(fnty);
+```
+
+```cpp
+===
+===
+asked to lower incorrect constant op:
+===
+%f_0 = "std.constant"() {value = @f} : () -> ((!lz.thunk<i64>, !lz.thunk<i64>) -> i64)
+new type: |(!lz.thunk<i64>, !lz.thunk<i64>) -> i64|
+```
+
+- I gess I need to manually convert the FunctionType using the `TypeConverter`.
+
 # Wednesday Dec 10th
 
 What are the guarantees of the use/def chain? Does it guarantee us that the

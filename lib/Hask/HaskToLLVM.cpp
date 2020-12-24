@@ -167,6 +167,47 @@ public:
   };
 };
 
+class ConstantOpLowering : public ConversionPattern {
+public:
+  explicit ConstantOpLowering(TypeConverter &tc, MLIRContext *context)
+      : ConversionPattern(ConstantOp::getOperationName(), 1, tc, context) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *rator, ArrayRef<Value> rands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto constant = cast<ConstantOp>(rator);
+    FuncOp owner = constant.getParentOfType<FuncOp>();
+
+    FunctionType fnty = constant.getResult().getType().dyn_cast<FunctionType>();
+    llvm::errs() << "===\n===\nasked to lower incorrect constant op:\n===\n";
+    SmallVector<Type, 4> argtys;
+    for (Type t : fnty.getInputs()) {
+      argtys.push_back(typeConverter->convertType(t));
+    }
+
+    SmallVector<Type, 4> rettys;
+    for (Type t : fnty.getResults()) {
+      rettys.push_back(typeConverter->convertType(t));
+    }
+
+    FunctionType outty = rewriter.getFunctionType(argtys, rettys);
+
+    llvm::errs() << "\nnew type: |" << outty << "|\n";
+    getchar();
+    assert(fnty && "was asked to lower a constant op that's not a reference to "
+                   "a function?!");
+
+    // create new function ref with new types
+    rewriter.replaceOpWithNewOp<ConstantOp>(constant, outty,
+                                            constant.getValue());
+
+    llvm::errs() << "\n===\nmodule after rewrite:\n";
+    owner.print(llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
+    getchar();
+
+    return success();
+  }
+};
 // https://github.com/spcl/open-earth-compiler/blob/master/lib/Conversion/StencilToStandard/ConvertStencilToStandard.cpp#L45
 class FuncOpLowering : public ConversionPattern {
 public:
@@ -191,18 +232,8 @@ public:
         FunctionType::get(inputs.getConvertedTypes(),
                           results.getConvertedTypes(), funcOp.getContext());
 
-    // // Replace the function by a function with an updated signature
-    // BlockAndValueMapping mapper;
     auto newFuncOp = rewriter.create<FuncOp>(loc, funcOp.getName(), funcType);
-
-    // // map old args to new args.
-    // for (int i = 0; i < (int)funcOp.getNumArguments(); ++i) {
-    //   mapper.map(funcOp.getArgument(i), newFuncOp.getArgument(i));
-    // }
-
-    // rewriter.cloneRegionBefore(funcOp.getBody(), newFuncOp.getBody(),
-    //                            newFuncOp.end(), mapper);
-
+    newFuncOp.setAttrs(funcOp.getAttrs());
     rewriter.inlineRegionBefore(funcOp.getBody(), newFuncOp.getBody(),
                                 newFuncOp.end());
 
@@ -211,10 +242,15 @@ public:
       assert(false && "unable to convert the function's region");
       return failure();
     }
-
-    // Convert the signature and delete the original operation
-    // rewriter.applySignatureConversion(&newFuncOp.getBody(), inputs);
     rewriter.eraseOp(funcOp);
+
+    llvm::errs() << "\n===\nconverting function:\n";
+    funcOp.print(llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
+    llvm::errs() << "\n===new function:===\n";
+    newFuncOp.print(llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
+    llvm::errs() << "\n===\n";
+    getchar();
+
     return success();
   }
 };
@@ -814,6 +850,23 @@ struct LowerHaskToLLVMPass : public Pass {
 
     target.addLegalOp<ModuleOp, ModuleTerminatorOp>();
 
+    target.addDynamicallyLegalOp<ConstantOp>([](ConstantOp op) {
+      auto funcType = op.getType().dyn_cast<FunctionType>();
+      if (!funcType) {
+        return true;
+      }
+
+      for (auto &arg : llvm::enumerate(funcType.getInputs())) {
+        if (arg.value().isa<HaskType>())
+          return false;
+      }
+      for (auto &arg : llvm::enumerate(funcType.getResults())) {
+        if (arg.value().isa<HaskType>())
+          return false;
+      }
+      return true;
+    });
+
     target.addDynamicallyLegalOp<FuncOp>([](FuncOp funcOp) {
       auto funcType = funcOp.getType();
       for (auto &arg : llvm::enumerate(funcType.getInputs())) {
@@ -847,7 +900,7 @@ struct LowerHaskToLLVMPass : public Pass {
     // patterns.insert<CaseOpConversionPattern>(typeConverter, &getContext());
     patterns.insert<HaskConstructOpConversionPattern>(typeConverter,
                                                       &getContext());
-
+    patterns.insert<ConstantOpLowering>(typeConverter, &getContext());
     patterns.insert<FuncOpLowering>(typeConverter, &getContext());
     patterns.insert<ReturnOpLowering>(typeConverter, &getContext());
 
