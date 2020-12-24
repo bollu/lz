@@ -1,4 +1,4 @@
-// RUN: hask-opt --lz-lower-to-llvm %s | FileCheck %s
+// RUN: hask-opt --lz-lower-to-llvm %s 
 module {
   // CHECK: llvm.func @main(%arg0: !llvm.ptr<i8>) -> !llvm.i64
   func @main (%p: !lz.thunk<i64>) -> i64 {
