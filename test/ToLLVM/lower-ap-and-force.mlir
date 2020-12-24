@@ -23,6 +23,6 @@ module {
     %outt = lz.ap(%f: (!lz.thunk<i64>, !lz.thunk<i64>) -> i64, %onet, %onet)
     %out = lz.force(%outt) : i64
 
-    lz.return %out : i64
+    return %out : i64
   }
 }

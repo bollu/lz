@@ -144,6 +144,11 @@ public:
       return op;
     }
 
+    if (src.getType().isa<FunctionType>()) {
+      return builder.create<ptr::PtrFnPtrToVoidPtrOp>(builder.getUnknownLoc(),
+                                                      src);
+    }
+
     assert(false && "unknown type to convert to void pointer");
   };
 
@@ -308,13 +313,7 @@ struct ForceOpConversionPattern : public mlir::ConversionPattern {
     rewriter.setInsertionPointAfter(call);
     Value out = tc.fromVoidPointer(rewriter, call.getResult(0),
                                    tc.convertType(force.getResult().getType()));
-
-    llvm::errs() << "\n===\n";
-    force.getParentOfType<FuncOp>().print(
-        llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
-    llvm::errs() << "\n===\n";
     rewriter.replaceOp(force, out);
-
     return success();
   }
 };
@@ -625,65 +624,132 @@ public:
 };
 */
 
+// Keep the old version of the class around because it has details about
+// function pointers.
+// vvvvvvvv
+// class ApOpConversionPattern : public ConversionPattern {
+// public:
+//   explicit ApOpConversionPattern(TypeConverter &tc, MLIRContext *context)
+//       : ConversionPattern(ApOp::getOperationName(), 1, tc, context) {}
+//   // !ptr.void x
+//   static CallOp getOrInsertMkClosure(PatternRewriter &rewriter, ModuleOp
+//   module,
+//                                      int n) {
+
+//     const std::string name = "mkClosure_capture0_args" + std::to_string(n);
+//     if (FuncOp fn = module.lookupSymbol<FuncOp>(name)) {
+//       return fn;
+//     }
+
+//     auto I8PtrTy = LLVM::LLVMType::getInt8PtrTy(rewriter.getContext());
+//     llvm::SmallVector<LLVM::LLVMType, 4> argTys(n + 1, I8PtrTy);
+//     auto llvmFnType = LLVM::LLVMType::getFunctionTy(I8PtrTy, argTys,
+//                                                     /*isVarArg=*/false);
+
+//     // Insert the printf function into the body of the parent module.
+//     PatternRewriter::InsertionGuard insertGuard(rewriter);
+//     rewriter.setInsertionPointToStart(module.getBody());
+//     rewriter.create<LLVM::LLVMFuncOp>(module.getLoc(), name, llvmFnType);
+//     return SymbolRefAttr::get(name, rewriter.getContext());
+//   }
+
+//   LogicalResult
+//   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+//                   ConversionPatternRewriter &rewriter) const override {
+//     using namespace mlir::LLVM;
+//     ApOp ap = cast<ApOp>(op);
+//     ModuleOp module = ap.getParentOfType<ModuleOp>();
+
+//     llvm::errs() << __FUNCTION__ << ":" << __LINE__ << "\n";
+//     // LLVMType kparamty =
+//     //     haskToLLVMType(rewriter.getContext(), ap.getResult().getType());
+
+//     rewriter.setInsertionPointAfter(ap);
+//     SmallVector<Value, 4> llvmFnArgs;
+//     // llvmFnArgs.push_back(transmuteToVoidPtr(ap.getFn(), rewriter,
+//     // ap.getLoc()));
+
+//     auto I8PtrTy = LLVM::LLVMType::getInt8PtrTy(rewriter.getContext());
+
+//     // convert function pointer into void* before pushing back
+//     llvmFnArgs.push_back(typeConverter->materializeTargetConversion(
+//         rewriter, ap.getLoc(), I8PtrTy, ap.getFn()));
+//     // llvmFnArgs.push_back(( ap.getFn());
+
+//     for (int i = 0; i < ap.getNumFnArguments(); ++i) {
+//       // llvmFnArgs.push_back(
+//       //     transmuteToVoidPtr(ap.getFnArgument(i), rewriter,
+//       ap.getLoc())); llvmFnArgs.push_back(ap.getFnArgument(i));
+//     }
+
+//     FlatSymbolRefAttr mkclosure =
+//         getOrInsertMkClosure(rewriter, module, ap.getNumFnArguments());
+//     rewriter.replaceOpWithNewOp<LLVM::CallOp>(
+//         op, LLVMType::getInt8PtrTy(rewriter.getContext()), mkclosure,
+//         llvmFnArgs);
+//     return success();
+//   }
+// };
+
 class ApOpConversionPattern : public ConversionPattern {
+private:
+  HaskToLLVMTypeConverter &tc;
+
 public:
-  explicit ApOpConversionPattern(TypeConverter &tc, MLIRContext *context)
-      : ConversionPattern(ApOp::getOperationName(), 1, tc, context) {}
-
-  static FlatSymbolRefAttr getOrInsertMkClosure(PatternRewriter &rewriter,
-                                                ModuleOp module, int n) {
-
+  explicit ApOpConversionPattern(HaskToLLVMTypeConverter &tc,
+                                 MLIRContext *context)
+      : ConversionPattern(ApOp::getOperationName(), 1, tc, context), tc(tc) {}
+  // !ptr.void x [!ptr.void*n] -> !ptr.void
+  // fnptr x args -> closure
+  static FuncOp getOrInsertMkClosure(PatternRewriter &rewriter, ModuleOp module,
+                                     int n) {
     const std::string name = "mkClosure_capture0_args" + std::to_string(n);
-    if (module.lookupSymbol<LLVM::LLVMFuncOp>(name)) {
-      return SymbolRefAttr::get(name, rewriter.getContext());
+    if (FuncOp fn = module.lookupSymbol<FuncOp>(name)) {
+      return fn;
     }
+    MLIRContext *ctx = rewriter.getContext();
 
-    auto I8PtrTy = LLVM::LLVMType::getInt8PtrTy(rewriter.getContext());
-    llvm::SmallVector<LLVM::LLVMType, 4> argTys(n + 1, I8PtrTy);
-    auto llvmFnType = LLVM::LLVMType::getFunctionTy(I8PtrTy, argTys,
-                                                    /*isVarArg=*/false);
+    // auto I8PtrTy = LLVM::LLVMType::getInt8PtrTy(rewriter.getContext());
+    // llvm::SmallVector<LLVM::LLVMType, 4> argTys(n + 1, I8PtrTy);
+    // auto llvmFnType = LLVM::LLVMType::getFunctionTy(I8PtrTy, argTys,
+    // /*isVarArg=*/false);
+
+    SmallVector<Type, 4> argTys;
+    for (int i = 0; i < n + 1; ++i) {
+      argTys.push_back(ptr::VoidPtrType::get(ctx));
+    }
+    Type retty = ptr::VoidPtrType::get(ctx);
+    FunctionType fnty = rewriter.getFunctionType(argTys, retty);
 
     // Insert the printf function into the body of the parent module.
     PatternRewriter::InsertionGuard insertGuard(rewriter);
     rewriter.setInsertionPointToStart(module.getBody());
-    rewriter.create<LLVM::LLVMFuncOp>(module.getLoc(), name, llvmFnType);
-    return SymbolRefAttr::get(name, rewriter.getContext());
+    FuncOp fn = rewriter.create<FuncOp>(module.getLoc(), name, fnty);
+    fn.setPrivate();
+    return fn;
   }
 
   LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+  matchAndRewrite(Operation *op, ArrayRef<Value> rands,
                   ConversionPatternRewriter &rewriter) const override {
     using namespace mlir::LLVM;
     ApOp ap = cast<ApOp>(op);
     ModuleOp module = ap.getParentOfType<ModuleOp>();
 
-    llvm::errs() << __FUNCTION__ << ":" << __LINE__ << "\n";
-    // LLVMType kparamty =
-    //     haskToLLVMType(rewriter.getContext(), ap.getResult().getType());
-
     rewriter.setInsertionPointAfter(ap);
-    SmallVector<Value, 4> llvmFnArgs;
-    // llvmFnArgs.push_back(transmuteToVoidPtr(ap.getFn(), rewriter,
-    // ap.getLoc()));
+    SmallVector<Value, 4> args;
 
-    auto I8PtrTy = LLVM::LLVMType::getInt8PtrTy(rewriter.getContext());
+    // function.
+    args.push_back(tc.toVoidPointer(rewriter, rands[0]));
 
-    // convert function pointer into void* before pushing back
-    llvmFnArgs.push_back(typeConverter->materializeTargetConversion(
-        rewriter, ap.getLoc(), I8PtrTy, ap.getFn()));
-    // llvmFnArgs.push_back(( ap.getFn());
-
-    for (int i = 0; i < ap.getNumFnArguments(); ++i) {
-      // llvmFnArgs.push_back(
-      //     transmuteToVoidPtr(ap.getFnArgument(i), rewriter, ap.getLoc()));
-      llvmFnArgs.push_back(ap.getFnArgument(i));
+    // function arguments
+    for (int i = 1; i < (int)rands.size(); ++i) {
+      args.push_back(rands[i]);
     }
 
-    FlatSymbolRefAttr mkclosure =
+    FuncOp mkclosure =
         getOrInsertMkClosure(rewriter, module, ap.getNumFnArguments());
-    rewriter.replaceOpWithNewOp<LLVM::CallOp>(
-        op, LLVMType::getInt8PtrTy(rewriter.getContext()), mkclosure,
-        llvmFnArgs);
+    rewriter.replaceOpWithNewOp<mlir::CallOp>(op, mkclosure, args);
     return success();
   }
 };
@@ -785,7 +851,7 @@ struct LowerHaskToLLVMPass : public Pass {
     patterns.insert<FuncOpLowering>(typeConverter, &getContext());
     patterns.insert<ReturnOpLowering>(typeConverter, &getContext());
 
-    // patterns.insert<ApOpConversionPattern>(typeConverter, &getContext());
+    patterns.insert<ApOpConversionPattern>(typeConverter, &getContext());
     // patterns.insert<ApEagerOpConversionPattern>(typeConverter,
     // &getContext());
     // patterns.insert<HaskReturnOpConversionPattern>(typeConverter,

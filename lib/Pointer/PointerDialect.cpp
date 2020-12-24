@@ -32,7 +32,7 @@ PtrDialect &PtrType::getDialect() {
 PtrDialect::PtrDialect(mlir::MLIRContext *context)
     : Dialect(getDialectNamespace(), context, TypeID::get<PtrDialect>()) {
   // clang-format off
-  addOperations<PtrIntToPtrOp, PtrPtrToIntOp, PtrStringOp>();
+  addOperations<PtrIntToPtrOp, PtrPtrToIntOp, PtrStringOp, PtrFnPtrToVoidPtrOp>();
   addTypes<VoidPtrType, CharPtrType>();
 
   // clang-format on
@@ -80,6 +80,23 @@ void PtrIntToPtrOp::print(OpAsmPrinter &p) {
   p.printGenericOp(this->getOperation());
 };
 
+// === FNPTR TO VOID PTR ===
+// === FNPTR TO VOID PTR ===
+// === FNPTR TO VOID PTR ===
+// === FNPTR TO VOID PTR ===
+// === FNPTR TO VOID PTR ===
+
+void PtrFnPtrToVoidPtrOp::build(mlir::OpBuilder &builder,
+                                mlir::OperationState &state, Value vint) {
+  assert(vint.getType().isa<FunctionType>());
+  state.addOperands(vint);
+  state.addTypes(VoidPtrType::get(builder.getContext()));
+};
+
+void PtrFnPtrToVoidPtrOp::print(OpAsmPrinter &p) {
+  p.printGenericOp(this->getOperation());
+};
+
 // === PTR TO INT ===
 // === PTR TO INT ===
 // === PTR TO INT ===
@@ -94,8 +111,7 @@ void PtrPtrToIntOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
   state.addTypes(ity);
 };
 
-void
-PtrPtrToIntOp::print(OpAsmPrinter &p) {
+void PtrPtrToIntOp::print(OpAsmPrinter &p) {
   p.printGenericOp(this->getOperation());
 };
 

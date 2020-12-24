@@ -54,7 +54,7 @@ class PtrIntToPtrOp
     : public Op<PtrIntToPtrOp, OpTrait::OneResult, OpTrait::OneOperand> {
 public:
   using Op::Op;
-  static StringRef getOperationName() { return "ptr.inttoptr"; };
+  static StringRef getOperationName() { return "ptr.int2ptr"; };
   // static ParseResult parse(OpAsmParser &parser, OperationState &result);
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
                     Value vint);
@@ -66,7 +66,7 @@ class PtrPtrToIntOp
     : public Op<PtrPtrToIntOp, OpTrait::OneResult, OpTrait::OneOperand> {
 public:
   using Op::Op;
-  static StringRef getOperationName() { return "ptr.ptrtoint"; };
+  static StringRef getOperationName() { return "ptr.ptr2int"; };
   // static ParseResult parse(OpAsmParser &parser, OperationState &result);
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
                     Value vptr, IntegerType ity);
@@ -86,6 +86,17 @@ public:
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
                     llvm::StringRef str);
 
+  void print(OpAsmPrinter &p);
+};
+
+class PtrFnPtrToVoidPtrOp
+    : public Op<PtrFnPtrToVoidPtrOp, OpTrait::OneResult, OpTrait::OneOperand> {
+public:
+  using Op::Op;
+  static StringRef getOperationName() { return "ptr.fn2voidptr"; };
+  // static ParseResult parse(OpAsmParser &parser, OperationState &result);
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                    Value vint);
   void print(OpAsmPrinter &p);
 };
 

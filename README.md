@@ -78,7 +78,42 @@ OpTy create(Location location, Args &&... args) {
 ```
 
 How the fuck can `create` fail?! 
+OK, fucking CRTP mistakes.
 
+
+- Now I have a real puzzler: Do I create a `FunctionPtrToVoidPtr` in my `ptr` dialect?
+  Or do I treat this wit more delicacy? Hmm. Unsure what the right way to do this is.
+- Also, should the casting of `FunctionPtr` to `VoidPtr` be *automatic*? Ie,
+  do we agree that at this stage we indeed lose all knowledge of function pointer
+  types? Decisions, decisions;
+
+- Fuck me, so apparently `std.constant` function references ALSO don't get 
+  rewrittern. Storms, has anyone written ANYTHING nontrivial with this shit?
+
+```cpp
+lower-ap-and-force.mlir:20:10: error: 'std.constant' op reference to function with mismatched type
+    %f = constant @f : (!lz.thunk<i64>, !lz.thunk<i64>) -> i64
+         ^
+lower-ap-and-force.mlir:20:10: note: see current operation:
+%f_0 = "std.constant"() {value = @f} : () -> ((!lz.thunk<i64>, !lz.thunk<i64>) -> i64)
+===Hask -> LLVM lowering failed at Verification===
+module  {
+  func private @mkClosure_capture0_args2(!ptr.void, !ptr.void, !ptr.void) -> !ptr.void
+  func private @mkClosure_capture0_args0(!ptr.void) -> !ptr.void
+  func private @evalClosure(!ptr.void) -> !ptr.void
+  func @f(%arg0: !ptr.void, %arg1: !ptr.void) -> i64 {
+    ...
+  }
+  func @main() -> i64 {
+    // vvv UNCHANGED!
+    %f_0 = constant @f : (!lz.thunk<i64>, !lz.thunk<i64>) -> i64
+    // ^^^ UNCHANGED!
+    ...
+  }
+}
+```
+
+This is just sad.
 
 # Monday 21st december
 
