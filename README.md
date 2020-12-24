@@ -608,8 +608,10 @@ asked to lower incorrect constant op:
 new type: |(!lz.thunk<i64>, !lz.thunk<i64>) -> i64|
 ```
 
-- I gess I need to manually convert the FunctionType using the `TypeConverter`.
+- I guess I need to manually convert the FunctionType using the `TypeConverter`.
 
+
+- Another MLIR bug (?) Anything whose legality is checked with `isDynamicallyLegal` needs to be `rewrite.erase`d and then `rewriter.create`d. It seems like you can't use `rewriter.replaceOpWithNewOp` for such operations.
 # Wednesday Dec 10th
 
 What are the guarantees of the use/def chain? Does it guarantee us that the

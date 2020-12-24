@@ -204,10 +204,18 @@ public:
     assert(fnty && "was asked to lower a constant op that's not a reference to "
                    "a function?!");
 
+    // Anything whose legality is checked with `isDynamicallyLegal` needs to be
+    // `rewrite.erase`d and then `rewriter.create`d. It seems like you can't
+    // use `rewriter.replaceOpWithNewOp` for such operations.
+    // vvvvv
     // create new function ref with new types
-    rewriter.replaceOpWithNewOp<ConstantOp>(constant, outty,
-                                            constant.getValue());
+    // rewriter.replaceOpWithNewOp<ConstantOp>(constant, outty,
+    //                                         constant.getValue());
 
+    ConstantOp newconst = rewriter.create<ConstantOp>(constant.getLoc(), outty,
+                                                      constant.getValue());
+    constant.getResult().replaceAllUsesWith(newconst.getResult());
+    rewriter.eraseOp(constant);
     llvm::errs() << "\n===\nmodule after rewrite:\n";
     owner.print(llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
     getchar();
@@ -771,8 +779,11 @@ public:
     Type retty = ptr::VoidPtrType::get(ctx);
     FunctionType fnty = rewriter.getFunctionType(argTys, retty);
 
+    // Insert the printf function into the body of the parent module.
     PatternRewriter::InsertionGuard insertGuard(rewriter);
     rewriter.setInsertionPointToStart(module.getBody());
+    FuncOp fn = rewriter.create<FuncOp>(module.getLoc(), name, fnty);
+    fn.setPrivate();
     return fn;
   }
 
@@ -939,8 +950,8 @@ struct LowerHaskToLLVMPass : public Pass {
 
     // applyPartialConversion | applyFullConversion
 
-    if (failed(mlir::applyPartialConversion(getOperation(), target,
-                                            std::move(patterns)))) {
+    if (failed(mlir::applyFullConversion(getOperation(), target,
+                                         std::move(patterns)))) {
       llvm::errs() << "===Hask -> LLVM lowering failed at Conversion===\n";
       getOperation()->print(llvm::errs());
       llvm::errs() << "\n===\n";
