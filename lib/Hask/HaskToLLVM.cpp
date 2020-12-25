@@ -190,17 +190,12 @@ public:
   matchAndRewrite(Operation *rator, ArrayRef<Value> rands,
                   ConversionPatternRewriter &rewriter) const override {
     auto constant = cast<ConstantOp>(rator);
-    FuncOp owner = constant.getParentOfType<FuncOp>();
 
     FunctionType fnty = constant.getResult().getType().dyn_cast<FunctionType>();
     assert(fnty);
 
     FunctionType outty = convertFunctionType(fnty, *typeConverter, rewriter);
 
-    llvm::errs() << "\n===old op:===\n";
-    constant.print(llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
-    llvm::errs() << "\nnew type: |" << outty << "|\n";
-    getchar();
     assert(fnty && "was asked to lower a constant op that's not a reference to "
                    "a function?!");
 
@@ -216,9 +211,6 @@ public:
                                                       constant.getValue());
     constant.getResult().replaceAllUsesWith(newconst.getResult());
     rewriter.eraseOp(constant);
-    llvm::errs() << "\n===\nmodule after rewrite:\n";
-    owner.print(llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
-    getchar();
 
     return success();
   }
@@ -265,13 +257,6 @@ public:
       return failure();
     }
     rewriter.eraseOp(funcOp);
-
-    llvm::errs() << "\n===\nconverting function:\n";
-    funcOp.print(llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
-    llvm::errs() << "\n===new function:===\n";
-    newFuncOp.print(llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
-    llvm::errs() << "\n===\n";
-    getchar();
 
     return success();
   }
@@ -378,6 +363,7 @@ struct ForceOpConversionPattern : public mlir::ConversionPattern {
 
 // legalize a region that has been inlined into an scf.if by converting
 // all lz.return() s into scf.yield() s
+/*
 void convertReturnsToYields(mlir::Region *r, mlir::PatternRewriter &rewriter) {
   for (Block &b : r->getBlocks()) {
     if (b.empty()) {
@@ -392,6 +378,7 @@ void convertReturnsToYields(mlir::Region *r, mlir::PatternRewriter &rewriter) {
                                                     ret.getOperand());
   }
 }
+*/
 
 struct CaseOpConversionPattern : public mlir::ConversionPattern {
 private:
@@ -402,7 +389,7 @@ public:
                                    MLIRContext *context)
       : ConversionPattern(CaseOp::getOperationName(), 1, tc, context), tc(tc) {}
 
-  // isConstructorTagEq(TAG : !ptr.char, constructor: !ptr.void) -> i1
+  // isConstructorTagEq(scrutinee: !ptr.void, TAG : !ptr.char) -> i1
   static FuncOp getOrInsertIsConstructorTagEq(PatternRewriter &rewriter,
                                               ModuleOp module) {
     MLIRContext *context = rewriter.getContext();
@@ -412,8 +399,8 @@ public:
     }
 
     // constructor, string constructor name
-    SmallVector<Type, 4> argtys{ptr::CharPtrType::get(context),
-                                ptr::VoidPtrType::get(context)};
+    SmallVector<Type, 4> argtys{ptr::VoidPtrType::get(context),
+                                ptr::CharPtrType::get(context)};
     Type retty = ptr::VoidPtrType::get(context);
     auto llvmFnType = rewriter.getFunctionType(argtys, retty);
     // Insert the printf function into the body of the parent module.
@@ -486,13 +473,13 @@ public:
     assert(out->getBlocks().size() == 1);
     llvm::SmallVector<Value, 4> rhsVals;
 
-    rewriter.setInsertionPointToEnd(&out->front());
     for (int argix = 0; argix < (int)caseop.getAltRHS(i).getNumArguments();
          ++argix) {
       Value arg = mkCallExtractConstructorArg(caseop.getScrutinee(), argix, mod,
                                               rewriter);
       Type ty =
           tc.convertType(caseop.getAltRHS(i).getArgument(argix).getType());
+      rewriter.setInsertionPointToEnd(&out->front());
       arg = tc.fromVoidPointer(rewriter, arg, ty);
       rhsVals.push_back(arg);
     }
@@ -500,7 +487,6 @@ public:
     Block *caseEntryBB = &caseop.getAltRHS(i).front();
     assert(caseEntryBB);
     rewriter.inlineRegionBefore(caseop.getAltRHS(i), *out, out->end());
-    convertReturnsToYields(out, rewriter);
     rewriter.mergeBlocks(caseEntryBB, &out->getBlocks().front(), rhsVals);
   }
 
@@ -529,9 +515,12 @@ public:
           typeConverter->convertType(caseop.getResult().getType()),
           /*cond=*/isEq.getResult(0),
           /* createelse=*/true);
+      rewriter.startRootUpdate(ite);
 
+      // THEN
       genCaseAltRHS(&ite.thenRegion(), caseop, order[i], rewriter);
 
+      // ELSE
       rewriter.setInsertionPointToEnd(&ite.elseRegion().front());
       scf::IfOp caseladder =
           genCaseAlt(caseop, scrutinee, i + 1, order, rewriter);
@@ -539,6 +528,8 @@ public:
       rewriter.setInsertionPointAfter(caseladder);
       rewriter.create<scf::YieldOp>(rewriter.getUnknownLoc(),
                                     caseladder.getResults());
+
+      rewriter.finalizeRootUpdate(ite);
       return ite;
 
     } else { // default or final else
@@ -553,7 +544,8 @@ public:
           typeConverter->convertType(caseop.getResult().getType()),
           /*cond=*/True,
           /* createelse=*/true);
-
+      rewriter.startRootUpdate(ite);
+      // THEN
       genCaseAltRHS(&ite.thenRegion(), caseop, order[i], rewriter);
 
       rewriter.setInsertionPointToEnd(&ite.elseRegion().front());
@@ -565,6 +557,7 @@ public:
       rewriter.create<scf::YieldOp>(rewriter.getUnknownLoc(),
                                     undef.getResult());
       rewriter.setInsertionPointAfter(ite);
+      rewriter.finalizeRootUpdate(ite);
       return ite;
     }
   }
@@ -658,6 +651,14 @@ public:
 
     CallOp call = rewriter.create<CallOp>(cons.getLoc(), fn, args);
     rewriter.replaceOp(cons, call.getResult(0));
+
+    llvm::errs() << "lowered: ";
+    op->dump();
+    llvm::errs() << "\n";
+    call.dump();
+    llvm::errs() << "\n";
+    getchar();
+
     return success();
   }
 };
@@ -851,7 +852,7 @@ struct HaskReturnOpConversionPattern : public mlir::ConversionPattern {
     using namespace mlir::LLVM;
     HaskReturnOp ret = cast<HaskReturnOp>(op);
     rewriter.setInsertionPointAfter(ret);
-    rewriter.replaceOpWithNewOp<mlir::scf::YieldOp>(ret, ret.getOperand());
+    rewriter.replaceOpWithNewOp<mlir::scf::YieldOp>(ret, operands);
     return success();
   }
 };
@@ -920,15 +921,6 @@ struct LowerHaskToLLVMPass : public Pass {
     });
 
     target.addDynamicallyLegalOp<ReturnOp>([](ReturnOp ret) {
-      llvm::errs() << "checking leagality of: |";
-      ret.print(llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
-      llvm::errs() << "|\n";
-      llvm::errs() << "\n===\n";
-      ret.getParentOfType<FuncOp>().print(
-          llvm::errs(), OpPrintingFlags().printGenericOpForm());
-      llvm::errs() << "\n===\n";
-
-      getchar();
       for (Value arg : ret.getOperands()) {
         if (arg.getType().isa<HaskType>())
           return false;
@@ -954,8 +946,8 @@ struct LowerHaskToLLVMPass : public Pass {
 
     patterns.insert<ApOpConversionPattern>(typeConverter, &getContext());
     patterns.insert<ApEagerOpConversionPattern>(typeConverter, &getContext());
-    // patterns.insert<HaskReturnOpConversionPattern>(typeConverter,
-    //                                                &getContext());
+    patterns.insert<HaskReturnOpConversionPattern>(typeConverter,
+                                                   &getContext());
     ::llvm::DebugFlag = true;
 
     // applyPartialConversion | applyFullConversion
