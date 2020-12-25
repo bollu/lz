@@ -1,6 +1,6 @@
 // Lower a case with a single alt and no block arguments.
 // RUN: hask-opt %s  --lz-interpret | FileCheck --check-prefix=CHECK-OUT %s
-// RUN: hask-opt %s  --lz-lower-to-llvm 
+// RUN: hask-opt %s  --lz-lower 
 // Test that case of int works.
 // CHECK-OUT: 10
 module {

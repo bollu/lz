@@ -1,5 +1,5 @@
 // Test lowering force.
-// RUN: hask-opt %s --lz-lower-to-llvm
+// RUN: hask-opt %s --lz-lower
 module {
   func @f (%t : !lz.thunk<!lz.value>) -> !lz.value {
     %v = lz.force(%t) : !lz.value

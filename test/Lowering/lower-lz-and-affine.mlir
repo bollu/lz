@@ -1,5 +1,5 @@
 // RUN: hask-opt --lz-interpret %s | FileCheck %s
-// RUN: hask-opt --lz-lower-to-llvm
+// RUN: hask-opt --lz-lower
 // CHECK: 523776
 // CHECK: num_force_calls(2)
 // CHECK-WW: 523776

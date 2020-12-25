@@ -1,6 +1,6 @@
 // Test lowering of apEager
 // RUN: hask-opt %s  --lz-interpret  | FileCheck %s
-// RUN: hask-opt %s --lz-lower-to-llvm
+// RUN: hask-opt %s --lz-lower
 // CHECK: 1
 module {
   func @f (%i : i64, %j: i64) -> i64 {

@@ -69,13 +69,13 @@ FunctionType convertFunctionType(FunctionType fnty, TypeConverter &tc,
   return builder.getFunctionType(argtys, rettys);
 };
 
-// class HaskToLLVMTypeConverter : public mlir::LLVMTypeConverter {
-class HaskToLLVMTypeConverter : public mlir::TypeConverter {
+// class HaskTypeConverter : public mlir::LLVMTypeConverter {
+class HaskTypeConverter : public mlir::TypeConverter {
 public:
   // using LLVMTypeConverter::LLVMTypeConverter;
   using TypeConverter::convertType;
 
-  HaskToLLVMTypeConverter(MLIRContext *ctx) {
+  HaskTypeConverter(MLIRContext *ctx) {
     // Convert ThunkType to I8PtrTy.
     // addConversion([](ThunkType type) -> Type {
     //   return LLVM::LLVMType::getInt8PtrTy(type.getContext());
@@ -315,12 +315,11 @@ bool isI8Ptr(Type ty) {
 // }
 //
 struct ForceOpConversionPattern : public mlir::ConversionPattern {
-  explicit ForceOpConversionPattern(HaskToLLVMTypeConverter &tc,
-                                    MLIRContext *context)
+  explicit ForceOpConversionPattern(HaskTypeConverter &tc, MLIRContext *context)
       : ConversionPattern(ForceOp::getOperationName(), 1, tc, context), tc(tc) {
   }
 
-  HaskToLLVMTypeConverter &tc;
+  HaskTypeConverter &tc;
 
   // !ptr.void -> !ptr.void
   static FuncOp getOrInsertEvalClosure(PatternRewriter &rewriter, ModuleOp m) {
@@ -382,11 +381,10 @@ void convertReturnsToYields(mlir::Region *r, mlir::PatternRewriter &rewriter) {
 
 struct CaseOpConversionPattern : public mlir::ConversionPattern {
 private:
-  HaskToLLVMTypeConverter &tc;
+  HaskTypeConverter &tc;
 
 public:
-  explicit CaseOpConversionPattern(HaskToLLVMTypeConverter &tc,
-                                   MLIRContext *context)
+  explicit CaseOpConversionPattern(HaskTypeConverter &tc, MLIRContext *context)
       : ConversionPattern(CaseOp::getOperationName(), 1, tc, context), tc(tc) {}
 
   // isConstructorTagEq(scrutinee: !ptr.void, TAG : !ptr.char) -> i1
@@ -586,10 +584,10 @@ public:
 
 class HaskConstructOpConversionPattern : public ConversionPattern {
 private:
-  HaskToLLVMTypeConverter &tc;
+  HaskTypeConverter &tc;
 
 public:
-  explicit HaskConstructOpConversionPattern(HaskToLLVMTypeConverter &tc,
+  explicit HaskConstructOpConversionPattern(HaskTypeConverter &tc,
                                             MLIRContext *context)
       : ConversionPattern(HaskConstructOp::getOperationName(), 1, tc, context),
         tc(tc) {}
@@ -748,11 +746,10 @@ public:
 
 class ApOpConversionPattern : public ConversionPattern {
 private:
-  HaskToLLVMTypeConverter &tc;
+  HaskTypeConverter &tc;
 
 public:
-  explicit ApOpConversionPattern(HaskToLLVMTypeConverter &tc,
-                                 MLIRContext *context)
+  explicit ApOpConversionPattern(HaskTypeConverter &tc, MLIRContext *context)
       : ConversionPattern(ApOp::getOperationName(), 1, tc, context), tc(tc) {}
   // !ptr.void x [!ptr.void*n] -> !ptr.void
   // fnptr x args -> closure
@@ -848,13 +845,13 @@ struct HaskReturnOpConversionPattern : public mlir::ConversionPattern {
 };
 
 namespace {
-struct LowerHaskToLLVMPass : public Pass {
-  LowerHaskToLLVMPass() : Pass(mlir::TypeID::get<LowerHaskToLLVMPass>()){};
+struct LowerHaskPass : public Pass {
+  LowerHaskPass() : Pass(mlir::TypeID::get<LowerHaskPass>()){};
   StringRef getName() const override { return "LowerHaskToLLVM"; }
 
   std::unique_ptr<Pass> clonePass() const override {
-    auto newInst = std::make_unique<LowerHaskToLLVMPass>(
-        *static_cast<const LowerHaskToLLVMPass *>(this));
+    auto newInst = std::make_unique<LowerHaskPass>(
+        *static_cast<const LowerHaskPass *>(this));
     newInst->copyOptionValuesFrom(this);
     return newInst;
   }
@@ -918,7 +915,7 @@ struct LowerHaskToLLVMPass : public Pass {
       return true;
     });
 
-    HaskToLLVMTypeConverter typeConverter(&getContext());
+    HaskTypeConverter typeConverter(&getContext());
     mlir::OwningRewritePatternList patterns;
 
     // OK why is it not able to legalize func? x(
@@ -944,14 +941,14 @@ struct LowerHaskToLLVMPass : public Pass {
 
     if (failed(mlir::applyFullConversion(getOperation(), target,
                                          std::move(patterns)))) {
-      llvm::errs() << "===Hask -> LLVM lowering failed at Conversion===\n";
+      llvm::errs() << "===Hask lowering failed at Conversion===\n";
       getOperation()->print(llvm::errs());
       llvm::errs() << "\n===\n";
       signalPassFailure();
     };
 
     if (failed(mlir::verify(getOperation()))) {
-      llvm::errs() << "===Hask -> LLVM lowering failed at Verification===\n";
+      llvm::errs() << "===Hask lowering failed at Verification===\n";
       getOperation()->print(llvm::errs());
       llvm::errs() << "\n===\n";
       signalPassFailure();
@@ -962,15 +959,14 @@ struct LowerHaskToLLVMPass : public Pass {
 };
 } // end anonymous namespace.
 
-std::unique_ptr<mlir::Pass> createLowerHaskToLLVMPass() {
-  return std::make_unique<LowerHaskToLLVMPass>();
+std::unique_ptr<mlir::Pass> createLowerHaskPass() {
+  return std::make_unique<LowerHaskPass>();
 }
 
-void registerLowerHaskToLLVMPass() {
-  ::mlir::registerPass("lz-lower-to-llvm", "Perform lowering to LLVM",
-                       []() -> std::unique_ptr<::mlir::Pass> {
-                         return createLowerHaskToLLVMPass();
-                       });
+void registerLowerHaskPass() {
+  ::mlir::registerPass(
+      "lz-lower", "Perform lowering to std+scf+ptr",
+      []() -> std::unique_ptr<::mlir::Pass> { return createLowerHaskPass(); });
 }
 
 } // namespace standalone

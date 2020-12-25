@@ -62,7 +62,7 @@ ExitOnError ExitOnErr;
 int main(int argc, char **argv) {
   // mlir::registerAllPasses();
   mlir::standalone::registerWorkerWrapperPass();
-  mlir::standalone::registerLowerHaskToLLVMPass();
+  mlir::standalone::registerLowerHaskPass();
   mlir::registerInlinerPass();
   mlir::registerCanonicalizerPass();
   mlir::registerCSEPass();

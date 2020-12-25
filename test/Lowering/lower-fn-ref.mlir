@@ -1,4 +1,4 @@
-// RUN: hask-opt %s  --lz-lower-to-llvm 
+// RUN: hask-opt %s  --lz-lower 
 
 // Check that private function declarations work.
 module {
