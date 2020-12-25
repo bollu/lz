@@ -401,7 +401,7 @@ public:
     // constructor, string constructor name
     SmallVector<Type, 4> argtys{ptr::VoidPtrType::get(context),
                                 ptr::CharPtrType::get(context)};
-    Type retty = ptr::VoidPtrType::get(context);
+    Type retty = rewriter.getI1Type();
     auto llvmFnType = rewriter.getFunctionType(argtys, retty);
     // Insert the printf function into the body of the parent module.
     PatternRewriter::InsertionGuard insertGuard(rewriter);
@@ -506,22 +506,34 @@ public:
 
     // check if equal
     const bool hasNext = (i + 1 < (int)order.size());
+
+    Value condition = [&]() {
+      if (hasNext) {
+        CallOp isEq = rewriter.create<CallOp>(caseop.getLoc(), fn, params);
+        return isEq.getResult(0);
+      } else {
+        Value True = rewriter.create<ConstantOp>(
+            rewriter.getUnknownLoc(),
+            rewriter.getIntegerAttr(rewriter.getI1Type(), 1));
+        return True;
+      }
+    }();
+
+    scf::IfOp ite = rewriter.create<mlir::scf::IfOp>(
+        caseop.getLoc(),
+        /*return types=*/
+        typeConverter->convertType(caseop.getResult().getType()),
+        /*cond=*/condition,
+        /* createelse=*/true);
+    rewriter.startRootUpdate(ite);
+
+    // THEN
+    rewriter.setInsertionPointToStart(&ite.thenRegion().front());
+    genCaseAltRHS(&ite.thenRegion(), caseop, order[i], rewriter);
+
+    // ELSE
+    rewriter.setInsertionPointToStart(&ite.elseRegion().front());
     if (hasNext) {
-      CallOp isEq = rewriter.create<CallOp>(caseop.getLoc(), fn, params);
-
-      scf::IfOp ite = rewriter.create<mlir::scf::IfOp>(
-          caseop.getLoc(),
-          /*return types=*/
-          typeConverter->convertType(caseop.getResult().getType()),
-          /*cond=*/isEq.getResult(0),
-          /* createelse=*/true);
-      rewriter.startRootUpdate(ite);
-
-      // THEN
-      genCaseAltRHS(&ite.thenRegion(), caseop, order[i], rewriter);
-
-      // ELSE
-      rewriter.setInsertionPointToEnd(&ite.elseRegion().front());
       scf::IfOp caseladder =
           genCaseAlt(caseop, scrutinee, i + 1, order, rewriter);
 
@@ -529,37 +541,15 @@ public:
       rewriter.create<scf::YieldOp>(rewriter.getUnknownLoc(),
                                     caseladder.getResults());
 
-      rewriter.finalizeRootUpdate(ite);
-      return ite;
-
-    } else { // default or final else
-      // generate dummy if condition
-
-      Value True = rewriter.create<ConstantOp>(
-          rewriter.getUnknownLoc(),
-          rewriter.getIntegerAttr(rewriter.getI1Type(), 1));
-      scf::IfOp ite = rewriter.create<mlir::scf::IfOp>(
-          caseop.getLoc(),
-          /*return types=*/
-          typeConverter->convertType(caseop.getResult().getType()),
-          /*cond=*/True,
-          /* createelse=*/true);
-      rewriter.startRootUpdate(ite);
-      // THEN
-      genCaseAltRHS(&ite.thenRegion(), caseop, order[i], rewriter);
-
-      rewriter.setInsertionPointToEnd(&ite.elseRegion().front());
-      // TODO: unreachable is defined to be ZeroResult, but it's really
-      // VariadicResult?
+    } else {
       auto undef = rewriter.create<HaskUndefOp>(
           rewriter.getUnknownLoc(),
           typeConverter->convertType(caseop.getResult().getType()));
       rewriter.create<scf::YieldOp>(rewriter.getUnknownLoc(),
                                     undef.getResult());
-      rewriter.setInsertionPointAfter(ite);
-      rewriter.finalizeRootUpdate(ite);
-      return ite;
     }
+    rewriter.finalizeRootUpdate(ite);
+    return ite;
   }
 
   LogicalResult
