@@ -394,9 +394,13 @@ void convertReturnsToYields(mlir::Region *r, mlir::PatternRewriter &rewriter) {
 }
 
 struct CaseOpConversionPattern : public mlir::ConversionPattern {
-  explicit CaseOpConversionPattern(mlir::TypeConverter &tc,
+private:
+  HaskToLLVMTypeConverter &tc;
+
+public:
+  explicit CaseOpConversionPattern(HaskToLLVMTypeConverter &tc,
                                    MLIRContext *context)
-      : ConversionPattern(CaseOp::getOperationName(), 1, tc, context) {}
+      : ConversionPattern(CaseOp::getOperationName(), 1, tc, context), tc(tc) {}
 
   // isConstructorTagEq(TAG : !ptr.char, constructor: !ptr.void) -> i1
   static FuncOp getOrInsertIsConstructorTagEq(PatternRewriter &rewriter,
@@ -485,16 +489,19 @@ struct CaseOpConversionPattern : public mlir::ConversionPattern {
     rewriter.setInsertionPointToEnd(&out->front());
     for (int argix = 0; argix < (int)caseop.getAltRHS(i).getNumArguments();
          ++argix) {
-      rhsVals.push_back(mkCallExtractConstructorArg(caseop.getScrutinee(),
-                                                    argix, mod, rewriter));
+      Value arg = mkCallExtractConstructorArg(caseop.getScrutinee(), argix, mod,
+                                              rewriter);
+      Type ty =
+          tc.convertType(caseop.getAltRHS(i).getArgument(argix).getType());
+      arg = tc.fromVoidPointer(rewriter, arg, ty);
+      rhsVals.push_back(arg);
     }
 
-    // rewriter.cloneRegionBefore(caseop.getAltRHS(i), *out, out->end(),
-    // mapper);
+    Block *caseEntryBB = &caseop.getAltRHS(i).front();
+    assert(caseEntryBB);
     rewriter.inlineRegionBefore(caseop.getAltRHS(i), *out, out->end());
     convertReturnsToYields(out, rewriter);
-    rewriter.mergeBlocks(out->getBlocks().front().getNextNode(),
-                         &out->getBlocks().front(), rhsVals);
+    rewriter.mergeBlocks(caseEntryBB, &out->getBlocks().front(), rhsVals);
   }
 
   // generate the order[i]th case alt of caseop, We need this `order` thing to
@@ -507,10 +514,6 @@ struct CaseOpConversionPattern : public mlir::ConversionPattern {
 
     // isConsTagEq(scrutinee, lhs-tag)
     FuncOp fn = getOrInsertIsConstructorTagEq(rewriter, mod);
-    // Value lhs = getOrCreateGlobalString(
-    //     caseop.getLoc(), rewriter, caseop.getAltLHS(order[i]).getValue(),
-    //     caseop.getAltLHS(order[i]).getValue(), mod);
-
     Value lhs = rewriter.create<ptr::PtrStringOp>(
         caseop.getLoc(), caseop.getAltLHS(order[i]).getValue());
     SmallVector<Value, 4> params{scrutinee, lhs};
@@ -521,7 +524,9 @@ struct CaseOpConversionPattern : public mlir::ConversionPattern {
       CallOp isEq = rewriter.create<CallOp>(caseop.getLoc(), fn, params);
 
       scf::IfOp ite = rewriter.create<mlir::scf::IfOp>(
-          /*return types=*/caseop.getLoc(), caseop.getResult().getType(),
+          caseop.getLoc(),
+          /*return types=*/
+          typeConverter->convertType(caseop.getResult().getType()),
           /*cond=*/isEq.getResult(0),
           /* createelse=*/true);
 
@@ -542,20 +547,21 @@ struct CaseOpConversionPattern : public mlir::ConversionPattern {
       Value True = rewriter.create<ConstantOp>(
           rewriter.getUnknownLoc(),
           rewriter.getIntegerAttr(rewriter.getI1Type(), 1));
-      scf::IfOp ite =
-          rewriter.create<mlir::scf::IfOp>(caseop.getLoc(),
-                                           /*return types=*/
-                                           caseop.getResult().getType(),
-                                           /*cond=*/True,
-                                           /* createelse=*/true);
+      scf::IfOp ite = rewriter.create<mlir::scf::IfOp>(
+          caseop.getLoc(),
+          /*return types=*/
+          typeConverter->convertType(caseop.getResult().getType()),
+          /*cond=*/True,
+          /* createelse=*/true);
 
       genCaseAltRHS(&ite.thenRegion(), caseop, order[i], rewriter);
 
       rewriter.setInsertionPointToEnd(&ite.elseRegion().front());
       // TODO: unreachable is defined to be ZeroResult, but it's really
       // VariadicResult?
-      auto undef = rewriter.create<HaskUndefOp>(rewriter.getUnknownLoc(),
-                                                caseop.getResult().getType());
+      auto undef = rewriter.create<HaskUndefOp>(
+          rewriter.getUnknownLoc(),
+          typeConverter->convertType(caseop.getResult().getType()));
       rewriter.create<scf::YieldOp>(rewriter.getUnknownLoc(),
                                     undef.getResult());
       rewriter.setInsertionPointAfter(ite);
@@ -914,6 +920,15 @@ struct LowerHaskToLLVMPass : public Pass {
     });
 
     target.addDynamicallyLegalOp<ReturnOp>([](ReturnOp ret) {
+      llvm::errs() << "checking leagality of: |";
+      ret.print(llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
+      llvm::errs() << "|\n";
+      llvm::errs() << "\n===\n";
+      ret.getParentOfType<FuncOp>().print(
+          llvm::errs(), OpPrintingFlags().printGenericOpForm());
+      llvm::errs() << "\n===\n";
+
+      getchar();
       for (Value arg : ret.getOperands()) {
         if (arg.getType().isa<HaskType>())
           return false;
@@ -930,7 +945,7 @@ struct LowerHaskToLLVMPass : public Pass {
     // populateStdToLLVMConversionPatterns(typeConverter, patterns);
 
     patterns.insert<ForceOpConversionPattern>(typeConverter, &getContext());
-    // patterns.insert<CaseOpConversionPattern>(typeConverter, &getContext());
+    patterns.insert<CaseOpConversionPattern>(typeConverter, &getContext());
     patterns.insert<HaskConstructOpConversionPattern>(typeConverter,
                                                       &getContext());
     patterns.insert<ConstantOpLowering>(typeConverter, &getContext());
