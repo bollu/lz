@@ -100,5 +100,7 @@ public:
   void print(OpAsmPrinter &p);
 };
 
+void registerLowerPointerPass();
+
 }; // namespace ptr
 }; // namespace mlir

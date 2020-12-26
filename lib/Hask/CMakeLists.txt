@@ -2,7 +2,7 @@ add_mlir_dialect_library(MLIRHask
 HaskDialect.cpp
 HaskOps.cpp
 WorkerWrapperPass.cpp
-HaskToLLVM.cpp
+HaskLowering.cpp
 
 ADDITIONAL_HEADER_DIRS
 ${PROJECT_SOURCE_DIR}/include/Hask

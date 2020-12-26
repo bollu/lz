@@ -19,6 +19,20 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
 
+// dilect lowering
+#include "mlir/Pass/PassRegistry.h"
+#include "mlir/Transforms/DialectConversion.h"
+// https://github.com/llvm/llvm-project/blob/80d7ac3bc7c04975fd444e9f2806e4db224f2416/mlir/examples/toy/Ch6/toyc.cpp
+#include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
+#include "mlir/Conversion/SCFToStandard/SCFToStandard.h"
+#include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
+#include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Pass/Pass.h"
+#include "mlir/Transforms/DialectConversion.h"
+
 using namespace mlir;
 using namespace mlir::ptr;
 
@@ -142,3 +156,92 @@ void PtrStringOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
 void PtrStringOp::print(OpAsmPrinter &p) {
   p.printGenericOp(this->getOperation());
 };
+
+class PtrTypeConverter : public mlir::TypeConverter {
+public:
+  // using LLVMTypeConverter::LLVMTypeConverter;
+  using TypeConverter::convertType;
+
+  PtrTypeConverter(MLIRContext *ctx) {
+    // Convert ThunkType to I8PtrTy.
+    // addConversion([](ThunkType type) -> Type {
+    //   return LLVM::LLVMType::getInt8PtrTy(type.getContext());
+    // });
+
+    addConversion([](Type type) { return type; });
+  };
+};
+
+struct LowerPointerPass : public Pass {
+  LowerPointerPass() : Pass(mlir::TypeID::get<LowerPointerPass>()){};
+  StringRef getName() const override { return "LowerPointer"; }
+
+  std::unique_ptr<Pass> clonePass() const override {
+    auto newInst = std::make_unique<LowerPointerPass>(
+        *static_cast<const LowerPointerPass *>(this));
+    newInst->copyOptionValuesFrom(this);
+    return newInst;
+  }
+
+  void runOnOperation() override {
+    LLVMConversionTarget target(getContext());
+    // ConversionTarget target(getContext());
+    target.addIllegalDialect<PtrDialect>();
+    target.addLegalDialect<LLVM::LLVMDialect>();
+    target.addLegalDialect<StandardOpsDialect>();
+    PtrTypeConverter typeConverter(&getContext());
+
+    // HaskTypeConverter typeConverter(&getContext());
+    mlir::OwningRewritePatternList patterns;
+
+    // // OK why is it not able to legalize func? x(
+    // populateAffineToStdConversionPatterns(patterns, &getContext());
+    // populateLoopToStdConversionPatterns(patterns, &getContext());
+    // populateStdToLLVMConversionPatterns(typeConverter, patterns);
+
+    // patterns.insert<ForceOpConversionPattern>(typeConverter,
+    // &getContext()); patterns.insert<CaseOpConversionPattern>(typeConverter,
+    // &getContext());
+    // patterns.insert<HaskConstructOpConversionPattern>(typeConverter,
+    //                                                   &getContext());
+    // patterns.insert<ConstantOpLowering>(typeConverter, &getContext());
+    // patterns.insert<FuncOpLowering>(typeConverter, &getContext());
+    // patterns.insert<ReturnOpLowering>(typeConverter, &getContext());
+
+    // patterns.insert<ApOpConversionPattern>(typeConverter, &getContext());
+    // patterns.insert<ApEagerOpConversionPattern>(typeConverter,
+    // &getContext());
+    // patterns.insert<HaskReturnOpConversionPattern>(typeConverter,
+    //                                                &getContext());
+    ::llvm::DebugFlag = true;
+
+    // applyPartialConversion | applyFullConversion
+    if (failed(mlir::applyFullConversion(getOperation(), target,
+                                         std::move(patterns)))) {
+      llvm::errs() << "===Ptr lowering failed at Conversion===\n";
+      getOperation()->print(llvm::errs());
+      llvm::errs() << "\n===\n";
+      signalPassFailure();
+    };
+
+    if (failed(mlir::verify(getOperation()))) {
+      llvm::errs() << "===Ptr lowering failed at Verification===\n";
+      getOperation()->print(llvm::errs());
+      llvm::errs() << "\n===\n";
+      signalPassFailure();
+    }
+
+    ::llvm::DebugFlag = false;
+  };
+};
+
+std::unique_ptr<mlir::Pass> createLowerPointerPass() {
+  return std::make_unique<LowerPointerPass>();
+}
+
+void ptr::registerLowerPointerPass() {
+  ::mlir::registerPass("ptr-lower", "Perform lowering of ptr to std+llvm",
+                       []() -> std::unique_ptr<::mlir::Pass> {
+                         return createLowerPointerPass();
+                       });
+}

@@ -63,6 +63,7 @@ int main(int argc, char **argv) {
   // mlir::registerAllPasses();
   mlir::standalone::registerWorkerWrapperPass();
   mlir::standalone::registerLowerHaskPass();
+  mlir::ptr::registerLowerPointerPass();
   mlir::registerInlinerPass();
   mlir::registerCanonicalizerPass();
   mlir::registerCSEPass();
