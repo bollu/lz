@@ -93,6 +93,20 @@ public:
       return ptr::VoidPtrType::get(type.getContext());
     });
 
+    addConversion([&](FunctionType fnty) -> Type {
+      SmallVector<Type, 4> argtys;
+      for (Type t : fnty.getInputs()) {
+        argtys.push_back(this->convertType(t));
+      }
+
+      SmallVector<Type, 4> rettys;
+      for (Type t : fnty.getResults()) {
+        rettys.push_back(this->convertType(t));
+      }
+
+      return FunctionType::get(argtys, rettys, fnty.getContext());
+    });
+
     // int->!ptr.void
     /*
     addConversion([](IntegerType type) -> Type {
@@ -844,6 +858,27 @@ struct HaskReturnOpConversionPattern : public mlir::ConversionPattern {
   }
 };
 
+bool isTypeLegal(Type t) {
+  if (t.isa<HaskType>()) {
+    return false;
+  }
+  if (auto fnty = t.dyn_cast<FunctionType>()) {
+
+    for (Type t : fnty.getInputs()) {
+      if (!isTypeLegal(t)) {
+        return false;
+      }
+    }
+
+    for (Type t : fnty.getResults()) {
+      if (!isTypeLegal(t)) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 namespace {
 struct LowerHaskPass : public Pass {
   LowerHaskPass() : Pass(mlir::TypeID::get<LowerHaskPass>()){};
@@ -880,13 +915,11 @@ struct LowerHaskPass : public Pass {
 
       for (auto &arg : llvm::enumerate(funcType.getInputs())) {
         if (arg.value().isa<HaskType>()) {
-
           return false;
         }
       }
       for (auto &arg : llvm::enumerate(funcType.getResults())) {
         if (arg.value().isa<HaskType>()) {
-
           return false;
         }
       }
@@ -894,23 +927,16 @@ struct LowerHaskPass : public Pass {
       return true;
     });
 
-    target.addDynamicallyLegalOp<FuncOp>([](FuncOp funcOp) {
-      auto funcType = funcOp.getType();
-      for (auto &arg : llvm::enumerate(funcType.getInputs())) {
-        if (arg.value().isa<HaskType>())
-          return false;
-      }
-      for (auto &arg : llvm::enumerate(funcType.getResults())) {
-        if (arg.value().isa<HaskType>())
-          return false;
-      }
-      return true;
-    });
+    // This is wrong. We need to recursively check if function type
+    // is legal.
+    target.addDynamicallyLegalOp<FuncOp>(
+        [](FuncOp funcOp) { return isTypeLegal(funcOp.getType()); });
 
     target.addDynamicallyLegalOp<ReturnOp>([](ReturnOp ret) {
       for (Value arg : ret.getOperands()) {
-        if (arg.getType().isa<HaskType>())
+        if (!isTypeLegal(arg.getType())) {
           return false;
+        }
       }
       return true;
     });
