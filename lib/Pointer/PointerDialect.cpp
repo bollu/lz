@@ -157,21 +157,34 @@ void PtrStringOp::print(OpAsmPrinter &p) {
   p.printGenericOp(this->getOperation());
 };
 
-class PtrTypeConverter : public mlir::TypeConverter {
+class PtrTypeConverter : public mlir::LLVMTypeConverter {
 public:
-  // using LLVMTypeConverter::LLVMTypeConverter;
-  using TypeConverter::convertType;
+  using LLVMTypeConverter::LLVMTypeConverter;
 
-  PtrTypeConverter(MLIRContext *ctx) {
-    // Convert ThunkType to I8PtrTy.
-    // addConversion([](ThunkType type) -> Type {
-    //   return LLVM::LLVMType::getInt8PtrTy(type.getContext());
-    // });
-
-    addConversion([](Type type) { return type; });
+  PtrTypeConverter(MLIRContext *ctx) : LLVMTypeConverter(ctx) {
+    // !ptr.void -> i8*
+    addConversion([](ptr::VoidPtrType ty) {
+      LLVM::LLVMType i8 = LLVM::LLVMType::getInt8Ty(ty.getContext());
+      return LLVM::LLVMPointerType::get(i8);
+    });
   };
 };
 
+struct Fn2VoidPtrLowering : public ConversionPattern {
+public:
+  explicit Fn2VoidPtrLowering(TypeConverter &tc, MLIRContext *context)
+      : ConversionPattern(PtrFnPtrToVoidPtrOp::getOperationName(), 1, tc,
+                          context) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *rator, ArrayRef<Value> rands,
+                  ConversionPatternRewriter &rewriter) const override {
+    Value fn = rands[0];
+    rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(
+        rator, LLVM::LLVMType::getInt8PtrTy(fn.getContext()), fn);
+    return success();
+  }
+};
 struct LowerPointerPass : public Pass {
   LowerPointerPass() : Pass(mlir::TypeID::get<LowerPointerPass>()){};
   StringRef getName() const override { return "LowerPointer"; }
@@ -188,18 +201,19 @@ struct LowerPointerPass : public Pass {
     // ConversionTarget target(getContext());
     target.addIllegalDialect<PtrDialect>();
     target.addLegalDialect<LLVM::LLVMDialect>();
-    target.addLegalDialect<StandardOpsDialect>();
-    PtrTypeConverter typeConverter(&getContext());
+    // target.addLegalDialect<StandardOpsDialect>();
 
-    // HaskTypeConverter typeConverter(&getContext());
+    target.addLegalOp<ModuleOp, ModuleTerminatorOp>();
+
+    PtrTypeConverter typeConverter(&getContext());
     mlir::OwningRewritePatternList patterns;
+    populateStdToLLVMConversionPatterns(typeConverter, patterns);
 
     // // OK why is it not able to legalize func? x(
     // populateAffineToStdConversionPatterns(patterns, &getContext());
     // populateLoopToStdConversionPatterns(patterns, &getContext());
-    // populateStdToLLVMConversionPatterns(typeConverter, patterns);
 
-    // patterns.insert<ForceOpConversionPattern>(typeConverter,
+    patterns.insert<Fn2VoidPtrLowering>(typeConverter, &getContext());
     // &getContext()); patterns.insert<CaseOpConversionPattern>(typeConverter,
     // &getContext());
     // patterns.insert<HaskConstructOpConversionPattern>(typeConverter,
@@ -215,16 +229,18 @@ struct LowerPointerPass : public Pass {
     //                                                &getContext());
     ::llvm::DebugFlag = true;
 
+    ModuleOp mod = mlir::cast<ModuleOp>(getOperation());
+
     // applyPartialConversion | applyFullConversion
-    if (failed(mlir::applyFullConversion(getOperation(), target,
-                                         std::move(patterns)))) {
+    if (failed(
+            mlir::applyPartialConversion(mod, target, std::move(patterns)))) {
       llvm::errs() << "===Ptr lowering failed at Conversion===\n";
       getOperation()->print(llvm::errs());
       llvm::errs() << "\n===\n";
       signalPassFailure();
     };
 
-    if (failed(mlir::verify(getOperation()))) {
+    if (failed(mod.verify())) {
       llvm::errs() << "===Ptr lowering failed at Verification===\n";
       getOperation()->print(llvm::errs());
       llvm::errs() << "\n===\n";

@@ -26,6 +26,72 @@ Convert GHC Core to MLIR.
 
 
 # Log:  [newest] to [oldest]
+# Monday 28th Dec
+
+For whatever reason, on trying to lower my `Ptr+Standard` dialect to LLVM,
+I get a failure in a nonsensical location:
+
+```cpp
+class OffsetSizeAndStrideOpInterface : public
+::mlir::OpInterface<OffsetSizeAndStrideOpInterface,
+detail::OffsetSizeAndStrideOpInterfaceInterfaceTraits> {
+```
+
+This happens at the line:
+
+```cpp
+failed(mlir::verify(getOperation()))
+```
+
+It seems like `mlir::verify()` picks up some nonsensical `OpInterface`?!
+
+The exact traceback is:
+
+```
+0.	Program arguments: hask-opt lower-ap.mlir --lz-lower --ptr-lower
+ #0 0x000000000046dceb backtrace (/home/bollu/work/mlir/lz/build/bin/hask-opt+0x46dceb)
+ #1 0x0000000000632c6c llvm::sys::PrintStackTrace(llvm::raw_ostream&, int) (/home/bollu/work/mlir/lz/build/bin/hask-opt+0x632c6c)
+ #2 0x0000000000630844 llvm::sys::RunSignalHandlers() (/home/bollu/work/mlir/lz/build/bin/hask-opt+0x630844)
+ #3 0x00000000006309b3 SignalHandler(int) (/home/bollu/work/mlir/lz/build/bin/hask-opt+0x6309b3)
+ #4 0x00007f9f79ee0980 __restore_rt (/lib/x86_64-linux-gnu/libpthread.so.0+0x12980)
+ #5 0x00007f9f7892ffb7 raise /build/glibc-S7xCS9/glibc-2.27/signal/../sysdeps/unix/sysv/linux/raise.c:51:0
+ #6 0x00007f9f78931921 abort /build/glibc-S7xCS9/glibc-2.27/stdlib/abort.c:81:0
+ #7 0x00007f9f7892148a __assert_fail_base /build/glibc-S7xCS9/glibc-2.27/assert/assert.c:89:0
+ #8 0x00007f9f78921502 (/lib/x86_64-linux-gnu/libc.so.6+0x30502)
+ #9 0x0000000000985f8a mlir::detail::Interface<mlir::OffsetSizeAndStrideOpInterface, mlir::Operation*, mlir::detail::OffsetSizeAndStrideOpInterfaceInterfaceTraits, mlir::Op<mlir::OffsetSizeAndStrideOpInterface>, mlir::OpTrait::TraitBase>::Interface(mlir::Operation*) (/home/bollu/work/mlir/lz/build/bin/hask-opt+0x985f8a)
+#10 0x0000000000985de0 mlir::OpInterface<mlir::OffsetSizeAndStrideOpInterface, mlir::detail::OffsetSizeAndStrideOpInterfaceInterfaceTraits>::OpInterface(mlir::Operation*) (/home/bollu/work/mlir/lz/build/bin/hask-opt+0x985de0)
+#11 0x000000000097cf40 mlir::OffsetSizeAndStrideOpInterface::OffsetSizeAndStrideOpInterface(mlir::Operation*) (/home/bollu/work/mlir/lz/build/bin/hask-opt+0x97cf40)
+#12 0x000000000097b767 LowerPointerPass::runOnOperation() (/home/bollu/work/mlir/lz/build/bin/hask-opt+0x97b767)
+#13 0x0000000000a9eda1 mlir::detail::OpToOpPassAdaptor::run(mlir::Pass*, mlir::Operation*, mlir::AnalysisManager, bool) (/home/bollu/work/mlir/lz/build/bin/hask-opt+0xa9eda1)
+#14 0x0000000000a9f051 mlir::detail::OpToOpPassAdaptor::runPipeline(llvm::iterator_range<llvm::pointee_iterator<std::unique_ptr<mlir::Pass, std::default_delete<mlir::Pass> >*, mlir::Pass> >, mlir::Operation*, mlir::AnalysisManager, bool) (/home/bollu/work/mlir/lz/build/bin/hask-opt+0xa9f051)
+#15 0x0000000000aa1a11 mlir::PassManager::run(mlir::ModuleOp) (/home/bollu/work/mlir/lz/build/bin/hask-opt+0xaa1a11)
+#16 0x00000000009d5525 performActions(llvm::raw_ostream&, bool, bool, llvm::SourceMgr&, mlir::MLIRContext*, mlir::PassPipelineCLParser const&) (.constprop.101) (/home/bollu/work/mlir/lz/build/bin/hask-opt+0x9d5525)
+#17 0x00000000009d5a97 processBuffer(llvm::raw_ostream&, std::unique_ptr<llvm::MemoryBuffer, std::default_delete<llvm::MemoryBuffer> >, bool, bool, bool, bool, mlir::PassPipelineCLParser const&, mlir::DialectRegistry&) (/home/bollu/work/mlir/lz/build/bin/hask-opt+0x9d5a97)
+#18 0x00000000009d5c66 mlir::MlirOptMain(llvm::raw_ostream&, std::unique_ptr<llvm::MemoryBuffer, std::default_delete<llvm::MemoryBuffer> >, mlir::PassPipelineCLParser const&, mlir::DialectRegistry&, bool, bool, bool, bool, bool) (/home/bollu/work/mlir/lz/build/bin/hask-opt+0x9d5c66)
+#19 0x00000000009d60ad mlir::MlirOptMain(int, char**, llvm::StringRef, mlir::DialectRegistry&, bool) (/home/bollu/work/mlir/lz/build/bin/hask-opt+0x9d60ad)
+#20 0x00000000004db274 main (/home/bollu/work/mlir/lz/build/bin/hask-opt+0x4db274)
+#21 0x00007f9f78912bf7 __libc_start_main /build/glibc-S7xCS9/glibc-2.27/csu/../csu/libc-start.c:344:0
+#22 0x00000000004373fa _start (/home/bollu/work/mlir/lz/build/bin/hask-opt+0x4373fa)
+fish: Job 1, 'hask-opt lower-ap.mlir --lz-l...' terminated by signal SIGABRT (Abort)
+```
+
+The solution is:
+
+```cpp
+ModuleOp mod = mlir::cast<ModuleOp>(getOperation());
+
+if (failed(mod.verify())) {
+  llvm::errs() << "===Ptr lowering failed at Verification===\n";
+  getOperation()->print(llvm::errs());
+  llvm::errs() << "\n===\n";
+  signalPassFailure();
+}
+```
+
+I find this sort of thing disturing, since it implies that the heavy use of
+"C++ interface" that is very common in MLIR may start failing peculiarly?
+
+
 # Thursday 24th Dec
 
 ```
