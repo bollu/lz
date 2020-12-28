@@ -554,7 +554,7 @@ public:
                                     caseladder.getResults());
 
     } else {
-      auto undef = rewriter.create<HaskUndefOp>(
+      auto undef = rewriter.create<ptr::PtrUndefOp>(
           rewriter.getUnknownLoc(),
           typeConverter->convertType(caseop.getResult().getType()));
       rewriter.create<scf::YieldOp>(rewriter.getUnknownLoc(),
@@ -897,8 +897,6 @@ struct LowerHaskPass : public Pass {
     target.addIllegalDialect<HaskDialect>();
     // target.addLegalDialect<HaskDialect>();
     // target.addIllegalOp<HaskConstructOp>();
-
-    target.addLegalOp<HaskUndefOp>();
 
     target.addLegalDialect<StandardOpsDialect>();
     // target.addLegalDialect<mlir::LLVM::LLVMDialect>();

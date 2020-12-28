@@ -47,7 +47,7 @@ PtrDialect &PtrType::getDialect() {
 PtrDialect::PtrDialect(mlir::MLIRContext *context)
     : Dialect(getDialectNamespace(), context, TypeID::get<PtrDialect>()) {
   // clang-format off
-  addOperations<PtrIntToPtrOp, PtrPtrToIntOp, PtrStringOp, PtrFnPtrToVoidPtrOp>();
+  addOperations<PtrIntToPtrOp, PtrPtrToIntOp, PtrStringOp, PtrFnPtrToVoidPtrOp, PtrUndefOp>();
   addTypes<VoidPtrType, CharPtrType>();
 
   // clang-format on
@@ -175,6 +175,35 @@ public:
     });
   };
 };
+// === UNDEF OP ===
+// === UNDEF OP ===
+// === UNDEF OP ===
+// === UNDEF OP ===
+// === UNDEF OP ===
+
+ParseResult PtrUndefOp::parse(OpAsmParser &parser, OperationState &result) {
+  mlir::Type retty;
+  if (parser.parseColonType(retty)) {
+    return failure();
+  };
+  result.addTypes(retty);
+  return success();
+};
+
+void PtrUndefOp::print(OpAsmPrinter &p) {
+  p.printGenericOp(this->getOperation());
+};
+
+void PtrUndefOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                       Type retty) {
+  state.addTypes(retty);
+}
+
+// === LOWERING ===
+// === LOWERING ===
+// === LOWERING ===
+// === LOWERING ===
+// === LOWERING ===
 
 struct Fn2VoidPtrLowering : public ConversionPattern {
 public:
@@ -328,16 +357,16 @@ public:
   }
 };
 
-class HaskUndefOpLowering : public ConversionPattern {
+class PtrUndefOpLowering : public ConversionPattern {
 public:
-  explicit HaskUndefOpLowering(TypeConverter &tc, MLIRContext *context)
-      : ConversionPattern(standalone::HaskUndefOp::getOperationName(), 1, tc,
-                          context) {}
+  explicit PtrUndefOpLowering(TypeConverter &tc, MLIRContext *context)
+      : ConversionPattern(ptr::PtrUndefOp::getOperationName(), 1, tc, context) {
+  }
 
   LogicalResult
   matchAndRewrite(Operation *operation, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    auto undef = mlir::cast<standalone::HaskUndefOp>(operation);
+    auto undef = mlir::cast<ptr::PtrUndefOp>(operation);
     // vvv LLVM ops can only have LLVM types. *eye roll*
     rewriter.replaceOpWithNewOp<LLVM::UndefOp>(
         undef, typeConverter->convertType(undef.getType()));
@@ -363,8 +392,6 @@ struct LowerPointerPass : public Pass {
     target.addLegalDialect<LLVM::LLVMDialect>();
     // target.addLegalDialect<StandardOpsDialect>();
 
-    target.addIllegalOp<standalone::HaskUndefOp>();
-
     target.addLegalOp<ModuleOp, ModuleTerminatorOp>();
 
     PtrTypeConverter typeConverter(&getContext());
@@ -380,7 +407,7 @@ struct LowerPointerPass : public Pass {
     patterns.insert<Int2PtrOpLowering>(typeConverter, &getContext());
     patterns.insert<Ptr2IntOpLowering>(typeConverter, &getContext());
     // vvv yuge hack.
-    patterns.insert<HaskUndefOpLowering>(typeConverter, &getContext());
+    patterns.insert<PtrUndefOpLowering>(typeConverter, &getContext());
     // &getContext()); patterns.insert<CaseOpConversionPattern>(typeConverter,
     // &getContext());
     // patterns.insert<HaskConstructOpConversionPattern>(typeConverter,

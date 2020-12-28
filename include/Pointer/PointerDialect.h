@@ -73,6 +73,7 @@ public:
   void print(OpAsmPrinter &p);
 };
 
+// ptr.string "string-I-like"
 class PtrStringOp
     : public Op<PtrStringOp, OpTrait::OneResult, OpTrait::ZeroOperands> {
 public:
@@ -98,6 +99,16 @@ public:
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
                     Value vint);
   void print(OpAsmPrinter &p);
+};
+
+class PtrUndefOp : public Op<PtrUndefOp, OpTrait::OneResult> {
+public:
+  using Op::Op;
+  static StringRef getOperationName() { return "ptr.undef"; };
+  static ParseResult parse(OpAsmParser &parser, OperationState &result);
+  void print(OpAsmPrinter &p);
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                    Type resultty);
 };
 
 void registerLowerPointerPass();

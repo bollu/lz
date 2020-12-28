@@ -737,30 +737,7 @@ void ThunkifyOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
   state.addTypes(builder.getType<ThunkType>(scrutinee.getType()));
 }
 
-// === UNDEF OP ===
-// === UNDEF OP ===
-// === UNDEF OP ===
-// === UNDEF OP ===
-// === UNDEF OP ===
-
-ParseResult HaskUndefOp::parse(OpAsmParser &parser, OperationState &result) {
-  mlir::Type retty;
-  if (parser.parseColonType(retty)) {
-    return failure();
-  };
-  result.addTypes(retty);
-  return success();
-};
-
-void HaskUndefOp::print(OpAsmPrinter &p) {
-  p.printGenericOp(this->getOperation());
-};
-
-void HaskUndefOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                        Type retty) {
-  state.addTypes(retty);
-}
-
+/*
 // === VALUE TO PTR OP===
 // === VALUE TO PTR OP===
 // === VALUE TO PTR OP===
@@ -813,6 +790,7 @@ ParseResult HaskThunkToPtrOp::parse(OpAsmParser &parser,
 void HaskThunkToPtrOp::print(OpAsmPrinter &p) {
   p.printGenericOp(this->getOperation());
 };
+*/
 
 } // namespace standalone
 } // namespace mlir

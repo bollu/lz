@@ -96,6 +96,34 @@ I find this sort of thing disturing, since it implies that the heavy use of
 - Why can LLVM ops only have LLVM types? This is so annoying. I want to use `LLVMUndefOp`
   but I need some song and dance to use it because I can't say `undef : !ptr.void`
   or `undef: !lz.value`. 
+
+  ```cpp
+auto undef = rewriter.create<LLVM::UndefOp>(
+  rewriter.getUnknownLoc(),
+  typeConverter->convertType(caseop.getResult().getType()));
+```
+
+fails with:
+
+```
+    //===-------------------------------------------===//
+  } -> FAILURE : generated operation 'llvm.mlir.undef'(0x0000607000006D80) was illegal
+} -> FAILURE : no matched legalization pattern
+```
+
+because for whatever reason, `LLVM::UndefOp` can only take a 
+
+but succeeds with:
+
+```cpp
+auto undef = rewriter.create<HaskUndefOp>(
+  rewriter.getUnknownLoc(),
+  typeConverter->convertType(caseop.getResult().getType()));
+```
+
+Because `llvm.mlir.undef` can only return LLVM types. What is this nonsense?
+
+
 # Thursday 24th Dec
 
 ```
