@@ -1,5 +1,7 @@
 // Check that MLIR is capable of lowering the subset of linalg we want.
 // RUN: hask-opt --lower-affine %s
+// RUN: hask-opt --lower-affine --lz-lower  %s
+// RUN: hask-opt --lower-affine --lz-lower --convert-scf-to-std --ptr-lower %s
 module {
   func @main() -> i64 {
     %c0_i64 = constant 0 : i64

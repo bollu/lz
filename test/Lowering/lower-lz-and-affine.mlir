@@ -1,5 +1,6 @@
 // RUN: hask-opt --lz-interpret %s | FileCheck %s
 // RUN: hask-opt --lz-lower
+// RUN: hask-opt %s  --lz-lower --convert-scf-to-std --ptr-lower
 // CHECK: 523776
 // CHECK: num_force_calls(2)
 // CHECK-WW: 523776

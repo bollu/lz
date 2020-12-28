@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Pointer/PointerDialect.h"
+#include "Hask/HaskOps.h"
 #include "Pointer/PointerOps.h"
 
 // includes
@@ -327,6 +328,23 @@ public:
   }
 };
 
+class HaskUndefOpLowering : public ConversionPattern {
+public:
+  explicit HaskUndefOpLowering(TypeConverter &tc, MLIRContext *context)
+      : ConversionPattern(standalone::HaskUndefOp::getOperationName(), 1, tc,
+                          context) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *operation, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto undef = mlir::cast<standalone::HaskUndefOp>(operation);
+    // vvv LLVM ops can only have LLVM types. *eye roll*
+    rewriter.replaceOpWithNewOp<LLVM::UndefOp>(
+        undef, typeConverter->convertType(undef.getType()));
+    return success();
+  }
+};
+
 struct LowerPointerPass : public Pass {
   LowerPointerPass() : Pass(mlir::TypeID::get<LowerPointerPass>()){};
   StringRef getName() const override { return "LowerPointer"; }
@@ -345,6 +363,8 @@ struct LowerPointerPass : public Pass {
     target.addLegalDialect<LLVM::LLVMDialect>();
     // target.addLegalDialect<StandardOpsDialect>();
 
+    target.addIllegalOp<standalone::HaskUndefOp>();
+
     target.addLegalOp<ModuleOp, ModuleTerminatorOp>();
 
     PtrTypeConverter typeConverter(&getContext());
@@ -359,13 +379,15 @@ struct LowerPointerPass : public Pass {
     patterns.insert<StringOpLowering>(typeConverter, &getContext());
     patterns.insert<Int2PtrOpLowering>(typeConverter, &getContext());
     patterns.insert<Ptr2IntOpLowering>(typeConverter, &getContext());
+    // vvv yuge hack.
+    patterns.insert<HaskUndefOpLowering>(typeConverter, &getContext());
     // &getContext()); patterns.insert<CaseOpConversionPattern>(typeConverter,
     // &getContext());
     // patterns.insert<HaskConstructOpConversionPattern>(typeConverter,
     //                                                   &getContext());
     // patterns.insert<ConstantOpLowering>(typeConverter, &getContext());
-    patterns.insert<FuncOpLowering>(typeConverter, &getContext());
-    patterns.insert<ReturnOpLowering>(typeConverter, &getContext());
+    // patterns.insert<FuncOpLowering>(typeConverter, &getContext());
+    // patterns.insert<ReturnOpLowering>(typeConverter, &getContext());
 
     // patterns.insert<ApOpConversionPattern>(typeConverter, &getContext());
     // patterns.insert<ApEagerOpConversionPattern>(typeConverter,
@@ -377,8 +399,7 @@ struct LowerPointerPass : public Pass {
     ModuleOp mod = mlir::cast<ModuleOp>(getOperation());
 
     // applyPartialConversion | applyFullConversion
-    if (failed(
-            mlir::applyPartialConversion(mod, target, std::move(patterns)))) {
+    if (failed(mlir::applyFullConversion(mod, target, std::move(patterns)))) {
       llvm::errs() << "===Ptr lowering failed at Conversion===\n";
       getOperation()->print(llvm::errs());
       llvm::errs() << "\n===\n";

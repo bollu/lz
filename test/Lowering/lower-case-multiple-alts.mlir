@@ -1,6 +1,6 @@
 // RUN: hask-opt %s  --lz-lower 
-// RUN: hask-opt %s  --lz-lower --ptr-lower
 // RUN: hask-opt %s  --lz-lower --convert-scf-to-std
+// RUN: hask-opt %s  --lz-lower --convert-scf-to-std --ptr-lower
 // Test that case of int works.
 module {
   func @main(%boxedx : !lz.value) -> !lz.value {

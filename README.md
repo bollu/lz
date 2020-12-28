@@ -92,6 +92,10 @@ I find this sort of thing disturing, since it implies that the heavy use of
 "C++ interface" that is very common in MLIR may start failing peculiarly?
 
 
+
+- Why can LLVM ops only have LLVM types? This is so annoying. I want to use `LLVMUndefOp`
+  but I need some song and dance to use it because I can't say `undef : !ptr.void`
+  or `undef: !lz.value`. 
 # Thursday 24th Dec
 
 ```

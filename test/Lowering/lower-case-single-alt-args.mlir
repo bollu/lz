@@ -1,4 +1,6 @@
 // RUN: hask-opt %s  --lz-lower 
+// RUN: hask-opt %s --lz-lower --convert-scf-to-std --ptr-lower
+
 
 // Lower a case with a single alt that has a block argument
 // RUN: hask-opt %s  --lz-lower 
