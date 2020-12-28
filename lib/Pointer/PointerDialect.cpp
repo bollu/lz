@@ -167,6 +167,11 @@ public:
       LLVM::LLVMType i8 = LLVM::LLVMType::getInt8Ty(ty.getContext());
       return LLVM::LLVMPointerType::get(i8);
     });
+    // !ptr.char -> i8*
+    addConversion([](ptr::CharPtrType ty) {
+      LLVM::LLVMType i8 = LLVM::LLVMType::getInt8Ty(ty.getContext());
+      return LLVM::LLVMPointerType::get(i8);
+    });
   };
 };
 
@@ -185,6 +190,64 @@ public:
     return success();
   }
 };
+
+struct StringOpLowering : public ConversionPattern {
+public:
+  static Value getOrCreateGlobalString(Location loc, OpBuilder &builder,
+                                       StringRef name, StringRef value,
+                                       ModuleOp module) {
+    // Create the global at the entry of the module.
+    LLVM::GlobalOp global;
+    if (!(global = module.lookupSymbol<LLVM::GlobalOp>(name))) {
+      OpBuilder::InsertionGuard insertGuard(builder);
+      builder.setInsertionPointToStart(module.getBody());
+      auto type = LLVM::LLVMType::getArrayTy(
+          LLVM::LLVMType::getInt8Ty(builder.getContext()), value.size());
+      global = builder.create<LLVM::GlobalOp>(loc, type, true,
+                                              LLVM::Linkage::Internal, name,
+                                              builder.getStringAttr(value));
+    }
+
+    // Get the pointer to the first character in the global string.
+    Value globalPtr = builder.create<LLVM::AddressOfOp>(loc, global);
+    Value cst0 = builder.create<LLVM::ConstantOp>(
+        loc, LLVM::LLVMType::getInt64Ty(builder.getContext()),
+        builder.getIntegerAttr(builder.getIndexType(), 0));
+    return builder.create<LLVM::GEPOp>(
+        loc, LLVM::LLVMType::getInt8PtrTy(builder.getContext()), globalPtr,
+        ArrayRef<Value>({cst0, cst0}));
+  }
+
+  explicit StringOpLowering(TypeConverter &tc, MLIRContext *context)
+      : ConversionPattern(PtrStringOp::getOperationName(), 1, tc, context) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *rator, ArrayRef<Value> rands,
+                  ConversionPatternRewriter &rewriter) const override {
+    StringAttr str = rator->getAttrOfType<StringAttr>("value");
+    mlir::ModuleOp mod = rator->getParentOfType<ModuleOp>();
+    Value v = getOrCreateGlobalString(rator->getLoc(), rewriter, str.getValue(),
+                                      str.getValue(), mod);
+    rewriter.replaceOp(rator, v);
+    return success();
+  }
+};
+
+struct Int2PtrOpLowering : public ConversionPattern {
+public:
+  explicit Int2PtrOpLowering(TypeConverter &tc, MLIRContext *context)
+      : ConversionPattern(PtrIntToPtrOp::getOperationName(), 1, tc, context) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *rator, ArrayRef<Value> rands,
+                  ConversionPatternRewriter &rewriter) const override {
+    Value i = rands[0];
+    rewriter.replaceOpWithNewOp<LLVM::IntToPtrOp>(
+        rator, LLVM::LLVMType::getInt8PtrTy(rator->getContext()), i);
+    return success();
+  }
+};
+
 struct LowerPointerPass : public Pass {
   LowerPointerPass() : Pass(mlir::TypeID::get<LowerPointerPass>()){};
   StringRef getName() const override { return "LowerPointer"; }
@@ -214,6 +277,8 @@ struct LowerPointerPass : public Pass {
     // populateLoopToStdConversionPatterns(patterns, &getContext());
 
     patterns.insert<Fn2VoidPtrLowering>(typeConverter, &getContext());
+    patterns.insert<StringOpLowering>(typeConverter, &getContext());
+    patterns.insert<Int2PtrOpLowering>(typeConverter, &getContext());
     // &getContext()); patterns.insert<CaseOpConversionPattern>(typeConverter,
     // &getContext());
     // patterns.insert<HaskConstructOpConversionPattern>(typeConverter,

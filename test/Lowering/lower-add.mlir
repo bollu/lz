@@ -1,5 +1,6 @@
 // RUN: hask-opt %s  --lz-interpret | FileCheck %s --check-prefix=CHECK-OUT
 // RUN: hask-opt %s  --lz-lower 
+// RUN: hask-opt %s  --lz-lower  --ptr-lower
 // Test that case of int works.
 // CHECK-OUT: constructor(Just 42)
 module {
