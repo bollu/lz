@@ -265,6 +265,68 @@ public:
   }
 };
 
+// https://github.com/spcl/open-earth-compiler/blob/master/lib/Conversion/StencilToStandard/ConvertStencilToStandard.cpp#L45
+class FuncOpLowering : public ConversionPattern {
+public:
+  explicit FuncOpLowering(TypeConverter &tc, MLIRContext *context)
+      : ConversionPattern(FuncOp::getOperationName(), 1, tc, context) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *operation, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto loc = operation->getLoc();
+    auto funcOp = cast<FuncOp>(operation);
+
+    TypeConverter::SignatureConversion inputs(funcOp.getNumArguments());
+    for (auto &en : llvm::enumerate(funcOp.getType().getInputs()))
+      inputs.addInputs(en.index(), typeConverter->convertType(en.value()));
+
+    TypeConverter::SignatureConversion results(funcOp.getNumResults());
+    for (auto &en : llvm::enumerate(funcOp.getType().getResults()))
+      results.addInputs(en.index(), typeConverter->convertType(en.value()));
+
+    auto funcType =
+        FunctionType::get(inputs.getConvertedTypes(),
+                          results.getConvertedTypes(), funcOp.getContext());
+
+    auto newFuncOp = rewriter.create<FuncOp>(loc, funcOp.getName(), funcType);
+    // vvvv SHOOT ME PLEASE.
+    // The problem is that I can't copy *all* attributes, because Type
+    // is also an attribute x(.
+
+    if (Attribute visibility = funcOp.getAttr("sym_visibility")) {
+      newFuncOp.setAttr("sym_visibility", visibility);
+    }
+    // newFuncOp.setAttrs(funcOp.getAttrs());
+    rewriter.inlineRegionBefore(funcOp.getBody(), newFuncOp.getBody(),
+                                newFuncOp.end());
+
+    if (failed(rewriter.convertRegionTypes(&newFuncOp.getBody(), *typeConverter,
+                                           &inputs))) {
+      assert(false && "unable to convert the function's region");
+      return failure();
+    }
+    rewriter.eraseOp(funcOp);
+
+    return success();
+  }
+};
+
+class ReturnOpLowering : public ConversionPattern {
+public:
+  explicit ReturnOpLowering(TypeConverter &tc, MLIRContext *context)
+      : ConversionPattern(ReturnOp::getOperationName(), 1, tc, context) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *operation, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto loc = operation->getLoc();
+    rewriter.create<ReturnOp>(loc, operands);
+    rewriter.eraseOp(operation);
+    return success();
+  }
+};
+
 struct LowerPointerPass : public Pass {
   LowerPointerPass() : Pass(mlir::TypeID::get<LowerPointerPass>()){};
   StringRef getName() const override { return "LowerPointer"; }
@@ -302,8 +364,8 @@ struct LowerPointerPass : public Pass {
     // patterns.insert<HaskConstructOpConversionPattern>(typeConverter,
     //                                                   &getContext());
     // patterns.insert<ConstantOpLowering>(typeConverter, &getContext());
-    // patterns.insert<FuncOpLowering>(typeConverter, &getContext());
-    // patterns.insert<ReturnOpLowering>(typeConverter, &getContext());
+    patterns.insert<FuncOpLowering>(typeConverter, &getContext());
+    patterns.insert<ReturnOpLowering>(typeConverter, &getContext());
 
     // patterns.insert<ApOpConversionPattern>(typeConverter, &getContext());
     // patterns.insert<ApEagerOpConversionPattern>(typeConverter,
