@@ -248,6 +248,23 @@ public:
   }
 };
 
+struct Ptr2IntOpLowering : public ConversionPattern {
+public:
+  explicit Ptr2IntOpLowering(TypeConverter &tc, MLIRContext *context)
+      : ConversionPattern(PtrPtrToIntOp::getOperationName(), 1, tc, context) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *rator, ArrayRef<Value> rands,
+                  ConversionPatternRewriter &rewriter) const override {
+    Value ptr = rands[0];
+    LLVM::LLVMType retty =
+        typeConverter->convertType(rator->getResult(0).getType())
+            .cast<LLVM::LLVMType>();
+    rewriter.replaceOpWithNewOp<LLVM::PtrToIntOp>(rator, retty, ptr);
+    return success();
+  }
+};
+
 struct LowerPointerPass : public Pass {
   LowerPointerPass() : Pass(mlir::TypeID::get<LowerPointerPass>()){};
   StringRef getName() const override { return "LowerPointer"; }
@@ -279,6 +296,7 @@ struct LowerPointerPass : public Pass {
     patterns.insert<Fn2VoidPtrLowering>(typeConverter, &getContext());
     patterns.insert<StringOpLowering>(typeConverter, &getContext());
     patterns.insert<Int2PtrOpLowering>(typeConverter, &getContext());
+    patterns.insert<Ptr2IntOpLowering>(typeConverter, &getContext());
     // &getContext()); patterns.insert<CaseOpConversionPattern>(typeConverter,
     // &getContext());
     // patterns.insert<HaskConstructOpConversionPattern>(typeConverter,
