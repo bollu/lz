@@ -114,6 +114,7 @@ public:
   void print(OpAsmPrinter &p);
 };
 
+
 class PtrUndefOp : public Op<PtrUndefOp, OpTrait::OneResult> {
 public:
   using Op::Op;

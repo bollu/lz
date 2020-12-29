@@ -735,7 +735,25 @@ void ThunkifyOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
   state.addTypes(builder.getType<ThunkType>(scrutinee.getType()));
 }
 
-/*
+// === PTR TO VALUE ===
+// === PTR TO VALUE ===
+// === PTR TO VALUE ===
+// === PTR TO VALUE ===
+// === PTR TO VALUE ===
+// === PTR TO VALUE ===
+// === PTR TO VALUE ===
+// === PTR TO VALUE ===
+
+void PtrToHaskValueOp::build(mlir::OpBuilder &builder,
+                             mlir::OperationState &state, Value vptr) {
+  state.addOperands(vptr);
+  state.addTypes(ValueType::get(builder.getContext()));
+};
+
+void PtrToHaskValueOp::print(OpAsmPrinter &p) {
+  p.printGenericOp(this->getOperation());
+};
+
 // === VALUE TO PTR OP===
 // === VALUE TO PTR OP===
 // === VALUE TO PTR OP===
@@ -766,6 +784,7 @@ void HaskValueToPtrOp::print(OpAsmPrinter &p) {
   p.printGenericOp(this->getOperation());
 };
 
+/*
 // === THUNK TO PTR OP ===
 // === THUNK TO PTR OP ===
 // === THUNK TO PTR OP ===

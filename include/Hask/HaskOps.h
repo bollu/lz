@@ -328,6 +328,28 @@ public:
                  &effects) {}
 };
 
+// %mr = ptr2memref %vptr : !ptr.void -> memref
+class PtrToHaskValueOp
+    : public Op<PtrToHaskValueOp, OpTrait::OneResult, OpTrait::OneOperand> {
+public:
+  using Op::Op;
+  static StringRef getOperationName() { return "ptr.ptr2haskval"; };
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                    Value vptr);
+  void print(OpAsmPrinter &p);
+};
+
+class HaskValueToPtrOp
+    : public Op<HaskValueToPtrOp, OpTrait::OneOperand, OpTrait::OneResult> {
+public:
+  using Op::Op;
+  static StringRef getOperationName() { return "lz.value2ptr"; };
+  static ParseResult parse(OpAsmParser &parser, OperationState &result);
+  void print(OpAsmPrinter &p);
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                    Value v);
+};
+
 /*
 class HaskThunkToPtrOp
     : public Op<HaskThunkToPtrOp, OpTrait::OneOperand, OpTrait::OneResult,

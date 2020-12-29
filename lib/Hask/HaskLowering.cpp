@@ -107,6 +107,20 @@ public:
       return FunctionType::get(argtys, rettys, fnty.getContext());
     });
 
+    // lz.value -> !ptr.void
+    addTargetMaterialization([&](OpBuilder &rewriter, ptr::VoidPtrType resultty,
+                                 ValueRange vals,
+                                 Location loc) -> Optional<Value> {
+      llvm::errs() << "materializing * -> !ptr.void: |" << vals[0] << "|\n";
+      if (vals.size() != 1) {
+        return {};
+      }
+      if (!vals[0].getType().isa<ValueType>()) {
+        return {};
+      }
+      return {rewriter.create<HaskValueToPtrOp>(loc, vals[0])};
+    });
+
     // int->!ptr.void
     /*
     addConversion([](IntegerType type) -> Type {
@@ -194,6 +208,12 @@ public:
     if (MemRefType mr = retty.dyn_cast<MemRefType>()) {
       ptr::PtrToMemrefOp op =
           builder.create<ptr::PtrToMemrefOp>(builder.getUnknownLoc(), src, mr);
+      return op;
+    }
+
+    if (ValueType val = retty.dyn_cast<ValueType>()) {
+      PtrToHaskValueOp op =
+          builder.create<PtrToHaskValueOp>(builder.getUnknownLoc(), src);
       return op;
     }
 
@@ -364,19 +384,25 @@ struct ForceOpConversionPattern : public mlir::ConversionPattern {
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> rands,
                   ConversionPatternRewriter &rewriter) const override {
-    ForceOp force = mlir::dyn_cast<ForceOp>(op);
+    FuncOp parent = op->getParentOfType<FuncOp>();
+    ForceOp force = mlir::cast<ForceOp>(op);
     ModuleOp mod = op->getParentOfType<ModuleOp>();
     FuncOp evalClosure = getOrInsertEvalClosure(rewriter, mod);
     rewriter.setInsertionPointAfter(op);
 
     // vvv HACK: I ought not need this!
     //    SmallVector<Value, 4> args(rands.begin(), rands.end());
-    CallOp call = rewriter.create<CallOp>(op->getLoc(), evalClosure, rands);
-
+    rewriter.setInsertionPointAfter(op);
+    Value toForce = tc.toVoidPointer(rewriter, rands[0]);
+    CallOp call = rewriter.create<CallOp>(op->getLoc(), evalClosure, toForce);
     rewriter.setInsertionPointAfter(call);
     Value out = tc.fromVoidPointer(rewriter, call.getResult(0),
-                                   tc.convertType(force.getResult().getType()));
-    rewriter.replaceOp(force, out);
+                                   force.getResult().getType());
+    rewriter.replaceOp(op, out);
+    llvm::errs() << "vvvv--after-force---vvv\n";
+    parent.print(llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
+    llvm::errs() << "^^^^^^^\n";
+    getchar();
     return success();
   }
 };
@@ -454,7 +480,7 @@ public:
 
   // return the order in which we should generate case alts.
   static std::vector<int> getAltGenerationOrder(CaseOp caseop) {
-    std::vector<int> ixs;
+      std::vector<int> ixs;
     llvm::Optional<int> defaultix = caseop.getDefaultAltIndex();
     for (int i = 0; i < caseop.getNumAlts(); ++i) {
       if (defaultix && *defaultix == i) {
@@ -485,7 +511,7 @@ public:
   }
 
   // fill the region `out` with the ith RHS of the caseop.
-  void genCaseAltRHS(Region *out, CaseOp caseop, int i,
+  void genCaseAltRHS(Region *out, CaseOp caseop, Value scrutinee, int i,
                      ConversionPatternRewriter &rewriter) const {
     ModuleOp mod = caseop.getParentOfType<ModuleOp>();
     assert(out->args_empty());
@@ -494,7 +520,7 @@ public:
 
     for (int argix = 0; argix < (int)caseop.getAltRHS(i).getNumArguments();
          ++argix) {
-      Value arg = mkCallExtractConstructorArg(caseop.getScrutinee(), argix, mod,
+      Value arg = mkCallExtractConstructorArg(scrutinee, argix, mod,
                                               rewriter);
       Type ty =
           tc.convertType(caseop.getAltRHS(i).getArgument(argix).getType());
@@ -517,17 +543,16 @@ public:
                        ConversionPatternRewriter &rewriter) const {
     ModuleOp mod = caseop.getParentOfType<ModuleOp>();
 
-    // isConsTagEq(scrutinee, lhs-tag)
-    FuncOp fn = getOrInsertIsConstructorTagEq(rewriter, mod);
-    Value lhs = rewriter.create<ptr::PtrStringOp>(
-        caseop.getLoc(), caseop.getAltLHS(order[i]).getValue());
-    SmallVector<Value, 4> params{scrutinee, lhs};
-
     // check if equal
     const bool hasNext = (i + 1 < (int)order.size());
 
     Value condition = [&]() {
       if (hasNext) {
+        // isConsTagEq(scrutinee, lhs-tag)
+        FuncOp fn = getOrInsertIsConstructorTagEq(rewriter, mod);
+        Value lhs = rewriter.create<ptr::PtrStringOp>(
+            caseop.getLoc(), caseop.getAltLHS(order[i]).getValue());
+        SmallVector<Value, 4> params{scrutinee, lhs};
         CallOp isEq = rewriter.create<CallOp>(caseop.getLoc(), fn, params);
         return isEq.getResult(0);
       } else {
@@ -548,7 +573,7 @@ public:
 
     // THEN
     rewriter.setInsertionPointToStart(&ite.thenRegion().front());
-    genCaseAltRHS(&ite.thenRegion(), caseop, order[i], rewriter);
+    genCaseAltRHS(&ite.thenRegion(), caseop, scrutinee, order[i], rewriter);
 
     // ELSE
     rewriter.setInsertionPointToStart(&ite.elseRegion().front());
@@ -587,7 +612,6 @@ public:
     caseladder.print(llvm::errs(),
                      mlir::OpPrintingFlags().printGenericOpForm());
     llvm::errs() << "\n^^^^^^^^^caseop[before/after]^^^^^^^^^\n";
-    getchar();
 
     // caseop.getResult().replaceAllUsesWith(caseladder.getResult(0));
     // rewriter.eraseOp(caseop);
@@ -597,7 +621,6 @@ public:
     caseladder.getParentOfType<ModuleOp>().print(
         llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
     llvm::errs() << "\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
-    getchar();
 
     return success();
   }
@@ -723,7 +746,6 @@ public:
     caseladder.print(llvm::errs(),
                      mlir::OpPrintingFlags().printGenericOpForm());
     llvm::errs() << "\n^^^^^^^^^caseIntop[before/after]^^^^^^^^^\n";
-    getchar();
 
     // caseop.getResult().replaceAllUsesWith(caseladder.getResult(0));
     // rewriter.eraseOp(caseop);
@@ -733,7 +755,6 @@ public:
     caseladder.getParentOfType<ModuleOp>().print(
         llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
     llvm::errs() << "\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
-    getchar();
 
     return success();
   }
@@ -802,8 +823,46 @@ public:
     llvm::errs() << "\n";
     call.dump();
     llvm::errs() << "\n";
-    getchar();
 
+    return success();
+  }
+};
+
+class ThunkifyOpLowering : public ConversionPattern {
+private:
+  HaskTypeConverter &tc;
+
+public:
+  explicit ThunkifyOpLowering(HaskTypeConverter &tc, MLIRContext *context)
+      : ConversionPattern(ThunkifyOp::getOperationName(), 1, tc, context),
+        tc(tc) {}
+  // !ptr.void -> !ptr.void
+  static FuncOp getOrInsertMkClosureThunkify(PatternRewriter &rewriter,
+                                             ModuleOp m) {
+    const std::string name = "mkClosure_thunkify";
+    if (FuncOp fn = m.lookupSymbol<FuncOp>(name)) {
+      return fn;
+    }
+
+    MLIRContext *context = rewriter.getContext();
+    Type argty = ptr::VoidPtrType::get(context);
+    Type retty = ptr::VoidPtrType::get(context);
+    FunctionType fnty = rewriter.getFunctionType(argty, retty);
+
+    PatternRewriter::InsertionGuard insertGuard(rewriter);
+    rewriter.setInsertionPointToStart(m.getBody());
+    FuncOp fn = rewriter.create<FuncOp>(m.getLoc(), name, fnty);
+    fn.setPrivate();
+    return fn;
+  }
+
+  LogicalResult
+  matchAndRewrite(Operation *rator, ArrayRef<Value> rands,
+                  ConversionPatternRewriter &rewriter) const override {
+    ModuleOp mod = rator->getParentOfType<ModuleOp>();
+    Value param = tc.toVoidPointer(rewriter, rands[0]);
+    FuncOp mkClosure = getOrInsertMkClosureThunkify(rewriter, mod);
+    rewriter.replaceOpWithNewOp<CallOp>(rator, mkClosure, param);
     return success();
   }
 };
@@ -1047,6 +1106,7 @@ struct LowerHaskPass : public Pass {
     target.addLegalDialect<ptr::PtrDialect>();
 
     target.addLegalOp<ModuleOp, ModuleTerminatorOp>();
+    target.addLegalOp<PtrToHaskValueOp, HaskValueToPtrOp>();
 
     target.addDynamicallyLegalOp<ConstantOp>([](ConstantOp op) {
       auto funcType = op.getType().dyn_cast<FunctionType>();
@@ -1064,7 +1124,6 @@ struct LowerHaskPass : public Pass {
           return false;
         }
       }
-      getchar();
       return true;
     });
 
@@ -1095,6 +1154,8 @@ struct LowerHaskPass : public Pass {
     patterns.insert<CaseIntOpConversionPattern>(typeConverter, &getContext());
     patterns.insert<HaskConstructOpConversionPattern>(typeConverter,
                                                       &getContext());
+    patterns.insert<ThunkifyOpLowering>(typeConverter, &getContext());
+
     patterns.insert<ConstantOpLowering>(typeConverter, &getContext());
     patterns.insert<FuncOpLowering>(typeConverter, &getContext());
     patterns.insert<ReturnOpLowering>(typeConverter, &getContext());
