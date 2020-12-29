@@ -2,7 +2,9 @@
 # https://github.com/llvm/llvm-project/blob/a93514abf2d843339878d0607e2f5fd2a787bf72/mlir/examples/toy/Ch7/CMakeLists.txt
 set(LLVM_LINK_COMPONENTS
   Core
+  MCParser  # found from llvm-exegesis.
   Support
+  native # fond from llvm-exegesis
   nativecodegen
   OrcJIT
   ExecutionEngine
@@ -12,7 +14,7 @@ set(LLVM_LINK_COMPONENTS
 
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 get_property(conversion_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
-add_llvm_executable(hask-opt hask-opt.cpp Interpreter.cpp Runtime.cpp)
+add_llvm_executable(hask-opt hask-opt.cpp Interpreter.cpp Runtime.cpp ../lib/LZJIT/LZJIT.cpp)
 
 llvm_update_compile_flags(hask-opt)
 target_link_libraries(hask-opt PRIVATE
@@ -31,7 +33,7 @@ target_link_libraries(hask-opt PRIVATE
         MLIRSideEffectInterfaces
         MLIRTargetLLVMIR
         MLIRTransforms
-        MLIRSupport
-        LZJIT)
+        MLIRSupport)
+    # LZJIT)
 
 mlir_check_link_libraries(hask-opt)

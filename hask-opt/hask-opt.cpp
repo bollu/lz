@@ -59,7 +59,6 @@ const char *__asan_default_options() { return "detect_leaks=0"; }
 
 using namespace llvm;
 using namespace llvm::orc;
-ExitOnError ExitOnErr;
 
 int main(int argc, char **argv) {
   // mlir::registerAllPasses();
