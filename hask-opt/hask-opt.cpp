@@ -40,6 +40,8 @@
 #include "Pointer/PointerDialect.h"
 #include "Runtime.h"
 
+#include "LZJIT/LZJIT.h"
+
 // conversion
 // https://github.com/llvm/llvm-project/blob/80d7ac3bc7c04975fd444e9f2806e4db224f2416/mlir/examples/toy/Ch6/toyc.cpp
 #include "mlir/Target/LLVMIR.h"
@@ -73,6 +75,7 @@ int main(int argc, char **argv) {
   mlir::registerConvertAffineToStandardPass();
   mlir::registerSCFToStandardPass();
 
+  registerLZJITPass();
   registerLzInterpretPass();
 
   mlir::DialectRegistry registry;

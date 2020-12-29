@@ -31,6 +31,7 @@ target_link_libraries(hask-opt PRIVATE
         MLIRSideEffectInterfaces
         MLIRTargetLLVMIR
         MLIRTransforms
-        MLIRSupport)
+        MLIRSupport
+        LZJIT)
 
 mlir_check_link_libraries(hask-opt)
