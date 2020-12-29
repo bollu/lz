@@ -130,7 +130,7 @@ public:
         return {};
       }
 
-      ptr::PtrIntToPtrOp op = rewriter.create<ptr::PtrIntToPtrOp>(loc, vals[0]);
+      ptr::IntToPtrOp op = rewriter.create<ptr::IntToPtrOp>(loc, vals[0]);
       llvm::SmallPtrSet<Operation *, 1> exceptions;
       exceptions.insert(op);
 
@@ -149,8 +149,8 @@ public:
         return {};
       }
 
-      ptr::PtrPtrToIntOp op =
-          rewriter.create<ptr::PtrPtrToIntOp>(loc, vals[0], resultty);
+      ptr::PtrToIntOp op =
+          rewriter.create<ptr::PtrToIntOp>(loc, vals[0], resultty);
 
       llvm::errs() << "op: ";
       op.dump();
@@ -167,16 +167,16 @@ public:
       return src;
     }
     if (src.getType().isa<IntegerType>()) {
-      ptr::PtrIntToPtrOp op =
-          builder.create<ptr::PtrIntToPtrOp>(builder.getUnknownLoc(), src);
+      ptr::IntToPtrOp op =
+          builder.create<ptr::IntToPtrOp>(builder.getUnknownLoc(), src);
       return op;
     }
 
     if (src.getType().isa<FunctionType>()) {
-      return builder.create<ptr::PtrFnPtrToVoidPtrOp>(builder.getUnknownLoc(),
-                                                      src);
+      return builder.create<ptr::FnToVoidPtrOp>(builder.getUnknownLoc(), src);
     }
 
+    llvm::errs() << "ERROR: unknown type: |" << src.getType() << "|\n";
     assert(false && "unknown type to convert to void pointer");
   };
 
@@ -186,11 +186,18 @@ public:
       return src;
     }
     if (IntegerType it = retty.dyn_cast<IntegerType>()) {
-      ptr::PtrPtrToIntOp op =
-          builder.create<ptr::PtrPtrToIntOp>(builder.getUnknownLoc(), src, it);
+      ptr::PtrToIntOp op =
+          builder.create<ptr::PtrToIntOp>(builder.getUnknownLoc(), src, it);
       return op;
     }
 
+    if (MemRefType mr = retty.dyn_cast<MemRefType>()) {
+      ptr::PtrToMemrefOp op =
+          builder.create<ptr::PtrToMemrefOp>(builder.getUnknownLoc(), src, mr);
+      return op;
+    }
+
+    llvm::errs() << "ERROR: unknown type: |" << retty << "|\n";
     assert(false && "unknown type to convert from void pointer");
   };
 };

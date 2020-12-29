@@ -1,5 +1,6 @@
 #pragma once
 #include "mlir/IR/Dialect.h"
+#include "mlir/IR/StandardTypes.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include <llvm/ADT/ArrayRef.h>
@@ -50,8 +51,8 @@ public:
 };
 
 // %ptr = inttoptr %i
-class PtrIntToPtrOp
-    : public Op<PtrIntToPtrOp, OpTrait::OneResult, OpTrait::OneOperand> {
+class IntToPtrOp
+    : public Op<IntToPtrOp, OpTrait::OneResult, OpTrait::OneOperand> {
 public:
   using Op::Op;
   static StringRef getOperationName() { return "ptr.int2ptr"; };
@@ -62,8 +63,8 @@ public:
 };
 
 // %ptr = ptrtoint %i
-class PtrPtrToIntOp
-    : public Op<PtrPtrToIntOp, OpTrait::OneResult, OpTrait::OneOperand> {
+class PtrToIntOp
+    : public Op<PtrToIntOp, OpTrait::OneResult, OpTrait::OneOperand> {
 public:
   using Op::Op;
   static StringRef getOperationName() { return "ptr.ptr2int"; };
@@ -90,14 +91,26 @@ public:
   void print(OpAsmPrinter &p);
 };
 
-class PtrFnPtrToVoidPtrOp
-    : public Op<PtrFnPtrToVoidPtrOp, OpTrait::OneResult, OpTrait::OneOperand> {
+// fnptr -> !ptr.void
+class FnToVoidPtrOp
+    : public Op<FnToVoidPtrOp, OpTrait::OneResult, OpTrait::OneOperand> {
 public:
   using Op::Op;
   static StringRef getOperationName() { return "ptr.fn2voidptr"; };
   // static ParseResult parse(OpAsmParser &parser, OperationState &result);
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
                     Value vint);
+  void print(OpAsmPrinter &p);
+};
+
+// %mr = ptr2memref %vptr : !ptr.void -> memref
+class PtrToMemrefOp
+    : public Op<PtrToMemrefOp, OpTrait::OneResult, OpTrait::OneOperand> {
+public:
+  using Op::Op;
+  static StringRef getOperationName() { return "ptr.ptr2memref"; };
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                    Value vptr, MemRefType ity);
   void print(OpAsmPrinter &p);
 };
 

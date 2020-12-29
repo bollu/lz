@@ -47,7 +47,8 @@ PtrDialect &PtrType::getDialect() {
 PtrDialect::PtrDialect(mlir::MLIRContext *context)
     : Dialect(getDialectNamespace(), context, TypeID::get<PtrDialect>()) {
   // clang-format off
-  addOperations<PtrIntToPtrOp, PtrPtrToIntOp, PtrStringOp, PtrFnPtrToVoidPtrOp, PtrUndefOp>();
+  addOperations<IntToPtrOp, PtrToIntOp, PtrStringOp, FnToVoidPtrOp, PtrUndefOp>();
+  addOperations<PtrToMemrefOp>();
   addTypes<VoidPtrType, CharPtrType>();
 
   // clang-format on
@@ -84,14 +85,14 @@ void PtrDialect::printType(mlir::Type type, mlir::DialectAsmPrinter &p) const {
 // === INT TO PTR ===
 // === INT TO PTR ===
 
-void PtrIntToPtrOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                          Value vint) {
+void IntToPtrOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                       Value vint) {
   assert(vint.getType().isa<IntegerType>());
   state.addOperands(vint);
   state.addTypes(VoidPtrType::get(builder.getContext()));
 };
 
-void PtrIntToPtrOp::print(OpAsmPrinter &p) {
+void IntToPtrOp::print(OpAsmPrinter &p) {
   p.printGenericOp(this->getOperation());
 };
 
@@ -101,14 +102,14 @@ void PtrIntToPtrOp::print(OpAsmPrinter &p) {
 // === FNPTR TO VOID PTR ===
 // === FNPTR TO VOID PTR ===
 
-void PtrFnPtrToVoidPtrOp::build(mlir::OpBuilder &builder,
-                                mlir::OperationState &state, Value vint) {
+void FnToVoidPtrOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                          Value vint) {
   assert(vint.getType().isa<FunctionType>());
   state.addOperands(vint);
   state.addTypes(VoidPtrType::get(builder.getContext()));
 };
 
-void PtrFnPtrToVoidPtrOp::print(OpAsmPrinter &p) {
+void FnToVoidPtrOp::print(OpAsmPrinter &p) {
   p.printGenericOp(this->getOperation());
 };
 
@@ -118,15 +119,33 @@ void PtrFnPtrToVoidPtrOp::print(OpAsmPrinter &p) {
 // === PTR TO INT ===
 // === PTR TO INT ===
 
-void PtrPtrToIntOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                          Value vptr, IntegerType ity) {
+void PtrToIntOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                       Value vptr, IntegerType ity) {
   assert(vptr.getType().isa<VoidPtrType>() &&
          "expected argument to be a void pointer type");
   state.addOperands(vptr);
   state.addTypes(ity);
 };
 
-void PtrPtrToIntOp::print(OpAsmPrinter &p) {
+void PtrToIntOp::print(OpAsmPrinter &p) {
+  p.printGenericOp(this->getOperation());
+};
+
+// === PTR TO MEMREF ===
+// === PTR TO MEMREF ===
+// === PTR TO MEMREF ===
+// === PTR TO MEMREF ===
+// === PTR TO MEMREF ===
+
+void PtrToMemrefOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                          Value vptr, MemRefType mty) {
+  assert(vptr.getType().isa<VoidPtrType>() &&
+         "expected argument to be a void pointer type");
+  state.addOperands(vptr);
+  state.addTypes(mty);
+};
+
+void PtrToMemrefOp::print(OpAsmPrinter &p) {
   p.printGenericOp(this->getOperation());
 };
 
@@ -208,8 +227,7 @@ void PtrUndefOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
 struct Fn2VoidPtrLowering : public ConversionPattern {
 public:
   explicit Fn2VoidPtrLowering(TypeConverter &tc, MLIRContext *context)
-      : ConversionPattern(PtrFnPtrToVoidPtrOp::getOperationName(), 1, tc,
-                          context) {}
+      : ConversionPattern(FnToVoidPtrOp::getOperationName(), 1, tc, context) {}
 
   LogicalResult
   matchAndRewrite(Operation *rator, ArrayRef<Value> rands,
@@ -266,7 +284,7 @@ public:
 struct Int2PtrOpLowering : public ConversionPattern {
 public:
   explicit Int2PtrOpLowering(TypeConverter &tc, MLIRContext *context)
-      : ConversionPattern(PtrIntToPtrOp::getOperationName(), 1, tc, context) {}
+      : ConversionPattern(IntToPtrOp::getOperationName(), 1, tc, context) {}
 
   LogicalResult
   matchAndRewrite(Operation *rator, ArrayRef<Value> rands,
@@ -281,7 +299,7 @@ public:
 struct Ptr2IntOpLowering : public ConversionPattern {
 public:
   explicit Ptr2IntOpLowering(TypeConverter &tc, MLIRContext *context)
-      : ConversionPattern(PtrPtrToIntOp::getOperationName(), 1, tc, context) {}
+      : ConversionPattern(PtrToIntOp::getOperationName(), 1, tc, context) {}
 
   LogicalResult
   matchAndRewrite(Operation *rator, ArrayRef<Value> rands,
