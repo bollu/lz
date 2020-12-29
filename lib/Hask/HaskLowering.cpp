@@ -108,6 +108,7 @@ public:
     });
 
     // lz.value -> !ptr.void
+    /*
     addTargetMaterialization([&](OpBuilder &rewriter, ptr::VoidPtrType resultty,
                                  ValueRange vals,
                                  Location loc) -> Optional<Value> {
@@ -120,6 +121,7 @@ public:
       }
       return {rewriter.create<ptr::HaskValueToPtrOp>(loc, vals[0])};
     });
+    */
 
     // int->!ptr.void
     /*

@@ -70,7 +70,7 @@ module {
           }]
         lz.return %retj :!lz.value
       }]
-    lz.return %reti : !lz.value
+    return %reti : !lz.value
   }
 
   // 37 + 5 = 42
@@ -81,7 +81,7 @@ module {
     %f = constant @f : (!lz.thunk<!lz.value>) -> !lz.value
     %out_t = lz.ap(%f : (!lz.thunk<!lz.value>) -> !lz.value, %v_thunk)
     %out_v = lz.force(%out_t): !lz.value
-    lz.return %out_v : !lz.value
+    return %out_v : !lz.value
   }
 }
 

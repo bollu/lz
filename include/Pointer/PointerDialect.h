@@ -126,6 +126,7 @@ public:
 };
 
 
+/*
 class PtrToHaskValueOp
     : public Op<PtrToHaskValueOp, OpTrait::OneResult, OpTrait::OneOperand> {
 public:
@@ -146,6 +147,7 @@ public:
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
                     Value v);
 };
+*/
 
 void registerLowerPointerPass();
 

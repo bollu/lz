@@ -48,7 +48,7 @@ PtrDialect::PtrDialect(mlir::MLIRContext *context)
     : Dialect(getDialectNamespace(), context, TypeID::get<PtrDialect>()) {
   // clang-format off
   addOperations<IntToPtrOp, PtrToIntOp, PtrStringOp, FnToVoidPtrOp, PtrUndefOp>();
-  addOperations<PtrToHaskValueOp, HaskValueToPtrOp>();
+  // addOperations<PtrToHaskValueOp, HaskValueToPtrOp>();
   addOperations<PtrToMemrefOp>();
   addTypes<VoidPtrType, CharPtrType>();
 
@@ -219,6 +219,7 @@ void PtrUndefOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
   state.addTypes(retty);
 }
 
+/*
 // === PTR TO VALUE ===
 // === PTR TO VALUE ===
 // === PTR TO VALUE ===
@@ -267,6 +268,7 @@ void HaskValueToPtrOp::build(mlir::OpBuilder &builder,
 void HaskValueToPtrOp::print(OpAsmPrinter &p) {
   p.printGenericOp(this->getOperation());
 };
+*/
 
 // === LOWERING ===
 // === LOWERING ===
