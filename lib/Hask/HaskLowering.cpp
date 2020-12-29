@@ -118,7 +118,7 @@ public:
       if (!vals[0].getType().isa<ValueType>()) {
         return {};
       }
-      return {rewriter.create<HaskValueToPtrOp>(loc, vals[0])};
+      return {rewriter.create<ptr::HaskValueToPtrOp>(loc, vals[0])};
     });
 
     // int->!ptr.void
@@ -212,9 +212,10 @@ public:
     }
 
     if (ValueType val = retty.dyn_cast<ValueType>()) {
-      PtrToHaskValueOp op =
-          builder.create<PtrToHaskValueOp>(builder.getUnknownLoc(), src);
-      return op;
+        return src;
+     //    ptr::PtrToHaskValueOp op =
+     //      builder.create<ptr::PtrToHaskValueOp>(builder.getUnknownLoc(), src);
+     //  return op;
     }
 
     llvm::errs() << "ERROR: unknown type: |" << retty << "|\n";
@@ -1106,7 +1107,6 @@ struct LowerHaskPass : public Pass {
     target.addLegalDialect<ptr::PtrDialect>();
 
     target.addLegalOp<ModuleOp, ModuleTerminatorOp>();
-    target.addLegalOp<PtrToHaskValueOp, HaskValueToPtrOp>();
 
     target.addDynamicallyLegalOp<ConstantOp>([](ConstantOp op) {
       auto funcType = op.getType().dyn_cast<FunctionType>();

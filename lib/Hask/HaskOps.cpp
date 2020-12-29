@@ -735,54 +735,6 @@ void ThunkifyOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
   state.addTypes(builder.getType<ThunkType>(scrutinee.getType()));
 }
 
-// === PTR TO VALUE ===
-// === PTR TO VALUE ===
-// === PTR TO VALUE ===
-// === PTR TO VALUE ===
-// === PTR TO VALUE ===
-// === PTR TO VALUE ===
-// === PTR TO VALUE ===
-// === PTR TO VALUE ===
-
-void PtrToHaskValueOp::build(mlir::OpBuilder &builder,
-                             mlir::OperationState &state, Value vptr) {
-  state.addOperands(vptr);
-  state.addTypes(ValueType::get(builder.getContext()));
-};
-
-void PtrToHaskValueOp::print(OpAsmPrinter &p) {
-  p.printGenericOp(this->getOperation());
-};
-
-// === VALUE TO PTR OP===
-// === VALUE TO PTR OP===
-// === VALUE TO PTR OP===
-// === VALUE TO PTR OP===
-// === VALUE TO PTR OP===
-ParseResult HaskValueToPtrOp::parse(OpAsmParser &parser,
-                                    OperationState &result) {
-  OpAsmParser::OperandType rand; // ope'rand
-  if (parser.parseOperand(rand) ||
-      parser.resolveOperand(rand,
-                            ValueType::get(parser.getBuilder().getContext()),
-                            result.operands)) {
-    return failure();
-  }
-  result.addTypes(ptr::VoidPtrType::get(parser.getBuilder().getContext()));
-  return success();
-};
-
-void HaskValueToPtrOp::build(mlir::OpBuilder &builder,
-                             mlir::OperationState &state, mlir::Value v) {
-
-  assert(v.getType().isa<ValueType>());
-  state.addOperands(v);
-  state.addTypes(ptr::VoidPtrType::get(builder.getContext()));
-}
-
-void HaskValueToPtrOp::print(OpAsmPrinter &p) {
-  p.printGenericOp(this->getOperation());
-};
 
 /*
 // === THUNK TO PTR OP ===

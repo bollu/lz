@@ -125,6 +125,28 @@ public:
                     Type resultty);
 };
 
+
+class PtrToHaskValueOp
+    : public Op<PtrToHaskValueOp, OpTrait::OneResult, OpTrait::OneOperand> {
+public:
+  using Op::Op;
+  static StringRef getOperationName() { return "ptr.ptr2haskval"; };
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                    Value vptr);
+  void print(OpAsmPrinter &p);
+};
+
+class HaskValueToPtrOp
+    : public Op<HaskValueToPtrOp, OpTrait::OneOperand, OpTrait::OneResult> {
+public:
+  using Op::Op;
+  static StringRef getOperationName() { return "ptr.haskval2ptr"; };
+  static ParseResult parse(OpAsmParser &parser, OperationState &result);
+  void print(OpAsmPrinter &p);
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                    Value v);
+};
+
 void registerLowerPointerPass();
 
 }; // namespace ptr

@@ -54,10 +54,7 @@ HaskDialect::HaskDialect(mlir::MLIRContext *context)
     ForceOp,
     HaskConstructOp,
     CaseIntOp,
-    HaskLambdaOp,
-    PtrToHaskValueOp,
-    HaskValueToPtrOp
-  >();
+    HaskLambdaOp >();
   addTypes<
     // HaskFnType,
     // ADTType,
