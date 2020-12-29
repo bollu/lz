@@ -50,7 +50,7 @@ module {
             %one = constant 1: i64
             %isub = subi %ihash, %one: i64
             %boxed_isub = lz.construct(@Just, %isub: i64)
-            %boxed_isub_t = lz.thunkify(%boxed_isub : !lz.value) : !lz.thunk<!lz.value>
+            %boxed_isub_t = lz.thunkify(%boxed_isub : !lz.value) 
             %f = constant @f : (!lz.thunk<!lz.value>) -> !lz.value
             %rec_t = lz.ap(%f : (!lz.thunk<!lz.value>) -> !lz.value , %boxed_isub_t)
             %rec_v = lz.force(%rec_t): !lz.value
@@ -77,7 +77,7 @@ module {
   func @main() -> !lz.value {
     %v = constant 37: i64
     %v_box = lz.construct(@Just, %v: i64)
-    %v_thunk = lz.thunkify(%v_box: !lz.value): !lz.thunk<!lz.value>
+    %v_thunk = lz.thunkify(%v_box: !lz.value)
     %f = constant @f : (!lz.thunk<!lz.value>) -> !lz.value
     %out_t = lz.ap(%f : (!lz.thunk<!lz.value>) -> !lz.value, %v_thunk)
     %out_v = lz.force(%out_t): !lz.value

@@ -114,8 +114,8 @@ module {
                           %fib_i_minus_two_t = lz.ap(%fib: (!lz.thunk<!lz.value>) -> !lz.value, %i_minus_two_t)
                           %fib_i_minus_two_v = lz.force(%fib_i_minus_two_t) : !lz.value
 
-                          %fib_i_minus_one_v_t = lz.thunkify(%fib_i_minus_one_v: !lz.value): !lz.thunk<!lz.value>
-                          %fib_i_minus_two_v_t = lz.thunkify(%fib_i_minus_two_v: !lz.value): !lz.thunk<!lz.value>
+                          %fib_i_minus_one_v_t = lz.thunkify(%fib_i_minus_one_v: !lz.value)
+                          %fib_i_minus_two_v_t = lz.thunkify(%fib_i_minus_two_v: !lz.value)
 
                           %plus = constant @plus : (!lz.thunk<!lz.value>, !lz.thunk<!lz.value>) -> !lz.value
                           %sum = lz.ap(%plus: (!lz.thunk<!lz.value>, !lz.thunk<!lz.value>) -> !lz.value, %fib_i_minus_one_v_t, %fib_i_minus_two_v_t)
@@ -133,7 +133,7 @@ module {
   func @main() -> !lz.value {
     %number = std.constant 6 : i64
     %boxed_number = lz.construct(@SimpleInt, %number: i64)
-    %thunk_number = lz.thunkify(%boxed_number: !lz.value) : !lz.thunk<!lz.value>
+    %thunk_number = lz.thunkify(%boxed_number: !lz.value) 
 
     %fib = constant @fib : (!lz.thunk<!lz.value>) -> !lz.value
     %out_t = lz.ap(%fib : (!lz.thunk<!lz.value>) -> !lz.value, %thunk_number)

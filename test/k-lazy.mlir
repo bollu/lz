@@ -24,7 +24,7 @@ module {
     // TODO: I need a think to transmute to different types.
     // Because we may want to "downcast" a ADT to a raw value
     %xv = lz.construct(@X, %lit_42 : i64)
-    %x_t = lz.thunkify(%xv : !lz.value) :!lz.thunk<!lz.value>
+    %x_t = lz.thunkify(%xv : !lz.value) 
 
     %loop = constant @loop : (!lz.thunk<!lz.value>) -> !lz.value
     %y = lz.ap(%loop : (!lz.thunk<!lz.value>) -> !lz.value, %x_t)

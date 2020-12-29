@@ -709,11 +709,10 @@ void CaseIntOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
 
 ParseResult ThunkifyOp::parse(OpAsmParser &parser, OperationState &result) {
   OpAsmParser::OperandType scrutinee;
-  mlir::Type type, retty;
 
+  Type type;
   if (parser.parseLParen() || parser.parseOperand(scrutinee) ||
-      parser.parseColon() || parser.parseType(type) || parser.parseRParen() ||
-      parser.parseColon() || parser.parseType(retty)) {
+      parser.parseColonType(type) || parser.parseRParen()) {
     return failure();
   }
 
@@ -721,14 +720,13 @@ ParseResult ThunkifyOp::parse(OpAsmParser &parser, OperationState &result) {
   if (parser.resolveOperand(scrutinee, type, results))
     return failure();
   result.addOperands(results);
-  result.addTypes(retty);
+  result.addTypes(ThunkType::get(parser.getBuilder().getContext(), type));
   return success();
 };
 
 void ThunkifyOp::print(OpAsmPrinter &p) {
   p << getOperationName() << "(" << this->getScrutinee() << " :"
-    << this->getScrutinee().getType() << ")"
-    << ":" << this->getResult().getType();
+    << this->getScrutinee().getType() << ")";
 };
 
 void ThunkifyOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,

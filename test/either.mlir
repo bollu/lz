@@ -41,7 +41,7 @@ module {
     %l_t = lz.ap(%lfn: () -> !lz.value)
 
     %r = lz.construct(@Right, %l_t :!lz.thunk<!lz.value>)
-    %r_t = lz.thunkify(%r :!lz.value):!lz.thunk<!lz.value>
+    %r_t = lz.thunkify(%r :!lz.value)
     return %r :!lz.value
   }
 

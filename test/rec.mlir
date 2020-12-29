@@ -20,7 +20,7 @@ module {
                %onehash = constant 1: i64
                %prev = subi %ihash, %onehash: i64
                %box_prev_v = lz.construct(@SimpleInt, %prev: i64)
-               %box_prev_t = lz.thunkify(%box_prev_v :!lz.value) : !lz.thunk<!lz.value>
+               %box_prev_t = lz.thunkify(%box_prev_v :!lz.value) 
                %fprev_t = lz.ap(%f: (!lz.thunk<!lz.value>) -> !lz.value, %box_prev_t)
                %prev_v = lz.force(%fprev_t): !lz.value
                lz.return %prev_v : !lz.value
@@ -32,7 +32,7 @@ module {
   func @main() -> !lz.value {
     %n = constant 6: i64
     %box_n_v = lz.construct(@SimpleInt, %n: i64)
-    %box_n_t = lz.thunkify(%box_n_v: !lz.value) : !lz.thunk<!lz.value>
+    %box_n_t = lz.thunkify(%box_n_v: !lz.value) 
     %f = constant @f : (!lz.thunk<!lz.value>) -> !lz.value
     %out_t = lz.ap(%f: (!lz.thunk<!lz.value>) -> !lz.value, %box_n_t)
     %out_v = lz.force(%out_t): !lz.value
