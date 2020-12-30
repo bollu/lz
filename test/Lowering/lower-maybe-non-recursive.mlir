@@ -1,17 +1,18 @@
 // RUN: hask-opt %s  --lz-interpret | FileCheck %s
-// RUN: hask-opt %s  --lz-worker-wrapper --lz-interpret | FileCheck %s -check-prefix='CHECK-WW'
 // RUN: hask-opt %s  --lz-lower 
 // RUN: hask-opt %s  --lz-lower --convert-scf-to-std --ptr-lower 
+// RUN: hask-opt %s hask-opt lower-maybe-non-recursive.mlir --lz-lower --convert-scf-to-std --ptr-lower --lz-jit
 // Check that @plus works with Maybe works.
 // CHECK: constructor(Just 42)
 // CHECK: num_thunkify_calls(76)
 // CHECK: num_force_calls(76)
 // CHECK: num_construct_calls(76)
 
-// CHECK-WW: constructor(Just 42)
-// CHECK-WW: num_thunkify_calls(0)
-// CHECK-WW: num_force_calls(0)
-// CHECK-WW: num_construct_calls(38)
+// CHECK-JIT: constructor(Just 42)
+// CHECK-JIT: num_thunkify_calls(76)
+// CHECK-JIT: num_force_calls(76)
+// CHECK-JIT: num_construct_calls(76)
+
 
 module {
   // f :: Maybe Int# -> Maybe Int#

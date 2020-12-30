@@ -38,6 +38,7 @@
 #include "Hask/HaskOps.h"
 #include "Interpreter.h"
 #include "Pointer/PointerDialect.h"
+#include "Unification/UnificationDialect.h"
 #include "Runtime.h"
 
 #include "LZJIT/LZJIT.h"
