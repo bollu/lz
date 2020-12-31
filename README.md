@@ -26,6 +26,10 @@ Convert GHC Core to MLIR.
 
 
 # Log:  [newest] to [oldest]
+# Thursday, 31st Dec
+- Lower `maybe-int-non-tail-recursive` and see that the generated LLVM is optimized.
+- Lower `memref`.
+
 # Monday 28th Dec
 
 For whatever reason, on trying to lower my `Ptr+Standard` dialect to LLVM,

@@ -143,3 +143,47 @@ void registerLZJITPass() {
       "lz-jit", "JIT LLVM code that's generated from lz+std+scf+affine",
       []() -> std::unique_ptr<::mlir::Pass> { return createLZJITPass(); });
 }
+
+// === DUMP LLVM ===
+// === DUMP LLVM ===
+// === DUMP LLVM ===
+// === DUMP LLVM ===
+// === DUMP LLVM ===
+// === DUMP LLVM ===
+
+
+struct LZDumpLLVMPass : public mlir::Pass {
+  LZDumpLLVMPass() : Pass(mlir::TypeID::get<LZDumpLLVMPass>()){};
+  StringRef getName() const override { return "LZDumpLLVM"; }
+
+  std::unique_ptr<Pass> clonePass() const override {
+    auto newInst =
+        std::make_unique<LZDumpLLVMPass>(*static_cast<const LZDumpLLVMPass *>(this));
+    newInst->copyOptionValuesFrom(this);
+    return newInst;
+  }
+  // https://github.com/bollu/coremlir/blob/7ab044051e62c54e8d3f94a38e3d1ecbf49fb2b0/hask-opt/hask-opt.cpp#L246
+  void runOnOperation() override {
+
+    mlir::ModuleOp mod = mlir::cast<ModuleOp>(this->getOperation());
+    llvm::errs() << "===Lowering MLIR-LLVM module to LLVM===\n";
+
+    auto llvmContext = std::make_unique<llvm::LLVMContext>();
+    std::unique_ptr<llvm::Module> llvmMod =
+        mlir::translateModuleToLLVMIR(mod, *llvmContext);
+
+    llvm::AssemblyAnnotationWriter *AAW = nullptr;
+    llvmMod->print(llvm::outs(), AAW);
+  };
+};
+
+
+std::unique_ptr<mlir::Pass> createLZDumpLLVMPass() {
+  return std::make_unique<LZDumpLLVMPass>();
+}
+
+void registerLZDumpLLVMPass() {
+  ::mlir::registerPass(
+      "lz-dump-llvm", "JIT LLVM code that's generated from lz+std+scf+affine",
+      []() -> std::unique_ptr<::mlir::Pass> { return createLZDumpLLVMPass(); });
+}

@@ -171,7 +171,6 @@ public:
       llvm::errs() << "op: ";
       op.dump();
       llvm::errs() << "\n";
-      getchar();
       return op.getResult();
     });
     */
@@ -405,7 +404,6 @@ struct ForceOpConversionPattern : public mlir::ConversionPattern {
     llvm::errs() << "vvvv--after-force---vvv\n";
     parent.print(llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
     llvm::errs() << "^^^^^^^\n";
-    getchar();
     return success();
   }
 };

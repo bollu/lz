@@ -7,4 +7,5 @@
 #include <llvm/ADT/ArrayRef.h>
 
 void registerLZJITPass();
+void registerLZDumpLLVMPass();
 #endif

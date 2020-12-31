@@ -76,6 +76,7 @@ int main(int argc, char **argv) {
   mlir::registerSCFToStandardPass();
 
   registerLZJITPass();
+  registerLZDumpLLVMPass();
   registerLzInterpretPass();
 
   mlir::DialectRegistry registry;
@@ -84,6 +85,7 @@ int main(int argc, char **argv) {
   registry.insert<mlir::standalone::HaskDialect>();
   registry.insert<mlir::grin::GRINDialect>();
   registry.insert<mlir::ptr::PtrDialect>();
+  registry.insert<mlir::unification::UnificationDialect>();
   registry.insert<mlir::StandardOpsDialect>();
   registry.insert<mlir::AffineDialect>();
   registry.insert<mlir::scf::SCFDialect>();
