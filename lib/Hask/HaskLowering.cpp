@@ -213,10 +213,11 @@ public:
     }
 
     if (ValueType val = retty.dyn_cast<ValueType>()) {
-        return src;
-     //    ptr::PtrToHaskValueOp op =
-     //      builder.create<ptr::PtrToHaskValueOp>(builder.getUnknownLoc(), src);
-     //  return op;
+      return src;
+      //    ptr::PtrToHaskValueOp op =
+      //      builder.create<ptr::PtrToHaskValueOp>(builder.getUnknownLoc(),
+      //      src);
+      //  return op;
     }
 
     llvm::errs() << "ERROR: unknown type: |" << retty << "|\n";
@@ -331,6 +332,22 @@ bool isI8Ptr(Type ty) {
   }
   return elem.getBitWidth() == 8;
 }
+
+// I don't understand why I need this.
+class CallOpLowering : public ConversionPattern {
+public:
+  explicit CallOpLowering(TypeConverter &tc, MLIRContext *context)
+      : ConversionPattern(CallOp::getOperationName(), 1, tc, context) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *operation, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto call = cast<CallOp>(operation);
+    rewriter.replaceOpWithNewOp<CallOp>(operation, call.getCallee(),
+                                        call.getResultTypes(), operands);
+    return success();
+  }
+};
 
 // static Value getOrCreateGlobalString(Location loc, OpBuilder &builder,
 //                                      StringRef name, StringRef value,
@@ -481,7 +498,7 @@ public:
 
   // return the order in which we should generate case alts.
   static std::vector<int> getAltGenerationOrder(CaseOp caseop) {
-      std::vector<int> ixs;
+    std::vector<int> ixs;
     llvm::Optional<int> defaultix = caseop.getDefaultAltIndex();
     for (int i = 0; i < caseop.getNumAlts(); ++i) {
       if (defaultix && *defaultix == i) {
@@ -521,8 +538,7 @@ public:
 
     for (int argix = 0; argix < (int)caseop.getAltRHS(i).getNumArguments();
          ++argix) {
-      Value arg = mkCallExtractConstructorArg(scrutinee, argix, mod,
-                                              rewriter);
+      Value arg = mkCallExtractConstructorArg(scrutinee, argix, mod, rewriter);
       Type ty =
           tc.convertType(caseop.getAltRHS(i).getArgument(argix).getType());
       rewriter.setInsertionPointToEnd(&out->front());
@@ -761,12 +777,12 @@ public:
   }
 }; // namespace standalone
 
-class HaskConstructOpConversionPattern : public ConversionPattern {
+class HaskConstructOpLowering : public ConversionPattern {
 private:
   HaskTypeConverter &tc;
 
 public:
-  explicit HaskConstructOpConversionPattern(HaskTypeConverter &tc,
+  explicit HaskConstructOpLowering(HaskTypeConverter &tc,
                                             MLIRContext *context)
       : ConversionPattern(HaskConstructOp::getOperationName(), 1, tc, context),
         tc(tc) {}
@@ -816,15 +832,9 @@ public:
       args.insert(args.end(), tc.toVoidPointer(rewriter, operands[i]));
     }
 
-    CallOp call = rewriter.create<CallOp>(cons.getLoc(), fn, args);
-    rewriter.replaceOp(cons, call.getResult(0));
-
-    llvm::errs() << "lowered: ";
-    op->dump();
-    llvm::errs() << "\n";
-    call.dump();
-    llvm::errs() << "\n";
-
+    // CallOp call = rewriter.create<CallOp>(cons.getLoc(), fn, args);
+    // rewriter.replaceOp(cons, call.getResult(0));
+    rewriter.replaceOpWithNewOp<CallOp>(cons, fn, args);
     return success();
   }
 };
@@ -1141,6 +1151,16 @@ struct LowerHaskPass : public Pass {
       return true;
     });
 
+        target.addDynamicallyLegalOp<CallOp>([](CallOp call) {
+      for (Value arg : call.getOperands()) {
+        if (!isTypeLegal(arg.getType())) {
+          return false;
+        }
+      }
+      return true;
+    });
+
+
     HaskTypeConverter typeConverter(&getContext());
     mlir::OwningRewritePatternList patterns;
 
@@ -1152,13 +1172,14 @@ struct LowerHaskPass : public Pass {
     patterns.insert<ForceOpConversionPattern>(typeConverter, &getContext());
     patterns.insert<CaseOpConversionPattern>(typeConverter, &getContext());
     patterns.insert<CaseIntOpConversionPattern>(typeConverter, &getContext());
-    patterns.insert<HaskConstructOpConversionPattern>(typeConverter,
+    patterns.insert<HaskConstructOpLowering>(typeConverter,
                                                       &getContext());
     patterns.insert<ThunkifyOpLowering>(typeConverter, &getContext());
 
     patterns.insert<ConstantOpLowering>(typeConverter, &getContext());
     patterns.insert<FuncOpLowering>(typeConverter, &getContext());
     patterns.insert<ReturnOpLowering>(typeConverter, &getContext());
+    patterns.insert<CallOpLowering>(typeConverter, &getContext());
 
     patterns.insert<ApOpConversionPattern>(typeConverter, &getContext());
     patterns.insert<ApEagerOpConversionPattern>(typeConverter, &getContext());

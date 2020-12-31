@@ -5,17 +5,6 @@
 
 extern "C" {
 
-[[maybe_unused]] static int DEBUG_STACK_DEPTH = 0;
-void DEBUG_INDENT();
-
-#define DEBUG_LOG                                                              \
-  if (1) {                                                                     \
-    DEBUG_INDENT();                                                            \
-    fprintf(stderr, "%s ", __FUNCTION__);                                      \
-  }
-void DEBUG_PUSH_STACK();
-void DEBUG_POP_STACK();
-
 static const int MAX_CLOSURE_ARGS = 10;
 struct Closure {
   int n;
@@ -51,4 +40,5 @@ void *__attribute__((used)) mkConstructor1(const char *tag, void *a);
 void *__attribute__((used)) mkConstructor2(const char *tag, void *a, void *b);
 void *extractConstructorArg(void *cptr, int i);
 bool isConstructorTagEq(void *cptr, const char *tag);
+void printInt(int i);
 } // end extern C

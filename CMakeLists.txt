@@ -17,7 +17,9 @@ project(lz-dialect LANGUAGES CXX C)
 
 
 set(CMAKE_CXX_STANDARD 14 CACHE STRING "C++ standard to conform to")
-set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Werror -fsanitize=address -fsanitize=undefined")
+# we have -Wnoerror=attributes because we use things like always_inline,
+# and clang says:
+set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Werror -Wno-attributes -fsanitize=address -fsanitize=undefined")
 
 
 find_package(MLIR REQUIRED CONFIG)
