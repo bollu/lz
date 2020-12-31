@@ -1,5 +1,7 @@
 // RUN: hask-opt %s --lz-lower --convert-scf-to-std --ptr-lower
 // RUN: hask-opt %s --lz-lower --convert-scf-to-std --ptr-lower | mlir-translate --mlir-to-llvmir
+// RUN: hask-opt %s --lz-worker-wrapper --lz-lower --convert-scf-to-std --ptr-lower
+// RUN: hask-opt %s --lz-worker-wrapper --lz-lower --convert-scf-to-std --ptr-lower | mlir-translate --mlir-to-llvmir
 module {
   // f :: Maybe Int# -> Maybe Int#
   // f mi = case mi of
