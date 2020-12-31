@@ -191,6 +191,12 @@ public:
       return builder.create<ptr::FnToVoidPtrOp>(builder.getUnknownLoc(), src);
     }
 
+    if (src.getType().isa<MemRefType>()) {
+      ptr::MemrefToVoidPtrOp op =
+          builder.create<ptr::MemrefToVoidPtrOp>(builder.getUnknownLoc(), src);
+      return op;
+    }
+
     llvm::errs() << "ERROR: unknown type: |" << src.getType() << "|\n";
     assert(false && "unknown type to convert to void pointer");
   };

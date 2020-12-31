@@ -50,6 +50,7 @@ PtrDialect::PtrDialect(mlir::MLIRContext *context)
   addOperations<IntToPtrOp, PtrToIntOp, PtrStringOp, FnToVoidPtrOp, PtrUndefOp>();
   // addOperations<PtrToHaskValueOp, HaskValueToPtrOp>();
   addOperations<PtrToMemrefOp>();
+  addOperations<MemrefToVoidPtrOp>();
   addTypes<VoidPtrType, CharPtrType>();
 
   // clang-format on
@@ -104,15 +105,33 @@ void IntToPtrOp::print(OpAsmPrinter &p) {
 // === FNPTR TO VOID PTR ===
 
 void FnToVoidPtrOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                          Value vint) {
-  assert(vint.getType().isa<FunctionType>());
-  state.addOperands(vint);
+                          Value v) {
+  assert(v.getType().isa<FunctionType>());
+  state.addOperands(v);
   state.addTypes(VoidPtrType::get(builder.getContext()));
 };
 
 void FnToVoidPtrOp::print(OpAsmPrinter &p) {
   p.printGenericOp(this->getOperation());
 };
+
+// === MEMREF TO VOID PTR ===
+// === MEMREF TO VOID PTR ===
+// === MEMREF TO VOID PTR ===
+// === MEMREF TO VOID PTR ===
+// === MEMREF TO VOID PTR ===
+
+void MemrefToVoidPtrOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                          Value v) {
+  assert(v.getType().isa<MemRefType>());
+  state.addOperands(v);
+  state.addTypes(VoidPtrType::get(builder.getContext()));
+};
+
+void MemrefToVoidPtrOp::print(OpAsmPrinter &p) {
+  p.printGenericOp(this->getOperation());
+};
+
 
 // === PTR TO INT ===
 // === PTR TO INT ===
@@ -291,6 +310,49 @@ public:
   }
 };
 
+// memref: |%13 = llvm.insertvalue %1, %12[4, 0] : !llvm.struct<(ptr<i64>, ptr<i64>, i64, array<1 x i64>, array<1 x i64>)>|
+struct Memref2VoidPtrLowering : public ConversionPattern {
+public:
+  explicit Memref2VoidPtrLowering(TypeConverter &tc, MLIRContext *context)
+      : ConversionPattern(MemrefToVoidPtrOp::getOperationName(), 1, tc, context) {}
+
+  // !llvm.struct<(ptr<i64>, ptr<i64>, i64, array<1 x i64>, array<1 x i64>)>| -> !ptr.void
+  static FuncOp getOrInsertBoxI64Memref(PatternRewriter &rewriter, ModuleOp m, TypeConverter &tc) {
+    const std::string name = "boxMemref";
+    if (FuncOp fn = m.lookupSymbol<FuncOp>(name)) {
+      return fn;
+    }
+
+    // MLIRContext *context = rewriter.getContext();
+    SmallVector<Type, 4> argtys;
+
+    tc.convertType(MemRefType::get({0}, rewriter.getI64Type()), argtys);
+    Type retty = ptr::VoidPtrType::get(rewriter.getContext());
+    FunctionType fnty = rewriter.getFunctionType(argtys, retty);
+
+    PatternRewriter::InsertionGuard insertGuard(rewriter);
+    rewriter.setInsertionPointToStart(m.getBody());
+    FuncOp fn = rewriter.create<FuncOp>(m.getLoc(), name, fnty);
+    fn.setPrivate();
+    return fn;
+  }
+
+
+  LogicalResult
+  matchAndRewrite(Operation *rator, ArrayRef<Value> rands,
+                  ConversionPatternRewriter &rewriter) const override {
+    ModuleOp mod = rator->getParentOfType<ModuleOp>();
+    Value memref = rands[0];
+    llvm::errs() << "memref: |" << memref << "|\n";
+    llvm::errs() << "memref.type: " << memref.getType() << "|\n";
+//    assert(false);
+    FuncOp boxMemref = getOrInsertBoxI64Memref(rewriter, mod, *typeConverter);
+    rewriter.replaceOpWithNewOp<CallOp>(rator, boxMemref, rands);
+    return success();
+  }
+};
+
+
 struct StringOpLowering : public ConversionPattern {
 public:
   static Value getOrCreateGlobalString(Location loc, OpBuilder &builder,
@@ -365,6 +427,49 @@ public:
   }
 };
 
+
+FunctionType convertFunctionType(FunctionType fnty, TypeConverter &tc,
+                                 OpBuilder &builder) {
+  SmallVector<Type, 4> argtys;
+  for (Type t : fnty.getInputs()) {
+    argtys.push_back(tc.convertType(t));
+  }
+
+  SmallVector<Type, 4> rettys;
+  for (Type t : fnty.getResults()) {
+    rettys.push_back(tc.convertType(t));
+  }
+  return builder.getFunctionType(argtys, rettys);
+};
+
+
+class ConstantOpLowering : public ConversionPattern {
+public:
+  explicit ConstantOpLowering(TypeConverter &tc, MLIRContext *context)
+      : ConversionPattern(ConstantOp::getOperationName(), 1, tc, context) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *rator, ArrayRef<Value> rands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto constant = cast<ConstantOp>(rator);
+
+    FunctionType fnty = constant.getResult().getType().dyn_cast<FunctionType>();
+    assert(fnty && "was asked to lower a constant op that's not a reference to "
+                   "a function?!");
+
+    FunctionType outty = convertFunctionType(fnty, *typeConverter, rewriter);
+
+
+    ConstantOp newconst = rewriter.create<ConstantOp>(constant.getLoc(), outty,
+                                                      constant.getValue());
+    constant.getResult().replaceAllUsesWith(newconst.getResult());
+    rewriter.eraseOp(constant);
+
+    return success();
+  }
+};
+
+/*
 // https://github.com/spcl/open-earth-compiler/blob/master/lib/Conversion/StencilToStandard/ConvertStencilToStandard.cpp#L45
 class FuncOpLowering : public ConversionPattern {
 public:
@@ -427,6 +532,24 @@ public:
   }
 };
 
+// I don't understand why I need this.
+class CallOpLowering : public ConversionPattern {
+public:
+  explicit CallOpLowering(TypeConverter &tc, MLIRContext *context)
+      : ConversionPattern(CallOp::getOperationName(), 1, tc, context) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *operation, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto call = cast<CallOp>(operation);
+    rewriter.replaceOpWithNewOp<CallOp>(operation, call.getCallee(),
+                                        call.getResultTypes(), operands);
+    return success();
+  }
+};
+*/
+
+
 class PtrUndefOpLowering : public ConversionPattern {
 public:
   explicit PtrUndefOpLowering(TypeConverter &tc, MLIRContext *context)
@@ -443,6 +566,28 @@ public:
     return success();
   }
 };
+
+bool isTypeLegal(Type t) {
+  if (t.isa<ptr::PtrType>()) {
+    return false;
+  }
+  if (auto fnty = t.dyn_cast<FunctionType>()) {
+
+    for (Type t : fnty.getInputs()) {
+      if (!isTypeLegal(t)) {
+        return false;
+      }
+    }
+
+    for (Type t : fnty.getResults()) {
+      if (!isTypeLegal(t)) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 
 struct LowerPointerPass : public Pass {
   LowerPointerPass() : Pass(mlir::TypeID::get<LowerPointerPass>()){};
@@ -468,11 +613,52 @@ struct LowerPointerPass : public Pass {
     mlir::OwningRewritePatternList patterns;
     populateStdToLLVMConversionPatterns(typeConverter, patterns);
 
+    // This is wrong. We need to recursively check if function type
+    // is legal.
+    /*
+    target.addDynamicallyLegalOp<FuncOp>(
+        [](FuncOp funcOp) { return isTypeLegal(funcOp.getType()); });
+
+    // LLVM should take care of this automatically!
+    target.addDynamicallyLegalOp<ReturnOp>([](ReturnOp ret) {
+      for (Value arg : ret.getOperands()) {
+        if (!isTypeLegal(arg.getType())) {
+          return false;
+        }
+      }
+      return true;
+    });
+
+    target.addDynamicallyLegalOp<CallOp>([](CallOp call) {
+      for (Value arg : call.getOperands()) {
+        if (!isTypeLegal(arg.getType())) {
+          return false;
+        }
+      }
+      return true;
+    });
+
+    target.addDynamicallyLegalOp<ConstantOp>(
+        [](ConstantOp op) {
+          FunctionType fnty = op.getResult().getType().dyn_cast<FunctionType>();
+          if (!fnty) { return true; }
+          return isTypeLegal(fnty);
+        });
+ */
+
+
+
     // // OK why is it not able to legalize func? x(
     // populateAffineToStdConversionPatterns(patterns, &getContext());
     // populateLoopToStdConversionPatterns(patterns, &getContext());
 
     patterns.insert<Fn2VoidPtrLowering>(typeConverter, &getContext());
+    patterns.insert<Memref2VoidPtrLowering>(typeConverter, &getContext());
+
+//    patterns.insert<CallOpLowering>(typeConverter, &getContext());
+
+
+
     patterns.insert<StringOpLowering>(typeConverter, &getContext());
     patterns.insert<Int2PtrOpLowering>(typeConverter, &getContext());
     patterns.insert<Ptr2IntOpLowering>(typeConverter, &getContext());
@@ -482,7 +668,7 @@ struct LowerPointerPass : public Pass {
     // &getContext());
     // patterns.insert<HaskConstructOpConversionPattern>(typeConverter,
     //                                                   &getContext());
-    // patterns.insert<ConstantOpLowering>(typeConverter, &getContext());
+     // patterns.insert<ConstantOpLowering>(typeConverter, &getContext());
     // patterns.insert<FuncOpLowering>(typeConverter, &getContext());
     // patterns.insert<ReturnOpLowering>(typeConverter, &getContext());
 

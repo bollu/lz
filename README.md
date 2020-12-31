@@ -29,6 +29,8 @@ Convert GHC Core to MLIR.
 # Thursday, 31st Dec
 - Lower `maybe-int-non-tail-recursive` and see that the generated LLVM is optimized.
 - Lower `memref`.
+- Listen to [coffee house sounds](https://www.youtube.com/watch?v=gaGrHUekGrc) for 
+  productivity!
 
 # Monday 28th Dec
 

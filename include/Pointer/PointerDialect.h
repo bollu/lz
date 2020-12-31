@@ -103,6 +103,20 @@ public:
   void print(OpAsmPrinter &p);
 };
 
+// memref -> !ptr.void
+class MemrefToVoidPtrOp
+    : public Op<MemrefToVoidPtrOp, OpTrait::OneResult, OpTrait::OneOperand> {
+public:
+  using Op::Op;
+  static StringRef getOperationName() { return "ptr.memref2voidptr"; };
+  // static ParseResult parse(OpAsmParser &parser, OperationState &result);
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                    Value vint);
+  void print(OpAsmPrinter &p);
+};
+
+
+
 // %mr = ptr2memref %vptr : !ptr.void -> memref
 class PtrToMemrefOp
     : public Op<PtrToMemrefOp, OpTrait::OneResult, OpTrait::OneOperand> {
