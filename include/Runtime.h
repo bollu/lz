@@ -41,4 +41,5 @@ void *__attribute__((used)) mkConstructor2(const char *tag, void *a, void *b);
 void *extractConstructorArg(void *cptr, int i);
 bool isConstructorTagEq(void *cptr, const char *tag);
 void printInt(int i);
+void printConstructor(void *v, const char *fmt);
 } // end extern C

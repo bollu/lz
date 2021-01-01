@@ -193,7 +193,7 @@ void *extractConstructorArg(void *__restrict__ cptr, int i) {
   return v;
 }
 
-bool isConstructorTagEq(void * __restrict__ cptr, const char *tag) {
+bool isConstructorTagEq(void *__restrict__ cptr, const char *tag) {
   Constructor *c = (Constructor *)cptr;
   const bool eq = !strcmp(c->tag, tag);
 #ifndef NODEBUG
@@ -203,7 +203,32 @@ bool isConstructorTagEq(void * __restrict__ cptr, const char *tag) {
   return eq;
 }
 
-void printInt(int i) {
-    printf("%d\n", i);
+void printInt(int i) { printf("%d\n", i); }
+
+const char *printConstructorGo(void *v, const char *fmt) {
+  if (fmt[0] == 'i') {
+    printf("%d", (int)((size_t)v));
+    return fmt + 1;
+  } else {
+    assert(fmt[0] == '(');
+    fmt++;
+
+    Constructor *c = (Constructor *)v;
+    printf("%s{", c->tag);
+    assert(c->n <= 2 && "too many values in constructor");
+    for (int i = 0; i < c->n; ++i) {
+      fmt = printConstructorGo(c->args[i], fmt);
+    }
+    assert(fmt[0] == ')');
+    fmt++;
+    printf("}");
+    return fmt;
+  }
+};
+
+void printConstructor(void *v, const char *fmt) {
+  fmt = printConstructorGo(v, fmt);
+  assert(fmt[0] == 0 && "did not consume format string entirely!");
+  printf("\n");
 }
 } // end extern C

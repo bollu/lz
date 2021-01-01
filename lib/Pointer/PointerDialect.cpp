@@ -197,6 +197,16 @@ void PtrStringOp::print(OpAsmPrinter &p) {
   p.printGenericOp(this->getOperation());
 };
 
+ParseResult PtrStringOp::parse(OpAsmParser &parser, OperationState &result) {
+    StringAttr attr;
+    if (parser.parseAttribute<StringAttr>(attr, "value", result.attributes)) {
+      return failure();
+    }
+
+    result.addTypes(CharPtrType::get(parser.getBuilder().getContext()));
+    return success();
+}
+
 class PtrTypeConverter : public mlir::LLVMTypeConverter {
 public:
   using LLVMTypeConverter::LLVMTypeConverter;
@@ -396,18 +406,21 @@ public:
 struct StringOpLowering : public ConversionPattern {
 public:
   static Value getOrCreateGlobalString(Location loc, OpBuilder &builder,
-                                       StringRef name, StringRef value,
+                                       StringRef name, StringAttr strattr,
                                        ModuleOp module) {
     // Create the global at the entry of the module.
     LLVM::GlobalOp global;
     if (!(global = module.lookupSymbol<LLVM::GlobalOp>(name))) {
       OpBuilder::InsertionGuard insertGuard(builder);
+
+      std::string str = strattr.getValue().str();
+
       builder.setInsertionPointToStart(module.getBody());
       auto type = LLVM::LLVMType::getArrayTy(
-          LLVM::LLVMType::getInt8Ty(builder.getContext()), value.size());
+          LLVM::LLVMType::getInt8Ty(builder.getContext()), str.size()+1);
       global = builder.create<LLVM::GlobalOp>(loc, type, true,
                                               LLVM::Linkage::Internal, name,
-                                              builder.getStringAttr(value));
+                                              builder.getStringAttr(StringRef(str.c_str(), str.size()+1)));
     }
 
     // Get the pointer to the first character in the global string.
@@ -429,7 +442,7 @@ public:
     StringAttr str = rator->getAttrOfType<StringAttr>("value");
     mlir::ModuleOp mod = rator->getParentOfType<ModuleOp>();
     Value v = getOrCreateGlobalString(rator->getLoc(), rewriter, str.getValue(),
-                                      str.getValue(), mod);
+                                      str, mod);
     rewriter.replaceOp(rator, v);
     return success();
   }

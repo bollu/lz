@@ -80,7 +80,7 @@ class PtrStringOp
 public:
   using Op::Op;
   static StringRef getOperationName() { return "ptr.string"; };
-  // static ParseResult parse(OpAsmParser &parser, OperationState &result);
+  static ParseResult parse(OpAsmParser &parser, OperationState &result);
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
                     const char *str);
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
