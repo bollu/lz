@@ -14,6 +14,7 @@ Convert GHC Core to MLIR.
   file.
 - IORefs are bad
 - Example GHC perf slide because of laziness: https://gitlab.haskell.org/ghc/ghc/-/issues/19102#note_319557
+- [Novel GC algorithm for pure funcitonal languages](https://www.reddit.com/r/haskell/comments/knzfhn/novel_garbage_collection_technique_for_immutable/)
 
 
 
