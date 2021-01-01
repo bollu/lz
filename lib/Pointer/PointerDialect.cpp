@@ -318,7 +318,7 @@ public:
 
   // !llvm.struct<(ptr<i64>, ptr<i64>, i64, array<1 x i64>, array<1 x i64>)>| -> !ptr.void
   static FuncOp getOrInsertBoxI64Memref(PatternRewriter &rewriter, ModuleOp m, TypeConverter &tc) {
-    const std::string name = "boxMemref";
+    const std::string name = "boxI64Memref";
     if (FuncOp fn = m.lookupSymbol<FuncOp>(name)) {
       return fn;
     }
@@ -351,6 +351,46 @@ public:
     return success();
   }
 };
+
+//   llvm.func @unboxI64Memref(!llvm.ptr<i8>) -> !llvm.struct<(ptr<i64>, ptr<i64>, i64, array<1 x i64>, array<1 x i64>)> attributes {sym_visibility = "private"}
+struct Ptr2MemrefOpLowering : public ConversionPattern {
+public:
+  explicit Ptr2MemrefOpLowering(TypeConverter &tc, MLIRContext *context)
+      : ConversionPattern(PtrToMemrefOp::getOperationName(), 1, tc, context) {}
+
+  // !llvm.struct<(ptr<i64>, ptr<i64>, i64, array<1 x i64>, array<1 x i64>)>| -> !ptr.void
+  static FuncOp getOrInsertUnboxI64Memref(PatternRewriter &rewriter, ModuleOp m, TypeConverter &tc) {
+    const std::string name = "unboxI64Memref";
+    if (FuncOp fn = m.lookupSymbol<FuncOp>(name)) {
+      return fn;
+    }
+
+    // MLIRContext *context = rewriter.getContext();
+
+    Type argty = ptr::VoidPtrType::get(rewriter.getContext());
+    Type retty = tc.convertType(MemRefType::get({0}, rewriter.getI64Type()));
+    assert(retty);
+
+    FunctionType fnty = rewriter.getFunctionType(argty, retty);
+
+    PatternRewriter::InsertionGuard insertGuard(rewriter);
+    rewriter.setInsertionPointToStart(m.getBody());
+    FuncOp fn = rewriter.create<FuncOp>(m.getLoc(), name, fnty);
+    fn.setPrivate();
+    return fn;
+  }
+
+
+  LogicalResult
+  matchAndRewrite(Operation *rator, ArrayRef<Value> rands,
+                  ConversionPatternRewriter &rewriter) const override {
+    ModuleOp mod = rator->getParentOfType<ModuleOp>();
+    FuncOp unboxfn = getOrInsertUnboxI64Memref(rewriter, mod, *typeConverter);
+    rewriter.replaceOpWithNewOp<CallOp>(rator, unboxfn, rands);
+    return success();
+  }
+};
+
 
 
 struct StringOpLowering : public ConversionPattern {
@@ -664,6 +704,8 @@ struct LowerPointerPass : public Pass {
     patterns.insert<Ptr2IntOpLowering>(typeConverter, &getContext());
     // vvv yuge hack.
     patterns.insert<PtrUndefOpLowering>(typeConverter, &getContext());
+    patterns.insert<Ptr2MemrefOpLowering>(typeConverter, &getContext());
+
     // &getContext()); patterns.insert<CaseOpConversionPattern>(typeConverter,
     // &getContext());
     // patterns.insert<HaskConstructOpConversionPattern>(typeConverter,
