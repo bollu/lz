@@ -214,14 +214,14 @@ const char *printConstructorGo(void *v, const char *fmt) {
     fmt++;
 
     Constructor *c = (Constructor *)v;
-    printf("%s{", c->tag);
+    printf("%s(", c->tag);
     assert(c->n <= 2 && "too many values in constructor");
     for (int i = 0; i < c->n; ++i) {
       fmt = printConstructorGo(c->args[i], fmt);
     }
     assert(fmt[0] == ')');
     fmt++;
-    printf("}");
+    printf(")");
     return fmt;
   }
 };
