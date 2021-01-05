@@ -1,8 +1,3 @@
-thesis.pdf
-
-# Created by https://www.gitignore.io/api/vim,latex,linux
-
-### LaTeX ###
 ## Core latex/pdflatex auxiliary files:
 *.aux
 *.lof
@@ -15,6 +10,7 @@ thesis.pdf
 *.fot
 *.cb
 *.cb2
+.*.lb
 
 ## Intermediate documents:
 *.dvi
@@ -43,7 +39,10 @@ thesis.pdf
 *.synctex.gz
 *.synctex.gz(busy)
 *.pdfsync
-*Notes.bib
+
+## Build tool directories for auxiliary files
+# latexrun
+latex.out/
 
 ## Auxiliary and intermediate files from other packages:
 # algorithms
@@ -64,6 +63,9 @@ acs-*.bib
 
 # changes
 *.soc
+
+# comment
+*.cut
 
 # cprotect
 *.cpt
@@ -107,6 +109,11 @@ acs-*.bib
 *.glo
 *.gls
 *.glsdefs
+*.lzo
+*.lzs
+
+# uncomment this for glossaries-extra (will ignore makeindex's style files!)
+# *.ist
 
 # gnuplottex
 *-gnuplottex-*
@@ -115,23 +122,33 @@ acs-*.bib
 *.gaux
 *.gtex
 
+# htlatex
+*.4ct
+*.4tc
+*.idv
+*.lg
+*.trc
+*.xref
+
 # hyperref
 *.brf
 
 # knitr
 *-concordance.tex
-# TODO Comment the next line if you want to keep your tikz graphics files
-*.tikz
+# TODO Uncomment the next line if you use knitr and want to ignore its generated tikz files
+# *.tikz
 *-tikzDictionary
 
 # listings
 *.lol
 
+# luatexja-ruby
+*.ltjruby
+
 # makeidx
 *.idx
 *.ilg
 *.ind
-*.ist
 
 # minitoc
 *.maf
@@ -150,7 +167,9 @@ _minted*
 *.mw
 
 # nomencl
+*.nlg
 *.nlo
+*.nls
 
 # pax
 *.pax
@@ -179,6 +198,9 @@ sympy-plots-for-*.tex/
 *.pytxcode
 pythontex-files-*/
 
+# tcolorbox
+*.listing
+
 # thmtools
 *.loe
 
@@ -190,14 +212,25 @@ pythontex-files-*/
 # todonotes
 *.tdo
 
+# vhistory
+*.hst
+*.ver
+
 # easy-todo
 *.lod
+
+# xcolor
+*.xcp
+
+# xmpincl
+*.xmpi
 
 # xindy
 *.xdy
 
-# xypic precompiled matrices
+# xypic precompiled matrices and outlines
 *.xyc
+*.xyd
 
 # endfloat
 *.ttt
@@ -214,47 +247,52 @@ TSWLatexianTemp*
 # Texpad
 .texpadtmp
 
+# LyX
+*.lyx~
+
 # Kile
 *.backup
+
+# gummi
+.*.swp
 
 # KBibTeX
 *~[0-9]*
 
+# TeXnicCenter
+*.tps
+
 # auto folder when using emacs and auctex
-/auto/*
+./auto/*
+*.el
 
 # expex forward references with \gathertags
 *-tags.tex
 
-### Linux ###
-*~
+# standalone packages
+*.sta
 
-# temporary files which can be created if a process still has a handle open of a deleted file
-.fuse_hidden*
+# Makeindex log files
+*.lpz
 
-# KDE directory preferences
-.directory
+# xwatermark package
+*.xwm
 
-# Linux trash folder which might appear on any partition or disk
-.Trash-*
+# REVTeX puts footnotes in the bibliography by default, unless the nofootinbib
+# option is specified. Footnotes are the stored in a file with suffix Notes.bib.
+# Uncomment the next line to have this generated file ignored.
+#*Notes.bib
 
-# .nfs files are created when an open file is removed but is still being accessed
-.nfs*
-
-### Vim ###
-# swap
-.sw[a-p]
-.*.sw[a-p]
-# session
-Session.vim
-# temporary
-.netrwhist
-# auto-generated tag files
+/*.pdf
 tags
+*.pdf
+*.bbl
+*.blg
 
 
-# End of https://www.gitignore.io/api/vim,latex,linux
+_minted-blind/
+_minted-camera/
+_minted-grammarly/
+_minted-paper/
 
-*.sublime_*
-*sublime*
-blogcache.txt
+

@@ -1,80 +1,1583 @@
-\documentclass{book}
+% Papers should be formatted according to the two-column ACM proceedings
+% format.  Each paper should have no more than 12 pages, excluding
+% bibliography, in 10pt font. There is no limit on the page count for
+% references. Each reference must list all authors of the paper (do not use et
+% al). The citations should be in numeric style, e.g., [52]. Submissions should
+% be in PDF format and printable on US Letter and A4 sized paper. These
+% requirements are all the same as in the previous year.
+
+
+
+\def\paperversiondraft{draft}
+\def\paperversionblind{blind}
+\def\paperversioncamera{camera}
+
+% If no special paper-version is requested, compile in draft mode
+\ifx\paperversion\paperversionblind
+\else
+  \ifx\paperversion\paperversioncamera
+  \else
+     \def\paperversion{draft}
+  \fi
+\fi
+
+\def\grammarlyon{on}
+
+\ifx\grammarly\grammarlyon
+\def\review{}
+\else
+\def\review{review,}
+\fi
+
+\ifx\paperversion\paperversiondraft
+  \documentclass[sigplan,\review anonymous]{acmart}
+\fi
+
+\ifx\paperversion\paperversionblind
+  \documentclass[sigplan,\review anonymous]{acmart}
+\fi
+
+\ifx\paperversion\paperversioncamera
+  \documentclass[sigplan]{acmart}\settopmatter{}
+\fi
+
+% Most PL conferences are edited by conference-publishing.com. Follow their
+% advice to add the following packages.
+%
+% The first enables the use of UTF-8 as character encoding, which is the
+% standard nowadays. The second ensures the use of font encodings that support
+% accented characters etc. (Why should I use this?). The mictotype package
+% enables certain features 'to­wards ty­po­graph­i­cal per­fec­tion
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{microtype}
+
+\usepackage{xargs}
+\usepackage{lipsum}
+\usepackage[textsize=tiny]{todonotes}
+\usepackage{xparse}
+\usepackage{xifthen, xstring}
+\usepackage{ulem}
+\usepackage{xspace}
+\usepackage{minted}
+\usemintedstyle{bw}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=blue}
+\usepackage{mathpartir}
+\usepackage{dirtytalk}
+\usepackage[ligature, inference]{semantic}
+
+\usepackage{listings}
+\usepackage{xcolor}
+
+%New colors defined below
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+%Code listing style named "mystyle"
+% https://www.overleaf.com/project/5fc73ba8b2793a82677493d5
+% https://tex.stackexchange.com/questions/200208/how-can-i-reduce-the-line-spacing-in-a-listing
+\lstdefinestyle{mystyle}{
+  commentstyle=\color{gray},
+  keywordstyle=\bfseries,
+  numberstyle=\ttfamily\footnotesize\color{codegray},
+  basicstyle=\linespread{0.8}\ttfamily,%,\footnotesize,
+  breakatwhitespace=false,
+  breaklines=true,
+  captionpos=b,
+  keepspaces=true,
+  numbers=left,
+  columns=flexible,
+  numbersep=5pt,
+  showspaces=false,
+  showstringspaces=false,
+  showtabs=false,
+  tabsize=2
+}
+
+%"mystyle" code listing set
+\lstset{style=mystyle}
+
+
+% Use to keep figure in same section
+% \usepackage[section]{placeins}
+
+\makeatletter
+\font\uwavefont=lasyb10 scaled 652
+
+\newcommand\colorwave[1][blue]{\bgroup\markoverwith{\lower3\p@\hbox{\uwavefont\textcolor{#1}{\char58}}}\ULon}
+\makeatother
+
+\ifx\paperversion\paperversiondraft
+\newcommand\createtodoauthor[2]{%
+\def\tmpdefault{emptystring}
+\expandafter\newcommand\csname #1\endcsname[2][\tmpdefault]{\def\tmp{##1}\ifthenelse{\equal{\tmp}{\tmpdefault}}
+   {\todo[linecolor=#2,backgroundcolor=#2,bordercolor=#2]{\textbf{#1:} ##2}}
+   {\ifthenelse{\equal{##2}{}}{\colorwave[#2]{##1}\xspace}{ \todo[linecolor=#2,backgroundcolor=#2,bordercolor=#2]{\textbf{#1:} ##2}\colorwave[#2]{##1}}}}}
+\else
+\newcommand\createtodoauthor[2]{%
+\def\tmpdefault{emptystring}
+\expandafter\newcommand\csname #1\endcsname[2][\tmpdefault]{\def\tmp{##1}\ifthenelse{\equal{\tmp}{\tmpdefault}}
+   {}
+   {\ifthenelse{\equal{##2}{}}{##1\xspace}{ ##1}}}}
+\fi
+
+% Broaden margins to make room for todo notes
+\ifx\paperversion\paperversiondraft
+  \paperwidth=\dimexpr \paperwidth + 6cm\relax
+  \oddsidemargin=\dimexpr\oddsidemargin + 3cm\relax
+  \evensidemargin=\dimexpr\evensidemargin + 3cm\relax
+  \marginparwidth=\dimexpr \marginparwidth + 3cm\relax
+  \setlength{\marginparwidth}{4.6cm}
+\fi
+
+% We use the following color scheme
+% 
+% This scheme is both print-friendly and colorblind safe for
+% up to four colors (including the red tones makes it not
+% colorblind safe any more)
+%
+% https://colorbrewer2.org/#type=qualitative&scheme=Paired&n=4
+
+\definecolor{pairedOneLightBlue}{HTML}{a6cee3}
+\definecolor{pairedTwoDarkBlue}{HTML}{1f78b4}
+\definecolor{pairedThreeLightGreen}{HTML}{b2df8a}
+\definecolor{pairedFourDarkGreen}{HTML}{33a02c}
+\definecolor{pairedFiveLightRed}{HTML}{fb9a99}
+\definecolor{pairedSixDarkRed}{HTML}{e31a1c}
+
+\createtodoauthor{grosser}{pairedOneLightBlue}
+% \createtodoauthor{authorTwo}{pairedTwoDarkBlue}
+\createtodoauthor{sid}{pairedThreeLightGreen}
+\createtodoauthor{authorFour}{pairedFourDarkGreen}
+\createtodoauthor{authorFive}{pairedFiveLightRed}
+\createtodoauthor{authorSix}{pairedSixDarkRed}
+
+%% Note: Authors migrating a paper from traditional SIGPLAN
+%% proceedings format to PACMPL format should change 'sigplan' to
+%% 'acmsmall'.
+
+
+%% Some recommended packages.
+\usepackage{booktabs}   %% For formal tables:
+                        %% http://ctan.org/pkg/booktabs
+\usepackage{subcaption} %% For complex figures with subfigures/subcaptions
+                        %% http://ctan.org/pkg/subcaption
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathtools}
+\usepackage{marvosym}
+
+% [Operational semantics](https://tex.stackexchange.com/questions/271147/how-to-align-the-premises-in-a-semantic)
+\renewcommand{\inference}[3][]{%
+  \[\begin{array}[b]{@{}lc}
+      \\
+      \begin{array}[b]{l} #2 \end{array}
+      \smash{\raisebox{-0.6\normalbaselineskip}{\scriptsize}} \\
+      % \cline{2-2}
+      \cmidrule[0.4pt]{1-1}
+      \begin{array}[t]{l} #3 \end{array}
+      \\
+      \\
+  \end{array}\]
+}
+
+% https://tex.stackexchange.com/questions/198462/the-lightning-symbol-in-an-equation-environment
+%\newcommand{\lightning}{\mbox{\Lightning}}
+\newcommand{\val}{\texttt{value} }
+\newcommand{\unk}{\texttt{unk} }
+\newcommand{\absent}{\texttt{absent} }
+\newcommand{\case}{\texttt{case} }
+\newcommand{\CONS}{\texttt{cons} }
+\newcommand{\lzap}{\texttt{lz.ap} }
+\newcommand{\lzthunk}{\texttt{lz.thunk} }
+\newcommand{\construct}{\texttt{lz.construct} }
+\newcommand{\stdcall}{\texttt{std.call} }
+\newcommand{\std}{\texttt{std} }
+\newcommand{\nofib}{\texttt{nofib} }
+\newcommand{\Int}{\texttt{Int} }
+
+\newcommand{\cpp}[1]{\mintinline{cpp}{#1}}
+\newcommand{\raw}[1]{\mintinline{text}{#1}}
+\newcommand{\denotation}[1]{\left\llbracket {\raw{#1}} \right\rrbracket}
+
+
+\newcommand{\mlir}{\texttt{MLIR} }
+\newcommand{\lz}{\texttt{lz} }
+\newcommand{\lzforce}{\texttt{lz.force}}
+\newcommand{\lzconstruct}{\texttt{lz.construct}}
+\newcommand{\GHC}{\texttt{GHC} }
+\newcommand{\ghc}{\GHC}
+\newcommand{\Core}{\core}
+\newcommand{\core}{\texttt{Core} }
+
+% syntactic elements of our language
+\newcommand{\EXPR}{\texttt{EXPR}}
+\newcommand{\PHI}{\texttt{PHI}}
+\newcommand{\BB}{\texttt{BB}}
+\newcommand{\BBID}{\texttt{BBID}}
+\newcommand{\INST}{\texttt{INST}}
+\newcommand{\TERM}{\texttt{TERM}}
+\newcommand{\LABEL}{\texttt{LABEL}}
+\newcommand{\FLAG}{\texttt{FLAG}}
+\newcommand{\ASSIGN}{\texttt{ASSIGN}}
+\newcommand{\VID}{\texttt{VID}}
+
+% transition relations
+\newcommand{\assignarrow}{\xrightarrow{~\texttt{asgn}~}}
+\newcommand{\phiarrow}{\xrightarrow{phi}}
+\newcommand{\controlflowarrow}{\xrightarrow{~\texttt{ctrl}~}}
+
+
+\makeatletter\if@ACM@journal\makeatother
+%% Journal information (used by PACMPL format)
+%% Supplied to authors by publisher for camera-ready submission
+\acmJournal{PACMPL}
+\acmVolume{1}
+\acmNumber{1}
+\acmArticle{1}
+\acmYear{2017}
+\acmMonth{1}
+\acmDOI{10.1145/nnnnnnn.nnnnnnn}
+\startPage{1}
+\else\makeatother
+%% Conference information (used by SIGPLAN proceedings format)
+%% Supplied to authors by publisher for camera-ready submission
+\acmConference[PL'17]{ACM SIGPLAN Conference on Programming Languages}{January 01--03, 2017}{New York, NY, USA}
+\acmYear{2017}
+\acmISBN{978-x-xxxx-xxxx-x/YY/MM}
+\acmDOI{10.1145/nnnnnnn.nnnnnnn}
+\startPage{1}
+\fi
+
+
+%% Copyright information
+%% Supplied to authors (based on authors' rights management selection;
+%% see authors.acm.org) by publisher for camera-ready submission
+\setcopyright{none}             %% For review submission
+%\setcopyright{acmcopyright}
+%\setcopyright{acmlicensed}
+%\setcopyright{rightsretained}
+%\copyrightyear{2017}           %% If different from \acmYear
+
+
+%% Bibliography style
+\bibliographystyle{ACM-Reference-Format}
+%% Citation style
+%% Note: author/year citations are required for papers published as an
+%% issue of PACMPL.
+%\citestyle{acmauthoryear}  %% For author/year citations
+%\citestyle{acmnumeric}     %% For numeric citations
+%\setcitestyle{nosort}      %% With 'acmnumeric', to disable automatic
+                            %% sorting of references within a single citation;
+                            %% e.g., \cite{Smith99,Carpenter05,Baker12}
+                            %% rendered as [14,5,2] rather than [2,5,14].
+%\setcitesyle{nocompress}   %% With 'acmnumeric', to disable automatic
+                            %% compression of sequential references within a
+                            %% single citation;
+                            %% e.g., \cite{Baker12,Baker14,Baker16}
+                            %% rendered as [2,3,4] rather than [2-4].
+
+
+
 \begin{document}
-\chapter{Introduction}
 
-\section{Goals and Non-goals}
+%% Title information
+\title[Short Title]{Catching fire: Undefined behaviour for equational reasoning of lazy languages with strictness annotations}
+                                        %% when present, will be used in
+                                        %% header instead of Full Title.
+\subtitle{Subtitle}                     %% \subtitle is optional
 
-I begin with a lofty idea: Can haskell run faster than it does with GHC? It is
-a difficult question to answer, due to the coupling of
-haskell-the-language-2010, and
-haskell-with-extensions-the-language-implemented-by-GHC. Haskell is a mature
-language, with a large feature set: software transactional memory, great
-garbage collection, a mature concurrency story with complex semantics, a
-sophisticated type system, and so on. Therefore, it seems prudent to rephrase
-the lofty into something managable:
 
-\begin{quote}
-Can I write a kernel for a lazy language that is faster on Haskell98?
-\end{quote}
+%% Author information
+%% Contents and number of authors suppressed with 'anonymous'.
+%% Each author should be introduced by \author, followed by
+%% \authornote (optional), \orcid (optional), \affiliation, and
+%% \email.
+%% An author may have multiple affiliations and/or emails; repeat the
+%% appropriate command.
+%% Many elements are not rendered, but should be provided for metadata
+%% extraction tools.
 
-This too is too broad, vague, and ambitious, since it makes no reference in what
-\emph{domain} we wish to be faster than Haskell98, and how I plan on implementing
-this new compiler. This is where MLIR enters into the picture. 
+%% Author with single affiliation.
+\author{First1 Last1}
+\authornote{with author1 note}          %% \authornote is optional;
+                                        %% can be repeated if necessary
+\orcid{nnnn-nnnn-nnnn-nnnn}             %% \orcid is optional
+\affiliation{
+  \position{Position1}
+  \department{Department1}              %% \department is recommended
+  \institution{Institution1}            %% \institution is required
+  \streetaddress{Street1 Address1}
+  \city{City1}
+  \state{State1}
+  \postcode{Post-Code1}
+  \country{Country1}
+}
+\email{first1.last1@inst1.edu}          %% \email is recommended
 
-MLIR is a new \emph{compiler framework} which attempts to take the lessons
-learnt from building LLVM, and then democratizing it to all compiler
-development. Therefore, it provides:
+%% Author with two affiliations and emails.
+\author{First2 Last2}
+\authornote{with author2 note}          %% \authornote is optional;
+                                        %% can be repeated if necessary
+\orcid{nnnn-nnnn-nnnn-nnnn}             %% \orcid is optional
+\affiliation{
+  \position{Position2a}
+  \department{Department2a}             %% \department is recommended
+  \institution{Institution2a}           %% \institution is required
+  \streetaddress{Street2a Address2a}
+  \city{City2a}
+  \state{State2a}
+  \postcode{Post-Code2a}
+  \country{Country2a}
+}
+\email{first2.last2@inst2a.com}         %% \email is recommended
+\affiliation{
+  \position{Position2b}
+  \department{Department2b}             %% \department is recommended
+  \institution{Institution2b}           %% \institution is required
+  \streetaddress{Street3b Address2b}
+  \city{City2b}
+  \state{State2b}
+  \postcode{Post-Code2b}
+  \country{Country2b}
+}
+\email{first2.last2@inst2b.org}         %% \email is recommended
+
+\begin{abstract}
+% An abstract should consist of six main sentences:
+%  1. Introduction. In one sentence, what’s the topic?
+%  2. State the problem you tackle.
+%  3. Summarize (in one sentence) why nobody else has adequately answered the research question yet.
+%  4. Explain, in one sentence, how you tackled the research question.
+%  5. In one sentence, how did you go about doing the research that follows from your big idea.
+%  6. As a single sentence, what’s the key impact of your research?
+
+% 1
+We propose a new style of semantics
+for non-strict languages that provide access to many optimizations that are
+currently unsound for lazy languages.
+% 2 
+Lazy languages, while providing equational reasoning, are unable to reason
+effectively about \emph{strictness annotations}. On the other hand, most strict
+languages are impure, and thus unable to provide equational reasoning due to
+the presence of side effects.
+% 3
+Research on optimizing non-strict languages has focused on optimizing away
+non-strictness with demands, and efficient lowering of strictness onto modern
+hardware.
+% 4
+We take a different approach: we propose to use undefined behaviour judiciously
+while defining the semantics of our language to enable many key optimizations that
+are possible in the strict world, that are not possible in the non-strict world.
+We model \emph{divergent computations as undefined behaviour}, giving the
+compiler far more freedom to optimize and reorder a mix of strict and non-strict
+code.
+% 5 
+We first consider the various deficiencies of introducing an explicit "bang pattern"
+or "strictness annotation" as is done within the Glasgow Haskell compiler today.
+Then we demonstrate how setting divergent computations to be undefined behaviour 
+cleanly enables the compiler to optimize these programs.
+% 6
+This modelling of divergence as undefined behaviour enables us to write an
+\emph{optimizing} compiler that can reason about a mix of strictness and non
+strictness. Furthermore, it enables us to modularly add non-strictness into
+an existing strict language. We demonstrate this with a prototype optimizing
+functional language called Lizzy. Lizzy uses MLIR as a backend. We introduce
+a new dialect \lz in MLIR for modularly expressing non-strictness.  As a benchmark,
+we consider a shootout between GHC's optimization of vector and matrix
+computations, and \lz's ability to optimize the same computations.
+% (http://www.easterbrook.ca/steve/2010/01/how-to-write-a-scientific-abstract-in-six-easy-steps/)
+\end{abstract}
+
+
+% Only add ACM notes and keywords in camera ready version
+% Drop citations and footnotes in draft and blind mode.
+\ifx\paperversion\paperversioncamera
+%% 2012 ACM Computing Classification System (CSS) concepts
+%% Generate at 'http://dl.acm.org/ccs/ccs.cfm'.
+\begin{CCSXML}
+<ccs2012>
+<concept>
+<concept_id>10011007.10011006.10011008</concept_id>
+<concept_desc>Software and its engineering~General programming languages</concept_desc>
+<concept_significance>500</concept_significance>
+</concept>
+<concept>
+<concept_id>10003456.10003457.10003521.10003525</concept_id>
+<concept_desc>Social and professional topics~History of programming languages</concept_desc>
+<concept_significance>300</concept_significance>
+</concept>
+</ccs2012>
+\end{CCSXML}
+
+\ccsdesc[500]{Software and its engineering~General programming languages}
+\ccsdesc[300]{Social and professional topics~History of programming languages}
+%% End of generated code
+
+
+%% Keywords
+%% comma separated list
+\keywords{keyword1, keyword2, keyword3}  %% \keywords is optional
+
+\else
+\settopmatter{printacmref=false} % Removes citation information below abstract
+\renewcommand\footnotetextcopyrightpermission[1]{} % removes footnote with conference information in first column
+\fi
+
+%% \maketitle
+%% Note: \maketitle command must come after title commands, author
+%% commands, abstract environment, Computing Classification System
+%% environment and commands, and keywords command.
+\maketitle
+\ifx\grammarly\grammarlyon 
+\onecolumn 
+\else 
+\fi
+
+\section{Introduction}
+
+% borrowed from : https://arxiv.org/abs/2003.00532 (Uday's note on MLIR)
+Lazy languages such as Haskell
+offer many benefits, chief of which is the ability to reason
+equationally about programs. For performance, considerations,
+the prototypical lazy language, Haskell, provides ``bang patterns'' to
+mark strictness. Herein lies the trouble; these ``bang patterns'' do not
+permit equational reasoning for the user. Worse, they form a sequence point
+in the otherwise pure semantics, taking away most of the optimization freedom
+from the compiler. We propose to remedy the situation by making judicious use
+of \emph{undefined behaviour semantics}. While undefined behaviour is often
+reviled in discourse, it is in fact a major reason why C and C++ can be optimized
+as well as they can; defining certain rare or impossible conditions as undefined
+behaviour provides the compiler a great deal of freedom by being able to ignore
+these cases. We choose to mark \emph{divergence as undefined behaviour}. This
+solves the \emph{correctness problem} in reordering strict computations; The
+only thing our compiler (Lizzy) will reason about is performance when reordering
+strict computations. Furthermore, this is not too insane a proposal; After all,
+the C standard also defines side-effect free infinite loops as undefined behaviour.
+Next, we show a variety of examples where this simple extension to the language
+semantics permits far easier reasoning about mixing strictness and non-strictness.
+We then put this to the test, by extending MLIR with a new non-strict IR, called
+\lz. Note that the undefined behaviour semantics are critical in order to
+reason effectively about the mix of strict and non strict behaviour we wish
+to model within MLIR. Finally, to validate our approach, we consider a series
+of benchmarks where our programming language, Lizzy outperforms similar programs
+in Haskell compiled by the Glasgow Haskell Compiler.
+
+% \begin{figure}
+% % Link to figure
+% %
+% % https://docs.google.com/drawings/d/1juKp43D3rLC-luBQPwQZ_wCnDK2S_6C1k6USV0wKE0g/edit?usp=sharing
+% \includegraphics[width=\columnwidth]{images/overview.pdf}
+% \caption{Our key idea visualized}
+% \end{figure}
+                                                                   
+% \grosser{Always state your contributions explicitly: (A) this makes it
+% easy for the reader to understand what novelty is presented, and (B)
+% these contributions help you to focus. In particular, the objectie of
+% the remaining paper should be to support the claims stated here.
+% }
+Our contributions are:                                          
 \begin{itemize}
-\item Easy interfaces for parsing, printing, round-tripping,
-and verifying the intermediate representation of a choice of language.
-\item The ability to mingle multiple intermediate representations (which MLIR calls \emph{dialects}),
-       and raise/lower between different intermediate representations.
-\item An SSA based paradigm for all intermediate representations which
-      encourages certain styles of intermediate representation that are easy to
-      analyze and transform.
-\item An already strong optimization framework for array and tensor processing
-      workloads, which is being used by TensorFlow.
+\item A formal semantics for bang patterns in the Haskell language.
+\item A study of where bang patterns inhibit GHC's ability to reason about strictness.
+\item A novel yet simple extension to a lazy language semantics that remove this
+      inability of GHC (and lazy languages in general) to reason about strictness.
+\item An implementation of a prototype lazy language (Lizzy) that chooses this
+      approach pervasively.
+\item A new dialect (\lz) for MLIR to encode these semantics, and provide modular
+      non-strictness.
 \end{itemize}
 
-So, rephrasing the original problem statement to include the phrase:
 
-\begin{quote}
-Can I write a kernel for a lazy language that is faster on Haskell98, 
-\emph{using the MLIR compiler framework}
-\end{quote}
+\section{Strictness Annotations: The Bad And The Ugly}
 
-Naturally leads to a modified problem statement, which reads:
+We first motivate why strictness annotations inhibit the compiler
+from being able to optimize programs. Consider the program in
+\autoref{fig:lazy-loop}, where \texttt{out} declares
+a binding \raw{x = loop} and proceeds to not use it. This allows GHC
+to optimize out the program into \raw{out = 42}. On the
+other hand, consider  \autoref{fig:strict-loop} where \raw{out}
+declares  \emph{strict} binding \raw{!x  = loop} and proceeds to not
+use it. 
 
-\begin{quote}
-Can I write a new dialect \emph{within the MLIR compiler framework} which represents
-and optimizes away laziness, using an SSA based encoding, and can beat
-Haskell98 on tensor processing workloads?
-\end{quote}
 
-The modified problem statement tacitly carries with it many research questions:
+\begin{lstlisting}[language=haskell,caption=unoptimized \raw{out} and optimized \raw{outOptimized}]
+{-# LANGUAGE BangPatterns #-}
+loop, out, out' :: Int
+loop = loop;
+out = let x = loop in 42
+outOptimized = 42
+main :: IO ()
+main = do print out; print out'
+\end{lstlisting}
+
+\begin{lstlisting}[language=haskell, caption=unoptimized \raw{outStrict} with an incorrect optimization in \raw{outStrictOptimized}]
+{-# LANGUAGE BangPatterns #-}
+loop, out, out' :: Int
+loop = loop;
+outStrict = let !x = loop in 42
+outStrictOptimized = 42 -- INCORRECT TRANSFORM
+main :: IO ()
+main = do print out; print out'
+\end{lstlisting}
+% \caption{An example of how strictness annotations break equational reasoning}
+
+\begin{lstlisting}[language=haskell, caption=Original haskell program]
+{-# LANGUAGE BangPatterns #-}
+out b = let large = unknown 10 in 
+  if False then large else 42
+out' b = let !large = unknown  10 in 
+  if False then large else 42
+main :: IO ()
+main = do print out; print out'
+\end{lstlisting}
+
+\begin{lstlisting}[language=Haskell, caption=Correct optimization that is incorrect with a bang pattern]
+{-# LANGUAGE BangPatterns #-}
+loop, out, out' :: Int
+loop = loop;
+out b= if b then 
+  let large = unknown 10 in large else 42
+-- | incorrect. If `large` had been divergent, 
+-- then `out` no longer
+-- exhibits divergence
+out' b = if b then 
+  let !large = unknown 10 in large else 42
+
+main :: IO ()
+main = do print out; print out'
+\end{lstlisting}
+% \caption{An example of how strictness annotations disallow floating a \texttt{let}
+%          down into the use-site, inhibiting optimization}
+
+
+
+
+\section{Undefined Behaviour For Divergence?}
+
+As we have shown, the existence of bang patterns obviates equational reasoning.
+We are now in a bind: we can choose to forego bang patterns, thereby
+regaining equational reasoning with a loss of performance. This is not a 
+very reasonable suggestion, as bang patterns are critical for controlling
+evaluation ordering, and ensuring that we do not build up thunks.
+
+We first propose a simple, outrageous, solution:  Ban all divergence.
+We define divergence to be \emph{undefined behaviour}. In essence, this
+allows the compiler to assume that \emph{no value} is divergent, for if a
+value were divergent, then \emph{anything} can happen. We analyze the
+merits and deficiencies of this proposal, and then provide a more
+refined version of the above solution.
+
+% \begin{figure}[ht]
+% \begin{minted}{hs}
+% {-# LANGUAGE BangPatterns #-}
+% loop, out, out' :: Int
+% outStrict = let !x = loop in 42
+% -- ==If x were not divergent==, 
+% --   it is safe to set out' to 42.
+% -- ==If x were divergent==
+% --   It is undefined behaviour. Anything can
+% --   happen, including evaluating out' to 42.
+% outStrictOptimized = 42 
+% main :: IO ()
+% main = do print out; print out'
+% \end{minted}
+% \caption{An example of how defining divergence as UB allows continued
+%          equational reasoning with bang patterns.}
+% \label{fig:strict-loop-ub}
+% \end{figure}
+
+
+Consider the program in \autoref{fig:strict-loop}. Here, according
+to our semantics, we define \emph{divergence as undefined behaviour}.
+Interpreted according to these semantics, here's how we legally
+allow the transformation \raw{outStrictOptimized = 42}:
+
 \begin{itemize}
-\item How does SSA compare to (i) GHC's Core intermediate representation, (ii) 
-      Continuation based representations for optimizing lazy functional programs?
-\item Does SSA offer new insights to lazy program compilation? Does it unify 
-   transformations between strict and lazy languages?
-\item Can we express memory management in a separate dialect which is re-usable
-      by other compilers?
-\item Can we make the fragile and sometimes duplicated code around garbage collection
-      more robust by expressing garbage collection in a higher level dialect?
-\item Can we borrow ideas from Gibbon, ASAP (as static as possible memory management),
-      and other such efforts for better data representation and manipulation to 
-      improve the allocation story of lazy functional languages?
-\item Can the infrastructure we build for haskell be leveraged by Nix? OCaml? How
-      much of this is reusable?
-\item Can we reuse the wildly successful ideas of Polyhedral Compilation which
-      precisely analyzes array computations to a broader class of data structures
-      which is manipulated by a functional language?
+    \item Since \raw{x} is forced, we must evaluate \raw{loop} into weak head normal form.
+    \item \raw{loop} does not have a weak head normal form. This is a divergent computation.
+    \item Since we have divergence, \emph{anything} can happen [we can refine $\bot$ into a
+    value that is greater than $\bot$].
+    \item We choose to refine $\bot$ into $42$ as $\bot \sqsubset 42$.
 \end{itemize}
 
-My thesis attempts to chart a course through this terrain. While the classical
-ideas are well understood (SSA, demand analysis, compiling lazy functional programs,
-garbage collection), I
-hope to offer new insight into this amalgamation which is powered by MLIR and
-the ``static single information philosophy''. 
+%\begin{figure}
+%\begin{minted}{hs}
+\begin{lstlisting}[language=haskell, caption=An example of how defining divergence as UB is too agressive]
+{-# LANGUAGE BangPatterns #-}
+-- | never evaluates to a value.
+main = putStrLn "42"; main
+mainOptimized = return () 
+ -- | legal if divergence is UB.
+\end{lstlisting}
+%\end{minted}
+%\label{fig:io-loop}
+%\caption{An example of how defining divergence as UB is too agressive}
+%\end{figure}
+
+
+On the other hand, this definition is \emph{far too agressive}. Consider
+the program in \autoref{fig:io-loop}. Here, main prints $42$ forever,
+never returning the final \raw{IO ()} that it is expected to. Thus,
+we can \emph{optimize this program} into \raw{mainOptimized = return ()}
+if divergence is undefined behaviour. This is not what we want! We wish
+to allow programs which \emph{make progess without halting}, while
+still being able to exploit undefined behaviour. Thus, we must change our
+semantics to adapt to this need.
+
+\section{Progressive operational semantics}
+
+Naively speaking, one maybe tempted to summarize our approach as
+"make divergence undefined". While this is appealing, this is both too
+strong, and too naive. For example, such a definition would allow us to
+optimize away programs that \emph{progress} without \emph{terminating}.
+A tiny example of such a program, which prints ``42'' forever is
+given in \autoref{fig:print-forever}
+
+% \begin{figure}[ht]
+% \begin{minted}{hs}
+\begin{lstlisting}[language=haskell, caption=A program that makes progress without terminating.  We wish to preserve such program semantics]
+action :: IO (); action = putStrLn "42";
+main :: IO (); main = action >> main
+\end{lstlisting}
+% \end{minted}
+% \label{fig:print-forever}
+% \caption{A program that makes progress without terminating.  We wish to preserve such program semantics}
+% \end{figure}
+
+% \begin{figure}[ht]
+    
+%\begin{subfigure}[b]{0.48\textwidth}
+%\begin{minted}{hs}
+\begin{lstlisting}[language=haskell]
+{-# LANGUAGE BangPatterns #-}
+loop :: Int; loop = loop
+ex1 = let x = loop in 42
+ex2 = let !x = loop in 42
+ex3 = let !x = loop in x
+-- | New program
+{-# LANGUAGE BangPatterns #-}
+loop :: Int; loop = loop
+ex1 = 42
+ex2 = 42
+ex3 = let !x = loop in x
+ex3' = loop -- equivalent semantics
+\end{lstlisting}
+% \end{minted}
+% \subcaption{Maxmially transformed programs with our proposed semantics}
+% \end{subfigure}
+% \caption{Programs that exhibit a range of behviours, clarifying what values we do and do not eliminate}
+% \end{figure}
+
+We call our semantics \emph{progressive}, which tries to make as much progress
+as possible before getting stuck at a stuck term.
+\section{Formal Semantics Of Bang Patterns in Haskell}
+
+There is currently no formal definition of bang patterns in the Haskell language.
+The semantics are defined based on how the Glasgow Haskell Compiler chooses
+to manipulate these strictness annotations. So wherever we have previously argued
+that it would be ``incorrect'' for GHC to perform these transforms, we have been
+arguing from the position of:
+
+\begin{itemize}
+\item This is what GHC does today, and that is the current state of definition for bang patterns.
+\item Were GHC to make the above transformation, we believe it would violate the
+      intuitions that many people have about how GHC \emph{ought} to transform code.
+      \sid{I asked bgamari who works on GHC full-time, he said that GHC does not perform the above transform most likely.
+           Similarly, other friends (carter, davean) who commit into GHC also said likely not.}
+\end{itemize}
+
+To begin our discussion, we first formalize the semantics of bang patterns.
+\textbf{TODO: fill in semantics here.}
+\section{\lz: Its Syntax, Type system, semantics}
+\subsection{A high level overview of \mlir}
+
+\begin{figure*}
+\begin{minted}{text}
+toplevel := func | global
+func := <fn-name> formal-param-list -> <ret-type> <region>
+region := list [bb]
+bb := <bb-name> formal-param-list : list inst; terminator-inst
+inst := retval "=" <op-name> arg-list
+terminator-inst := std.return(<name>) | br <name> | condbr <name> <bb1> <param-list> <bb2> <param-list>
+\end{minted}
+\caption{The \std dialect syntax}
+
+\end{figure*}
+
+
+\begin{figure*}
+\vspace{3em}
+
+\begin{tabular}{l l}
+\begin{minipage}[t][1cm][b]{0.5\textwidth}
+\inference[assign-cst]
+{
+}
+{
+  (\texttt{\%vid =}~ \texttt{std.constant } const, R) ~\assignarrow~R[\texttt{\%vid} \mapsto const]
+}
+\end{minipage}
+
+&
+
+\begin{minipage}[t][1cm][b]{0.5\textwidth}
+\inference[assign-fncall]
+{
+  R[x_1] = v_1\quad R[x_2] = v_2\quad \dots\quad R[x_n] = v_n \\
+  \denotation{f}(v_1, v_2, \dots, v_n) = y \\
+}
+{
+  (\texttt{\%vid =}~ \texttt{f(}x_1, x_2, \dots, x_n \texttt{)}, R) ~\assignarrow~R[\texttt{\%vid} \mapsto y]
+}
+\end{minipage}
+\end{tabular}
+
+% =========================
+
+\vspace{3em}
+\begin{tabular}{l l}
+\begin{minipage}[t][1cm][b]{0.5\textwidth}
+\inference[cbr-left]
+{
+    % P[pc] = \texttt{cond\_br \%c $\caret$ bb1(...) \^bb2(...)} \quad
+    P[pc] = \raw{condbr c ^bb1(xs) ^bb2(ys)} \\
+    P[\raw{^bb1}] =  \raw{^bb1(ls)} \\
+    R[c] \ne 0
+}
+{
+    (pc, R) ~\controlflowarrow~(pc', R[ls \mapsto R[xs])
+}
+
+\end{minipage}
+&
+\begin{minipage}[t][1cm][b]{0.5\textwidth}
+
+\inference[cbr-right]
+{
+    P[pc] = \texttt{br}~ c~ l(v_1)~ r(v_2) \quad
+    P[r] = pc' \quad
+    R[c] = 0
+}
+{
+    (pc, R) ~\controlflowarrow~(pc', R[r.input \mapsto R[v_2])
+}
+\end{minipage}
+\end{tabular}
+
+% =========================
+
+\inference[br]
+{
+    P[pc] = \texttt{br}~ n(v) \quad
+    P[n] = pc'
+}
+{
+    (pc, R) ~\controlflowarrow~(pc', R[n.input \mapsto R[v])
+}
+
+\caption{The operational semantics of the \std dialect}
+\end{figure*}
+
+\subsection{A high level overview of \lz}
+We extend the basic \std dialect modestly, by adding primitives that can 
+describe non-strictness. We first introduce a primitive known as \lzthunk,
+which is responsible for creating non-strict thunks. 
+To represent lazy function application, we introduce a new operation called \lzap,
+which is the lazy sibling of \stdcall. This creates a thunk, which when evaluated,
+invokes the function with the given arguments. To force
+a thunk, we introduce \lzforce, which receives a thunk as input and returns
+the forced value of the thunk as output. In effect, we have an encoding of
+administrative normal form as (ANF) an MLIR dialect.
+
+To represent algebraic data types, which enable reasoning of control flow 
+and are the primary mode of abstraction in most functional languages, as
+well as newer imperative languages such as Rust, we introduce the \construct
+and \case operators, which are the introduction and elimination forms of
+structured data in the dialect.
+
+\begin{figure*}[hbt!]
+\begin{minted}{text}
+thunk(x): T -> Thunk<T>
+ap(f, v1, v2, ..., vn): ((T1,...Tn) -> R) x T1 x ... Tn -> Thunk<R>
+force(x): Thunk<T> -> T
+construct(ConsName, v1, ..., vn): Symbol x T1 x T2 ... x Tn -> ADT<T>
+case(x: T) of ... : ADT<T> -> R
+\end{minted}
+\caption{Syntax of \lz extensions}
+\end{figure*}
+
+\begin{figure*}
+\vspace{3em}
+\begin{tabular}{l l}
+\begin{minipage}[t][1cm][b]{0.5\textwidth}
+\inference[asgn-constructor]
+{
+   P[pc] = \\
+    \quad \texttt{\%vid = lz.construct(@ConsName, \%x1, ..., \%xn)} \\
+   P[\texttt{\%x1}] = v_1, \quad \dots, \quad P[\texttt{\%xn}] = v_n \\
+}
+{
+  R[\texttt{\%vid} \mapsto \texttt{constructor(@ConsName, $v_1, \dots, v_n$)}]
+}
+\end{minipage}
+&
+\begin{minipage}[t][1cm][b]{0.5\textwidth}
+\inference[asgn-thunk]
+{
+   P[pc] = \texttt{\%vid = lz.ap(\%fref, \%x1, ..., \%xn)} \\
+   P[\texttt{\%f1}] = \texttt{ref(@fn)} \\
+   P[\texttt{\%x1}] = v_1, \quad \dots, \quad P[\texttt{\%xn}] = v_n \\
+}
+{
+  R[\texttt{\%vid} \mapsto \texttt{thunk(@fn, $v_1, \dots, v_n$)}]
+}
+\end{minipage}
+\end{tabular}
+
+% ================
+
+\vspace{5em}
+\begin{tabular}{l l}
+\begin{minipage}[t][1cm][b]{0.5\textwidth}
+\inference[asgn-case]
+{
+   P[pc] = \texttt{\%vid = lz.case(\%x, @Cons\textsubscript{1}, r\textsubscript{1},}\dots 
+                    \texttt{, @Cons\textsubscript{N}, r \textsubscript{N})} \\
+   \texttt{@Cons}_i = \texttt{@XCons} \\ 
+   P[\texttt{\%x}] = \texttt{construct(@XCons, $v_1, \dots, v_n$)} \\
+   r_i = \raw{ { ^entry(arg1, ..., argn): ... } }
+}
+{
+  % decide on how to represent region execution
+  (pc, R) \controlflowarrow (P[r_i], R[\texttt{arg}_i \mapsto v_i])
+}
+\end{minipage}
+&
+\begin{minipage}[t][1cm][b]{0.5\textwidth}
+\inference[asgn-force]
+{
+   p[pc] = \texttt{\%vid = lz.force(\%thnk)} \\
+   p[\texttt{\%thnk}] = \texttt{thunk(@fn, $v_1, \dots, v_n$)} \\
+   \denotation{@fn}(v_1, v_2, \dots, v_n) = y
+}
+{
+  r[\texttt{\%vid} \mapsto y]
+}
+\end{minipage}
+\end{tabular}
+\caption{Operational semantics of \lz  extensions}
+\end{figure*}
+\textbf{TODO: this is broken, because it doesn't scope properly. We need to describe \lzthunk
+as building a thunk \emph{in memory/on the heap}, and the value stored in the register file
+is the pointer to this thunk}.
+
+\subsection{Purifying \lzforce}
+
+Let us for a moment assume that divergence is not undefined behaviour. Now consider
+the code in \autoref{fig:unused-divergent-variable-lz}. The variable called
+\texttt{\%loopv} is unused. However, because divergence \texttt{\%loopv} is
+divergent, it is incorrect to eliminate the variable definition of 
+\texttt{\%loopv}, for the divergence of \texttt{loop} occurs when \texttt{\%loopt} is forced;
+That is, when the instruction \texttt{\%loopv = lz.force(\%loopv)} is executed.
+This implies that the instruction \lzforce is side-effecting.
+
+
+If we wished to regain purity of \lzforce and leverage the power of
+SSA, then we must be allowed to eliminate a call to \lzforce if the
+value is unused. This is exactly the same requirement as being able to 
+equationally reason with bangs in a \texttt{let} binding. In that use-case,
+we wished for undefined behaviour semantics for ease-of-reasoning. Here, we wish
+for undefined behaviour semantics for ease-of-optimization. 
+
+\begin{lstlisting}[language=c++, caption=The SSA encoding of a lazy program with divergence in the \lz dialect.  Note the unused divergent variable \texttt{\%loopv}]
+// loop = loop
+lz.func @loop () -> !lz.adt<@Box> {
+  %outt = lz.ap(@loop) : !lz.thunk<lz.adt<@Box>> 
+  %outv = lz.force(@loop) : !lz.adt<@Box>
+  lz.return(%outv) : !lz.value
+}
+
+// main = let !x = loop in 42
+lz.func @main() -> !lz.adt<@Int> {
+  %loopt = lz.ap(@loop) 
+    : !lz.thunk<lz.adt<@Box>>
+  %loopv = lz.force(%loopv) // <- unused %loopv
+    : !lz.adt<@Box>
+  %i = std.constant 42 : i64
+  %retv = lz.construct(@Int, i)
+  lz.return(%retv)
+}
+\end{lstlisting}
+% \caption{The SSA encoding of a lazy program with divergence in the \lz dialect.
+%          Note the unused divergent variable \texttt{\%loopv}}
+% \label{fig:unused-divergent-variable-lz}
+% \end{figure}
+
+
+%\begin{figure}[hbt]
+%\begin{minted}{text}
+\begin{lstlisting}[language=c++, caption=Under the assumption that divergence is UB we can eliminate the call to \lzforce. This regains SSA semantics.]
+// loop = loop
+lz.func @loop () -> !lz.adt<@Box> {
+  %outt = lz.ap(@loop) : !lz.thunk<lz.adt<@Box>> 
+  %outv = lz.force(@loop) : !lz.adt<@Box>
+  lz.return(%outv) : !lz.value
+}
+
+// main = let !x = loop in 42
+lz.func @main() -> !lz.adt<@Int> {
+  // %loopt = lz.ap(@loop) 
+  //  : !lz.thunk<lz.adt<@Box>>
+  // %loopv = lz.force(%loopv) 
+  //   : !lz.adt<@Box> 
+  %i = std.constant 42 : i64
+  %retv = lz.construct(@Int, i)
+  lz.return(%retv)
+}
+\end{lstlisting}
+% \caption{Under the assumption that divergence is UB, we can eliminate the call to
+%          \lzforce. Thus, this assumption allows us to regain SSA semantics.}
+% \label{fig:unused-divergent-variable-lz-eliminated}
+% \end{figure}
+
+
+
+\subsection{Purifying \lzconstruct}
+
+Consider the program in \autoref{fig:unused-construct}. For us to eliminate
+the call to \texttt{lz.construct}, we need to be sure that memory allocation
+has no side effects. In our case, since we assume that allocations are not
+visible to the user in terms of their implementation details (eg. The address
+of the pointer of the block of memory), we can safely remove the value
+\texttt{\%unused = lz.construct(@Box)}  as \texttt{\%unused} is unused.
+
+
+On the flipside, consider a program where we want to \emph{copy} the 
+instruction \texttt{lz.construct}. If we were not guaranteed the existence
+of a garbage collector, then this would not be pure; we would have created a
+chunk of memory that is never freed. \textbf{TODO: Is there a good example where we 
+want to copy a value for optimization? Something like, copy an SSA value both
+into a loop and outside or something?}
+
+
+
+\begin{lstlisting}[caption=An unused called to \lzconstruct]
+lz.func() -> !hask.adt<@Box> {
+  %unused = lz.construct(@Box)
+  %one = std.constant 1 : i64
+  lz.ret(%one) : i64
+}
+\end{lstlisting}
+
+\section{Aiding the performance programmer with explicit forcing}
+
+\begin{lstlisting}[language=haskell, caption=Haskell program with two datatypes  \texttt{Lazy} and \texttt{Strict}
+with the same shape of data but different strictness annotations.]
+{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE UnboxedTuples #-}
+module Foo(boxLazyAndStrict) where
+-- | A large datatype
+data Box = Box Int Int Int Int Int
+data Lazy = MkLazy Box
+data Strict = MkStrict !Box
+
+data BoxPair = MkBoxPair !Box !Box
+
+boxLazyAndStrict :: Lazy 
+  -> Strict 
+  -> BoxPair
+boxLazyAndStrict lz str =
+  case lz of
+   MkLazy lbox  ->
+       case str of
+         MkStrict strbox ->
+           MkBoxPair lbox strbox
+\end{lstlisting}
+
+
+\begin{lstlisting}[language=haskell,caption=\ghc \core corresponding to the  above Haskell program  where there is no indication
+         that \texttt{strbox} is a value while \texttt{lbox} is a thunk]
+boxLazyAndStrict :: Lazy -> Strict -> BoxPair
+ ...
+ Tmpl= \ (lz_aub :: Lazy)
+         (str_auc :: Strict) ->
+         case lz_aub of { MkLazy lbox_aud ->
+         case str_auc of { MkStrict strbox_aue ->
+         case lbox_aud of dt_Xve [Occ=Once]
+         { Box _ _ _ _ _  ->
+         Foo.MkBoxPair dt_Xve strbox_aue
+         }}}}]
+\end{lstlisting}
+
+In Haskell, Core and STG, all of GHC's intermediate representations, there is
+no explicit description of the act of forcing a thunk. The \texttt{case} construct
+is responsible for \emph{both} forcing and case analysis. This is a fine state
+of affairs when we are in a language where values are forced right before they
+are used --- that is, the language is \emph{truly lazy}. However, Haskell currently
+supports bang patterns in defining data constructors, which violates this
+assumption. We begin with an example of a simple program with two datatypes,
+called \texttt{Lazy} and \texttt{Strict}, where the both contain the lazy data
+of type \texttt{Box}. \texttt{Strict}, to its name, is actually strict
+in its \texttt{Box} field. However, this is completely opaque on reading the
+Core: We need to infer from the facts:
+\begin{itemize}
+\item because \raw{lbox_aud} is \texttt{case}'d on
+\item The result of the aforementioned case is called \raw{dt_Xve}.
+\item The case is followed by the pointless match \raw{(Box _ _ _ _ _)}.
+\item Finally, the \raw{(Foo.MkBoxPair dt_Xve ...)} is built.
+\item Thus, the only reason \raw{dt_Xve} exists is to represent the forced \raw{lbox_aud}.
+\item So, the value \raw{lbox_aud} is forced into the value \raw{dt_Xve}
+\end{itemize}
+
+These infelicities, while slight, add up rapidly when attempting to optimize
+more complicated Haskell programs. On the other hand, consider our encoding
+in \lz. Since we separate the concept of \emph{forcing} a value from \emph{pattern matching},
+we can represent the force necessary as a \texttt{lz.force}, without needlessly
+introducing a pattern match. This improves the readability of the source, and
+more directly expresses the semantics we are interested in.  While GHC Core
+is an amazing intermediate representation for analysis and transformation, it
+is sub-par for \emph{consumption by the end-user}. Though the source language has
+gotten more complex, \core has changed very little; This is a source of
+strength (as the optimizer needs to only reasons about a very minimal language).
+It is also a source of obfuscation, as many overlapping ideas are represented
+by the same construct: in this case, that of forcing, and that of pattern
+matching.
+
+\begin{lstlisting}[language=llvm, caption=\lz dialect encoding of the above program where there is a clear indication of the thunk being forced]
+lz.func(%lz: !lz.adt<@Lazy>, 
+        %str: !lz.adt<Strict>) {
+  %lboxt = lz.extractvalue(%lz, 0)
+     : !lz.thunk<!lz.adt<@Box>>
+  %strboxv = lz.extractvalue(%str, 1)
+     : !lz.adt<@Box>
+  %lboxv = lz.force(%lboxt) # FORCE
+    : !lz.adt<@Box>
+  %retval = lz.construct(@MkBoxPair, 
+                         %lboxv, %strboxv)
+    : !lz.adt<@BoxPair>
+  lz.return(%retval)
+}
+\end{lstlisting}
+
+\section{Worker wrapper by local rewrites: A first stab}
+In this section, we consider a small example program, which we will explain
+how to perform a classical transform (the worker-wrapper transform) purely
+by using local rewrites. Traditionally, such a transformation is performed
+by first performing a \emph{demand analysis} whose results are used
+to drive the rewrite.
+
+We explore how this transformation can be achieved \emph{without} the need
+for demand analysis by performing \emph{local rewrites}. This provides
+both a simpler manifestation of the algorithm, as well as a potentially 
+faster implementation, as the MLIR infrastructure is capable of performing
+rewrites in parallel.
+% \begin{figure}[htb!]
+%\begin{minted}[linenos]{cpp}
+{\footnotesize
+\begin{lstlisting}[caption=initial source code]
+SimpleInt f(Thunk<SimpleInt> i) {
+    SimpleInt icons = force(i);
+    int ihash = casedefault(icons);
+    if (ihash <= 0) {
+        return SimpleInt(42);
+    } else {
+        int prev = ihash - 1;
+        SimpleInt siprev = SimpleInt(prev);
+        Thunk<SimpleInt> siprev_t = thunkify(siprev);
+        SimpleInt f_prev_v = apStrict(f, siprev_t);
+        return f_prev_v;
+    }
+}
+
+int main() {
+    printf("%d\n", f(thunkify(SimpleInt(1))).v);
+}
+\end{lstlisting}
+}
+%\end{minted}
+%\caption{Step 0: The source code we optimize using worker wrapper}
+%\end{figure}
+
+%\begin{figure}[htb!]
+%\begin{minted}{cpp}
+{\footnotesize
+\begin{lstlisting}[caption=Step 1: outlining everything after the initial \lzforce into \texttt{f2}]
+SimpleInt f2(SimpleInt icons) {
+    int ihash = casedefault(icons);
+    if (ihash <= 0) {
+        return SimpleInt(42);
+    } else {
+        int prev = ihash - 1;
+        SimpleInt siprev = SimpleInt(prev);
+        Thunk<SimpleInt> siprev_t = thunkify(siprev);
+        SimpleInt f_prev_v = apStrict(f, siprev_t);
+        return f_prev_v;
+    }
+}
+
+SimpleInt f(Thunk<SimpleInt> i) {
+    SimpleInt icons = force(i);
+    SimpleInt ret = apStrict(f2, icons);
+    return ret;
+}
+\end{lstlisting}
+}
+%\caption{Step 1: outlining everything after the initial \lzforce into \texttt{f2}}
+%\end{figure}
+
+%\begin{figure}[htb!]
+%\begin{minted}{cpp}
+\begin{lstlisting}[language=c++, caption=Step 2: Removing the strict application]
+SimpleInt f2(SimpleInt icons) {
+    int ihash = casedefault(icons);
+    if (ihash <= 0) {
+        return SimpleInt(42);
+    } else {
+        int prev = ihash - 1;
+        SimpleInt siprev = SimpleInt(prev);
+        // Thunk<SimpleInt> siprev_t = thunkify(siprev);
+        // SimpleInt f_prev_v = apStrict(f, siprev_t);
+        Thunk<SimpleInt> f_prev_v = apStrict(f2, siprev);
+        return f_prev_v;
+    }
+}
+
+SimpleInt f(Thunk<SimpleInt> i) {
+    SimpleInt icons = force(i);
+    SimpleInt ret = apStrict(f2, icons);
+    return ret;
+}
+\end{lstlisting}
+%\end{minted}
+%\caption{Step 2: Removing the strict application}
+%\end{figure}
+
+%\begin{figure}[htb!]
+{\footnotesize
+\begin{lstlisting}[language=c++, caption=Step 3: outline everything after casedefault into f3]
+SimpleInt f3(int icons) {
+    if (ihash <= 0) {
+        return SimpleInt(42);
+    } else {
+        int prev = ihash - 1;
+        SimpleInt siprev = SimpleInt(prev);
+        Thunk<SimpleInt> f_prev_v = apStrict(f2, siprev);
+        return f_prev_v;
+    }
+}
+
+SimpleInt f2(SimpleInt icons) {
+    int ihash = casedefault(icons);
+    SimpleInt ret = apStrict(f3, ihash);
+    return ret;
+}
+
+SimpleInt f(Thunk<SimpleInt> i) {
+    SimpleInt icons = force(i);
+    SimpleInt ret = apStrict(f2, icons);
+    return ret;
+}
+\end{lstlisting}
+}
+%\caption{ Step 3: outline everything after casedefault(icons) into f3}
+%\end{figure}
+
+%\begin{figure}[htb!]
+{\footnotesize
+\begin{lstlisting}[language=c++, caption=replace call \texttt{f2(SimpleInt(prev))} to \texttt{f3(prev)}]
+SimpleInt f3(int icons) {
+    if (ihash <= 0) {
+        return SimpleInt(42);
+    } else {
+        int prev = ihash - 1;
+        Thunk<SimpleInt> f_prev_v = apStrict(f3, prev);
+        return f_prev_v;
+    }
+}
+SimpleInt f2(SimpleInt icons) {
+    int ihash = casedefault(icons);
+    SimpleInt ret = apStrict(f3, ihash);
+    return ret;
+}
+SimpleInt f(Thunk<SimpleInt> i) {
+    SimpleInt icons = force(i);
+    SimpleInt ret = apStrict(f2, icons);
+    return ret;
+}
+\end{lstlisting}
+}
+%\caption{Step 4: replace call f2(SimpleInt(prev)) to f3(prev)}
+%\end{figure}
+
+
+%\begin{figure}[htb!]
+%% ! {\footnotesize
+%% ! \begin{lstlisting}[language=c++]
+%% ! SimpleInt f3(int icons) {
+%% !     if (ihash <= 0) {
+%% !         return SimpleInt(42);
+%% !     } else {
+%% !         int prev = ihash - 1;
+%% !         Thunk<SimpleInt> f_prev_v = apStrict(f3, prev);
+%% !         return f_prev_v;
+%% !     }
+%% ! }
+%% ! SimpleInt f(Thunk<SimpleInt> i) {
+%% !     SimpleInt icons = force(i);
+%% !     int ihash = casedefault(icons);
+%% !     SimpleInt ret = apStrict(f3, ihash);
+%% !     return ret;
+%% ! }
+%% ! \end{lstlisting}
+%% ! }
+%\caption{Step 5: Inline f2 into f. This gives us the worker(f3) and wrapper(f)}
+%\end{figure}
+
+\section{Worker wrapper by local rewrites: Non-tail-calls}
+
+Currently implementing the constructor simplification
+
+\section{Worker wrapper by local rewrites: Sum types}
+
+
+\section{Worker wrapper by local rewrites: Sum types + non-tail-calls}
+
+
+\section{Demand analysis by rewrites: The full algorithm}
+
+\begin{figure*}
+\vspace{3em}
+{\footnotesize
+\begin{tabular}{l l}
+\begin{minipage}[t][1cm][b]{0.5\textwidth}
+% \begin{subfigure}[b]{0.48\textwidth}
+
+\inference[ForceOfKnownAp]{
+\texttt{\%x = ap(\%f, \%v1, ..., \%vn): !lz.thunk<T>} \\
+\texttt{\%y = force(\%x): T}
+}{
+\texttt{\%y = \%f(\%v1, ..., \%vn): T}
+}
+\subcaption{force of a known function application: remove laziness}
+\end{minipage}
+
+&
+
+\begin{minipage}[t][1cm][b]{0.5\textwidth}
+\inference[ForceOfThunkify]{
+\texttt{\%x = thunkify(\%v) : !lz.thunk<T>} \\
+\texttt{\%y = force(\%x): T}
+}{
+\texttt{\%y = \%x}
+}
+\subcaption{force of a thunk: remove laziness}
+\end{minipage}
+\end{tabular}
+}
+
+% =========================
+\vspace{20em}
+
+\begin{tabular}{l l}
+\begin{minipage}[t][1cm][b]{0.5\textwidth}
+{\footnotesize
+
+\inference{
+% foo
+\texttt{func f(\%x1, ... \%txi: thunk<T>, ..., \%xn) \{} \\
+\texttt{  \%xi = force(\%txi)} \\
+\texttt{  \%zi = ... ; \%tzi = thunkify(\%zi)} \\
+\texttt{  f(\%y1, ..., \%tzi, ..., \%yn)} \\
+\texttt{\}}
+}{
+\texttt{func f\_strict\_i(\%x1, ... \%xi: T, ..., \%xn) \{} \\
+\texttt{   \%zi = ...} \\
+\texttt{   f\_strict\_i(\%y1, ..., \%zi, ..., \%yn)} \\
+\texttt{\}} \\
+\texttt{func f(\%x1, ... \%txi: thunk<T>, ..., \%xn) \{} \\
+\texttt{   \%xi = force(\%txi)} \\
+\texttt{   \%zi = ...} \\
+\texttt{   f\_strict\_i(\%y1, \%y2, ..., \%zi, ..., \%yn)} \\
+\texttt{\}}
+}
+} % end footnotesize
+\subcaption{outlining recursive call that is immediately forced}
+\end{minipage}
+&
+\begin{minipage}[t][1cm][b]{0.5\textwidth}
+{\footnotesize
+
+\inference{
+\texttt{func f(\%x1, ... \%wrapxi: @ADT, ..., \%xn) \{} \\
+\texttt{   \%xi = case (\%wrapxi) [\@Wrapper -> \string^ entry(\%v) \{ return \%v \}]} \\
+% \texttt{   \%zi = ...}
+% \texttt{   \%wrapzi = construct(@Wrapper, \%zi)}
+% \texttt{   f(\%y1, ..., \%wrapzi, ..., \%yn)}
+\texttt{\}}
+}{
+\texttt{func f\_work\_i(\%x1, ... \%xi: T, ..., \%xn) \{} \\
+\texttt{   \%zi = ...} \\
+\texttt{   f\_strict\_i(\%y1, \%y2, ..., \%zi, ..., \%yn)} \\
+\texttt{\}} \\
+\texttt{func f(\%x1, ... \%txi: thunk<T>, ..., \%xn) \{} \\
+\texttt{   \%xi = case (\%wrapxi) [\@Wrapper -> \string^ entry(\%v) \{ return \%v \}]} \\
+\texttt{   \%zi = ...} \\
+\texttt{   f\_work\_i(\%y1, ..., \%zi, ..., \%yn)} \\
+\texttt{\}}
+} % end inference
+} % end footnotesize
+\subcaption{outlining of recursion of a monovariant wrapper}
+\end{minipage}
+\end{tabular}
+
+\vspace{10em}
+
+\begin{minipage}[t][1cm][b]{0.5\textwidth}
+{\footnotesize
+\inference{
+\texttt{\%x = constructor(@Constructor, \%v1, ..., \%vm)} \\
+\texttt{\%y = case \%x} \\
+\texttt{      [\@C1 -> \{\string^entry1(\%z11, ..., \%z1n1): ...  \}]} \\
+\texttt{      [...]} \\
+\texttt{      [\@Ci -> \{\string^entry1(\%zi1, ..., \%zini): ...  \}]} \\
+}{
+\texttt{Inline \string^entryi with \%zik = \%vk}
+}
+} % end footnotesize
+\subcaption{Case of known constructor: remove indirection}
+\end{minipage}
+
+\vspace{10em}
+
+\begin{minipage}[t][1cm][b]{0.5\textwidth}
+{\footnotesize
+\inference{
+FOO
+}{
+BAR
+}
+} % end footnotesize
+\subcaption{Inline a function call}
+\end{minipage}
+\caption{Local rewrites performed to eliminate laziness (1)}
+\end{figure*}
+
+\begin{figure*}
+
+\begin{minipage}[t][1cm][b]{0.5\textwidth}
+{\footnotesize
+\inference{
+FOO
+}{
+BAR
+}
+} % end footnotesize
+\subcaption{Outline recursive call of constructor that is immediately unwrapped}
+\end{minipage}
+% OutlineRecursiveApEagerOfConstructorPattern
+
+
+
+\begin{minipage}[t][1cm][b]{0.5\textwidth}
+{\footnotesize
+\inference{
+FOO
+}{
+BAR
+}
+} % end footnotesize
+\subcaption{Outline pattern matching branches on a function input}
+% OutlineCaseOfFnInput
+\end{minipage}
+
+\begin{minipage}[t][1cm][b]{0.5\textwidth}
+{\footnotesize
+\inference{
+FOO
+}{
+BAR
+}
+} % end footnotesize
+\subcaption{Outline return of constructor}
+% outline return of constructor
+\end{minipage}
+
+
+\begin{minipage}[t][1cm][b]{0.5\textwidth}
+{\footnotesize
+\inference{
+FOO
+}{
+BAR
+}
+} % end footnotesize
+\subcaption{Peel constructor from case}
+% peel constructor from case
+\end{minipage}
+
+%% % \begin{minted}{text}
+%% % Inlining
+%% % \end{minted}
+\caption{Local rewrites performed to eliminate laziness (2)}
+\end{figure*}
+
+
+\section{Evaluation}
+
+As a baseline, we compare our performance on \nofib test-suite, which is the
+test suite that GHC is tested with and performance improvements to GHC 
+are reported on. We only consider a representative subset of programs from \nofib;
+The full test suite also extensively tests Haskell's semantics of parallelism, 
+software transactional memory, and other features that are orthogonal to the
+problem of representing and optimizing non strictness.
+
+\section{Related Work}
+
+\subsection{Demand analysis}
+\cite{wadler1987projections} ``Projections for demand analysis'' performs
+demand analysis computation by modelling demands as projections on the semantic
+domain. We use their broad framework, adapted to our setting. 
+
+\cite{grafcall}, \cite{breitner2014call} extend the demand analysis with
+finer grained information, such as Call Arity analysis.
+
+\subsection{GHC's intermediate representation}
+
+The Glasgow Haskell compiler \cite{jones1993glasgow} is a mature optimizing
+compiler for Haskell, whose plugin infrastructure we hook into to  develop a test
+set for \lz, and whose demand analysis we use as a benchmark to measure against.
+
+\subsection{Intel Haskell research compiler IR}
+The Intel labs Haskell Research compiler \cite{liu2013intel} models Core in a
+strict ANF language. The compiler performs demand analysis and abstract
+simplification on ANF. The demand analysis is performed using traditional
+abstract interpretation techniques. Later, this demand information is used
+to interpret the program and perform abstract simplification. (TODO: figure out
+details of this step).
+
+It then compiles to an intermediate representation called MIL,
+which is a loosely typed CFG based, SSA-lite intermediate representation.  They
+represent laziness as heap values, and manipulate the heap. Thus, their
+representation and usage of lazy values reasons with memory, instead of
+providing value semantics.
+MIL also does not have a notion of nested regions. Therefore, MIL extends
+the traditional control flow controls with more finer-grained information,
+called as \texttt{cut} and \texttt{interproc}.
+
+
+\subsection{Mixing dataflow analysis and transformation}
+
+This is based on the theory of compositional dataflow analysis
+and transformations, \cite{lerner2002composing} 
+which proves that we can interleave dataflow analyses and transformations
+safely.
+
+Hoopl \cite{ramsey2010hoopl} is the dataflow analysis and transformation library
+within GHC. However, GHC does not use this for performing dataflow analysis
+over Core, as the Hoopl library is designed to work with a CFG based
+intermediate representation, while GHC Core is a typed functional, expression
+oriented intermediate representation. While Hoopl is used for certain simplifications
+within C-- in GHC, it is not used extensively due to  poor performance characteristics
+exhibited by the implementation. (TODO: bench Hoopl on contrived examples)
+
+\subsection{Alternative encodings of laziness}
+
+GRIN  \cite{boquist1996grin} is an alternative intermediate representation
+for lazy and strict functional programming languages which explicitly represents
+heap manipulation and case analysis. However, it is not SSA based.
+
+\subsection{Theoretical justification for our encoding}
+
+Our encoding is based on call-by-push-value \cite{levy2012call}, which
+breaks down call-by-value and call-by-name paradigms into simple primitives. In
+our dialect \lz, we expose these primitives to enable a clean mixture of
+call by name and call by value. This enjoys the many properties that
+are proven to hold for call-by-push-value (TODO: which ones?!)
+
+
+\subsection{Technology substrate}
+                                                         
+MLIR \cite{lattner2020mlir} is a compiler framework for building reusable and
+extensible compiler infrastructure.  MLIR aims to address software
+fragmentation, improve compilation for heterogeneous hardware, significantly
+reduce the cost of building domain specific compilers, and aid in connecting
+existing compilers together.
+
+\section{Conclusion}
+
+We provide a baseline implementation of non-strictness for the MLIR framework
+which with very minimal extensions, allows us to fully express non strict semantics
+while being compatible with the rest of MLIR's strict dialects.
+As an experience report, we explore MLIR's strengths and weaknesses at representing
+non-strictness within an SSA based framework. We also provide a baseline implementation
+of demand analysis, as inspired by Wadler and Hugh's ``projections for demand
+analysis''. We evaluate our example programs against the nofib benchmark test suite.
+We also provide provocative examples where the potent combination of MLIR's 
+loop optimization infrastructure along with our modest extensions allows us to
+beat native haskell's performance.
+
+\section{TODO}
+
+\subsection{Performance benchmarking}
+\subsection{Correct encoding for mutual recursion}
+\subsection{Correct encoding for partially applied functions/closures}
+
+We currently have a \texttt{lz.lambda} but it's basically untested, because
+we didn't have many things that used closures. We need to make sure this
+works properly, and encodes data correctly.
+
+\subsubsection{Lambdas in GRIN}
+GRIN is also a low level IR, so it's useful to recall how this is encoded
+within GRIN. To quite the GRIN thesis:
+
+\say{
+end. Using hbcc we get well optimised
+code in a low level functional style, comparable to for example the Core lan-
+guage [PJ96] used by the Glasgow Haskell compiler.  The code is lambda lifted,
+i.e., has only super combinators, and most high level Haskell constructions,
+like overloading, have been transformed away.
+}
+
+
+\subsubsection{Implementing lambda lifting}
+Recall that optimal lambda lifting is $O(n^2)$. I don't know the
+algorithm; I'd have to study it before I implement it.
+
+\subsection{Stretch: rewrite based unification}
+\subsection{Stretch: rewrite based tabled typeclass generation}
+\subsection{Stretch: As static as possible garbage collection}
+
+
+%% Acknowledgments
+\begin{acks}                            %% acks environment is optional
+                                        %% contents suppressed with 'anonymous'
+  %% Commands \grantsponsor{<sponsorID>}{<name>}{<url>} and
+  %% \grantnum[<url>]{<sponsorID>}{<number>} should be used to
+  %% acknowledge financial support and will be used by metadata
+  %% extraction tools.
+  This material is based upon work supported by the
+  \grantsponsor{GS100000001}{National Science
+    Foundation}{http://dx.doi.org/10.13039/100000001} under Grant
+  No.~\grantnum{GS100000001}{nnnnnnn} and Grant
+  No.~\grantnum{GS100000001}{mmmmmmm}.  Any opinions, findings, and
+  conclusions or recommendations expressed in this material are those
+  of the author and do not necessarily reflect the views of the
+  National Science Foundation.
+\end{acks}
+
+%% Bibliography
+
+%% why does this not show?
+\bibliography{references}
+
+%% Appendix
+\appendix
+\section{Appendix}
+
+Text of appendix
 
 \end{document}
