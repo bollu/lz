@@ -63,9 +63,6 @@ using namespace llvm::orc;
 
 int main(int argc, char **argv) {
   mlir::registerAllPasses();
-  // mlir::standalone::registerWorkerWrapperPass();
-  // mlir::standalone::registerLowerHaskPass();
-  // mlir::ptr::registerLowerPointerPass();
 
   // mlir::registerInlinerPass();
   // mlir::registerCanonicalizerPass();
@@ -76,21 +73,24 @@ int main(int argc, char **argv) {
   // mlir::registerConvertAffineToStandardPass();
   // mlir::registerSCFToStandardPass();
 
-  // registerLZJITPass();
-  // registerLZDumpLLVMPass();
-  // registerLzInterpretPass();
+  mlir::standalone::registerWorkerWrapperPass();
+  mlir::standalone::registerLowerHaskPass();
+  mlir::ptr::registerLowerPointerPass();
+  registerLZJITPass();
+  registerLZDumpLLVMPass();
+  registerLzInterpretPass();
 
   mlir::DialectRegistry registry;
-  // registry.insert<mlir::LLVM::LLVMDialect>();
-  // registry.insert<mlir::standalone::HaskDialect>();
-  // registry.insert<mlir::grin::GRINDialect>();
-  // registry.insert<mlir::ptr::PtrDialect>();
-  // registry.insert<mlir::unification::UnificationDialect>();
+  mlir::registerAllDialects(registry);
+  registry.insert<mlir::LLVM::LLVMDialect>();
+  registry.insert<mlir::standalone::HaskDialect>();
+  registry.insert<mlir::grin::GRINDialect>();
+  registry.insert<mlir::ptr::PtrDialect>();
+  registry.insert<mlir::unification::UnificationDialect>();
 
   // registry.insert<mlir::StandardOpsDialect>();
   // registry.insert<mlir::AffineDialect>();
   // registry.insert<mlir::scf::SCFDialect>();
-  mlir::registerAllDialects(registry);
 
   // Add the following to include *all* MLIR Core dialects, or selectively
   // include what you need like above. You only need to register dialects that
@@ -98,5 +98,5 @@ int main(int argc, char **argv) {
   // registerAllDialects(registry);
 
   return failed(mlir::MlirOptMain(argc, argv, "Hask optimizer driver\n",
-                                  registry, false));
+                                  registry, true));
 }
