@@ -311,7 +311,7 @@ bool isWhitespace(char c) { return c == ' ' || c == '\n' || c == '\t'; }
 bool isReservedSigil(char c) {
   return c == '(' || c == ')' || c == '{' || c == '}' || c == ',' || c == ';' ||
          c == '[' || c == ']' || c == ':' || c == '-' || c == '*' || c == '+' ||
-         c == '/' || c == '!';
+         c == '/' || c == '!' || c  == '<' || c == '>';
 }
 
 void printfspan(Span span, const char *raw_input, const char *fmt, ...) {
@@ -536,7 +536,6 @@ struct IRTypeEnum : public IRType {
       it.second->print(f);
       f << "]";
     }
-
     f << "]";
   }
 
@@ -884,6 +883,9 @@ struct SurfaceType {
   void print(OutFile &out) const { out << (strict ? "!" : "") << tyname; }
 };
 
+struct SurfaceTypeConstructor {};
+struct SurfaceTypeVariable {};
+
 enum class CaseLHSKind { Int, Identifier, TupleStruct };
 
 struct CaseLHS {
@@ -1158,6 +1160,17 @@ SurfaceType parseType(Parser &in) {
   Loc lbegin = in.getCurrentLoc();
   optional<Identifier> ident;
   if ((ident = in.parseOptionalIdentifier())) {
+
+    // type variables.
+    if (optional<Span> openTyvar = in.parseOptionalSigil("<")) {
+        vector<SurfaceType> constructorArgs;
+        while(1) {
+            constructorArgs.push_back(parseType(in));
+            if (in.parseOptionalComma()) { continue; }
+            in.parseMatchingSigil(*openTyvar, "<");
+            break;
+        }
+    }
     const bool strict = bool(in.parseOptionalSigil("!"));
     return SurfaceType(Span(lbegin, in.getCurrentLoc()), *ident, strict);
   } else {
