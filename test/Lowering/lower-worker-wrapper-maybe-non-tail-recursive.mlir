@@ -2,6 +2,9 @@
 // RUN: hask-opt %s --lz-lower --convert-scf-to-std --ptr-lower | mlir-translate --mlir-to-llvmir
 // RUN: hask-opt %s --lz-worker-wrapper --lz-lower --convert-scf-to-std --ptr-lower
 // RUN: hask-opt %s --lz-worker-wrapper --lz-lower --convert-scf-to-std --ptr-lower | mlir-translate --mlir-to-llvmir
+// RUN: run-optimized.sh < %s | FileCheck %s
+// CHECK: Just(42)
+
 module {
   // f :: Maybe Int# -> Maybe Int#
   // f mi = case mi of
@@ -62,15 +65,19 @@ module {
     return %reti : !lz.value
   }
 
+  func private @printConstructor(%x: !lz.value, %s: !ptr.char) -> ()
   // 37 + 5 = 42
-  func @main() -> !lz.value {
+  func @main() -> i64 {
     %v = constant 37: i64
     %v_box = lz.construct(@Just, %v: i64)
     %v_thunk = lz.thunkify(%v_box: !lz.value)
     %f = constant @f : (!lz.thunk<!lz.value>) -> !lz.value
     %out_t = lz.ap(%f : (!lz.thunk<!lz.value>) -> !lz.value, %v_thunk)
     %out_v = lz.force(%out_t): !lz.value
-    return %out_v : !lz.value
+    %fmtstr = ptr.string "(i)"
+    call @printConstructor(%out_v, %fmtstr) : (!lz.value, !ptr.char) -> ()
+    %zero = constant 0 : i64
+    return %zero : i64
   }
 }
 

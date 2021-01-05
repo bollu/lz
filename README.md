@@ -20,13 +20,24 @@ Convert GHC Core to MLIR.
 
 # TODO:
 - Fix MLIR bugs.
-- Refactor to make type annotations less annoying. In particular, `ap`
+- Refactor to make type annotations less annoying. In particular, `ap`          
   should not need type of function, only type of arguments and return type
 - Remove the `hask.primop_*`. It's useless. Just use native `int`s.
 - Benchmarks: https://benchmarksgame-team.pages.debian.net/benchmarksgame/program/binarytrees-ghc-7.html
 
 
 # Log:  [newest] to [oldest]
+# Friday
+- Got my tests working for end-to-end
+- TODO (1): test memref
+- TODO (2): test all other examples in Lowering
+- TODO (3): implement vector benchmarks
+
+- TODO (10): implement unification
+- TODO (12): implement GRIN optimisations
+- TODO (13): implement tabled typeclass resolution
+- TODO (14): read call by push value
+
 # Thursday, 31st Dec
 - Lower `maybe-int-non-tail-recursive` and see that the generated LLVM is optimized.
 - Lower `memref`.
