@@ -14,7 +14,6 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/OpImplementation.h"
-#include "mlir/IR/StandardTypes.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
@@ -438,7 +437,7 @@ ParseResult HaskLambdaOp::parse(OpAsmParser &parser, OperationState &result) {
   }
 
   // result.addTypes(parser.getBuilder().getType<FunctionType>(argTys, retty));
-  result.addTypes(FunctionType::get(argTys, retty, result.getContext()));
+  result.addTypes(FunctionType::get(result.getContext(), argTys, retty));
   return success();
 }
 

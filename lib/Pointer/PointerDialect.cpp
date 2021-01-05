@@ -14,7 +14,6 @@
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
-#include "mlir/IR/StandardTypes.h"
 #include "mlir/IR/TypeSupport.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Support/LLVM.h"
@@ -36,6 +35,20 @@
 
 using namespace mlir;
 using namespace mlir::ptr;
+
+LLVM::LLVMIntegerType getInt8Ty(MLIRContext *ctx) {
+  return LLVM::LLVMIntegerType::get(ctx, 8);
+}
+
+LLVM::LLVMIntegerType getInt64Ty(MLIRContext *ctx) {
+  return LLVM::LLVMIntegerType::get(ctx, 8);
+}
+
+
+LLVM::LLVMPointerType getInt8PtrTy(MLIRContext *ctx) {
+  return LLVM::LLVMPointerType::get(getInt8Ty(ctx));
+}
+
 
 bool PtrType::classof(Type type) {
   return llvm::isa<PtrDialect>(type.getDialect());
@@ -214,12 +227,12 @@ public:
   PtrTypeConverter(MLIRContext *ctx) : LLVMTypeConverter(ctx) {
     // !ptr.void -> i8*
     addConversion([](ptr::VoidPtrType ty) {
-      LLVM::LLVMType i8 = LLVM::LLVMType::getInt8Ty(ty.getContext());
+      LLVM::LLVMType i8 = LLVM::LLVMIntegerType::get(ty.getContext(), 8);
       return LLVM::LLVMPointerType::get(i8);
     });
     // !ptr.char -> i8*
     addConversion([](ptr::CharPtrType ty) {
-      LLVM::LLVMType i8 = LLVM::LLVMType::getInt8Ty(ty.getContext());
+      LLVM::LLVMType i8 = LLVM::LLVMIntegerType::get(ty.getContext(), 8);
       return LLVM::LLVMPointerType::get(i8);
     });
   };
@@ -315,7 +328,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     Value fn = rands[0];
     rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(
-        rator, LLVM::LLVMType::getInt8PtrTy(fn.getContext()), fn);
+        rator, LLVM::LLVMPointerType::get(LLVM::LLVMIntegerType::get(fn.getContext(), 8)), fn);
     return success();
   }
 };
@@ -416,8 +429,8 @@ public:
       std::string str = strattr.getValue().str();
 
       builder.setInsertionPointToStart(module.getBody());
-      auto type = LLVM::LLVMType::getArrayTy(
-          LLVM::LLVMType::getInt8Ty(builder.getContext()), str.size()+1);
+      auto type = LLVM::LLVMArrayType::get(
+          getInt8Ty(builder.getContext()), str.size()+1);
       global = builder.create<LLVM::GlobalOp>(loc, type, true,
                                               LLVM::Linkage::Internal, name,
                                               builder.getStringAttr(StringRef(str.c_str(), str.size()+1)));
@@ -426,10 +439,10 @@ public:
     // Get the pointer to the first character in the global string.
     Value globalPtr = builder.create<LLVM::AddressOfOp>(loc, global);
     Value cst0 = builder.create<LLVM::ConstantOp>(
-        loc, LLVM::LLVMType::getInt64Ty(builder.getContext()),
+        loc, LLVM::LLVMIntegerType::get(builder.getContext(), 64),
         builder.getIntegerAttr(builder.getIndexType(), 0));
     return builder.create<LLVM::GEPOp>(
-        loc, LLVM::LLVMType::getInt8PtrTy(builder.getContext()), globalPtr,
+        loc, getInt8PtrTy(builder.getContext()), globalPtr,
         ArrayRef<Value>({cst0, cst0}));
   }
 
@@ -458,7 +471,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     Value i = rands[0];
     rewriter.replaceOpWithNewOp<LLVM::IntToPtrOp>(
-        rator, LLVM::LLVMType::getInt8PtrTy(rator->getContext()), i);
+        rator, getInt8PtrTy(rator->getContext()), i);
     return success();
   }
 };

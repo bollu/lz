@@ -62,39 +62,41 @@ using namespace llvm;
 using namespace llvm::orc;
 
 int main(int argc, char **argv) {
-  // mlir::registerAllPasses();
-  mlir::standalone::registerWorkerWrapperPass();
-  mlir::standalone::registerLowerHaskPass();
-  mlir::ptr::registerLowerPointerPass();
-  mlir::registerInlinerPass();
-  mlir::registerCanonicalizerPass();
-  mlir::registerCSEPass();
-  mlir::registerAffinePasses();
-  mlir::registerAffineLoopFusionPass();
-  mlir::registerConvertStandardToLLVMPass();
-  mlir::registerConvertAffineToStandardPass();
-  mlir::registerSCFToStandardPass();
+  mlir::registerAllPasses();
+  // mlir::standalone::registerWorkerWrapperPass();
+  // mlir::standalone::registerLowerHaskPass();
+  // mlir::ptr::registerLowerPointerPass();
 
-  registerLZJITPass();
-  registerLZDumpLLVMPass();
-  registerLzInterpretPass();
+  // mlir::registerInlinerPass();
+  // mlir::registerCanonicalizerPass();
+  // mlir::registerCSEPass();
+  // mlir::registerAffinePasses();
+  // mlir::registerAffineLoopFusionPass();
+  // mlir::registerConvertStandardToLLVMPass();
+  // mlir::registerConvertAffineToStandardPass();
+  // mlir::registerSCFToStandardPass();
+
+  // registerLZJITPass();
+  // registerLZDumpLLVMPass();
+  // registerLzInterpretPass();
 
   mlir::DialectRegistry registry;
-  // mlir::registerAllDialects(registry);
-  registry.insert<mlir::LLVM::LLVMDialect>();
-  registry.insert<mlir::standalone::HaskDialect>();
-  registry.insert<mlir::grin::GRINDialect>();
-  registry.insert<mlir::ptr::PtrDialect>();
-  registry.insert<mlir::unification::UnificationDialect>();
-  registry.insert<mlir::StandardOpsDialect>();
-  registry.insert<mlir::AffineDialect>();
-  registry.insert<mlir::scf::SCFDialect>();
+  // registry.insert<mlir::LLVM::LLVMDialect>();
+  // registry.insert<mlir::standalone::HaskDialect>();
+  // registry.insert<mlir::grin::GRINDialect>();
+  // registry.insert<mlir::ptr::PtrDialect>();
+  // registry.insert<mlir::unification::UnificationDialect>();
+
+  // registry.insert<mlir::StandardOpsDialect>();
+  // registry.insert<mlir::AffineDialect>();
+  // registry.insert<mlir::scf::SCFDialect>();
+  mlir::registerAllDialects(registry);
 
   // Add the following to include *all* MLIR Core dialects, or selectively
   // include what you need like above. You only need to register dialects that
   // will be *parsed* by the tool, not the one generated
   // registerAllDialects(registry);
 
-  return failed(mlir::MlirOptMain(argc, argv, "Standalone optimizer driver\n",
-                                  registry, true));
+  return failed(mlir::MlirOptMain(argc, argv, "Hask optimizer driver\n",
+                                  registry, false));
 }

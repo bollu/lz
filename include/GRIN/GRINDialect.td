@@ -8,7 +8,6 @@
 
 #ifndef GRIN_DIALECT
 #define GRIN_DIALECT
-
 include "mlir/IR/OpBase.td"
 
 //===----------------------------------------------------------------------===//

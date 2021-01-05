@@ -5,7 +5,6 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/OpImplementation.h"
-#include "mlir/IR/StandardTypes.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
@@ -224,7 +223,7 @@ FunctionType mkForcedFnType(FunctionType fty) {
     assert(thunkty);
     forcedTys.push_back(thunkty.getElementType());
   }
-  return FunctionType::get(forcedTys, fty.getResult(0), fty.getContext());
+  return FunctionType::get(fty.getContext(),  forcedTys, fty.getResult(0));
 }
 
 // ===IN===
@@ -443,9 +442,8 @@ struct OutlineRecursiveApEagerOfConstructorPattern
     SmallVector<Type, 4> clonedFnCallArgTys{
         (constructedArgument.getOperand(0).getType())};
 
-    mlir::FunctionType clonedFnTy = mlir::FunctionType::get(
-        clonedFnCallArgTys, called.getType().getResult(0),
-        rewriter.getContext());
+    mlir::FunctionType clonedFnTy = mlir::FunctionType::get(rewriter.getContext(),
+        clonedFnCallArgTys, called.getType().getResult(0));
 
     ConstantOp clonedFnRef = rewriter.create<ConstantOp>(
         ap.getFn().getLoc(), clonedFnTy,

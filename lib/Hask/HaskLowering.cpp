@@ -14,7 +14,6 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/OpImplementation.h"
-#include "mlir/IR/StandardTypes.h"
 #include "mlir/IR/Types.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Support/LLVM.h"
@@ -27,6 +26,8 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/IR/BuiltinTypes.h"
+
 
 // pattern matching
 #include "mlir/IR/Matchers.h"
@@ -104,7 +105,7 @@ public:
         rettys.push_back(this->convertType(t));
       }
 
-      return FunctionType::get(argtys, rettys, fnty.getContext());
+      return mlir::FunctionType::get(fnty.getContext(), argtys, rettys);
     });
 
     // lz.value -> !ptr.void
@@ -286,8 +287,8 @@ public:
       results.addInputs(en.index(), typeConverter->convertType(en.value()));
 
     auto funcType =
-        FunctionType::get(inputs.getConvertedTypes(),
-                          results.getConvertedTypes(), funcOp.getContext());
+        FunctionType::get(funcOp.getContext(), inputs.getConvertedTypes(),
+                          results.getConvertedTypes());
 
     auto newFuncOp = rewriter.create<FuncOp>(loc, funcOp.getName(), funcType);
     // vvvv SHOOT ME PLEASE.

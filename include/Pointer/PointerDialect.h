@@ -1,6 +1,5 @@
 #pragma once
 #include "mlir/IR/Dialect.h"
-#include "mlir/IR/StandardTypes.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include <llvm/ADT/ArrayRef.h>
@@ -129,7 +128,7 @@ public:
 };
 
 
-class PtrUndefOp : public Op<PtrUndefOp, OpTrait::OneResult> {
+class PtrUndefOp : public Op<PtrUndefOp, OpTrait::OneResult, OpTrait::OneTypedResult<Type>::Impl> {
 public:
   using Op::Op;
   static StringRef getOperationName() { return "ptr.undef"; };

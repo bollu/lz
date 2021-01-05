@@ -15,7 +15,6 @@
 // more MLIR includes...
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "mlir/IR/StandardTypes.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Pass/Pass.h"
 #include "llvm/ADT/Sequence.h"

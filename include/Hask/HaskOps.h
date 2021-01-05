@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+
 #ifndef STANDALONE_STANDALONEOPS_H
 #define STANDALONE_STANDALONEOPS_H
 
@@ -16,7 +17,6 @@
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
-#include "mlir/IR/StandardTypes.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
@@ -286,7 +286,8 @@ public:
 
 // replace case x of name { default -> ... } with name = force(x);
 class ForceOp : public Op<ForceOp, OpTrait::OneResult, OpTrait::OneOperand,
-                          MemoryEffectOpInterface::Trait> {
+                          MemoryEffectOpInterface::Trait,
+                          OpTrait::OneTypedResult<Type>::Impl> {
 public:
   using Op::Op;
   static StringRef getOperationName() { return "lz.force"; };

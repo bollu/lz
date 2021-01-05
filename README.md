@@ -27,6 +27,24 @@ Convert GHC Core to MLIR.
 
 
 # Log:  [newest] to [oldest]
+# Tuesday
+- There's a [`for_with_yield`](https://github.com/llvm/llvm-project/blob/main/mlir/test/Conversion/AffineToStandard/lower-affine.mlir#L29)
+  which is what I need. time to update MLIR!
+- Seems like `OneResult` needs a separate trait to get result types.
+
+```
+commit 9eb3e564d3b1c772a64eef6ecaa3b1705d065218
+Author: Chris Lattner <clattner@nondot.org>
+Date:   Wed Dec 23 18:13:39 2020 -0800
+
+    [ODS] Make the getType() method on a OneResult instruction return a specific type.
+
+```
+
+- Seems also that the LLVM dialet's helpers like `LLVMType::getI64Type` re
+  removed.
+- `StandardTypes.h` no longer exists, moved to `BuiltinTypes.h`.
+
 # Friday
 - Got my tests working for end-to-end
 - TODO (1): test memref
