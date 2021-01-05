@@ -27,7 +27,8 @@ Convert GHC Core to MLIR.
 
 
 # Log:  [newest] to [oldest]
-# Tuesday
+
+# Tuesday, Jan 5th
 - There's a [`for_with_yield`](https://github.com/llvm/llvm-project/blob/main/mlir/test/Conversion/AffineToStandard/lower-affine.mlir#L29)
   which is what I need. time to update MLIR!
 - Seems like `OneResult` needs a separate trait to get result types.
@@ -44,6 +45,32 @@ Date:   Wed Dec 23 18:13:39 2020 -0800
 - Seems also that the LLVM dialet's helpers like `LLVMType::getI64Type` re
   removed.
 - `StandardTypes.h` no longer exists, moved to `BuiltinTypes.h`.
+
+OK this is failing to link against stuff:
+
+```
+/home/bollu/work/mlir/llvm-project/build/lib/libMLIRTargetLLVMIR.so.12git: undefined reference to `mlir::LLVM::LLVMType::getFunctionParamType(unsigned int)'
+/home/bollu/work/mlir/llvm-project/build/lib/libMLIRTargetLLVMIR.so.12git: undefined reference to `mlir::MutableDictionaryAttr::set(mlir::Identifier, mlir::Attribute)'
+/home/bollu/work/mlir/llvm-project/build/lib/libMLIRTargetLLVMIR.so.12git: undefined reference to `mlir::LLVM::LLVMType::getVectorElementCount()'
+/home/bollu/work/mlir/llvm-project/build/lib/libMLIRTargetLLVMIR.so.12git: undefined reference to `mlir::LLVM::LLVMType::getVectorElementType()'
+/home/bollu/work/mlir/llvm-project/build/lib/libMLIRTargetLLVMIR.so.12git: undefined reference to `mlir::LLVM::LLVMType::getIntegerBitWidth()'
+/home/bollu/work/mlir/llvm-project/build/lib/libMLIRTargetLLVMIR.so.12git: undefined reference to `mlir::LLVM::LLVMType::isArrayTy()'
+/home/bollu/work/mlir/llvm-project/build/lib/libMLIRTargetLLVMIR.so.12git: undefined reference to `mlir::LLVM::LLVMType::isVectorTy()'
+/home/bollu/work/mlir/llvm-project/build/lib/libMLIRTargetLLVMIR.so.12git: undefined reference to `mlir::IntegerType::get(unsigned int, mlir::MLIRContext*)'
+/home/bollu/work/mlir/llvm-project/build/lib/libMLIRTargetLLVMIR.so.12git: undefined reference to `mlir::LLVM::LLVMType::getArrayNumElements()'
+/home/bollu/work/mlir/llvm-project/build/lib/libMLIRTargetLLVMIR.so.12git: undefined reference to `mlir::LLVM::LLVMFuncOp::build(mlir::OpBuilder&, mlir::OperationState&, llvm::StringRef, mlir::LLVM::LLVMType, mlir::LLVM::Linkage, llvm::Ar
+te> >, llvm::ArrayRef<mlir::MutableDictionaryAttr>)'
+/home/bollu/work/mlir/llvm-project/build/lib/libMLIRTargetLLVMIR.so.12git: undefined reference to `mlir::NamedAttrList::append(mlir::Identifier, mlir::Attribute)'
+/home/bollu/work/mlir/llvm-project/build/lib/libMLIRTargetLLVMIR.so.12git: undefined reference to `mlir::LLVM::LLVMType::getArrayElementType()'
+clang: error: linker command failed with exit code 1 (use -v to see invocation)
+ninja: build stopped: subcommand failed.
+```
+
+Mh, I should not only build `mlir-opt`, but just run `ninja` on the
+top directory. There seem to be things I depend on (what?) that aren't
+used my `mlir-opt`.
+
+- Great, I can lower affine!
 
 # Friday
 - Got my tests working for end-to-end
