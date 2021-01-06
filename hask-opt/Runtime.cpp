@@ -2,7 +2,6 @@
 #include <stdlib.h>
 
 extern "C" {
-
 #define DEBUG_LOG                                                              \
   if (1) {                                                                     \
     DEBUG_INDENT();                                                            \
@@ -11,7 +10,7 @@ extern "C" {
 
 #ifndef NODEBUG
 
-[[maybe_unused]] static int DEBUG_STACK_DEPTH = 0;
+static int DEBUG_STACK_DEPTH = 0;
 void DEBUG_INDENT();
 
 void DEBUG_PUSH_STACK();
@@ -133,7 +132,7 @@ void *__attribute__((used, always_inline)) evalClosure(void *closure_voidptr) {
     FnTwoArgs f = (FnTwoArgs)(c->fn);
     ret = f(c->args[0], c->args[1]);
   } else {
-    assert(false && "unhandled function arity");
+    assert(0 && "unhandled function arity");
   }
 #ifndef NODEBUG
   DEBUG_POP_STACK();
@@ -193,9 +192,9 @@ void *extractConstructorArg(void *__restrict__ cptr, int i) {
   return v;
 }
 
-bool isConstructorTagEq(void *__restrict__ cptr, const char *tag) {
+int isConstructorTagEq(void *__restrict__ cptr, const char *tag) {
   Constructor *c = (Constructor *)cptr;
-  const bool eq = !strcmp(c->tag, tag);
+  const int eq = !strcmp(c->tag, tag);
 #ifndef NODEBUG
   DEBUG_LOG;
   fprintf(stderr, "(%p:%s, %s) -> %d\n", cptr, c->tag, tag, eq);
@@ -230,5 +229,12 @@ void printConstructor(void *v, const char *fmt) {
   fmt = printConstructorGo(v, fmt);
   assert(fmt[0] == 0 && "did not consume format string entirely!");
   printf("\n");
+}
+
+I64Memref *unboxI64Memref(void *v) {
+  I64Memref *mem = (I64Memref *)malloc(sizeof(I64Memref));
+  mem->p = mem->q = mem->s = mem->t = 0;
+  mem->r = 42;
+  return mem;
 }
 } // end extern C

@@ -462,9 +462,17 @@ struct Interpreter {
         args.push_back(env.lookup(call.getLoc(), operand));
       }
       // TODO: generalize to more than 1 result
-      assert(call.getNumResults() == 1);
-      env.addNew(call.getResult(0),
-                 *interpretFunction(call.getCallee().str(), args));
+      // assert(call.getNumResults() == 1);
+
+      Optional<InterpValue> res = interpretFunction(call.getCallee().str(), args);
+
+      if (call.getNumResults() == 1) {
+          assert(res && "call has a result but function returned no result!");
+          env.addNew(call.getResult(0), *res);
+      } else {
+          assert(!res && "call has no results but function returned a result!");
+      }
+                 
       return;
     }
 
@@ -752,11 +760,29 @@ struct Interpreter {
     }
   }
 
+
+  void interpretPrimopPrintInt(ArrayRef<InterpValue> args) {
+    llvm::errs().changeColor(llvm::raw_fd_ostream::GREEN);
+    llvm::errs() << "--interpreting primop:|printInt|--\n";
+    llvm::errs().resetColor();
+    
+    assert(args.size() == 1 && "printInt expects single argument");
+    InterpValue v = args[0];
+    assert(v.type == InterpValueType::I64 && "printInt expects int argument");
+    // vvv is this a hack? Maybe.
+    llvm::outs() << v.i() << "\n";
+  };
+
   llvm::Optional<InterpValue> interpretFunction(std::string funcname,
                                                 ArrayRef<InterpValue> args) {
     llvm::errs().changeColor(llvm::raw_fd_ostream::GREEN);
     llvm::errs() << "--interpreting function:|" << funcname.c_str() << "|--\n";
     llvm::errs().resetColor();
+
+    if (funcname == "printInt") {
+        interpretPrimopPrintInt(args);
+        return {};
+    }
 
     // functions are isolated from above; create a fresh environment
     if (FuncOp haskfn = module.lookupSymbol<FuncOp>(funcname)) {
