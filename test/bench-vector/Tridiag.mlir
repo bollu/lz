@@ -13,20 +13,20 @@
 //                    id `seq` (c*id, (d-d'*a)*id)
 
 // Example: @prescanl (+) 0 \<1,2,3,4\> = \<0,1,3,6\>@
-func @prescanr(%f: (!lz.value, !lz.value) -> (!lz.value), 
-               %seed: !lz.value, 
-               %xs: memref<?x!lz.value>) -> memref<?x!lz.value> {
+func @prescanr(%f: (!lz.value, f64) -> (f64),
+               %seed: f64,
+               %xs: memref<?x!lz.value>) -> memref<?xf64> {
     %N = constant 1024 : index
-    %out = alloc(%N) : memref<?x!lz.value>
+    %out = alloc(%N) : memref<?xf64>
     affine.for %i = 0 to %N step 1 
-    iter_args(%accum = %seed) -> (!lz.value) {
-      affine.store %accum, %out[%i] : memref<?x!lz.value>
+    iter_args(%accum = %seed) -> (f64) {
+      affine.store %accum, %out[%i] : memref<?xf64>
       %x = affine.load %xs[%i] : memref<?x!lz.value>
       %accum_cur = std.call_indirect %f (%x, %accum) 
-        : (!lz.value, !lz.value) -> !lz.value
-      affine.yield %accum_cur : !lz.value
+        : (!lz.value, f64) -> f64
+      affine.yield %accum_cur : f64
     }
-    return %out : memref<?x!lz.value>
+    return %out : memref<?xf64>
 }
 
 // Example: @prescanl (+) 0 \<1,2,3,4\> = \<0,1,3,6\>@
@@ -54,6 +54,19 @@ func @zip(%xs: memref<?xf64>, %ys: memref<?xf64>) -> memref<?x!lz.value> {
       %x = affine.load %xs[%i] : memref<?xf64>
       %y = affine.load %ys[%i] : memref<?xf64>
       %zip = lz.construct(@Tuple2, %x: f64, %y: f64)
+      affine.store %zip, %out[%i] : memref<?x!lz.value>
+    }
+    return %out : memref<?x!lz.value>
+}
+
+
+func @zipLzLz(%xs: memref<?x!lz.value>, %ys: memref<?x!lz.value>) -> memref<?x!lz.value> {
+    %N = constant 1024 : index
+    %out = alloc(%N) : memref<?x!lz.value>
+    affine.for %i = 0 to %N step 1 {
+      %x = affine.load %xs[%i] : memref<?x!lz.value>
+      %y = affine.load %ys[%i] : memref<?x!lz.value>
+      %zip = lz.construct(@Tuple2, %x: !lz.value, %y: !lz.value)
       affine.store %zip, %out[%i] : memref<?x!lz.value>
     }
     return %out : memref<?x!lz.value>
@@ -89,6 +102,16 @@ func @modify(%cd2: !lz.value, %abcd: !lz.value) -> !lz.value {
   return %out : !lz.value
 }
 
+func @scanrf(%cd: !lz.value, %x2: f64) -> f64 {
+   %out = lz.case @Tuple %cd 
+   [@Tuple ->  { ^entry(%c: f64, %d: f64):
+        %cx2 = mulf %c, %x2 : f64
+        %ret = subf %d, %cx2 : f64
+        lz.return %ret : f64
+   }]
+   return %out : f64
+}
+
 func @trihs(%as: memref<?xf64>, 
             %bs: memref<?xf64>,
             %cs: memref<?xf64>,
@@ -97,6 +120,20 @@ func @trihs(%as: memref<?xf64>,
         : (memref<?xf64>, memref<?xf64>) -> memref<?x!lz.value>
     %csds = call @zip (%cs, %ds) 
         : (memref<?xf64>, memref<?xf64>) -> memref<?x!lz.value>
+    %abcd = call @zipLzLz(%asbs, %csds) 
+        : (memref<?x!lz.value>, memref<?x!lz.value>) -> memref<?x!lz.value>
+
+    %modify = std.constant @modify : (!lz.value, !lz.value) -> !lz.value
+    %c0 = constant 0.0 : f64
+    %c0c0 = lz.construct (@Tuple, %c0: f64, %c0: f64)
+    %scanl = call @prescanl(%modify, %c0c0, %abcd) 
+        : ((!lz.value, !lz.value) -> (!lz.value),  !lz.value, memref<?x!lz.value>) -> memref<?x!lz.value>
+
+
+    %scanrf = std.constant @scanrf : (!lz.value, f64) -> f64
+    %scanr = call @prescanr(%scanrf, %c0, %scanl) 
+        : ((!lz.value, f64) -> (f64),  f64, memref<?x!lz.value>) -> memref<?xf64>
+
     return %cs : memref<?xf64>
 }
 

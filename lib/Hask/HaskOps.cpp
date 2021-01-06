@@ -209,7 +209,12 @@ ParseResult CaseOp::parse(OpAsmParser &parser, OperationState &result) {
   assert(altRegions.size() > 0);
 
   HaskReturnOp retFirst =
-      cast<HaskReturnOp>(altRegions[0]->getBlocks().front().getTerminator());
+      dyn_cast<HaskReturnOp>(altRegions[0]->getBlocks().front().getTerminator());
+  if (!retFirst) {
+      assert(false && "expected caseop to end in lz.return");
+      return failure();
+
+  }
   for (int i = 1; i < (int)altRegions.size(); ++i) {
     HaskReturnOp ret =
         cast<HaskReturnOp>(altRegions[i]->getBlocks().front().getTerminator());
