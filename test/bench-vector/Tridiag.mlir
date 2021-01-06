@@ -61,27 +61,26 @@ func @zip(%xs: memref<?xf64>, %ys: memref<?xf64>) -> memref<?x!lz.value> {
 
 // write c', d' as c2, d2
 func @modify(%cd2: !lz.value, %abcd: !lz.value) -> !lz.value {
-    %out = lz.case @Tuple %cd 
+    %out = lz.case @Tuple %cd2 
     [@Tuple -> { ^entry(%c2: f64, %d2: f64):
         %out = lz.case @Tuple %abcd 
         [@Tuple ->  { ^entry(%ab: !lz.value, %cd: !lz.value):
             %out = lz.case @Tuple %ab 
             [@Tuple ->  { ^entry(%a: f64, %b: f64):
-                %out = lz.case @Tuple %cd 
-                [@Tuple ->  { ^entry(%c: f64, %d: f64):
-                    %c2a = std.mulf %c2, %a : f64
-                    %b_minus_c2a = std.subf %b, %c2a : f64
-                    %c1 = constant 1.0 : f64
-                    %id = divf %c1, %b_minus_c2a : f64
-                    %c_x_id = std.mulf %c, %id : f64
-                    %d_min_d2 = std.subf %d, %d2 : f64
-                    %d_min_d2_x_a = std.mulf %d_min_d2, %a : f64
-                    %d_min_d2_x_a_x_id = std.mulf %d_min_d2_x_a, %id : f64
-                    %out = lz.construct (@Tuple, %c_x_id : f64, %d_min_d2_x_a_x_id : f64)
-                    lz.return %out : !lz.value
-                }]
-                lz.return %out : !lz.value
-                
+                   %out = lz.case @Tuple %cd 
+                   [@Tuple ->  { ^entry(%c: f64, %d: f64):
+                       %c2a = std.mulf %c2, %a : f64
+                       %b_minus_c2a = std.subf %b, %c2a : f64
+                       %c1 = constant 1.0 : f64
+                       %id = divf %c1, %b_minus_c2a : f64
+                       %c_x_id = std.mulf %c, %id : f64
+                       %d_min_d2 = std.subf %d, %d2 : f64
+                       %d_min_d2_x_a = std.mulf %d_min_d2, %a : f64
+                       %d_min_d2_x_a_x_id = std.mulf %d_min_d2_x_a, %id : f64
+                       %out = lz.construct (@Tuple, %c_x_id : f64, %d_min_d2_x_a_x_id : f64)
+                       lz.return %out : !lz.value
+                   }]
+                 lz.return %out : !lz.value
             }]
             lz.return %out : !lz.value
         }]
