@@ -12,18 +12,47 @@
 //                    in
 //                    id `seq` (c*id, (d-d'*a)*id)
 
-func @prescanr(%f: (f64, f64) -> f64, %seed: f64, %mem: tensor<?x!lz.value>) -> tensor<?x!lz.value> {
-    return %mem : tensor<?x!lz.value>
+// Example: @prescanl (+) 0 \<1,2,3,4\> = \<0,1,3,6\>@
+func @prescanr(%f: (!lz.value, !lz.value) -> (!lz.value), %seed: !lz.value, %xs: memref<?x!lz.value>) -> memref<?x!lz.value> {
+    %N = constant 1024 : index
+    %out = alloc(%N) : memref<?x!lz.value>
+    affine.for %i = 0 to %N step 1 
+    iter_args(%accum = %seed) -> (!lz.value) {
+      affine.store %accum, %out[%i] : memref<?x!lz.value>
+      %x = affine.load %xs[%i] : memref<?x!lz.value>
+      %accum_cur = std.call_indirect %f (%x, %accum) : (!lz.value, !lz.value) -> !lz.value
+      affine.yield %accum_cur : !lz.value
+    }
+    return %out : memref<?x!lz.value>
 }
 
 // Example: @prescanl (+) 0 \<1,2,3,4\> = \<0,1,3,6\>@
 // v we should take a closure, right?
-func @prescanl(%f: (f64, f64) -> f64, %seed: f64, %mem: tensor<?xf64>) -> tensor<?xf64> {
-    return %mem : tensor<?xf64>
+func @prescanl(%f: (!lz.value, !lz.value) -> (!lz.value), %seed: !lz.value, %xs: memref<?x!lz.value>) -> memref<?x!lz.value> {
+    %N = constant 1024 : index
+    %out = alloc(%N) : memref<?x!lz.value>
+    affine.for %i = 0 to %N step 1 
+    iter_args(%accum = %seed) -> (!lz.value) {
+      affine.store %accum, %out[%i] : memref<?x!lz.value>
+      %x = affine.load %xs[%i] : memref<?x!lz.value>
+      %accum_cur = std.call_indirect %f (%x, %accum) : (!lz.value, !lz.value) -> !lz.value
+      affine.yield %accum_cur : !lz.value
+    }
+    return %out : memref<?x!lz.value>
 }
 
-// func @zip4(%x: tensor<?xf64>, %y: tensor<?xf64>, %z: tensor<?xf64>) -> tensor<?xf64> {
-// }
+func @zip(%xs: memref<?xi64>, %ys: memref<?xi64>) -> memref<?x!lz.value> {
+    %N = constant 1024 : index
+    %out = alloc(%N) : memref<?x!lz.value>
+    affine.for %i = 0 to %N step 1 {
+      %x = affine.load %xs[%i] : memref<?xi64>
+      %y = affine.load %ys[%i] : memref<?xi64>
+      %zip = lz.construct(@Tuple2, %x: i64, %y: i64)
+      affine.store %zip, %out[%i] : memref<?x!lz.value>
+    }
+    return %out : memref<?x!lz.value>
+}
+
 // 
 // func @trihs() -> tensor<?xf64> {
 // }
