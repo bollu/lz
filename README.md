@@ -27,6 +27,49 @@ Convert GHC Core to MLIR.
 
 
 # Log:  [newest] to [oldest]
+ 
+# Wednesday, Jan 6th
+
+- Tensor is insufficient for my purposes because I see no way to express something like a `zip` in any way that MLIR 
+  will know how to optimize. This is because it seems that all the effort in MLIR is spent on affine/linalg/.. all of which
+  work on `memref`s.
+- I'm going to weaken the checks and balances on `memref`s to see how far it takes me.
+  In particular, I'm commenting out:
+
+```diff
+diff --git a/mlir/include/mlir/IR/BuiltinTypes.h b/mlir/include/mlir/IR/BuiltinTypes.h
+index 3bfb3ce4c79b..ace5b1a24c05 100644
+--- a/mlir/include/mlir/IR/BuiltinTypes.h
++++ b/mlir/include/mlir/IR/BuiltinTypes.h
+@@ -445,7 +445,8 @@ public:
+
+   /// Return true if the specified element type is ok in a memref.
+   static bool isValidElementType(Type type) {
+-    return type.isIntOrIndexOrFloat() || type.isa<VectorType, ComplexType>();
++    return true;
++    // return type.isIntOrIndexOrFloat() || type.isa<VectorType, ComplexType>();
+   }
+
+   /// Methods for support type inquiry through isa, cast, and dyn_cast.
+diff --git a/mlir/lib/Parser/TypeParser.cpp b/mlir/lib/Parser/TypeParser.cpp
+index ab7f85a645e4..f777963fd9a7 100644
+--- a/mlir/lib/Parser/TypeParser.cpp
++++ b/mlir/lib/Parser/TypeParser.cpp
+@@ -217,9 +217,10 @@ Type Parser::parseMemRefType() {
+     return nullptr;
+
+   // Check that memref is formed from allowed types.
+-  if (!elementType.isIntOrIndexOrFloat() &&
+-      !elementType.isa<VectorType, ComplexType>())
+-    return emitError(typeLoc, "invalid memref element type"), nullptr;
++  // allow arbitrary element types.
++  // if (!elementType.isIntOrIndexOrFloat() &&
++  //     !elementType.isa<VectorType, ComplexType>())
++  //   return emitError(typeLoc, "invalid memref element type"), nullptr;
+```
+
+which checks that the memref has an element type of `int/float/complex/index`.
+
 
 # Tuesday, Jan 5th
 - There's a [`for_with_yield`](https://github.com/llvm/llvm-project/blob/main/mlir/test/Conversion/AffineToStandard/lower-affine.mlir#L29)
