@@ -108,6 +108,13 @@ public:
       return mlir::FunctionType::get(fnty.getContext(), argtys, rettys);
     });
 
+
+    addConversion([&](mlir::MemRefType memref) -> Type {
+        return mlir::MemRefType::get(memref.getShape(),
+                                   this->convertType(memref.getElementType()),
+                                   memref.getAffineMaps());
+    });
+
     // lz.value -> !ptr.void
     /*
     addTargetMaterialization([&](OpBuilder &rewriter, ptr::VoidPtrType resultty,
@@ -197,7 +204,11 @@ public:
           builder.create<ptr::MemrefToVoidPtrOp>(builder.getUnknownLoc(), src);
       return op;
     }
-
+    if (src.getType().isa<FloatType>()) {
+      ptr::DoubleToPtrOp op =
+          builder.create<ptr::DoubleToPtrOp>(builder.getUnknownLoc(), src);
+      return op;
+    }
     llvm::errs() << "ERROR: unknown type: |" << src.getType() << "|\n";
     assert(false && "unknown type to convert to void pointer");
   };
@@ -885,99 +896,6 @@ public:
   }
 };
 
-/*
-class I64ToI8PtrConversionPattern : public ConversionPattern {
-public:
-  explicit I64ToI8PtrConversionPattern(TypeConverter &tc)
-      : ConversionPattern(1, tc, MatchAnyOpTypeTag()) {}
-
-  LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
-                  ConversionPatternRewriter &rewriter) const override {
-    bool changed = false;
-    for (int i = 0; i < (int)op->getNumResults(); ++i) {
-      LLVM::LLVMIntegerType opResultTy =
-          op->getResult(i).getType().dyn_cast<mlir::LLVM::LLVMIntegerType>();
-      if (!opResultTy) {
-        continue;
-      }
-
-      // TODO: how do I check that the use site wants an I64Ptr?
-      return failure();
-    }
-
-    return changed ? success() : failure();
-  }
-};
-*/
-
-// Keep the old version of the class around because it has details about
-// function pointers.
-// vvvvvvvv
-// class ApOpConversionPattern : public ConversionPattern {
-// public:
-//   explicit ApOpConversionPattern(TypeConverter &tc, MLIRContext *context)
-//       : ConversionPattern(ApOp::getOperationName(), 1, tc, context) {}
-//   // !ptr.void x
-//   static CallOp getOrInsertMkClosure(PatternRewriter &rewriter, ModuleOp
-//   module,
-//                                      int n) {
-
-//     const std::string name = "mkClosure_capture0_args" + std::to_string(n);
-//     if (FuncOp fn = module.lookupSymbol<FuncOp>(name)) {
-//       return fn;
-//     }
-
-//     auto I8PtrTy = LLVM::LLVMType::getInt8PtrTy(rewriter.getContext());
-//     llvm::SmallVector<LLVM::LLVMType, 4> argTys(n + 1, I8PtrTy);
-//     auto llvmFnType = LLVM::LLVMType::getFunctionTy(I8PtrTy, argTys,
-//                                                     /*isVarArg=*/false);
-
-//     // Insert the printf function into the body of the parent module.
-//     PatternRewriter::InsertionGuard insertGuard(rewriter);
-//     rewriter.setInsertionPointToStart(module.getBody());
-//     rewriter.create<LLVM::LLVMFuncOp>(module.getLoc(), name, llvmFnType);
-//     return SymbolRefAttr::get(name, rewriter.getContext());
-//   }
-
-//   LogicalResult
-//   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
-//                   ConversionPatternRewriter &rewriter) const override {
-//     using namespace mlir::LLVM;
-//     ApOp ap = cast<ApOp>(op);
-//     ModuleOp module = ap.getParentOfType<ModuleOp>();
-
-//     llvm::errs() << __FUNCTION__ << ":" << __LINE__ << "\n";
-//     // LLVMType kparamty =
-//     //     haskToLLVMType(rewriter.getContext(), ap.getResult().getType());
-
-//     rewriter.setInsertionPointAfter(ap);
-//     SmallVector<Value, 4> llvmFnArgs;
-//     // llvmFnArgs.push_back(transmuteToVoidPtr(ap.getFn(), rewriter,
-//     // ap.getLoc()));
-
-//     auto I8PtrTy = LLVM::LLVMType::getInt8PtrTy(rewriter.getContext());
-
-//     // convert function pointer into void* before pushing back
-//     llvmFnArgs.push_back(typeConverter->materializeTargetConversion(
-//         rewriter, ap.getLoc(), I8PtrTy, ap.getFn()));
-//     // llvmFnArgs.push_back(( ap.getFn());
-
-//     for (int i = 0; i < ap.getNumFnArguments(); ++i) {
-//       // llvmFnArgs.push_back(
-//       //     transmuteToVoidPtr(ap.getFnArgument(i), rewriter,
-//       ap.getLoc())); llvmFnArgs.push_back(ap.getFnArgument(i));
-//     }
-
-//     FlatSymbolRefAttr mkclosure =
-//         getOrInsertMkClosure(rewriter, module, ap.getNumFnArguments());
-//     rewriter.replaceOpWithNewOp<LLVM::CallOp>(
-//         op, LLVMType::getInt8PtrTy(rewriter.getContext()), mkclosure,
-//         llvmFnArgs);
-//     return success();
-//   }
-// };
-
 class ApOpConversionPattern : public ConversionPattern {
 private:
   HaskTypeConverter &tc;
@@ -1078,6 +996,33 @@ struct HaskReturnOpConversionPattern : public mlir::ConversionPattern {
   }
 };
 
+
+struct AllocOpLowering : public mlir::ConversionPattern {
+  explicit AllocOpLowering(TypeConverter &tc,
+                                         MLIRContext *context)
+      : ConversionPattern(AllocOp::getOperationName(), 1, tc, context) {}
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> rands,
+                  ConversionPatternRewriter &rewriter) const override {
+    using namespace mlir::LLVM;
+    AllocOp alloc = cast<AllocOp>(op);
+    rewriter.setInsertionPointAfter(alloc);
+    MemRefType memrefty = typeConverter->convertType(alloc.getType()).cast<MemRefType>();
+    llvm::errs() << "===\n";
+    llvm::errs() << "dynamicSizes.size(): " << alloc.getDynamicSizes().size() << "\n";
+    llvm::errs() << "getOperands.size(): " << alloc.getOperands().size() << "\n";
+    llvm::errs() << "rands.size(): " << rands.size() << "\n";
+    llvm::errs() << "===\n";
+    rewriter.replaceOpWithNewOp<mlir::AllocOp>(alloc,
+                                               memrefty,
+                                               rands);
+    return success();
+  }
+};
+
+
+
+
 bool isTypeLegal(Type t) {
   if (t.isa<HaskType>()) {
     return false;
@@ -1094,6 +1039,12 @@ bool isTypeLegal(Type t) {
       if (!isTypeLegal(t)) {
         return false;
       }
+    }
+  }
+
+  if (auto memrefty = t.dyn_cast<MemRefType>()) {
+    if (!isTypeLegal(memrefty.getElementType())) {
+      return false;
     }
   }
   return true;
@@ -1167,8 +1118,13 @@ struct LowerHaskPass : public Pass {
       return true;
     });
 
+    target.addDynamicallyLegalOp<AllocOp>([](AllocOp op) {
+          return isTypeLegal(op.getType());
+    });
 
-    HaskTypeConverter typeConverter(&getContext());
+
+
+      HaskTypeConverter typeConverter(&getContext());
     mlir::OwningRewritePatternList patterns;
 
     // OK why is it not able to legalize func? x(
@@ -1192,6 +1148,9 @@ struct LowerHaskPass : public Pass {
     patterns.insert<ApEagerOpConversionPattern>(typeConverter, &getContext());
     patterns.insert<HaskReturnOpConversionPattern>(typeConverter,
                                                    &getContext());
+
+    // Memref ops? is this really how I'm supposed to do this?
+    patterns.insert<AllocOpLowering>(typeConverter, &getContext());
     ::llvm::DebugFlag = true;
 
     // applyPartialConversion | applyFullConversion

@@ -61,6 +61,20 @@ public:
   void print(OpAsmPrinter &p);
 };
 
+
+// %ptr = doubletoptr %i
+class DoubleToPtrOp
+    : public Op<DoubleToPtrOp, OpTrait::OneResult, OpTrait::OneOperand> {
+public:
+  using Op::Op;
+  static StringRef getOperationName() { return "ptr.double2ptr"; };
+  // static ParseResult parse(OpAsmParser &parser, OperationState &result);
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                    Value vint);
+  void print(OpAsmPrinter &p);
+};
+
+
 // %ptr = ptrtoint %i
 class PtrToIntOp
     : public Op<PtrToIntOp, OpTrait::OneResult, OpTrait::OneOperand> {

@@ -137,10 +137,36 @@ func @trihs(%as: memref<?xf64>,
     return %cs : memref<?xf64>
 }
 
-// 
-// func @trihand(%as: tensor<?xf64>, %bs: tensor<?xf64>, %cs: tensor<?xf64>, %ds: tensor<?xf64>) -> tensor<?xf64> {
-//     
-// }
-// 
-// func @main() -> tensor<?xf64> {
-// }
+func private @erand48(%xsubi: memref<3xi16>) -> f64
+
+
+// generate a random vector of doubles
+func @randomVec(%n: i64, %xsubi: memref<3xi16>) -> memref<?xf64> {
+    %N = index_cast %n : i64 to index
+    %out = alloc(%N) : memref<?xf64>
+
+    affine.for %i = 0 to %N step 1 {
+      %cval = call @erand48(%xsubi) : (memref<3xi16>) -> f64
+      affine.store %cval, %out[%i] : memref<?xf64>
+    }
+    return %out : memref<?xf64>
+}
+
+func @main() -> i64 {
+   %out = constant 0  : i64
+
+   %c3 = constant 3 : index
+   %xsubi = alloc() : memref<3xi16>
+
+   %useSize = constant 2000000 : i64
+   %useSeed = constant 42 : i16
+
+   %c2 = constant 2 : index
+   affine.store %useSeed, %xsubi[%c2] : memref<3xi16>
+
+   %as = call @randomVec(%useSize, %xsubi)  : (i64, memref<3xi16>) -> memref<?xf64>
+   %bs = call @randomVec(%useSize, %xsubi)  : (i64, memref<3xi16>) -> memref<?xf64>
+   %cs = call @randomVec(%useSize, %xsubi)  : (i64, memref<3xi16>) -> memref<?xf64>
+   %ds = call @randomVec(%useSize, %xsubi)  : (i64, memref<3xi16>) -> memref<?xf64>
+   return %out : i64
+}

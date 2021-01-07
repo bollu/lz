@@ -63,6 +63,7 @@ PtrDialect::PtrDialect(mlir::MLIRContext *context)
   addOperations<IntToPtrOp, PtrToIntOp, PtrStringOp, FnToVoidPtrOp, PtrUndefOp>();
   // addOperations<PtrToHaskValueOp, HaskValueToPtrOp>();
   addOperations<PtrToMemrefOp>();
+  addOperations<DoubleToPtrOp>();
   addOperations<MemrefToVoidPtrOp>();
   addTypes<VoidPtrType, CharPtrType>();
 
@@ -110,6 +111,26 @@ void IntToPtrOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
 void IntToPtrOp::print(OpAsmPrinter &p) {
   p.printGenericOp(this->getOperation());
 };
+
+// === DOUBLE TO PTR ===
+// === DOUBLE TO PTR ===
+// === DOUBLE TO PTR ===
+// === DOUBLE TO PTR ===
+// === DOUBLE TO PTR ===
+
+void DoubleToPtrOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                       Value v) {
+  FloatType ft = v.getType().dyn_cast<FloatType>();
+  assert(ft && "expected argument to be of float type");
+  state.addOperands(v);
+  state.addTypes(VoidPtrType::get(builder.getContext()));
+};
+
+void DoubleToPtrOp::print(OpAsmPrinter &p) {
+  p.printGenericOp(this->getOperation());
+};
+
+
 
 // === FNPTR TO VOID PTR ===
 // === FNPTR TO VOID PTR ===
