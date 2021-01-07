@@ -339,6 +339,22 @@ public:
   }
 };
 
+class ScfYieldOpLowering : public ConversionPattern {
+public:
+  explicit ScfYieldOpLowering(TypeConverter &tc, MLIRContext *context)
+      : ConversionPattern(scf::YieldOp::getOperationName(), 1, tc, context) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> rands,
+                  ConversionPatternRewriter &rewriter) const override {
+    assert(false);
+    rewriter.replaceOpWithNewOp<scf::YieldOp>(op, rands);
+    assert(false);
+    return success();
+  }
+};
+
+
 bool isI8Ptr(Type ty) {
   auto ptr = ty.dyn_cast<LLVM::LLVMPointerType>();
   if (!ptr) {
@@ -1154,6 +1170,14 @@ struct LowerHaskPass : public Pass {
           isTypeLegal(store.getValueToStore().getType());
     });
 
+    target.addDynamicallyLegalOp<mlir::scf::YieldOp>([](scf::YieldOp yield) {
+      for(Type t : yield.getOperandTypes()) {
+        if (!isTypeLegal(t)) { return false; }
+      }
+      return true;
+    });
+
+
 
 
 
@@ -1176,6 +1200,8 @@ struct LowerHaskPass : public Pass {
     patterns.insert<FuncOpLowering>(typeConverter, &getContext());
     patterns.insert<ReturnOpLowering>(typeConverter, &getContext());
     patterns.insert<CallOpLowering>(typeConverter, &getContext());
+    patterns.insert<ScfYieldOpLowering>(typeConverter, &getContext());
+
 
     patterns.insert<ApOpConversionPattern>(typeConverter, &getContext());
     patterns.insert<ApEagerOpConversionPattern>(typeConverter, &getContext());
@@ -1185,6 +1211,7 @@ struct LowerHaskPass : public Pass {
     // Memref ops? is this really how I'm supposed to do this?
     patterns.insert<AllocOpLowering>(typeConverter, &getContext());
     patterns.insert<StoreOpLowering>(typeConverter, &getContext());
+
 
     ::llvm::DebugFlag = true;
 
