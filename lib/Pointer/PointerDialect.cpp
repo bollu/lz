@@ -514,6 +514,21 @@ public:
   }
 };
 
+struct DoubleToPtrOpLowering : public ConversionPattern {
+public:
+  explicit DoubleToPtrOpLowering(TypeConverter &tc, MLIRContext *context)
+      : ConversionPattern(DoubleToPtrOp::getOperationName(), 1, tc, context) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *rator, ArrayRef<Value> rands,
+                  ConversionPatternRewriter &rewriter) const override {
+    Value i = rands[0];
+    rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(
+        rator, getInt8PtrTy(rator->getContext()), i);
+    return success();
+  }
+};
+
 
 FunctionType convertFunctionType(FunctionType fnty, TypeConverter &tc,
                                  OpBuilder &builder) {
@@ -748,6 +763,9 @@ struct LowerPointerPass : public Pass {
 
     patterns.insert<StringOpLowering>(typeConverter, &getContext());
     patterns.insert<Int2PtrOpLowering>(typeConverter, &getContext());
+    patterns.insert<DoubleToPtrOpLowering>(typeConverter, &getContext());
+
+
     patterns.insert<Ptr2IntOpLowering>(typeConverter, &getContext());
     // vvv yuge hack.
     patterns.insert<PtrUndefOpLowering>(typeConverter, &getContext());

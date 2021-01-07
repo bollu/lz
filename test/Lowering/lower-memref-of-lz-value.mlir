@@ -1,5 +1,5 @@
 // RUN: hask-opt %s  --lz-lower 
-// CHECK-LLVM: tail call void @printInt(i64 523776)
+// RUN: hask-opt %s  --lz-lower  --convert-scf-to-std --ptr-lower
 func @zip(%xs: memref<?xf64>, %ys: memref<?xf64>) -> memref<?x!lz.value> {
     %N = constant 1024 : index
     %out = alloc(%N) : memref<?x!lz.value>
