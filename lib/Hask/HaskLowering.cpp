@@ -1020,6 +1020,24 @@ struct AllocOpLowering : public mlir::ConversionPattern {
   }
 };
 
+struct StoreOpLowering : public mlir::ConversionPattern {
+  explicit StoreOpLowering(TypeConverter &tc,
+                           MLIRContext *context)
+      : ConversionPattern(mlir::StoreOp::getOperationName(), 1, tc, context) {}
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> rands,
+                  ConversionPatternRewriter &rewriter) const override {
+    using namespace mlir::LLVM;
+    mlir::StoreOp store = cast<mlir::StoreOp>(op);
+    rewriter.setInsertionPointAfter(store);
+    llvm::errs() << "rands.size()|" << rands.size() << "|\n";
+    assert(rands.size() >= 3 && "store needs memref, value to store, and store indeces");
+    rewriter.replaceOpWithNewOp<mlir::StoreOp>(store, rands[0], rands[1], rands.drop_front(2));
+    return success();
+  }
+};
+
+
 
 
 
@@ -1122,9 +1140,15 @@ struct LowerHaskPass : public Pass {
           return isTypeLegal(op.getType());
     });
 
+    target.addDynamicallyLegalOp<StoreOp>([](mlir::StoreOp store) {
+      return isTypeLegal(store.getMemRefType()) &&
+          isTypeLegal(store.getValueToStore().getType());
+    });
 
 
-      HaskTypeConverter typeConverter(&getContext());
+
+
+    HaskTypeConverter typeConverter(&getContext());
     mlir::OwningRewritePatternList patterns;
 
     // OK why is it not able to legalize func? x(
@@ -1151,6 +1175,8 @@ struct LowerHaskPass : public Pass {
 
     // Memref ops? is this really how I'm supposed to do this?
     patterns.insert<AllocOpLowering>(typeConverter, &getContext());
+    patterns.insert<StoreOpLowering>(typeConverter, &getContext());
+
     ::llvm::DebugFlag = true;
 
     // applyPartialConversion | applyFullConversion

@@ -1,12 +1,14 @@
+// RUN: hask-opt %s  --lz-lower 
+// CHECK-LLVM: tail call void @printInt(i64 523776)
 func @zip(%xs: memref<?xf64>, %ys: memref<?xf64>) -> memref<?x!lz.value> {
     %N = constant 1024 : index
     %out = alloc(%N) : memref<?x!lz.value>
-    // affine.for %i = 0 to %N step 1 {
-    //   %x = affine.load %xs[%i] : memref<?xf64>
-    //   %y = affine.load %ys[%i] : memref<?xf64>
-    //   %zip = lz.construct(@Tuple2, %x: f64, %y: f64)
-    //   affine.store %zip, %out[%i] : memref<?x!lz.value>
-    // }
+    affine.for %i = 0 to %N step 1 {
+      %x = affine.load %xs[%i] : memref<?xf64>
+      %y = affine.load %ys[%i] : memref<?xf64>
+      %zip = lz.construct(@Tuple2, %x: f64, %y: f64)
+      affine.store %zip, %out[%i] : memref<?x!lz.value>
+    }
     return %out : memref<?x!lz.value>
 }
 
