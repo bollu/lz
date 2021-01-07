@@ -43,7 +43,7 @@ func @main() -> i64 {
 
    %as = call @randomVec(%useSize, %xsubi)  : (i64, memref<3xi16>) -> memref<?xf64>
    %bs = call @randomVec(%useSize, %xsubi)  : (i64, memref<3xi16>) -> memref<?xf64>
-   // %asbs = call @zip (%as, %bs) 
-   //      : (memref<?xf64>, memref<?xf64>) -> memref<?x!lz.value>
+   %asbs = call @zip (%as, %bs) 
+        : (memref<?xf64>, memref<?xf64>) -> memref<?x!lz.value>
    return %out : i64
 }

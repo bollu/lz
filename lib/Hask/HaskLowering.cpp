@@ -361,8 +361,11 @@ public:
   matchAndRewrite(Operation *operation, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     auto call = cast<CallOp>(operation);
+    SmallVector<Type, 4> resultTypes;
+    typeConverter->convertTypes(call.getResultTypes(), resultTypes);
+
     rewriter.replaceOpWithNewOp<CallOp>(operation, call.getCallee(),
-                                        call.getResultTypes(), operands);
+                                        resultTypes, operands);
     return success();
   }
 };
@@ -1130,6 +1133,12 @@ struct LowerHaskPass : public Pass {
         target.addDynamicallyLegalOp<CallOp>([](CallOp call) {
       for (Value arg : call.getOperands()) {
         if (!isTypeLegal(arg.getType())) {
+          return false;
+        }
+      }
+
+      for(Type t : call.getResultTypes()) {
+        if (!isTypeLegal(t)) {
           return false;
         }
       }
