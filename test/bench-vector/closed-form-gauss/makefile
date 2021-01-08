@@ -12,4 +12,4 @@ cpp.out: test.cpp
 
 
 hs.out: test.hs
-	ghc test.hs -O2 -o hs.out
+	ghc test.hs -O2 -fllvm -o hs.out
