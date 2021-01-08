@@ -1198,7 +1198,7 @@ struct AffineForOpLowering : public mlir::ConversionPattern {
     for(int i = 0; i < (int)newForOp->getNumResults(); ++i) {
       newForOp.getResult(i).setType(typeConverter->convertType(newForOp.getResult(i).getType()));
     }
-     
+
 
     llvm::errs() << "===NEW FOR OP===\n";
     newForOp.print(llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
@@ -1438,7 +1438,7 @@ struct LowerHaskPass : public Pass {
     if (failed(mlir::applyPartialConversion(getOperation(), target,
                                          std::move(patterns)))) {
       llvm::errs() << "===Hask lowering failed at Conversion===\n";
-      getOperation()->print(llvm::errs());
+      getOperation()->print(llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
       llvm::errs() << "\n===\n";
       signalPassFailure();
     };
@@ -1446,6 +1446,7 @@ struct LowerHaskPass : public Pass {
     if (failed(mlir::verify(getOperation()))) {
       llvm::errs() << "===Hask lowering failed at Verification===\n";
       getOperation()->print(llvm::errs());
+
       llvm::errs() << "\n===\n";
       signalPassFailure();
     }
