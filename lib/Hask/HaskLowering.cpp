@@ -1106,6 +1106,26 @@ struct AffineLoadOpLowering : public mlir::ConversionPattern {
   }
 };
 
+struct AffineStoreOpLowering : public mlir::ConversionPattern {
+  explicit AffineStoreOpLowering(TypeConverter &tc, MLIRContext *context)
+      : ConversionPattern(mlir::AffineStoreOp::getOperationName(), 1, tc, context) {}
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> rands,
+                  ConversionPatternRewriter &rewriter) const override {
+    using namespace mlir::LLVM;
+    mlir::AffineStoreOp store = cast<mlir::AffineStoreOp>(op);
+    rewriter.setInsertionPointAfter(store);
+    assert(rands.size() >= 3 &&
+        "affine store needs memref, value to store, and store indeces");
+    rewriter.replaceOpWithNewOp<mlir::AffineStoreOp>(store, rands[0], rands[1],
+                                               rands.drop_front(2));
+    return success();
+  }
+};
+
+
+
+
 struct AffineForOpLowering : public mlir::ConversionPattern {
   explicit AffineForOpLowering(TypeConverter &tc, MLIRContext *context)
       : ConversionPattern(mlir::AffineForOp::getOperationName(), 1, tc, context) {}
@@ -1304,6 +1324,18 @@ struct LowerHaskPass : public Pass {
           isTypeLegal(load.getResult().getType());
     });
 
+    target.addDynamicallyLegalOp<AffineStoreOp>([](mlir::AffineStoreOp op) {
+      for (Value arg : op.getOperands()) {
+        if (!isTypeLegal(arg.getType())) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+
+
+
     target.addDynamicallyLegalOp<AffineForOp>([](mlir::AffineForOp op) {
       for (Value arg : op.getOperands()) {
         if (!isTypeLegal(arg.getType())) {
@@ -1363,6 +1395,8 @@ struct LowerHaskPass : public Pass {
     patterns.insert<StoreOpLowering>(typeConverter, &getContext());
     patterns.insert<LoadOpLowering>(typeConverter, &getContext());
     patterns.insert<AffineLoadOpLowering>(typeConverter, &getContext());
+    patterns.insert<AffineStoreOpLowering>(typeConverter, &getContext());
+
     patterns.insert<AffineForOpLowering>(typeConverter, &getContext());
 
     ::llvm::DebugFlag = true;

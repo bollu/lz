@@ -1,5 +1,5 @@
 // RUN: hask-opt %s  --lz-lower 
-// RUN: hask-opt %s  --lz-lower  --convert-scf-to-std --ptr-lower
+// RUN: hask-opt %s  --lz-lower  --lower-affine --convert-scf-to-std --ptr-lower
 func @zip(%xs: memref<?xf64>, %ys: memref<?xf64>) -> memref<?x!lz.value> {
     %N = constant 1024 : index
     %out = alloc(%N) : memref<?x!lz.value>
