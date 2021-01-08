@@ -1,0 +1,15 @@
+.PHONY: run
+run: hs.out cpp.out
+	-rm out-hs.bin
+	-rm out-cpp.bin
+	./hs.out
+	./cpp.out
+	sha256sum out-hs.bin
+	sha256sum out-cpp.bin
+
+cpp.out: test.cpp
+	clang++ -O3 test.cpp -o cpp.out -lbenchmark -L/usr/local/lib/ -lpthread
+
+
+hs.out: test.hs
+	ghc test.hs -O2 -o hs.out
