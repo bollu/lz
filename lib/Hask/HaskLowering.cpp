@@ -360,6 +360,20 @@ public:
   }
 };
 
+class AffineYieldOpLowering : public ConversionPattern {
+public:
+  explicit AffineYieldOpLowering(TypeConverter &tc, MLIRContext *context)
+      : ConversionPattern(AffineYieldOp::getOperationName(), 1, tc, context) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> rands,
+                  ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<AffineYieldOp>(op, rands);
+    return success();
+  }
+};
+
+
 bool isI8Ptr(Type ty) {
   auto ptr = ty.dyn_cast<LLVM::LLVMPointerType>();
   if (!ptr) {
@@ -400,14 +414,12 @@ public:
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> rands,
                   ConversionPatternRewriter &rewriter) const override {
-    auto call = cast<CallIndirectOp>(op);
-    SmallVector<Type, 4> resultTypes;
-    typeConverter->convertTypes(call.getResultTypes(), resultTypes);
-    rewriter.replaceOpWithNewOp<CallIndirectOp>(op, resultTypes, rands[0], rands.drop_front(1));
+//    auto call = cast<CallIndirectOp>(op);
+//    typeConverter->convertTypes(call.getResultTypes(), resultTypes);
+    rewriter.replaceOpWithNewOp<CallIndirectOp>(op, rands[0], rands.drop_front(1));
     llvm::errs() << "=====call indirect parent fn=====\n";
     op->getParentOfType<FuncOp>().print(llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
     llvm::errs() << "\n=====\n";
-//    assert(false);
     return success();
   }
 };
@@ -1169,6 +1181,7 @@ struct AffineForOpLowering : public mlir::ConversionPattern {
                                 newForOp.region().end());
 
 
+
     for(int i = 0; i < (int)newForOp->getNumOperands(); ++i) {
       Type t = newForOp.getOperand(i).getType();
       Type tnew = typeConverter->convertType(t);
@@ -1185,6 +1198,7 @@ struct AffineForOpLowering : public mlir::ConversionPattern {
     for(int i = 0; i < (int)newForOp->getNumResults(); ++i) {
       newForOp.getResult(i).setType(typeConverter->convertType(newForOp.getResult(i).getType()));
     }
+     
 
     llvm::errs() << "===NEW FOR OP===\n";
     newForOp.print(llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
@@ -1288,6 +1302,7 @@ struct LowerHaskPass : public Pass {
     });
 
 
+      /*
     target.addDynamicallyLegalOp<CallIndirectOp>([](CallIndirectOp call) {
 
       llvm::errs() << "===Checking callIndirectOp===\n";
@@ -1309,6 +1324,7 @@ struct LowerHaskPass : public Pass {
       llvm::errs() << "\n===\n";
       return true;
     });
+       */
 
     target.addDynamicallyLegalOp<AllocOp>(
         [](AllocOp op) { return isTypeLegal(op.getType()); });
@@ -1358,6 +1374,7 @@ struct LowerHaskPass : public Pass {
 
 
 
+
     target.addDynamicallyLegalOp<mlir::scf::YieldOp>([](scf::YieldOp yield) {
       for (Type t : yield.getOperandTypes()) {
         if (!isTypeLegal(t)) {
@@ -1367,6 +1384,16 @@ struct LowerHaskPass : public Pass {
       }
       return true;
     });
+
+    target.addDynamicallyLegalOp<mlir::AffineYieldOp>([](AffineYieldOp yield) {
+      for (Type t : yield.getOperandTypes()) {
+        if (!isTypeLegal(t)) {
+          return false;
+        }
+      }
+      return true;
+    });
+
 
     HaskTypeConverter typeConverter(&getContext());
     mlir::OwningRewritePatternList patterns;
@@ -1386,7 +1413,7 @@ struct LowerHaskPass : public Pass {
     patterns.insert<FuncOpLowering>(typeConverter, &getContext());
     patterns.insert<ReturnOpLowering>(typeConverter, &getContext());
     patterns.insert<CallOpLowering>(typeConverter, &getContext());
-    patterns.insert<CallIndirectOpLowering>(typeConverter, &getContext());
+//    patterns.insert<CallIndirectOpLowering>(typeConverter, &getContext());
     patterns.insert<ScfYieldOpLowering>(typeConverter, &getContext());
 
     patterns.insert<ApOpConversionPattern>(typeConverter, &getContext());
@@ -1400,6 +1427,7 @@ struct LowerHaskPass : public Pass {
     patterns.insert<LoadOpLowering>(typeConverter, &getContext());
     patterns.insert<AffineLoadOpLowering>(typeConverter, &getContext());
     patterns.insert<AffineStoreOpLowering>(typeConverter, &getContext());
+    patterns.insert<AffineYieldOpLowering>(typeConverter, &getContext());
 
     patterns.insert<AffineForOpLowering>(typeConverter, &getContext());
 
