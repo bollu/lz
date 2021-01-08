@@ -1,5 +1,5 @@
 // RUN: hask-opt %s  --lz-lower 
-// RUN: hask-opt %s  --lz-lower  --convert-scf-to-std --ptr-lower
+// RUN: hask-opt %s  --lz-lower  --lower-affine --convert-scf-to-std --ptr-lower
 func @prescanl(%f: (!lz.value, !lz.value) -> (!lz.value), 
                %seed: !lz.value, 
                %xs: memref<?x!lz.value>) -> memref<?x!lz.value> {
