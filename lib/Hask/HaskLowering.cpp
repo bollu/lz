@@ -1172,6 +1172,8 @@ struct LowerHaskPass : public Pass {
 
     target.addDynamicallyLegalOp<mlir::scf::YieldOp>([](scf::YieldOp yield) {
       for(Type t : yield.getOperandTypes()) {
+        llvm::errs() << "scfOperandType: |" << t << "|\n";
+        // assert(false);
         if (!isTypeLegal(t)) { return false; }
       }
       return true;
