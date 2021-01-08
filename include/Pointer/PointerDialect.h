@@ -87,6 +87,21 @@ public:
   void print(OpAsmPrinter &p);
 };
 
+
+// %ptr = ptrtofloat %i
+class PtrToFloatOp
+    : public Op<PtrToFloatOp, OpTrait::OneResult, OpTrait::OneOperand> {
+public:
+  using Op::Op;
+  static StringRef getOperationName() { return "ptr.ptr2float"; };
+  // static ParseResult parse(OpAsmParser &parser, OperationState &result);
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                    Value vptr, FloatType fty);
+  void print(OpAsmPrinter &p);
+};
+
+
+
 // ptr.string "string-I-like"
 class PtrStringOp
     : public Op<PtrStringOp, OpTrait::OneResult, OpTrait::ZeroOperands> {

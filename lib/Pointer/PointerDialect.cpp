@@ -65,6 +65,8 @@ PtrDialect::PtrDialect(mlir::MLIRContext *context)
   addOperations<PtrToMemrefOp>();
   addOperations<DoubleToPtrOp>();
   addOperations<MemrefToVoidPtrOp>();
+  addOperations<PtrToFloatOp>();
+
   addTypes<VoidPtrType, CharPtrType>();
 
   // clang-format on
@@ -182,6 +184,24 @@ void PtrToIntOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
 };
 
 void PtrToIntOp::print(OpAsmPrinter &p) {
+  p.printGenericOp(this->getOperation());
+};
+
+// === PTR TO FLOAT ===
+// === PTR TO FLOAT ===
+// === PTR TO FLOAT ===
+// === PTR TO FLOAT ===
+// === PTR TO FLOAT ===
+
+void PtrToFloatOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                       Value vptr, FloatType ty) {
+  assert(vptr.getType().isa<VoidPtrType>() &&
+      "expected argument to be a void pointer type");
+  state.addOperands(vptr);
+  state.addTypes(ty);
+};
+
+void PtrToFloatOp::print(OpAsmPrinter &p) {
   p.printGenericOp(this->getOperation());
 };
 
@@ -529,6 +549,24 @@ public:
   }
 };
 
+struct Ptr2FloatOpLowering : public ConversionPattern {
+public:
+  explicit Ptr2FloatOpLowering(TypeConverter &tc, MLIRContext *context)
+      : ConversionPattern(PtrToFloatOp::getOperationName(), 1, tc, context) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *rator, ArrayRef<Value> rands,
+                  ConversionPatternRewriter &rewriter) const override {
+    Value ptr = rands[0];
+    LLVM::LLVMType retty =
+        typeConverter->convertType(rator->getResult(0).getType())
+            .cast<LLVM::LLVMType>();
+    rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(rator, retty, ptr);
+    return success();
+  }
+};
+
+
 
 FunctionType convertFunctionType(FunctionType fnty, TypeConverter &tc,
                                  OpBuilder &builder) {
@@ -767,6 +805,8 @@ struct LowerPointerPass : public Pass {
 
 
     patterns.insert<Ptr2IntOpLowering>(typeConverter, &getContext());
+    patterns.insert<Ptr2FloatOpLowering>(typeConverter, &getContext());
+
     // vvv yuge hack.
     patterns.insert<PtrUndefOpLowering>(typeConverter, &getContext());
     patterns.insert<Ptr2MemrefOpLowering>(typeConverter, &getContext());

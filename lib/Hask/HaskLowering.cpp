@@ -236,6 +236,10 @@ public:
       //  return op;
     }
 
+    if (FloatType ft = retty.dyn_cast<FloatType>()) {
+      return builder.create<ptr::PtrToFloatOp>(builder.getUnknownLoc(), src, ft);
+    }
+
     llvm::errs() << "ERROR: unknown type: |" << retty << "|\n";
     assert(false && "unknown type to convert from void pointer");
   };
