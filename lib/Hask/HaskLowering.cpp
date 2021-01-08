@@ -55,6 +55,7 @@
 namespace mlir {
 namespace standalone {
 
+/*
 FunctionType convertFunctionType(FunctionType fnty, TypeConverter &tc,
                                  OpBuilder &builder) {
   SmallVector<Type, 4> argtys;
@@ -68,6 +69,7 @@ FunctionType convertFunctionType(FunctionType fnty, TypeConverter &tc,
   }
   return builder.getFunctionType(argtys, rettys);
 };
+ */
 
 // class HaskTypeConverter : public mlir::LLVMTypeConverter {
 class HaskTypeConverter : public mlir::TypeConverter {
@@ -258,7 +260,9 @@ public:
     FunctionType fnty = constant.getResult().getType().dyn_cast<FunctionType>();
     assert(fnty);
 
-    FunctionType outty = convertFunctionType(fnty, *typeConverter, rewriter);
+//    FunctionType outty = convertFunctionType(fnty, *typeConverter, rewriter);
+
+    FunctionType outty = typeConverter->convertType(outty).dyn_cast<FunctionType>();
 
     assert(fnty && "was asked to lower a constant op that's not a reference to "
                    "a function?!");
@@ -399,7 +403,11 @@ public:
     auto call = cast<CallIndirectOp>(op);
     SmallVector<Type, 4> resultTypes;
     typeConverter->convertTypes(call.getResultTypes(), resultTypes);
-    rewriter.replaceOpWithNewOp<CallIndirectOp>(op, resultTypes, rands);
+    rewriter.replaceOpWithNewOp<CallIndirectOp>(op, resultTypes, rands[0], rands.drop_front(1));
+    llvm::errs() << "=====call indirect parent fn=====\n";
+    op->getParentOfType<FuncOp>().print(llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
+    llvm::errs() << "\n=====\n";
+//    assert(false);
     return success();
   }
 };
@@ -1281,17 +1289,24 @@ struct LowerHaskPass : public Pass {
 
 
     target.addDynamicallyLegalOp<CallIndirectOp>([](CallIndirectOp call) {
+
+      llvm::errs() << "===Checking callIndirectOp===\n";
       for (Value arg : call.getOperands()) {
+        llvm::errs() << " - " << arg.getType() << "\n";
         if (!isTypeLegal(arg.getType())) {
           return false;
+
         }
       }
 
       for (Type t : call.getResultTypes()) {
+        llvm::errs() << " - " << t << "\n";
+
         if (!isTypeLegal(t)) {
           return false;
         }
       }
+      llvm::errs() << "\n===\n";
       return true;
     });
 
@@ -1392,7 +1407,7 @@ struct LowerHaskPass : public Pass {
 
     // applyPartialConversion | applyFullConversion
 
-    if (failed(mlir::applyFullConversion(getOperation(), target,
+    if (failed(mlir::applyPartialConversion(getOperation(), target,
                                          std::move(patterns)))) {
       llvm::errs() << "===Hask lowering failed at Conversion===\n";
       getOperation()->print(llvm::errs());
