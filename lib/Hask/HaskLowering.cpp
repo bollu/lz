@@ -1247,22 +1247,7 @@ struct LowerHaskPass : public Pass {
     target.addLegalOp<ModuleOp, ModuleTerminatorOp>();
 
     target.addDynamicallyLegalOp<ConstantOp>([](ConstantOp op) {
-      auto funcType = op.getType().dyn_cast<FunctionType>();
-      if (!funcType) {
-        return true;
-      }
-
-      for (auto &arg : llvm::enumerate(funcType.getInputs())) {
-        if (arg.value().isa<HaskType>()) {
-          return false;
-        }
-      }
-      for (auto &arg : llvm::enumerate(funcType.getResults())) {
-        if (arg.value().isa<HaskType>()) {
-          return false;
-        }
-      }
-      return true;
+      return isTypeLegal(op.getType());
     });
 
     // This is wrong. We need to recursively check if function type
