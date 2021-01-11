@@ -2,16 +2,7 @@
 #include <inttypes.h>
 #include <benchmark/benchmark.h>
 #include <stdlib.h>
-
-// static const int useSize = 2000000;
-// static const int useSeed = 42;
-double *newArray(int len, unsigned short xsubi[3]) {
-    double *xs= new double[len];
-    for(int i = 0; i  < len;++i) {
-        xs[i] = erand48(xsubi);
-    }
-    return xs;
-}
+#include <iostream>
 
 template<typename T>
 T *readArray(const char *path, int *len) {
@@ -33,47 +24,86 @@ T *readArray(const char *path, int *len) {
 }
 
 template<typename T>
-void writeArray(int len, T *xs, FILE *fp) {
+void writeArray(const char *filename, int len, T *xs) {
+    FILE *fp =  fopen(filename, "wb");
+    assert(fp && "unable to open file to write array");
     fwrite((void *)&len, sizeof(int), 1, fp);
     for(int i = 0; i < len; ++i) {
         fwrite(xs + i, sizeof(T), 1, fp);
     }
-}
-
-
-
-int64_t go3(int64_t accum, int64_t i) {
-    if (i == 0) { return accum; }
-    else { return go3(accum+i, i -1); }
-}
-
-int64_t go2(int64_t accum, int64_t i) {
-    if (i == 0) { return accum; }
-    else { return go2(accum+ go3(0, i), i -1); }
-}
-
-int64_t go1(int64_t accum, int64_t i) {
-    if (i == 0) { return accum; }
-    else { return go1(accum+ go2(0, i), i -1); }
-}
-
-int64_t test(int64_t d) { return go1(0, d); }
-
-void BM_test(benchmark::State& state) {
-    int64_t input = 2000;
-
-    for (auto _ : state) {
-        test(input);
-    }
-
-    FILE *fp = fopen("out-cpp.bin", "wb");
-    assert(fp);
-    int64_t out = test(input);
-    writeArray<int64_t>(1, &out, fp);
     fclose(fp);
 }
 
-BENCHMARK(BM_test)->Unit(benchmark::kMicrosecond);
+template<typename T>
+void debug_print_array(const char *name, T *xs, int len) {
+    std::cerr << name << " [";
+    for(int i = 0; i < len; ++i) {
+        std::cerr << xs[i];
+        if (i + 1 < len) { std::cerr << " "; }
+    }
+    std::cerr << "]\n";
+}
+
+int *test(const int *ls, const int *rs, int len) {
+    // debug_print_array("ls", ls, len);
+    // debug_print_array("rs", rs, len);
+    int *xs = new int[len];
+    for(int i = 0; i < len; ++i) {
+        xs[i] = 1;
+    }
+    // debug_print_array("xs", xs, len);
+
+    int *vs = new int[len*2];
+    for(int  i = 0; i < len*2; ++i) {
+        vs[i] = 0;
+    }
+
+    // update_: https://hackage.haskell.org/package/vector-0.12.1.2/docs/Data-Vector-Primitive.html#v:update_
+    // update(src, ixs, vs) = for(i) { src[ixs[i]] = vs[i]; }
+    // zs   = V.replicate (V.length ls * 2) 0
+    // vs   = V.update_ zs ls xs
+    for(int i = 0; i < len; ++i) {
+        vs[ls[i]] = xs[i];
+    }
+    // debug_print_array("vs", vs, len*2);
+
+    // sums = V.prescanl' (+) 0 vs
+    int *sums = new int[2*len];
+    int sum = 0;
+    for(int i = 0; i < 2*len; ++i) {
+        sums[i] = sum;
+        sum += vs[i];
+    }
+    // debug_print_array("sums", sums, len*2);
+
+    // backpermute: 
+    // https://hackage.haskell.org/package/vector-0.12.1.2/docs/Data-Vector-Primitive.html#v:backpermute
+    // V.zipWith (-) (V.backpermute sums ls) (V.backpermute sums rs)
+    int *out = new int[len];
+    for(int i = 0; i < len; ++i) {
+        out[i] = sums[ls[i]] - sums[rs[i]];
+    }
+    // debug_print_array("out", out, len);
+    return out;
+}
+
+void BM_test(benchmark::State& state) {
+    int lenleft;
+    int *lparens = readArray<int>("lparens.bin", &lenleft);
+    int lenright; 
+    int *rparens = readArray<int>("rparens.bin", &lenright);
+    assert(lenleft == lenright);
+
+
+    for (auto _ : state) {
+        test(lparens, rparens, lenleft);
+    }
+
+    int *out = test(lparens, rparens, lenleft);
+    writeArray<int>("out-cpp.bin", lenleft, out);
+}
+
+BENCHMARK(BM_test)->Unit(benchmark::kMillisecond);
 // BENCHMARK(BM_test)->Unit(benchmark::kMillisecond);
 // Run the benchmark
 BENCHMARK_MAIN();

@@ -1,8 +1,7 @@
 .PHONY: run hs.out cpp.out
 
 run: hs.out cpp.out
-	-rm out-hs.bin
-	-rm out-cpp.bin
+	-rm *.bin
 	./hs.out
 	./cpp.out
 	sha256sum out-hs.bin
