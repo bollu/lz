@@ -52,6 +52,7 @@ main = do
   (nodes, edges1, edges2) <- randomGraph gen useSize
   nodes `seq` edges1 `seq` edges2 `seq` return ()
 
+  defaultMain $ [bench "awshcc" $ whnf awhscc (nodes, edges1, edges2)]
+
   let out = awhscc (nodes, edges1, edges2)
   encodeVecDoubleToFile "out-hs.bin" out
-  defaultMain $ [bench "awshcc" $ whnf awhscc (nodes, edges1, edges2)]
