@@ -1,6 +1,6 @@
 {-# OPTIONS -fno-spec-constr-count #-}
 module Algo.AwShCC (awshcc) where
-
+import GenGraph
 import Data.Vector.Unboxed as V
 
 awshcc :: (Int, Vector Int, Vector Int) -> Vector Int
@@ -36,3 +36,22 @@ awshcc (n, es1, es2) = concomp ds es1' es2'
                         (V.backpermute ds' es2)
                         (V.backpermute (starCheck ds') es1)
 
+
+encodeVecDoubleToFile :: String -> Vector Double -> IO ()
+encodeVecDoubleToFile f vs = 
+  B.writeFile f $ runPut $ (genericPutVectorWith (putInt32le . fromIntegral) putDoublele vs)
+
+encodeVecInt32ToFile :: String -> Vector Double -> IO ()
+encodeVecInt32ToFile f vs = 
+  B.writeFile f $ runPut $ (genericPutVectorWith (putInt32le . fromIntegral) (putInt32le . fromIntegral) vs)
+
+
+main :: IO ()
+main = do
+  gen <- newIOGenM (mkStdGen useSeed)
+  (nodes, edges1, edges2) <- randomGraph gen useSize
+  nodes `seq` edges1 `seq` edges2 `seq` return ()
+
+  let out = awhscc (nodes, edges1, edges2)
+  encodeVecDoubleToFile "out-hs.bin" out
+  defaultMain $ [bench "awshcc" $ whnf awhscc (nodes, edges1, edges2)]
