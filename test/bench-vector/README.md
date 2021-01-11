@@ -103,9 +103,15 @@ a5236d1a9a72d11379d8f85a41d0bb0e17d665cdc0545836ea8cf5914590a031  out-hs.bin
 sha256sum out-cpp.bin
 ```
 ##### Listrank
+
 ##### MutableSet
+- Uninteresting, benchmarks cost of setting a value in an array.
+  Will port this last.
+
 ##### Quickhull
+
 ##### Rootfix
+
 ##### Spectral
 
 ##### closed-form-gauss

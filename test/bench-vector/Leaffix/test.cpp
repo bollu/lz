@@ -44,27 +44,15 @@ void debug_print_array(const char *name, T *xs, int len) {
     std::cerr << "]\n";
 }
 
-int *test(const int *ls, const int *rs, int len) {
-    // debug_print_array("ls", ls, len);
-    // debug_print_array("rs", rs, len);
-    int *xs = new int[len];
-    for(int i = 0; i < len; ++i) {
-        xs[i] = 1;
-    }
-    // debug_print_array("xs", xs, len);
-
+int *test(const int * __restrict__ ls, const int * __restrict__ rs, int len) {
     int *vs = new int[len*2];
-    for(int  i = 0; i < len*2; ++i) {
-        vs[i] = 0;
-    }
+    for(int  i = 0; i < len*2; ++i) { vs[i] = 0; }
 
     // update_: https://hackage.haskell.org/package/vector-0.12.1.2/docs/Data-Vector-Primitive.html#v:update_
     // update(src, ixs, vs) = for(i) { src[ixs[i]] = vs[i]; }
     // zs   = V.replicate (V.length ls * 2) 0
     // vs   = V.update_ zs ls xs
-    for(int i = 0; i < len; ++i) {
-        vs[ls[i]] = xs[i];
-    }
+    for(int i = 0; i < len; ++i) { vs[ls[i]] = 1; }
     // debug_print_array("vs", vs, len*2);
 
     // sums = V.prescanl' (+) 0 vs
