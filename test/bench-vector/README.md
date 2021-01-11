@@ -67,6 +67,41 @@ GenGraph.hs:27:18: error:
 - Unable to test, because it depends on the same dependencies as `AwShCC`.
 
 ##### Leaffix
+
+```
+[I] /home/bollu/work/mlir/lz/test/bench-vector/Leaffix > make
+ghc test.hs -O2 -fllvm -o hs.out
+Loaded package environment from /home/bollu/.ghc/x86_64-linux-8.10.2/environments/default
+clang++ -O3 test.cpp -o cpp.out -lbenchmark -L/usr/local/lib/ -lpthread
+rm *.bin
+./hs.out
+benchmarked leaffix
+time                 11.73 ms   (11.50 ms .. 11.99 ms)
+                     0.998 R²   (0.997 R² .. 0.999 R²)
+mean                 12.02 ms   (11.91 ms .. 12.18 ms)
+std dev              341.3 μs   (247.7 μs .. 444.9 μs)
+variance introduced by outliers: 10% (moderately inflated)
+
+./cpp.out
+2021-01-11T23:09:14+05:30
+Running ./cpp.out
+Run on (8 X 3400 MHz CPU s)
+CPU Caches:
+  L1 Data 32 KiB (x4)
+  L1 Instruction 32 KiB (x4)
+  L2 Unified 256 KiB (x4)
+  L3 Unified 6144 KiB (x1)
+  L4 Unified 131072 KiB (x1)
+Load Average: 0.83, 0.74, 0.70
+***WARNING*** CPU scaling is enabled, the benchmark real time measurements may be noisy and will incur extra overhead.
+-----------------------------------------------------
+Benchmark           Time             CPU   Iterations
+-----------------------------------------------------
+BM_test          11.4 ms         11.4 ms           60
+sha256sum out-hs.bin
+a5236d1a9a72d11379d8f85a41d0bb0e17d665cdc0545836ea8cf5914590a031  out-hs.bin
+sha256sum out-cpp.bin
+```
 ##### Listrank
 ##### MutableSet
 ##### Quickhull
