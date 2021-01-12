@@ -1,7 +1,14 @@
 {-# OPTIONS -fno-spec-constr-count #-}
-module Algo.AwShCC (awshcc) where
+module Main where
+import Gauge.Main
 import GenGraph
 import Data.Vector.Unboxed as V
+import Data.Word
+import System.Random.Stateful
+import Data.Binary
+import Data.Vector.Binary
+import Data.Binary.Put
+import qualified Data.ByteString.Lazy as B
 
 awshcc :: (Int, Vector Int, Vector Int) -> Vector Int
 {-# NOINLINE awshcc #-}
@@ -41,18 +48,28 @@ encodeVecDoubleToFile :: String -> Vector Double -> IO ()
 encodeVecDoubleToFile f vs = 
   B.writeFile f $ runPut $ (genericPutVectorWith (putInt32le . fromIntegral) putDoublele vs)
 
-encodeVecInt32ToFile :: String -> Vector Double -> IO ()
+encodeVecInt32ToFile :: String -> Vector Int -> IO ()
 encodeVecInt32ToFile f vs = 
   B.writeFile f $ runPut $ (genericPutVectorWith (putInt32le . fromIntegral) (putInt32le . fromIntegral) vs)
 
+
+useSize :: Int
+useSize = 2000000
+
+useSeed :: Int
+useSeed = 42
 
 main :: IO ()
 main = do
   gen <- newIOGenM (mkStdGen useSeed)
   (nodes, edges1, edges2) <- randomGraph gen useSize
   nodes `seq` edges1 `seq` edges2 `seq` return ()
+  encodeVecInt32ToFile "nodes.bin" (V.singleton nodes)
+  encodeVecInt32ToFile "edges1.bin" edges1
+  encodeVecInt32ToFile "edges1.bin" edges2
 
-  defaultMain $ [bench "awshcc" $ whnf awhscc (nodes, edges1, edges2)]
 
-  let out = awhscc (nodes, edges1, edges2)
-  encodeVecDoubleToFile "out-hs.bin" out
+  defaultMain $ [bench "awshcc" $ whnf awshcc (nodes, edges1, edges2)]
+
+  let out = awshcc (nodes, edges1, edges2)
+  encodeVecInt32ToFile "out-hs.bin" out
