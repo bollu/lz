@@ -154,6 +154,8 @@ sha256sum out-cpp.bin
 
 ##### Quickhull
 
+- TODO
+
 ##### Rootfix
 
 ```
@@ -196,6 +198,50 @@ sha256sum out-cpp.bin
 ```
 
 ##### Spectral
+
+- Insane speedup
+
+```
+[I] /home/bollu/work/mlir/lz/test/bench-vector/Spectral > make
+ghc test.hs -O2 -fllvm -o hs.out
+Loaded package environment from /home/bollu/.ghc/x86_64-linux-8.10.2/environments/default
+[1 of 1] Compiling Main             ( test.hs, test.o )
+You are using an unsupported version of LLVM!
+Currently only 9 is supported. System LLVM version: 12.0.0
+We will try though...
+Linking hs.out ...
+clang++ -O3 test.cpp -o cpp.out -lbenchmark -L/usr/local/lib/ -lpthread
+rm out-hs.bin
+rm out-cpp.bin
+./hs.out
+benchmarking spectral ... took 96.37 s, total 56 iterations
+benchmarked spectral
+time                 1.755 s    (1.738 s .. 1.766 s)
+                     1.000 R²   (1.000 R² .. 1.000 R²)
+mean                 1.745 s    (1.721 s .. 1.757 s)
+std dev              29.02 ms   (13.23 ms .. 45.18 ms)
+
+./cpp.out
+2021-01-12T18:44:43+05:30
+Running ./cpp.out
+Run on (8 X 3400 MHz CPU s)
+CPU Caches:
+  L1 Data 32 KiB (x4)
+  L1 Instruction 32 KiB (x4)
+  L2 Unified 256 KiB (x4)
+  L3 Unified 6144 KiB (x1)
+  L4 Unified 131072 KiB (x1)
+Load Average: 1.13, 0.99, 0.86
+***WARNING*** CPU scaling is enabled, the benchmark real time measurements may be noisy and will incur extra overhead.
+-----------------------------------------------------
+Benchmark           Time             CPU   Iterations
+-----------------------------------------------------
+BM_test         0.000 ms        0.000 ms   1000000000
+sha256sum out-hs.bin
+6b8ee09cdf0882dd087640c6f59328616028ef298953fdd83c3645045f4d53a3  out-hs.bin
+sha256sum out-cpp.bin
+6b8ee09cdf0882dd087640c6f59328616028ef298953fdd83c3645045f4d53a3  out-cpp.bin
+```
 
 ##### closed-form-gauss
 

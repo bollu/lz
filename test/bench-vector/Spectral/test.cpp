@@ -33,48 +33,48 @@ T *readArray(const char *path, int *len) {
 }
 
 template<typename T>
-void writeArray(int len, T *xs, FILE *fp) {
+void writeArray(const char *filename, int len, T *xs) {
+    FILE *fp =  fopen(filename, "wb");
+    assert(fp && "unable to open file to write array");
     fwrite((void *)&len, sizeof(int), 1, fp);
     for(int i = 0; i < len; ++i) {
         fwrite(xs + i, sizeof(T), 1, fp);
     }
-}
-
-
-
-int64_t go3(int64_t accum, int64_t i) {
-    if (i == 0) { return accum; }
-    else { return go3(accum+i, i -1); }
-}
-
-int64_t go2(int64_t accum, int64_t i) {
-    if (i == 0) { return accum; }
-    else { return go2(accum+ go3(0, i), i -1); }
-}
-
-int64_t go1(int64_t accum, int64_t i) {
-    if (i == 0) { return accum; }
-    else { return go1(accum+ go2(0, i), i -1); }
-}
-
-int64_t test(int64_t d) { return go1(0, d); }
-
-void BM_test(benchmark::State& state) {
-    int64_t input = 2000;
-
-    for (auto _ : state) {
-        test(input);
-    }
-
-    FILE *fp = fopen("out-cpp.bin", "wb");
-    assert(fp);
-    int64_t out = test(input);
-    writeArray<int64_t>(1, &out, fp);
     fclose(fp);
 }
 
-BENCHMARK(BM_test)->Unit(benchmark::kMicrosecond);
-// BENCHMARK(BM_test)->Unit(benchmark::kMillisecond);
+
+double *test(double *us, int len) {
+    double *out = new double[len];
+    for(int i = 0; i < len; ++i) {
+        double sum = 0;
+        for(int j = 0; j < len; ++j) {
+            int n = (i + j);
+            int t = n*(n+1);
+            int u = t >> 1;
+            int r = u + (i+1);
+            double uj = us[j];
+            sum += 1.0 / r * uj;
+        }
+        out[i] = sum;
+    }
+    return out;
+}
+
+void BM_test(benchmark::State& state) {
+    int len;
+    double *as = readArray<double>("as.bin", &len);
+
+    for (auto _ : state) {
+        test(as, len);
+    }
+
+    double *out = test(as, len);
+    writeArray<double>("out-cpp.bin", len, out);
+}
+
+// BENCHMARK(BM_test)->Unit(benchmark::kMicrosecond);
+BENCHMARK(BM_test)->Unit(benchmark::kMillisecond);
 // Run the benchmark
 BENCHMARK_MAIN();
 
