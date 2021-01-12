@@ -15,6 +15,7 @@ Convert GHC Core to MLIR.
 - IORefs are bad
 - Example GHC perf slide because of laziness: https://gitlab.haskell.org/ghc/ghc/-/issues/19102#note_319557
 - [Novel GC algorithm for pure funcitonal languages](https://www.reddit.com/r/haskell/comments/knzfhn/novel_garbage_collection_technique_for_immutable/)
+- [supercompiler by evaluation](https://www.microsoft.com/en-us/research/wp-content/uploads/2016/07/supercomp-by-eval.pdf)
 
 
 
@@ -24,6 +25,8 @@ Convert GHC Core to MLIR.
   should not need type of function, only type of arguments and return type
 - Remove the `hask.primop_*`. It's useless. Just use native `int`s.
 - Benchmarks: https://benchmarksgame-team.pages.debian.net/benchmarksgame/program/binarytrees-ghc-7.html
+- compiling _from_ categories: can we have a dialect called `CCC` for closed cartesian
+  categories that's compiled efficiently?
 
 
 # Log:  [newest] to [oldest]
