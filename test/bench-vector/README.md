@@ -104,6 +104,50 @@ sha256sum out-cpp.bin
 ```
 ##### Listrank
 
+```
+[I] /home/bollu/work/mlir/lz/test/bench-vector/Listrank > make
+ghc test.hs -O2 -fllvm -o hs.out
+Loaded package environment from /home/bollu/.ghc/x86_64-linux-8.10.2/environments/default
+[1 of 1] Compiling Main             ( test.hs, test.o )
+You are using an unsupported version of LLVM!
+Currently only 9 is supported. System LLVM version: 12.0.0
+We will try though...
+Linking hs.out ...
+# clang++ -O3 test.cpp -o cpp.out -lbenchmark -L/usr/local/lib/ -lpthread
+clang++ -O0 -g test.cpp -o cpp.out -lbenchmark -L/usr/local/lib/ -lpthread
+rm out-hs.bin
+rm out-cpp.bin
+./hs.out
+benchmarking listRank ... took 23.12 s, total 56 iterations
+benchmarked listRank
+time                 441.9 ms   (387.1 ms .. 498.6 ms)
+                     0.954 R²   (0.863 R² .. 0.996 R²)
+mean                 405.6 ms   (383.7 ms .. 447.6 ms)
+std dev              49.68 ms   (31.42 ms .. 75.01 ms)
+variance introduced by outliers: 38% (moderately inflated)
+
+./cpp.out
+2021-01-12T01:56:59+05:30
+Running ./cpp.out
+Run on (8 X 3400 MHz CPU s)
+CPU Caches:
+  L1 Data 32 KiB (x4)
+  L1 Instruction 32 KiB (x4)
+  L2 Unified 256 KiB (x4)
+  L3 Unified 6144 KiB (x1)
+  L4 Unified 131072 KiB (x1)
+Load Average: 2.40, 1.55, 1.09
+***WARNING*** CPU scaling is enabled, the benchmark real time measurements may be noisy and will incur extra overhead.
+-----------------------------------------------------
+Benchmark           Time             CPU   Iterations
+-----------------------------------------------------
+BM_test           666 ms          665 ms            1
+sha256sum out-hs.bin
+0bc580290a3e79b1e8d721b228e4dec4adea68b807304a8e7c848a5bd578a220  out-hs.bin
+sha256sum out-cpp.bin
+0bc580290a3e79b1e8d721b228e4dec4adea68b807304a8e7c848a5bd578a220  out-cpp.bin
+```
+
 ##### MutableSet
 - Uninteresting, benchmarks cost of setting a value in an array.
   Will port this last.
@@ -111,6 +155,45 @@ sha256sum out-cpp.bin
 ##### Quickhull
 
 ##### Rootfix
+
+```
+[1 of 1] Compiling Main             ( test.hs, test.o )
+You are using an unsupported version of LLVM!
+Currently only 9 is supported. System LLVM version: 12.0.0
+We will try though...
+Linking hs.out ...
+clang++ -O3 test.cpp -o cpp.out -lbenchmark -L/usr/local/lib/ -lpthread
+rm out-hs.bin
+rm out-cpp.bin
+./hs.out
+benchmarking rootfix ... took 9.123 s, total 56 iterations
+benchmarked rootfix
+time                 168.0 ms   (166.3 ms .. 171.2 ms)
+                     0.999 R²   (0.998 R² .. 1.000 R²)
+mean                 163.9 ms   (161.9 ms .. 166.0 ms)
+std dev              3.517 ms   (2.925 ms .. 4.295 ms)
+
+./cpp.out
+2021-01-12T17:54:15+05:30
+Running ./cpp.out
+Run on (8 X 3400 MHz CPU s)
+CPU Caches:
+  L1 Data 32 KiB (x4)
+  L1 Instruction 32 KiB (x4)
+  L2 Unified 256 KiB (x4)
+  L3 Unified 6144 KiB (x1)
+  L4 Unified 131072 KiB (x1)
+Load Average: 0.85, 0.87, 0.95
+***WARNING*** CPU scaling is enabled, the benchmark real time measurements may be noisy and will incur extra overhead.
+-----------------------------------------------------
+Benchmark           Time             CPU   Iterations
+-----------------------------------------------------
+BM_test           112 ms          112 ms            6
+sha256sum out-hs.bin
+30e2127773251e01fd0054421e12a31823a7cd138eebd8452bb5cbf3da0890d9  out-hs.bin
+sha256sum out-cpp.bin
+30e2127773251e01fd0054421e12a31823a7cd138eebd8452bb5cbf3da0890d9  out-cpp.bin
+```
 
 ##### Spectral
 
