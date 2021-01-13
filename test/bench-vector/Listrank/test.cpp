@@ -92,13 +92,16 @@ int *test(int n) {
 }
 
 void BM_test(benchmark::State& state) {
+    state.PauseTiming();
     int len;
     int *useSize = readArray<int>("useSize.bin", &len);
     assert(len == 1 && "expected len variable to be use size");
 
+    state.ResumeTiming();
     for (auto _ : state) {
         test(*useSize);
     }
+    state.PauseTiming();
 
     int *out = test(*useSize);
     writeArray<int>("out-cpp.bin", *useSize, out);

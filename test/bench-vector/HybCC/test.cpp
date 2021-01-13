@@ -2,6 +2,7 @@
 #include <inttypes.h>
 #include <benchmark/benchmark.h>
 #include <stdlib.h>
+#include <vector>
 
 // static const int useSize = 2000000;
 // static const int useSeed = 42;
@@ -32,45 +33,65 @@ T *readArray(const char *path, int *len) {
     return arr;
 }
 
+
 template<typename T>
-void writeArray(int len, T *xs, FILE *fp) {
+void writeArray(const char *filename, int len, T *xs) {
+    FILE *fp =  fopen(filename, "wb");
+    assert(fp && "unable to open file to write array");
     fwrite((void *)&len, sizeof(int), 1, fp);
     for(int i = 0; i < len; ++i) {
         fwrite(xs + i, sizeof(T), 1, fp);
     }
+    fclose(fp);
 }
 
-
-
-int64_t go3(int64_t accum, int64_t i) {
-    if (i == 0) { return accum; }
-    else { return go3(accum+i, i -1); }
+std::vector<int> shortcut_all(std::vector<int> p) {
+    std::vector<int> pp(p.size());
+    bool equal = true;
+    for(int i = 0; i < p.size(); ++i) {
+        if(p[i] != pp[i]) { equal = false; }
+        pp[i] = p[p[i]];
+    }
+    if (equal) { return p; }
+    else { return shortcut_all(pp); }
 }
 
-int64_t go2(int64_t accum, int64_t i) {
-    if (i == 0) { return accum; }
-    else { return go2(accum+ go3(0, i), i -1); }
+std::vector<int> compress(std::vector<int>p, std::vector<std::pair<int, int>> es) {
+    
 }
 
-int64_t go1(int64_t accum, int64_t i) {
-    if (i == 0) { return accum; }
-    else { return go1(accum+ go2(0, i), i -1); }
+std::vector<int> concomp(std::vector<std::pair<int, int>> es, int n) {
+    if (es.size() == 0) {
+        std::vector<int> v(n);
+        for(int i = 0; i < n; ++i) { v.push_back(i); }
+        return v;
+    } else {
+        std::vector<int> out(n);
+        for(int i = 0; i < n; ++i) {
+            out[i] = ins[ins[i]];
+        }
+        return out;
+    }
 }
 
-int64_t test(int64_t d) { return go1(0, d); }
+std::vector<int> test(int n, std::vector<int> es1, std::vector<int> es2) {
+
+}
 
 void BM_test(benchmark::State& state) {
-    int64_t input = 2000;
+    int one;
+    int *nodes = readArray<int>("nodes.bin",  &one);
+    assert(one == 1);
+    int les1, les2;
+    int *edges1 = readArray<int>("edges1.bin", &les1);
+    int *edges2 = readArray<int>("edges2.bin", &les2);
 
     for (auto _ : state) {
-        test(input);
+        test(*nodes, edges1, edges2, les1, les2);
     }
 
-    FILE *fp = fopen("out-cpp.bin", "wb");
-    assert(fp);
-    int64_t out = test(input);
-    writeArray<int64_t>(1, &out, fp);
-    fclose(fp);
+    int *out = test(*nodes, edges1, edges2, les1, les2);
+    writeArray<int>("out-cpp.bin", *nodes, out);
 }
 
 BENCHMARK(BM_test)->Unit(benchmark::kMicrosecond);

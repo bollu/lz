@@ -1,5 +1,4 @@
-module Algo.HybCC (hybcc) where
-
+module Main where
 import GenGraph
 import Gauge.Main
 import Data.Vector.Unboxed as V
@@ -49,18 +48,25 @@ hybcc (n, e1, e2) = concomp (V.zip e1 e2) n
           (e1',e2') = V.unzip es'
           new_es = V.zip (V.backpermute labels e1') (V.backpermute labels e2')
 
-encodeVecInt32ToFile :: String -> Vector Double -> IO ()
+encodeVecInt32ToFile :: String -> Vector Int -> IO ()
 encodeVecInt32ToFile f vs = 
   B.writeFile f $ runPut $ (genericPutVectorWith (putInt32le . fromIntegral) (putInt32le . fromIntegral) vs)
 
+useSize :: Int
+useSize = 2000000
+
+useSeed :: Int
+useSeed = 42
+
 main :: IO ()
 main = do
+  gen <- newIOGenM (mkStdGen useSeed)
   (nodes, edges1, edges2) <- randomGraph gen useSize
   nodes `seq` edges1 `seq` edges2 `seq` return () 
-  defaultMain $ bench "hybcc" $ whnf hybcc  (nodes, edges1, edges2)
+  defaultMain $ [bench "hybcc" $ whnf hybcc  (nodes, edges1, edges2)]
 
   let out = hybcc (nodes, edges1, edges2)
-  encodeVecInt32ToFile "nodes.bin" nodes
+  encodeVecInt32ToFile "nodes.bin" (V.singleton nodes)
   encodeVecInt32ToFile "edges1.bin" edges1
   encodeVecInt32ToFile "edges2.bin" edges2
   encodeVecInt32ToFile "out-hs.bin" out

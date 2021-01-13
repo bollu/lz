@@ -4,11 +4,13 @@ module GenGraph
 
 import System.Random.Stateful
 import qualified Data.Vector as V
+import Control.Monad.Primitive
 import qualified Data.Vector.Mutable as MV
+-- import qualified Data.Vector.Primitive.Mutable as MV
 import qualified Data.Vector.Unboxed as U
 
 randomGraph
-  :: (StatefulGen g m, MV.PrimMonad m)
+  :: (StatefulGen g m, PrimMonad m)
   => g
   -> Int
   -> m (Int, U.Vector Int, U.Vector Int)
@@ -21,10 +23,10 @@ randomGraph g edges = do
   return (vertices, U.fromList as, U.fromList bs)
 
 addRandomEdges
-  :: (StatefulGen g m, MV.PrimMonad m)
+  :: (StatefulGen g m, PrimMonad m)
   => g
   -> Int
-  -> MV.MVector (MV.PrimState m) [Int]
+  -> MV.MVector (PrimState m) [Int]
   -> Int
   -> m ()
 addRandomEdges g vertices arr = fill

@@ -75,6 +75,7 @@ int *test(int *ls, int *rs, int len) {
 }
 
 void BM_test(benchmark::State& state) {
+    // state.PauseTiming();
     int lenleft;
     int *lparens = readArray<int>("lparens.bin", &lenleft);
     int lenright; 
@@ -82,9 +83,11 @@ void BM_test(benchmark::State& state) {
     assert(lenleft == lenright);
 
 
+    // state.ResumeTiming();
     for (auto _ : state) {
         test(lparens, rparens, lenleft);
     }
+    // state.PauseTiming();
 
     int *out = test(lparens, rparens, lenleft);
     writeArray<int>("out-cpp.bin", lenleft, out);

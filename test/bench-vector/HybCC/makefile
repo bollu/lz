@@ -13,4 +13,4 @@ cpp.out:
 
 
 hs.out:
-	ghc test.hs -O2 -fllvm -o hs.out
+	ghc test.hs -O2 -fllvm -o hs.out -package primitive 
