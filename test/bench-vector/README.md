@@ -154,7 +154,58 @@ sha256sum out-cpp.bin
 
 ##### Quickhull
 
-- TODO
+
+```
+[I] /home/bollu/work/mlir/lz/test/bench-vector/Quickhull > make 
+ghc test.hs -O2 -fllvm -o hs.out
+Loaded package environment from /home/bollu/.ghc/x86_64-linux-8.10.2/environments/default
+[1 of 1] Compiling Main             ( test.hs, test.o )
+You are using an unsupported version of LLVM!
+Currently only 9 is supported. System LLVM version: 12.0.0
+We will try though...
+Linking hs.out ...
+clang++ -O3 test.cpp -o cpp.out -lbenchmark -L/usr/local/lib/ -lpthread
+rm out-hs.bin
+rm: cannot remove 'out-hs.bin': No such file or directory
+makefile:4: recipe for target 'run' failed
+make: [run] Error 1 (ignored)
+rm out-cpp.bin
+rm: cannot remove 'out-cpp.bin': No such file or directory
+makefile:4: recipe for target 'run' failed
+make: [run] Error 1 (ignored)
+./hs.out | tee hs.log
+benchmarking quickhull ... took 65.07 s, total 56 iterations
+benchmarked quickhull
+time                 1.257 s    (1.040 s .. 1.446 s)
+                     0.965 R²   (0.930 R² .. 0.998 R²)
+mean                 1.170 s    (1.124 s .. 1.244 s)
+std dev              93.82 ms   (59.29 ms .. 148.9 ms)
+variance introduced by outliers: 19% (moderately inflated)
+
+#############################
+./cpp.out | tee cpp.log
+2021-01-13T07:01:34+05:30
+Running ./cpp.out
+Run on (8 X 3400 MHz CPU s)
+CPU Caches:
+  L1 Data 32 KiB (x4)
+  L1 Instruction 32 KiB (x4)
+  L2 Unified 256 KiB (x4)
+  L3 Unified 6144 KiB (x1)
+  L4 Unified 131072 KiB (x1)
+Load Average: 1.27, 0.72, 0.61
+***WARNING*** CPU scaling is enabled, the benchmark real time measurements may be noisy and will incur extra overhead.
+-----------------------------------------------------
+Benchmark           Time             CPU   Iterations
+-----------------------------------------------------
+BM_test          3036 ms         3036 ms            1
+sha256sum out-hs.bin
+588c72ff37dd0e500a19976a9630cb2c31b1dc36602989225e02b0cb1f5161d0  out-hs.bin
+sha256sum out-cpp.bin
+588c72ff37dd0e500a19976a9630cb2c31b1dc36602989225e02b0cb1f5161d0  out-cpp.bin
+```
+
+
 
 ##### Rootfix
 
@@ -352,3 +403,10 @@ main = do
     , bench "findIndexR_manual" $ whnf findIndexR_manual ((<indexFindThreshold), as)
     ]
 ```
+
+##### Am I using the library correctly?
+
+- [I think so. To quote "controlling the timers"](https://github.com/google/benchmark#controlling-timers)
+> Normally, the entire duration of the work loop (for (auto _ : state) {}) is
+> measured.
+
