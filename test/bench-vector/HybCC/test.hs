@@ -59,7 +59,7 @@ encodeVecInt32ToFile f vs =
   B.writeFile f $ runPut $ (genericPutVectorWith (putInt32le . fromIntegral) (putInt32le . fromIntegral) vs)
 
 useSize :: Int
-useSize = 2000000
+useSize = 10
 
 useSeed :: Int
 useSeed = 42

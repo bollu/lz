@@ -1,132 +1,202 @@
 #define BENCH
-#include <inttypes.h>
 #include <benchmark/benchmark.h>
+#include <inttypes.h>
 #include <stdlib.h>
+#include <vector>
 
 // static const int useSize = 2000000;
 // static const int useSeed = 42;
 double *newArray(int len, unsigned short xsubi[3]) {
-    double *xs= new double[len];
-    for(int i = 0; i  < len;++i) {
-        xs[i] = erand48(xsubi);
-    }
-    return xs;
+  double *xs = new double[len];
+  for (int i = 0; i < len; ++i) {
+    xs[i] = erand48(xsubi);
+  }
+  return xs;
 }
 
-template<typename T>
-T *readArray(const char *path, int *len) {
-    FILE *fp = fopen(path, "rb");
-    assert(fp && "unable to open file");
+template <typename T> T *readArray(const char *path, int *len) {
+  FILE *fp = fopen(path, "rb");
+  assert(fp && "unable to open file");
 
-    int val;
-    fread(&val, sizeof(int), 1, fp);
-    // val = ntohl(val);
-    // printf("|%s| : |%d|; |", path, val); 
-    *len = val;
+  int val;
+  fread(&val, sizeof(int), 1, fp);
+  // val = ntohl(val);
+  // printf("|%s| : |%d|; |", path, val);
+  *len = val;
 
-    T *arr = new T[*len];
-    for(int i = 0; i < val; ++i) {
-        fread(arr+i, sizeof(T), 1, fp);
-    }
-    fclose(fp);
-    return arr;
+  T *arr = new T[*len];
+  for (int i = 0; i < val; ++i) {
+    fread(arr + i, sizeof(T), 1, fp);
+  }
+  fclose(fp);
+  return arr;
 }
 
-template<typename T>
-void writeArray(const char *filename, int len, T *xs) {
-    FILE *fp =  fopen(filename, "wb");
-    assert(fp && "unable to open file to write array");
-    fwrite((void *)&len, sizeof(int), 1, fp);
-    for(int i = 0; i < len; ++i) {
-        fwrite(xs + i, sizeof(T), 1, fp);
-    }
-    fclose(fp);
+template <typename T> std::vector<T> readVector(const char *filename) {
+  int len;
+  T *out = readArray<T>(filename, &len);
+  std::vector<T> arr(len);
+  for (int i = 0; i < len; ++i) {
+    arr[i] = out[i];
+  }
+  return arr;
 }
 
-int *starCheck(int *ds, int lds) {
-    int *gs = new int[lds];
-    // gs  = V.backpermute ds ds
-    for(int i = 0; i < lds; ++i) {
-        gs[i] = ds[ds[i]];
-    }
-    // st  = V.zipWith (==) ds gs
-    int *st = new int[lds];
-    for(int i = 0; i < lds; ++i) {
-        st[i] = ds[i] == gs[i];
-    }
-    // st' = V.update st . V.filter (not . snd) $ V.zip gs st
-    int *stt = new int[lds];
-    for(int i = 0; i < lds; ++i) {
-        stt[i] = st[i];
-        if (!st[i]) { stt[gs[i]] = st[i]; }
-    }
-
-    // starCheck ds = V.backpermute st' gs
-    int *out = new int[lds];
-    for(int i = 0; i < lds; ++i) {
-        out[i] = stt[gs[i]];
-    }
-    return out;
-
+template <typename T> void writeArray(const char *filename, int len, T *xs) {
+  FILE *fp = fopen(filename, "wb");
+  assert(fp && "unable to open file to write array");
+  fwrite((void *)&len, sizeof(int), 1, fp);
+  for (int i = 0; i < len; ++i) {
+    fwrite(xs + i, sizeof(T), 1, fp);
+  }
+  fclose(fp);
 }
 
-int *concomp(int *ds, int lds, int *es1, int *es2, int les1, int les2) {
-    int *dss = new int[lds];
-    int *bp_ds_es1 = new int[lds];
-    int *bp_ds_es2 = new int[lds];
-
-    int *dsss = new int[lds];
-    int *bp_dss_es1 = new int[lds];
-    int *bp_dss_es2 = new int[lds];
-    int *star = starCheck(dsss, lds);
-
-    // V.and (starCheck ds'') = ds''
-    int istrue = true;
-    for(int i = 0; i < lds; ++i) {
-        if (!star[i]) { istrue = false; break; }
-    }
-    if(istrue) { return dsss; }
-    // concomp (V.backpermute ds'' ds'') es1 es2 
-    int *backpermute_dsss = new int[lds];
-    for(int i = 0; i < lds; ++i) {
-        backpermute_dsss[i] = dsss[dsss[i]];
-    }
-    return concomp(backpermute_dsss, lds, es1, es2, les1, les2);
+template <typename T>
+void writeVector(const char *filename, std::vector<T> &xs) {
+  writeArray(filename, xs.size(), xs.data());
 }
 
-int *test(int n, int *es1, int *es2, int les1, int les2) {
-    // ds = V.enumFromTo 0 (n-1) V.++ V.enumFromTo 0 (n-1)
-    int *ds = new int[2*n];
-    for(int i = 0; i <n; ++i) { ds[i] = i; }
-    for(int i = 0; i <n; ++i) { ds[n+i] = i; }
-
-    // es1' = es1 V.++ es2
-    int *es11 = new int[les1 + les2];
-    for(int i = 0; i < les1; ++i) { es11[i] = es1[i]; }
-    for(int i = 0; i < les2; ++i) { es11[i] = es2[les1+i]; }
-    // es2' = es2 V.++ es1
-    int *es22 = new int[les1 + les2];
-    for(int i = 0; i < les2; ++i) { es22[i] = es2[i]; }
-    for(int i = 0; i < les2; ++i) { es22[i] = es1[les2+i]; }
-
-    // awshcc (n, es1, es2) = concomp ds es1' es2'
-    return concomp(ds, 2*n, es11, es22, les1+les2, les1+les2);
+template <typename T>
+std::vector<T> backpermute(std::vector<T> xs, std::vector<int> ixs) {
+  std::vector<T> out;
+  for (int ix : ixs) {
+    out.push_back(xs[ix]);
+  }
+  return out;
 }
 
-void BM_test(benchmark::State& state) {
-    int one;
-    int *nodes = readArray<int>("nodes.bin",  &one);
-    assert(one == 1);
-    int les1, les2;
-    int *edges1 = readArray<int>("edges1.bin", &les1);
-    int *edges2 = readArray<int>("edges2.bin", &les2);
+// update <5,9,2,7> <(2,1),(0,3),(2,8)> = <3,9,8,7>
+template <typename T>
+std::vector<T> update(std::vector<T> base,
+                      std::vector<std::pair<int, T>> ixsvals) {
+  for (int i = 0; i < (int)ixsvals.size(); ++i) {
+    base[ixsvals[i].first] = ixsvals[i].second;
+  }
+  return base;
+}
 
-    for (auto _ : state) {
-        test(*nodes, edges1, edges2, les1, les2);
+template <typename T>
+std::vector<T> update(std::vector<T> base, std::vector<int> ixs,
+                      std::vector<T> newvals) {
+  assert(ixs.size() == newvals.size());
+  for (int i = 0; i < (int)ixs.size(); ++i) {
+    base[ixs[i]] = newvals[i];
+  }
+}
+
+// starCheck :: Vector Int -> Vector Bool
+// starCheck ds = V.backpermute st' gs
+//   where
+//     gs  = V.backpermute ds ds
+//     st  = V.zipWith (==) ds gs
+//     st' = V.update st . V.filter (not . snd)
+//                       $ V.zip gs st
+std::vector<bool> starCheck(std::vector<int> ds) {
+  std::vector<bool> st;
+  std::vector<int> gs;
+  for (int i = 0; i < (int)ds.size(); ++i) {
+    gs.push_back(ds[ds[i]]);
+    st.push_back(ds[i] == gs[i]);
+  }
+
+  std::vector<bool> stprime = st;
+  for (int i = 0; i < (int)st.size(); ++i) {
+    if (!st[i]) {
+      stprime[gs[i]] = st[i];
     }
+  }
 
-    int *out = test(*nodes, edges1, edges2, les1, les2);
-    writeArray<int>("out-cpp.bin", *nodes, out);
+  // backpermute <a,b,c,d> <0,3,2,3,1,0> = <a,d,c,d,b,a>
+  // V.backpermute st' gs.
+  std::vector<bool> out;
+  for (int i = 0; i < (int)gs.size(); ++i) {
+    out.push_back(stprime[gs[i]]);
+  }
+  return out;
+}
+
+bool and_(std::vector<bool> bs) {
+  for (bool b : bs) {
+    if (!b) {
+      return false;
+    }
+  }
+  return true;
+}
+// concomp :: Vector Int -> Vector Int -> Vector Int -> Vector Int
+std::vector<int> concomp(std::vector<int> ds, std::vector<int> es1,
+                         std::vector<int> es2) {
+  std::vector<std::pair<int, int>> upd1;
+  for (int i = 0; i < (int)es1.size(); ++i) {
+    int di = ds[es1[i]];
+    int dj = ds[es2[i]];
+    int gi = ds[ds[es1[i]]];
+    if (gi == di && di > dj) {
+      upd1.push_back({di, dj});
+    }
+  }
+
+  std::vector<int> dsprime = update(ds, upd1);
+  std::vector<bool> dsstar = starCheck(dsprime);
+  std::vector<std::pair<int, int>> upd2;
+  for (int i = 0; i < (int)es1.size(); ++i) {
+    int di = dsprime[es1[i]];
+    int dj = dsprime[es2[i]];
+    bool st = dsstar[es1[i]];
+    if (st && di != dj) {
+      upd1.push_back({di, dj});
+    }
+  }
+  //     | V.and (starCheck ds'') = ds''
+  std::vector<int> dsprimeprime = update(dsprime, upd2);
+  if (and_(starCheck(dsprimeprime))) {
+    return dsprimeprime;
+  }
+  // | otherwise              = concomp (V.backpermute ds'' ds'') es1 es2
+  return concomp(backpermute(dsprimeprime, dsprimeprime), es1, es2);
+}
+
+std::vector<int> test(int n, std::vector<int> es1, std::vector<int> es2) {
+  std::vector<int> ds;
+  for (int i = 0; i < n; ++i) {
+    ds.push_back(i);
+  }
+  for (int i = 0; i < n; ++i) {
+    ds.push_back(i);
+  }
+  std::vector<int> es1prime;
+  for (int e : es1) {
+    es1prime.push_back(e);
+  }
+  for (int e : es2) {
+    es1prime.push_back(e);
+  }
+
+  std::vector<int> es2prime;
+  for (int e : es1) {
+    es2prime.push_back(e);
+  }
+  for (int e : es2) {
+    es2prime.push_back(e);
+  }
+
+  return concomp(ds, es2prime, es2prime);
+}
+
+void BM_test(benchmark::State &state) {
+  int one;
+  int *nodes = readArray<int>("nodes.bin", &one);
+  assert(one == 1);
+  std::vector<int> edges1 = readVector<int>("edges1.bin");
+  std::vector<int> edges2 = readVector<int>("edges2.bin");
+
+  for (auto _ : state) {
+    test(*nodes, edges1, edges2);
+  }
+
+  std::vector<int> out = test(*nodes, edges1, edges2);
+  writeVector<int>("out-cpp.bin", out);
 }
 
 BENCHMARK(BM_test)->Unit(benchmark::kMicrosecond);

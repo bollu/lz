@@ -65,6 +65,10 @@ GenGraph.hs:27:18: error:
 
 ##### HybCC
 - Unable to test, because it depends on the same dependencies as `AwShCC`.
+- OK, I started testing it. Unable to get it running, because the large problem
+  size, while terminates in haskell, consumes too much memory.
+- Setting `useSize=20` causes the haskell program to never halt. I feel the
+  test is bugged. Skipping.
 
 ##### Leaffix
 

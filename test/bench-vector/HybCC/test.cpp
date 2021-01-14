@@ -101,6 +101,7 @@ std::vector<int> pack_index(std::vector<bool> bs) {
   return out;
 }
 
+
 std::pair<std::vector<std::pair<int, int>>, std::vector<int>>
 compress(std::vector<int> p, std::vector<std::pair<int, int>> es) {
   std::vector<int> e1;
@@ -143,6 +144,23 @@ compress(std::vector<int> p, std::vector<std::pair<int, int>> es) {
   return {new_es, pack_index(roots)};
 }
 
+// update <5,9,2,7> <(2,1),(0,3),(2,8)> = <3,9,8,7>
+template<typename T>
+std::vector<T> update(std::vector<T> xs, std::vector<std::pair<int, T>> upds) {
+  for(std::pair<int, T> upd : upds) {
+    xs[upd.first] = upd.second;
+  }
+  return xs;
+}
+
+// generate { lo <= i <= hi}
+std::vector<int> enumFromTo(int lo, int hi) {
+  std::vector<int> xs;
+    for(int i = lo; i <= (int)hi; ++i) { xs.push_back(i); }
+    return xs;
+}
+
+
 std::vector<int> concomp(std::vector<std::pair<int, int>> es, int n) {
   // | V.null es = V.enumFromTo 0 (n-1)
   if (es.size() == 0) {
@@ -153,21 +171,29 @@ std::vector<int> concomp(std::vector<std::pair<int, int>> es, int n) {
     return v;
   } else {
     // p = shortcut_all $ V.update (V.enumFromTo 0 (n-1)) es
-    std::vector<int> p;
+    // update <5,9,2,7> <(2,1),(0,3),(2,8)> = <3,9,8,7>
+    std::vector<int> p = enumFromTo(0, n - 1);
+    p = update(p, es);
+
+
     // (es',i) = compress p es
-   std::vector<std::pair<int, int>> esprime;
-   std::vector<int> i;
-   std::tie(esprime, i) = compress(p, es);
-   // r = concomp es' (V.length i)
-   std::vector<int> r = concomp (esprime, n);
-   // ins = V.update_ p i $ V.backpermute i r
-   // update_ <5,9,2,7>  <2,0,2> <1,3,8> = <3,9,8,7>
-   // backpermute <a,b,c,d> <0,3,2,3,1,0> = <a,d,c,d,b,a>
-   std::vector<int> ins = p;
-   std::vector<int> permute_i_r;
-   for(int j = 0; j < (int)r.size(); ++j) { permute_i_r.push_back(i[r[j]]); }
-   for(int j = 0; j < (int)i.size(); ++j) { ins[i[j]] = permute_i_r[j]; } // WTF is this doing?
-    
+    std::vector<std::pair<int, int>> esprime;
+    std::vector<int> i;
+    std::tie(esprime, i) = compress(p, es);
+    // r = concomp es' (V.length i)
+    std::vector<int> r = concomp(esprime, n);
+    // ins = V.update_ p i $ V.backpermute i r
+    // update_ <5,9,2,7>  <2,0,2> <1,3,8> = <3,9,8,7>
+    // backpermute <a,b,c,d> <0,3,2,3,1,0> = <a,d,c,d,b,a>
+    std::vector<int> ins = p;
+    std::vector<int> permute_i_r;
+    for (int j = 0; j < (int)r.size(); ++j) {
+      permute_i_r.push_back(i[r[j]]);
+    }
+    for (int j = 0; j < (int)i.size(); ++j) {
+      ins[i[j]] = permute_i_r[j];
+    } // WTF is this doing?
+
     // | otherwise = V.backpermute ins ins
     std::vector<int> out(n);
     for (int j = 0; j < n; ++j) {
@@ -178,19 +204,20 @@ std::vector<int> concomp(std::vector<std::pair<int, int>> es, int n) {
 }
 
 std::vector<int> test(int n, std::vector<int> es1, std::vector<int> es2) {
-    std::vector<std::pair<int, int>> es;
-    for(int i = 0; i < (int)es1.size(); ++i) {
-        es.push_back({es1[i], es2[i]});
-    }
-return concomp(es, n);
+  std::vector<std::pair<int, int>> es;
+  for (int i = 0; i < (int)es1.size(); ++i) {
+    es.push_back({es1[i], es2[i]});
+  }
+  // return concomp(es, n);
+  return {};
 }
 
 void BM_test(benchmark::State &state) {
   int one;
   int *nodes = readArray<int>("nodes.bin", &one);
   assert(one == 1);
-  std::vector<int> e1 = readVector<int>("e1.bin");
-  std::vector<int> e2 = readVector<int>("e2.bin");
+  std::vector<int> e1 = readVector<int>("edges1.bin");
+  std::vector<int> e2 = readVector<int>("edges2.bin");
 
   for (auto _ : state) {
     test(*nodes, e1, e2);
