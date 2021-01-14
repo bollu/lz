@@ -1,6 +1,7 @@
 #define BENCH
 #include <benchmark/benchmark.h>
 #include <inttypes.h>
+#include <iostream>
 #include <stdlib.h>
 #include <vector>
 
@@ -57,23 +58,35 @@ void writeVector(const char *filename, std::vector<T> &xs) {
   writeArray(filename, xs.size(), xs.data());
 }
 
+template <typename T>
+std::vector<T> backpermute(std::vector<T> xs, std::vector<int> ixs) {
+  std::cerr << "backpermute\n";
+  std::vector<T> out;
+  for (int ix : ixs) {
+    out.push_back(xs[ix]);
+  }
+  return out;
+}
+
 std::vector<int> shortcut_all(std::vector<int> p) {
-  std::vector<int> pp(p.size());
+  std::cerr << "shortcut_all\n";
+  std::vector<int> pp = backpermute(p, p);
   bool equal = true;
   for (int i = 0; i < (int)p.size(); ++i) {
     if (p[i] != pp[i]) {
       equal = false;
+      break;
     }
-    pp[i] = p[p[i]];
   }
   if (equal) {
-    return p;
+    return pp;
   } else {
     return shortcut_all(pp);
   }
 }
 
 std::vector<int> enumerate(std::vector<bool> bs) {
+  std::cerr << "enumerate\n";
   std::vector<int> xs;
   int sum = 0;
   for (int i = 0; i < (int)bs.size(); ++i) {
@@ -84,6 +97,7 @@ std::vector<int> enumerate(std::vector<bool> bs) {
 }
 
 std::vector<bool> compute_roots(std::vector<int> p) {
+  std::cerr << "compute_roots\n";
   std::vector<bool> isroot;
   for (int i = 0; i < (int)p.size(); ++i) {
     isroot.push_back(p[i] == i);
@@ -92,6 +106,7 @@ std::vector<bool> compute_roots(std::vector<int> p) {
 }
 
 std::vector<int> pack_index(std::vector<bool> bs) {
+  std::cerr << "pack_index\n";
   std::vector<int> out;
   for (int i = 0; i < (int)bs.size(); ++i) {
     if (bs[i]) {
@@ -101,9 +116,9 @@ std::vector<int> pack_index(std::vector<bool> bs) {
   return out;
 }
 
-
 std::pair<std::vector<std::pair<int, int>>, std::vector<int>>
 compress(std::vector<int> p, std::vector<std::pair<int, int>> es) {
+  std::cerr << "compress\n";
   std::vector<int> e1;
   std::vector<int> e2;
   for (int i = 0; i < (int)es.size(); ++i) {
@@ -122,7 +137,7 @@ compress(std::vector<int> p, std::vector<std::pair<int, int>> es) {
       if (x > y) {
         esprime.push_back({y, x});
       } else {
-        es_permute.push_back({x, y});
+        esprime.push_back({x, y});
       }
     }
   }
@@ -141,13 +156,15 @@ compress(std::vector<int> p, std::vector<std::pair<int, int>> es) {
     int r = labels[e2prime[i]];
     new_es.push_back({l, r});
   }
+  // compress p es = (new_es, pack_index roots)
   return {new_es, pack_index(roots)};
 }
 
 // update <5,9,2,7> <(2,1),(0,3),(2,8)> = <3,9,8,7>
-template<typename T>
+template <typename T>
 std::vector<T> update(std::vector<T> xs, std::vector<std::pair<int, T>> upds) {
-  for(std::pair<int, T> upd : upds) {
+  std::cerr << "update\n";
+  for (std::pair<int, T> upd : upds) {
     xs[upd.first] = upd.second;
   }
   return xs;
@@ -155,13 +172,20 @@ std::vector<T> update(std::vector<T> xs, std::vector<std::pair<int, T>> upds) {
 
 // generate { lo <= i <= hi}
 std::vector<int> enumFromTo(int lo, int hi) {
+  std::cerr << "enumFromTo\n";
   std::vector<int> xs;
-    for(int i = lo; i <= (int)hi; ++i) { xs.push_back(i); }
-    return xs;
+  for (int i = lo; i <= (int)hi; ++i) {
+    xs.push_back(i);
+  }
+  return xs;
 }
 
-
 std::vector<int> concomp(std::vector<std::pair<int, int>> es, int n) {
+  std::cerr << "concomp\n";
+  static int ncalls = 0;
+  ncalls++;
+  // assert(ncalls < 3);
+  std::cerr << "concomp\n";
   // | V.null es = V.enumFromTo 0 (n-1)
   if (es.size() == 0) {
     std::vector<int> v(n);
@@ -174,7 +198,6 @@ std::vector<int> concomp(std::vector<std::pair<int, int>> es, int n) {
     // update <5,9,2,7> <(2,1),(0,3),(2,8)> = <3,9,8,7>
     std::vector<int> p = enumFromTo(0, n - 1);
     p = update(p, es);
-
 
     // (es',i) = compress p es
     std::vector<std::pair<int, int>> esprime;
@@ -195,9 +218,9 @@ std::vector<int> concomp(std::vector<std::pair<int, int>> es, int n) {
     } // WTF is this doing?
 
     // | otherwise = V.backpermute ins ins
-    std::vector<int> out(n);
+    std::vector<int> out;
     for (int j = 0; j < n; ++j) {
-      out[j] = ins[ins[j]];
+      out.push_back(ins[ins[j]]);
     }
     return out;
   }
@@ -208,8 +231,7 @@ std::vector<int> test(int n, std::vector<int> es1, std::vector<int> es2) {
   for (int i = 0; i < (int)es1.size(); ++i) {
     es.push_back({es1[i], es2[i]});
   }
-  // return concomp(es, n);
-  return {};
+  return concomp(es, n);
 }
 
 void BM_test(benchmark::State &state) {
