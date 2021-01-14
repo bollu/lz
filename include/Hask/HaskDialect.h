@@ -81,6 +81,34 @@ public:
   static ValueType get(MLIRContext *context) { return Base::get(context); }
 };
 
+struct DynamicTypeStorage : public TypeStorage {
+  DynamicTypeStorage(llvm::StringRef t) : t(t) {}
+
+  /// The hash key used for uniquing.
+  using KeyTy = llvm::StringRef;
+  bool operator==(const KeyTy &key) const { return key == t; }
+
+  /// Construction.
+  static DynamicTypeStorage *construct(TypeStorageAllocator &allocator,
+                                     const KeyTy &key) {
+    return new (allocator.allocate<DynamicTypeStorage>())
+        DynamicTypeStorage(std::string(allocator.copyInto(key)));
+  }
+
+  llvm::StringRef getElementType() const { return t; }
+  llvm::StringRef const t;
+};
+
+class DynamicType
+    : public mlir::Type::TypeBase<DynamicType, HaskType, DynamicTypeStorage> {
+public:
+  using Base::Base;
+  static DynamicType get(MLIRContext *context, std::string elemty) {
+    return Base::get(context, elemty);
+  }
+  llvm::StringRef getElementType() { return this->getImpl()->getElementType(); }
+};
+
 struct ThunkTypeStorage : public TypeStorage {
   ThunkTypeStorage(ArrayRef<Type> const t) : t(t) {}
 

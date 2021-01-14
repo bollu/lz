@@ -76,7 +76,13 @@ mlir::Type HaskDialect::parseType(mlir::DialectAsmParser &parser) const {
     return ThunkType::get(parser.getBuilder().getContext(), t);
   } else if (succeeded(parser.parseOptionalKeyword("value"))) {
     return ValueType::get(parser.getBuilder().getContext());
-  } /* else if (succeeded(parser.parseOptionalKeyword("fn"))) {
+  } else if (succeeded(parser.parseOptionalKeyword("dynamic"))) {
+      StringAttr strattr;
+      if (parser.parseLess() ||  parser.parseAttribute<StringAttr>(strattr) || parser.parseGreater()) {
+          return DynamicType::get(parser.getBuilder().getContext(), std::string(strattr.getValue()));
+      }
+  }
+  /* else if (succeeded(parser.parseOptionalKeyword("fn"))) {
     SmallVector<Type, 4> params;
     Type res;
     if (parser.parseLess()) {
