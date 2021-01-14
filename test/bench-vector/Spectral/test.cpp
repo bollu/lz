@@ -54,15 +54,15 @@ double *test(double *us, int len) {
             int u = t >> 1;
             int r = u + (i+1);
             double uj = us[j];
-            sum += (1.0 / r) * uj;
+            sum += 1.0 / r * uj;
         }
         out[i] = sum;
     }
     return out;
 }
 
-#define NDEBUG
 #ifdef NDEBUG
+
 void BM_test(benchmark::State& state) {
     int len;
     double *as = readArray<double>("as.bin", &len);
@@ -80,13 +80,14 @@ BENCHMARK(BM_test)->Unit(benchmark::kMillisecond);
 // Run the benchmark
 BENCHMARK_MAIN();
 
-#else // debug build
+#else
 
 int main() {
     int len;
     double *as = readArray<double>("as.bin", &len);
     double *out = test(as, len);
     writeArray<double>("out-cpp.bin", len, out);
+    return 0;
 }
-#endif
 
+#endif

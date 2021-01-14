@@ -3,8 +3,8 @@
 run: hs.out cpp.out
 	-rm out-hs.bin
 	-rm out-cpp.bin
-	./hs.out
-	./cpp.out
+	time ./hs.out
+	time ./cpp.out
 	sha256sum out-hs.bin
 	sha256sum out-cpp.bin
 
