@@ -16,16 +16,18 @@ spectral us = us `seq` V.map row (V.enumFromTo 0 (n-1))
 
       row i = i `seq` V.sum (V.imap (\j uj -> eval_A i j * uj) us)
 
+      -- eval_A[i, j]  u[j] = j
+      -- eval_A(i, j) = 1/ (((i+j)*(i+j+1)>>1) + (i + 1)
       eval_A i j = 1 / fromIntegral r
         where
-          r = u + (i+1)
-          u = t `shiftR` 1
+          r = u + (i+1) -- (i + j + 1) C 2 + (i + 1)
+          u = t `shiftR` 1 -- (i + j + 1) C 2
           t = n * (n+1)
           n = i+j
 
 useSize :: Int
 --useSize = 2000000
-useSize = 20000
+useSize = 50000 -- O(n^2)
 
 useSeed :: Int
 useSeed = 42
@@ -40,7 +42,7 @@ main = do
   as <- randomVector useSize
   encodeVecToFile "as.bin" as
 
-  defaultMain $ [bench "spectral" $ whnf spectral (as)]
+  -- defaultMain $ [bench "spectral" $ whnf spectral (as)]
 
   let out = spectral as
   encodeVecToFile "out-hs.bin" out
