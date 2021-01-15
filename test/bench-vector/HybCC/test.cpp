@@ -15,6 +15,19 @@ double *newArray(int len, unsigned short xsubi[3]) {
   return xs;
 }
 
+template<class T, class U>
+std::ostream & operator << (std::ostream &o, std::pair<T, U> p) {
+ return o << "(" << p.first << ", " << p.second << ")";
+}
+
+template<typename T>
+void printVector(std::string s, const std::vector<T> &ts) {
+    std::cerr << s << ": ";
+    std::cerr << "[";
+    for(auto t : ts) { std::cerr << t << " "; }
+    std::cerr << "]\n";
+}
+
 template <typename T> T *readArray(const char *path, int *len) {
   FILE *fp = fopen(path, "rb");
   assert(fp && "unable to open file");
@@ -59,8 +72,9 @@ void writeVector(const char *filename, std::vector<T> &xs) {
 }
 
 template <typename T>
+// backpermute <a,b,c,d> <0,3,2,3,1,0> = <a,d,c,d,b,a>
 std::vector<T> backpermute(std::vector<T> xs, std::vector<int> ixs) {
-  std::cerr << "backpermute\n";
+  // std::cerr << "backpermute\n";
   std::vector<T> out;
   for (int ix : ixs) {
     out.push_back(xs[ix]);
@@ -68,8 +82,41 @@ std::vector<T> backpermute(std::vector<T> xs, std::vector<int> ixs) {
   return out;
 }
 
+// update <5,9,2,7> <(2,1),(0,3),(2,8)> = <3,9,8,7>
+template <typename T>
+std::vector<T> update(std::vector<T> base,
+                      std::vector<std::pair<int, T>> ixsvals) {
+  // std::cerr << "update\n";
+  for (int i = 0; i < (int)ixsvals.size(); ++i) {
+    base[ixsvals[i].first] = ixsvals[i].second;
+  }
+  return base;
+}
+
+template <typename T>
+std::vector<T> update(std::vector<T> base, std::vector<int> ixs,
+                      std::vector<T> newvals) {
+  // std::cerr << "update\n";
+  assert(ixs.size() == newvals.size());
+  for (int i = 0; i < (int)ixs.size(); ++i) {
+    base[ixs[i]] = newvals[i];
+  }
+  return base;
+}
+
+// generate { lo <= i <= hi}
+std::vector<int> enumFromTo(int lo, int hi) {
+  // std::cerr << "enumFromTo\n";
+  std::vector<int> xs;
+  for (int i = lo; i <= (int)hi; ++i) {
+    xs.push_back(i);
+  }
+  return xs;
+}
+
 std::vector<int> shortcut_all(std::vector<int> p) {
-  std::cerr << "shortcut_all\n";
+  // std::cerr << "shortcut_all\n";
+  // printVector("shortcut_all.p", p);
   std::vector<int> pp = backpermute(p, p);
   bool equal = true;
   for (int i = 0; i < (int)p.size(); ++i) {
@@ -86,7 +133,7 @@ std::vector<int> shortcut_all(std::vector<int> p) {
 }
 
 std::vector<int> enumerate(std::vector<bool> bs) {
-  std::cerr << "enumerate\n";
+  // std::cerr << "enumerate\n";
   std::vector<int> xs;
   int sum = 0;
   for (int i = 0; i < (int)bs.size(); ++i) {
@@ -96,17 +143,9 @@ std::vector<int> enumerate(std::vector<bool> bs) {
   return xs;
 }
 
-std::vector<bool> compute_roots(std::vector<int> p) {
-  std::cerr << "compute_roots\n";
-  std::vector<bool> isroot;
-  for (int i = 0; i < (int)p.size(); ++i) {
-    isroot.push_back(p[i] == i);
-  }
-  return isroot;
-}
 
 std::vector<int> pack_index(std::vector<bool> bs) {
-  std::cerr << "pack_index\n";
+  // std::cerr << "pack_index\n";
   std::vector<int> out;
   for (int i = 0; i < (int)bs.size(); ++i) {
     if (bs[i]) {
@@ -118,7 +157,8 @@ std::vector<int> pack_index(std::vector<bool> bs) {
 
 std::pair<std::vector<std::pair<int, int>>, std::vector<int>>
 compress(std::vector<int> p, std::vector<std::pair<int, int>> es) {
-  std::cerr << "compress\n";
+  // printVector("compressDebug.p: ", p);
+  // std::cerr << "compress\n";
   std::vector<int> e1;
   std::vector<int> e2;
   for (int i = 0; i < (int)es.size(); ++i) {
@@ -129,6 +169,7 @@ compress(std::vector<int> p, std::vector<std::pair<int, int>> es) {
   for (int i = 0; i < (int)es.size(); ++i) {
     es_permute.push_back({p[e1[i]], p[e2[i]]});
   }
+  // printVector("compressDebug.es_permute: ", es_permute);
   std::vector<std::pair<int, int>> esprime;
   for (int i = 0; i < (int)es_permute.size(); ++i) {
     const int x = es_permute[i].first;
@@ -141,10 +182,14 @@ compress(std::vector<int> p, std::vector<std::pair<int, int>> es) {
       }
     }
   }
-  std::vector<bool> roots = compute_roots(p);
+  std::vector<bool> roots;
+  for(int i = 0; i < (int)p.size(); ++i) {
+      roots.push_back(i == p[i]); 
+  }
+
   std::vector<int> labels = enumerate(roots);
   std::vector<int> e1prime, e2prime;
-  for (int i = 0; i < (int)es.size(); ++i) {
+  for (int i = 0; i < (int)esprime.size(); ++i) {
     e1prime.push_back(esprime[i].first);
     e2prime.push_back(esprime[i].second);
   }
@@ -160,68 +205,32 @@ compress(std::vector<int> p, std::vector<std::pair<int, int>> es) {
   return {new_es, pack_index(roots)};
 }
 
-// update <5,9,2,7> <(2,1),(0,3),(2,8)> = <3,9,8,7>
-template <typename T>
-std::vector<T> update(std::vector<T> xs, std::vector<std::pair<int, T>> upds) {
-  std::cerr << "update\n";
-  for (std::pair<int, T> upd : upds) {
-    xs[upd.first] = upd.second;
-  }
-  return xs;
-}
-
-// generate { lo <= i <= hi}
-std::vector<int> enumFromTo(int lo, int hi) {
-  std::cerr << "enumFromTo\n";
-  std::vector<int> xs;
-  for (int i = lo; i <= (int)hi; ++i) {
-    xs.push_back(i);
-  }
-  return xs;
-}
-
 std::vector<int> concomp(std::vector<std::pair<int, int>> es, int n) {
-  std::cerr << "concomp\n";
-  static int ncalls = 0;
-  ncalls++;
-  // assert(ncalls < 3);
-  std::cerr << "concomp\n";
+  // std::cerr << "concomp\n";
   // | V.null es = V.enumFromTo 0 (n-1)
+  // printVector("es", es);
   if (es.size() == 0) {
-    std::vector<int> v(n);
-    for (int i = 0; i < n; ++i) {
-      v.push_back(i);
-    }
-    return v;
+      return enumFromTo(0, n-1);
   } else {
     // p = shortcut_all $ V.update (V.enumFromTo 0 (n-1)) es
     // update <5,9,2,7> <(2,1),(0,3),(2,8)> = <3,9,8,7>
-    std::vector<int> p = enumFromTo(0, n - 1);
-    p = update(p, es);
+    std::vector<int> p = shortcut_all(update(enumFromTo(0, n-1), es));
 
     // (es',i) = compress p es
     std::vector<std::pair<int, int>> esprime;
     std::vector<int> i;
     std::tie(esprime, i) = compress(p, es);
+    // printVector("es'", esprime);
     // r = concomp es' (V.length i)
-    std::vector<int> r = concomp(esprime, n);
+    std::vector<int> r = concomp(esprime, i.size());
     // ins = V.update_ p i $ V.backpermute i r
     // update_ <5,9,2,7>  <2,0,2> <1,3,8> = <3,9,8,7>
     // backpermute <a,b,c,d> <0,3,2,3,1,0> = <a,d,c,d,b,a>
-    std::vector<int> ins = p;
-    std::vector<int> permute_i_r;
-    for (int j = 0; j < (int)r.size(); ++j) {
-      permute_i_r.push_back(i[r[j]]);
-    }
-    for (int j = 0; j < (int)i.size(); ++j) {
-      ins[i[j]] = permute_i_r[j];
-    } // WTF is this doing?
-
+    std::vector<int> permute_i_r = backpermute(i, r);
+    std::vector<int> ins = update(p, i, permute_i_r);
+    // WTF is this computation _doing_?
     // | otherwise = V.backpermute ins ins
-    std::vector<int> out;
-    for (int j = 0; j < n; ++j) {
-      out.push_back(ins[ins[j]]);
-    }
+    std::vector<int> out = backpermute(ins, ins);
     return out;
   }
 }

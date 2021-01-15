@@ -89,6 +89,48 @@ sha256sum out-cpp.bin
 - Setting `useSize=20` causes the haskell program to never halt. I feel the
   test is bugged. Skipping.
 
+```
+bollu@cantordust:~/work/mlir/lz/test/bench-vector/HybCC/ > make
+ghc test.hs -O2 -fllvm -o hs.out -package primitive 
+Loaded package environment from /home/bollu/.ghc/x86_64-linux-8.10.2/environments/default
+[2 of 2] Compiling Main             ( test.hs, test.o )
+You are using an unsupported version of LLVM!
+Currently only 9 is supported. System LLVM version: 12.0.0
+We will try though...
+Linking hs.out ...
+clang++ -Wall -Werror -O3 test.cpp -o cpp.out -lbenchmark -L/usr/local/lib/ -lpthread
+rm out-hs.bin
+rm out-cpp.bin
+./hs.out
+benchmarked hybcc
+time                 374.4 μs   (357.8 μs .. 397.7 μs)
+                     0.980 R²   (0.970 R² .. 0.996 R²)
+mean                 362.9 μs   (357.2 μs .. 370.8 μs)
+std dev              22.51 μs   (15.55 μs .. 31.00 μs)
+variance introduced by outliers: 38% (moderately inflated)
+
+./cpp.out
+2021-01-15T08:02:15+05:30
+Running ./cpp.out
+Run on (8 X 3400 MHz CPU s)
+CPU Caches:
+  L1 Data 32 KiB (x4)
+  L1 Instruction 32 KiB (x4)
+  L2 Unified 256 KiB (x4)
+  L3 Unified 6144 KiB (x1)
+  L4 Unified 131072 KiB (x1)
+Load Average: 0.81, 0.79, 0.63
+***WARNING*** CPU scaling is enabled, the benchmark real time measurements may be noisy and will incur extra overhead.
+-----------------------------------------------------
+Benchmark           Time             CPU   Iterations
+-----------------------------------------------------
+BM_test          1142 us         1142 us          619
+sha256sum out-hs.bin
+ce2b96591f4c532e6eee8c2bd94418c8d54c03b1916c968a0d66cba8b54e0e78  out-hs.bin
+sha256sum out-cpp.bin
+ce2b96591f4c532e6eee8c2bd94418c8d54c03b1916c968a0d66cba8b54e0e78  out-cpp.bin
+```
+
 ##### Leaffix
 
 ```
