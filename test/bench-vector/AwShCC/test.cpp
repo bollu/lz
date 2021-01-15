@@ -1,6 +1,7 @@
 #define BENCH
 #include <benchmark/benchmark.h>
 #include <inttypes.h>
+#include <iostream>
 #include <stdlib.h>
 #include <vector>
 
@@ -16,6 +17,9 @@ double *newArray(int len, unsigned short xsubi[3]) {
 
 template <typename T> T *readArray(const char *path, int *len) {
   FILE *fp = fopen(path, "rb");
+  if (!fp) {
+    std::cerr << "unable to open |" << path << "|\n";
+  }
   assert(fp && "unable to open file");
 
   int val;
@@ -58,6 +62,7 @@ void writeVector(const char *filename, std::vector<T> &xs) {
 }
 
 template <typename T>
+// backpermute <a,b,c,d> <0,3,2,3,1,0> = <a,d,c,d,b,a>
 std::vector<T> backpermute(std::vector<T> xs, std::vector<int> ixs) {
   std::vector<T> out;
   for (int ix : ixs) {
@@ -83,6 +88,7 @@ std::vector<T> update(std::vector<T> base, std::vector<int> ixs,
   for (int i = 0; i < (int)ixs.size(); ++i) {
     base[ixs[i]] = newvals[i];
   }
+  return base;
 }
 
 // starCheck :: Vector Int -> Vector Bool
@@ -93,10 +99,9 @@ std::vector<T> update(std::vector<T> base, std::vector<int> ixs,
 //     st' = V.update st . V.filter (not . snd)
 //                       $ V.zip gs st
 std::vector<bool> starCheck(std::vector<int> ds) {
+  std::vector<int> gs = backpermute(ds, ds);
   std::vector<bool> st;
-  std::vector<int> gs;
   for (int i = 0; i < (int)ds.size(); ++i) {
-    gs.push_back(ds[ds[i]]);
     st.push_back(ds[i] == gs[i]);
   }
 
@@ -109,11 +114,7 @@ std::vector<bool> starCheck(std::vector<int> ds) {
 
   // backpermute <a,b,c,d> <0,3,2,3,1,0> = <a,d,c,d,b,a>
   // V.backpermute st' gs.
-  std::vector<bool> out;
-  for (int i = 0; i < (int)gs.size(); ++i) {
-    out.push_back(stprime[gs[i]]);
-  }
-  return out;
+  return backpermute(stprime, gs);
 }
 
 bool and_(std::vector<bool> bs) {
@@ -124,20 +125,58 @@ bool and_(std::vector<bool> bs) {
   }
   return true;
 }
+
+template<class T, class U>
+std::ostream & operator << (std::ostream &o, std::pair<T, U> p) {
+ return o << "(" << p.first << ", " << p.second << ")";
+}
+
+template<typename T>
+void printVector(std::string s, const std::vector<T> &ts) {
+    std::cerr << s << ": ";
+    std::cerr << "[";
+    for(auto t : ts) { std::cerr << t << " "; }
+    std::cerr << "]\n";
+}
+
 // concomp :: Vector Int -> Vector Int -> Vector Int -> Vector Int
 std::vector<int> concomp(std::vector<int> ds, std::vector<int> es1,
                          std::vector<int> es2) {
+  // printVector("ds", ds);
+  // printVector("es1", es1);
+  // printVector("es2", es2);
+  // ds'  = V.update ds
+  //      . V.map (\(di, dj, gi) -> (di, dj))
+  //      . V.filter (\(di, dj, gi) -> gi == di && di > dj)
+  //      $ V.zip3 (V.backpermute ds es1)
+  //               (V.backpermute ds es2)
+  //               (V.backpermute ds (V.backpermute ds es1))
+  //               ----
   std::vector<std::pair<int, int>> upd1;
+  std::vector<int> ds_back_es1 = backpermute(ds, es1);
+  std::vector<int> ds_back_es2 = backpermute(ds, es2);
+  std::vector<int> ds_back_ds_back_es1 = backpermute(ds, ds_back_es1);
+
   for (int i = 0; i < (int)es1.size(); ++i) {
-    int di = ds[es1[i]];
-    int dj = ds[es2[i]];
-    int gi = ds[ds[es1[i]]];
+    int di = ds_back_es1[i];
+    int dj = ds_back_es2[i];
+    int gi = ds_back_ds_back_es1[i];
     if (gi == di && di > dj) {
       upd1.push_back({di, dj});
     }
   }
-
+  // printVector("upd1", upd1);
   std::vector<int> dsprime = update(ds, upd1);
+  // printVector("ds'", dsprime);
+
+  // ds'' = V.update ds'
+  //      . V.map (\(di, dj, st) -> (di, dj))
+  //      . V.filter (\(di, dj, st) -> st && di /= dj)
+  //      $ V.zip3 (V.backpermute ds' es1)
+  //               (V.backpermute ds' es2)
+  //               (V.backpermute (starCheck ds') es1)
+  // ---
+  //               (V.backpermute (starCheck ds') es1)
   std::vector<bool> dsstar = starCheck(dsprime);
   std::vector<std::pair<int, int>> upd2;
   for (int i = 0; i < (int)es1.size(); ++i) {
@@ -145,19 +184,21 @@ std::vector<int> concomp(std::vector<int> ds, std::vector<int> es1,
     int dj = dsprime[es2[i]];
     bool st = dsstar[es1[i]];
     if (st && di != dj) {
-      upd1.push_back({di, dj});
+      upd2.push_back({di, dj});
     }
   }
-  //     | V.and (starCheck ds'') = ds''
+  // | V.and (starCheck ds'') = ds''
   std::vector<int> dsprimeprime = update(dsprime, upd2);
   if (and_(starCheck(dsprimeprime))) {
     return dsprimeprime;
+  } else {
+    // | otherwise = concomp (V.backpermute ds'' ds'') es1 es2
+    return concomp(backpermute(dsprimeprime, dsprimeprime), es1, es2);
   }
-  // | otherwise              = concomp (V.backpermute ds'' ds'') es1 es2
-  return concomp(backpermute(dsprimeprime, dsprimeprime), es1, es2);
 }
 
 std::vector<int> test(int n, std::vector<int> es1, std::vector<int> es2) {
+  // ds = V.enumFromTo 0 (n-1) V.++ V.enumFromTo 0 (n-1)
   std::vector<int> ds;
   for (int i = 0; i < n; ++i) {
     ds.push_back(i);
@@ -165,6 +206,7 @@ std::vector<int> test(int n, std::vector<int> es1, std::vector<int> es2) {
   for (int i = 0; i < n; ++i) {
     ds.push_back(i);
   }
+  // es1' = es1 V.++ es2
   std::vector<int> es1prime;
   for (int e : es1) {
     es1prime.push_back(e);
@@ -173,15 +215,16 @@ std::vector<int> test(int n, std::vector<int> es1, std::vector<int> es2) {
     es1prime.push_back(e);
   }
 
+  // es2' = es2 V.++ es1
   std::vector<int> es2prime;
-  for (int e : es1) {
-    es2prime.push_back(e);
-  }
   for (int e : es2) {
     es2prime.push_back(e);
   }
+  for (int e : es1) {
+    es2prime.push_back(e);
+  }
 
-  return concomp(ds, es2prime, es2prime);
+  return concomp(ds, es1prime, es2prime);
 }
 
 void BM_test(benchmark::State &state) {
@@ -199,8 +242,8 @@ void BM_test(benchmark::State &state) {
   writeVector<int>("out-cpp.bin", out);
 }
 
-BENCHMARK(BM_test)->Unit(benchmark::kMicrosecond);
-// BENCHMARK(BM_test)->Unit(benchmark::kMillisecond);
+// BENCHMARK(BM_test)->Unit(benchmark::kMicrosecond);
+BENCHMARK(BM_test)->Unit(benchmark::kMillisecond);
 // Run the benchmark
 BENCHMARK_MAIN();
 

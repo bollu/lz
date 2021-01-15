@@ -9,7 +9,7 @@ run: hs.out cpp.out
 	sha256sum out-cpp.bin
 
 cpp.out:
-	clang++ -O3 test.cpp -o cpp.out -lbenchmark -L/usr/local/lib/ -lpthread
+	clang++ -O3 -Wall -Werror test.cpp -o cpp.out -lbenchmark -L/usr/local/lib/ -lpthread
 
 
 hs.out:

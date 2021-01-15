@@ -41,8 +41,6 @@ concompDebug :: Vector Int -> Vector Int -> Vector Int -> IO (Vector Int)
 concompDebug ds es1 es2 = do
   putStrLn $ "##concompDebug##"
   putStrLn $ "ds: " <> show ds
-  putStrLn $ "es1: " <> show es1
-  putStrLn $ "es2 " <> show es2
   let ds'  = V.update ds
          . V.map (\(di, dj, gi) -> (di, dj))
          . V.filter (\(di, dj, gi) -> gi == di && di > dj)
@@ -89,7 +87,7 @@ encodeVecInt32ToFile f vs =
 
 
 useSize :: Int
-useSize = 90000
+useSize = 220
 
 useSeed :: Int
 useSeed = 42
@@ -103,8 +101,8 @@ main = do
   encodeVecInt32ToFile "edges1.bin" edges1
   encodeVecInt32ToFile "edges2.bin" edges2
 
+
   defaultMain $ [bench "awshcc" $ whnf awshcc (nodes, edges1, edges2)]
 
-  -- out <- awshccDebug (nodes, edges1, edges2)
-  let out = awshcc (nodes, edges1, edges2)
+  out <- awshccDebug (nodes, edges1, edges2)
   encodeVecInt32ToFile "out-hs.bin" out

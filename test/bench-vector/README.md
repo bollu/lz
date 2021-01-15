@@ -37,27 +37,46 @@ b288ee288a2bc1800ca18beecb7df9a07edd1355876f44cf6342cf368a11e9c4  tridiag-out-cp
 ```
 
 #### AwShCC
+
 ```
-GenGraph.hs:11:24: error:
-    Not in scope: type constructor or class ‘MV.PrimMonad’
-    Module ‘Data.Vector.Mutable’ does not export ‘PrimMonad’.
-   |
-11 |   :: (StatefulGen g m, MV.PrimMonad m)
-   |                        ^^^^^^^^^^^^
+or/AwShCC/ > make
+ghc test.hs -O2 -fllvm -o hs.out -package primitive
+Loaded package environment from /home/bollu/.ghc/x86_64-linux-8.10.2/environments/default
+[2 of 2] Compiling Main             ( test.hs, test.o )
+You are using an unsupported version of LLVM!
+Currently only 9 is supported. System LLVM version: 12.0.0
+We will try though...
+Linking hs.out ...
+clang++ -O3 -Wall -Werror test.cpp -o cpp.out -lbenchmark -L/usr/local/lib/ -lpthread
+rm out-hs.bin
+rm out-cpp.bin
+./hs.out
+benchmarked awshcc
+time                 46.24 ms   (44.98 ms .. 48.07 ms)
+                     0.997 R²   (0.993 R² .. 0.999 R²)
+mean                 46.35 ms   (45.82 ms .. 47.04 ms)
+std dev              1.246 ms   (857.3 μs .. 1.731 ms)
 
-GenGraph.hs:24:24: error:
-    Not in scope: type constructor or class ‘MV.PrimMonad’
-    Module ‘Data.Vector.Mutable’ does not export ‘PrimMonad’.
-   |
-24 |   :: (StatefulGen g m, MV.PrimMonad m)
-   |                        ^^^^^^^^^^^^
-
-GenGraph.hs:27:18: error:
-    Not in scope: type constructor or class ‘MV.PrimState’
-    Module ‘Data.Vector.Mutable’ does not export ‘PrimState’.
-   |
-27 |   -> MV.MVector (MV.PrimState m) [Int]
-   |                  ^^^^^^^^^^^^
+./cpp.out
+2021-01-15T07:05:30+05:30
+Running ./cpp.out
+Run on (8 X 3400 MHz CPU s)
+CPU Caches:
+  L1 Data 32 KiB (x4)
+  L1 Instruction 32 KiB (x4)
+  L2 Unified 256 KiB (x4)
+  L3 Unified 6144 KiB (x1)
+  L4 Unified 131072 KiB (x1)
+Load Average: 0.97, 0.91, 0.77
+***WARNING*** CPU scaling is enabled, the benchmark real time measurements may be noisy and will incur extra overhead.
+-----------------------------------------------------
+Benchmark           Time             CPU   Iterations
+-----------------------------------------------------
+BM_test          27.4 ms         27.4 ms           25
+sha256sum out-hs.bin
+894d7ef5f46d0517ed4a932291c9776f8c3b6101c6e87975bd297f20749ea343  out-hs.bin
+sha256sum out-cpp.bin
+894d7ef5f46d0517ed4a932291c9776f8c3b6101c6e87975bd297f20749ea343  out-cpp.bin
 ```
 ##### FindIndexR
 - Unable to test, because this function was introduced in a new version of `vector`.
