@@ -256,16 +256,14 @@ public:
   matchAndRewrite(Operation *rator, ArrayRef<Value> rands,
                   ConversionPatternRewriter &rewriter) const override {
     auto constant = cast<ConstantOp>(rator);
-
     FunctionType fnty = constant.getResult().getType().dyn_cast<FunctionType>();
-    assert(fnty);
+    assert(fnty && "expected function");
 
-//    FunctionType outty = convertFunctionType(fnty, *typeConverter, rewriter);
-
-    FunctionType outty = typeConverter->convertType(outty).dyn_cast<FunctionType>();
-
-    assert(fnty && "was asked to lower a constant op that's not a reference to "
+    FunctionType outty = typeConverter->convertType(fnty).dyn_cast<FunctionType>();
+    assert(outty && "was asked to lower a constant op that's not a reference to "
                    "a function?!");
+
+
 
     // Anything whose legality is checked with `isDynamicallyLegal` needs to be
     // `rewrite.erase`d and then `rewriter.create`d. It seems like you can't
