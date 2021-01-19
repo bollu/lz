@@ -87,7 +87,7 @@ struct ForceOfKnownApPattern : public mlir::OpRewritePattern<ForceOp> {
     if (!apfnname) {
       return failure();
     }
-    ModuleOp mod = force.getParentOfType<ModuleOp>();
+    ModuleOp mod = force->getParentOfType<ModuleOp>();
     FuncOp fn = mod.lookupSymbol<FuncOp>(apfnname);
     if (!fn) {
       return failure();
@@ -130,7 +130,7 @@ struct OutlineUknownForcePattern : public mlir::OpRewritePattern<ForceOp> {
       // region that is dominated by the BB that `force` lives in.
       // For now, approximate.
       if (force.getOperation()->getBlock() !=
-          &force.getParentRegion()->front()) {
+          &force->getParentRegion()->front()) {
         assert(false && "force not in entry BB");
         return failure();
       }
@@ -138,9 +138,9 @@ struct OutlineUknownForcePattern : public mlir::OpRewritePattern<ForceOp> {
       // is this going to break *completely*? or only partially?
       std::unique_ptr<Region> r = std::make_unique<Region>();
       // create a hask func op.
-      FuncOp parentfn = force.getParentOfType<FuncOp>();
+      FuncOp parentfn = force->getParentOfType<FuncOp>();
 
-      ModuleOp module = parentfn.getParentOfType<ModuleOp>();
+      ModuleOp module = parentfn->getParentOfType<ModuleOp>();
       rewriter.setInsertionPointToEnd(&module.getBodyRegion().front());
 
       FuncOp outlinedFn = rewriter.create<FuncOp>(
@@ -165,7 +165,7 @@ struct ForceOfThunkifyPattern : public mlir::OpRewritePattern<ForceOp> {
   mlir::LogicalResult
   matchAndRewrite(ForceOp force,
                   mlir::PatternRewriter &rewriter) const override {
-    // HaskFuncOp fn = force.getParentOfType<HaskFuncOp>();
+    // HaskFuncOp fn = force->getParentOfType<HaskFuncOp>();
     ThunkifyOp thunkify = force.getOperand().getDefiningOp<ThunkifyOp>();
     if (!thunkify) {
       return failure();
@@ -183,8 +183,8 @@ struct InlineApEagerPattern : public mlir::OpRewritePattern<ApEagerOp> {
   matchAndRewrite(ApEagerOp ap,
                   mlir::PatternRewriter &rewriter) const override {
 
-    FuncOp parent = ap.getParentOfType<FuncOp>();
-    ModuleOp mod = ap.getParentOfType<ModuleOp>();
+    FuncOp parent = ap->getParentOfType<FuncOp>();
+    ModuleOp mod = ap->getParentOfType<ModuleOp>();
 
     FlatSymbolRefAttr apfn = getConstantFnRefFromValue(ap.getFn());
     if (!apfn) {
@@ -254,8 +254,8 @@ struct OutlineRecursiveApEagerOfThunkPattern
   matchAndRewrite(ApEagerOp ap,
                   mlir::PatternRewriter &rewriter) const override {
 
-    FuncOp parentfn = ap.getParentOfType<FuncOp>();
-    ModuleOp mod = ap.getParentOfType<ModuleOp>();
+    FuncOp parentfn = ap->getParentOfType<FuncOp>();
+    ModuleOp mod = ap->getParentOfType<ModuleOp>();
 
     FlatSymbolRefAttr apfnname = getConstantFnRefFromValue(ap.getFn());
     if (!apfnname) {
@@ -386,8 +386,8 @@ struct OutlineRecursiveApEagerOfConstructorPattern
   mlir::LogicalResult
   matchAndRewrite(ApEagerOp ap,
                   mlir::PatternRewriter &rewriter) const override {
-    FuncOp parentfn = ap.getParentOfType<FuncOp>();
-    ModuleOp mod = ap.getParentOfType<ModuleOp>();
+    FuncOp parentfn = ap->getParentOfType<FuncOp>();
+    ModuleOp mod = ap->getParentOfType<ModuleOp>();
 
     mlir::FlatSymbolRefAttr ref = getConstantFnRefFromValue(ap.getFn());
     // auto ref = ap.getFn().getDefiningOp<HaskRefOp>();
@@ -550,7 +550,7 @@ struct OutlineCaseOfFnInput : public mlir::OpRewritePattern<FuncOp> {
   mlir::LogicalResult
   matchAndRewrite(FuncOp parentfn,
                   mlir::PatternRewriter &rewriter) const override {
-    mlir::ModuleOp mod = parentfn.getParentOfType<ModuleOp>();
+    mlir::ModuleOp mod = parentfn->getParentOfType<ModuleOp>();
 
     if (parentfn.getArguments().size() != 1) {
       return failure();
@@ -699,7 +699,7 @@ struct OutlineReturnOfConstructor : public mlir::OpRewritePattern<FuncOp> {
     if (!ret) {
       return failure();
     }
-    ModuleOp mod = parentfn.getParentOfType<ModuleOp>();
+    ModuleOp mod = parentfn->getParentOfType<ModuleOp>();
 
     HaskConstructOp constructor =
         ret.getOperand().getDefiningOp<HaskConstructOp>();
@@ -821,9 +821,9 @@ struct CaseOfKnownConstructorPattern : public mlir::OpRewritePattern<CaseOp> {
 
     AlwaysInlinerInterface inliner(rewriter.getContext());
 
-    ModuleOp mod = caseop.getParentOfType<ModuleOp>();
+    ModuleOp mod = caseop->getParentOfType<ModuleOp>();
     (void)(mod);
-    FuncOp fn = caseop.getParentOfType<FuncOp>();
+    FuncOp fn = caseop->getParentOfType<FuncOp>();
 
     llvm::errs() << "===parent func:===\n";
     fn.getOperation()->print(llvm::errs(),
@@ -913,7 +913,7 @@ struct CaseOfBoxedRecursiveApWithFinalConstruct
   matchAndRewrite(CaseOp caseop,
                   mlir::PatternRewriter &rewriter) const override {
 
-    FuncOp fn = caseop.getParentOfType<FuncOp>();
+    FuncOp fn = caseop->getParentOfType<FuncOp>();
 
     // case(ap(..., ))
     ApEagerOp apeager = caseop.getScrutinee().getDefiningOp<ApEagerOp>();

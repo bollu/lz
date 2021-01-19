@@ -33,13 +33,13 @@
 #include "mlir/Transforms/DialectConversion.h"
 
 using namespace mlir;
-using namespace mlir::unification;
+using namespace mlir::unif;
 
-bool UnificationType::classof(Type type) {
+bool UnifType::classof(Type type) {
   return llvm::isa<UnificationDialect>(type.getDialect());
 }
 
-UnificationDialect &UnificationType::getDialect() {
+UnificationDialect &UnifType::getDialect() {
   return static_cast<UnificationDialect &>(Type::getDialect());
 }
 UnificationDialect::UnificationDialect(mlir::MLIRContext *context)
@@ -47,16 +47,17 @@ UnificationDialect::UnificationDialect(mlir::MLIRContext *context)
 }
 
 mlir::Type UnificationDialect::parseType(mlir::DialectAsmParser &parser) const {
-    assert(false);
+    if (parser.parseOptionalKeyword("node")) {
+        return parser.getBuilder().getType<UnifNodeType>();
+    }
+    assert(false && "unknown type for unification dialect");
 }
 
 void UnificationDialect::printType(mlir::Type type, mlir::DialectAsmPrinter &p) const {
-    assert(false);
+    if (type.isa<UnifNodeType>()) {
+        p << "node";
+        return;
+    }
+    assert(false && "unknown type for unification dialect");
 }
-
-// === INT TO PTR ===
-// === INT TO PTR ===
-// === INT TO PTR ===
-// === INT TO PTR ===
-// === INT TO PTR ===
 

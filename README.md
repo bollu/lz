@@ -30,7 +30,42 @@ Convert GHC Core to MLIR.
 
 
 # Log:  [newest] to [oldest]
+
+# Tue, 19th Jan
+
+- https://github.com/csabahruska/p4f-control-flow-analysis
+- https://twitter.com/csaba_hruska/status/1287701943863980032
+- https://github.com/grin-compiler/haskell-code-spot
+- https://www.patreon.com/posts/introducing-ghc-38173710
+- https://github.com/u235axe/FeOFu
+- https://github.com/grin-compiler/souffle-cfa-optimization-experiment
+- https://github.com/grin-compiler/ghc-grin/tree/master/lambda-grin/test
+
  
+# Saturday, Jan 17th
+- Trying to fix an MLIR bug with respect to use-after-def and regions.
+- When we ops defined one after the other in the wrong order, it gives the 
+  error:
+
+> bollu@cantordust:~/work/mlir/llvm-project/mlir/lib/ > cat ../test/IR/reuse-name-later.mlir // RUN: mlir-opt %s 
+> 
+> func @main() {
+>     %one = constant 1 : i64
+>     %x = addi %y, %y : i64
+>     %y = constant 10 : i64
+>     return
+> }
+>
+> 
+> ../test/IR/reuse-name-later.mlir:5:10: error: operand #0 does not dominate this use
+>     %x = addi %y, %y : i64
+>          ^
+> ../test/IR/reuse-name-later.mlir:5:10: note: see current operation: %0 = GENERIC OP
+> 
+> ../test/IR/reuse-name-later.mlir:6:10: note: operand defined here (op in the same block)
+>     %y = constant 10 : i64
+
+but this does not work for  stuff in a region.
 # Wednesday, Jan 6th
 
 - Tensor is insufficient for my purposes because I see no way to express something like a `zip` in any way that MLIR 

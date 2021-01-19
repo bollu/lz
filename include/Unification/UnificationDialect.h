@@ -5,7 +5,7 @@
 #include <llvm/ADT/ArrayRef.h>
 
 namespace mlir {
-namespace unification {
+namespace unif {
 
 class UnificationDialect : public mlir::Dialect {
 public:
@@ -13,25 +13,31 @@ public:
   mlir::Type parseType(mlir::DialectAsmParser &parser) const override;
   void printType(mlir::Type type,
                  mlir::DialectAsmPrinter &printer) const override;
-  static llvm::StringRef getDialectNamespace() { return "unification"; }
+  static llvm::StringRef getDialectNamespace() { return "unif"; }
 };
 
-class UnificationType : public Type {
+class UnifType : public Type {
 public:
   /// Inherit base constructors.
   using Type::Type;
 
   /// Support for UnificationLikeTypeTraits.
   using Type::getAsOpaquePointer;
-  static UnificationType getFromOpaquePointer(const void *ptr) {
-    return UnificationType(static_cast<ImplType *>(const_cast<void *>(ptr)));
+  static UnifType getFromOpaquePointer(const void *ptr) {
+    return UnifType(static_cast<ImplType *>(const_cast<void *>(ptr)));
   }
   /// Support for isa/cast.
   static bool classof(Type type);
   UnificationDialect &getDialect();
 };
 
+class UnifNodeType : public mlir::Type::TypeBase<UnifNodeType, UnifType, TypeStorage> {
+public:
+  using Base::Base;
+  static UnifNodeType get(MLIRContext *context) { return Base::get(context); }
+};
+
 void registerLowerUnificationPass();
 
-}; // namespace unification
+}; // namespace unif
 }; // namespace mlir

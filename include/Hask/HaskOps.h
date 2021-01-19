@@ -310,7 +310,7 @@ public:
   static const char *getDataConstructorAttrKey() { return "dataconstructor"; }
   static const char *getDataTypeAttrKey() { return "datatype"; }
   StringRef getDataConstructorName() {
-    return getAttrOfType<FlatSymbolRefAttr>(getDataConstructorAttrKey())
+    return getOperation()->getAttrOfType<FlatSymbolRefAttr>(getDataConstructorAttrKey())
         .getValue();
   }
 

@@ -312,8 +312,8 @@ public:
     // The problem is that I can't copy *all* attributes, because Type
     // is also an attribute x(.
 
-    if (Attribute visibility = funcOp.getAttr("sym_visibility")) {
-      newFuncOp.setAttr("sym_visibility", visibility);
+    if (Attribute visibility = funcOp->getAttr("sym_visibility")) {
+      newFuncOp->setAttr("sym_visibility", visibility);
     }
     // newFuncOp.setAttrs(funcOp.getAttrs());
     rewriter.inlineRegionBefore(funcOp.getBody(), newFuncOp.getBody(),
@@ -379,11 +379,11 @@ bool isI8Ptr(Type ty) {
   if (!ptr) {
     return false;
   }
-  auto elem = ptr.getElementType().dyn_cast<LLVM::LLVMIntegerType>();
+  auto elem = ptr.getElementType().dyn_cast<IntegerType>();
   if (!elem) {
     return false;
   }
-  return elem.getBitWidth() == 8;
+  return elem.getWidth() == 8;
 }
 
 // I don't understand why I need this.
@@ -606,7 +606,7 @@ public:
   // fill the region `out` with the ith RHS of the caseop.
   void genCaseAltRHS(Region *out, CaseOp caseop, Value scrutinee, int i,
                      ConversionPatternRewriter &rewriter) const {
-    ModuleOp mod = caseop.getParentOfType<ModuleOp>();
+    ModuleOp mod = caseop->getParentOfType<ModuleOp>();
     assert(out->args_empty());
     assert(out->getBlocks().size() == 1);
     llvm::SmallVector<Value, 4> rhsVals;
@@ -633,7 +633,7 @@ public:
   scf::IfOp genCaseAlt(mlir::standalone::CaseOp caseop, Value scrutinee, int i,
                        const std::vector<int> &order,
                        ConversionPatternRewriter &rewriter) const {
-    ModuleOp mod = caseop.getParentOfType<ModuleOp>();
+    ModuleOp mod = caseop->getParentOfType<ModuleOp>();
 
     // check if equal
     const bool hasNext = (i + 1 < (int)order.size());
@@ -710,7 +710,7 @@ public:
     rewriter.replaceOp(caseop, caseladder.getResults());
 
     llvm::errs() << "\nvvvvvvcase op module [after inline]vvvvvv\n";
-    caseladder.getParentOfType<ModuleOp>().print(
+    caseladder->getParentOfType<ModuleOp>().print(
         llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
     llvm::errs() << "\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
 
@@ -844,7 +844,7 @@ public:
     rewriter.replaceOp(caseop, caseladder.getResults());
 
     llvm::errs() << "\nvvvvvvcase op module [after inline]vvvvvv\n";
-    caseladder.getParentOfType<ModuleOp>().print(
+    caseladder->getParentOfType<ModuleOp>().print(
         llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
     llvm::errs() << "\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
 
@@ -994,7 +994,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     using namespace mlir::LLVM;
     ApOp ap = cast<ApOp>(op);
-    ModuleOp module = ap.getParentOfType<ModuleOp>();
+    ModuleOp module = ap->getParentOfType<ModuleOp>();
 
     rewriter.setInsertionPointAfter(ap);
     SmallVector<Value, 4> args;

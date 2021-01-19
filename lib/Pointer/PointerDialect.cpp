@@ -36,19 +36,13 @@
 using namespace mlir;
 using namespace mlir::ptr;
 
-LLVM::LLVMIntegerType getInt8Ty(MLIRContext *ctx) {
-  return LLVM::LLVMIntegerType::get(ctx, 8);
-}
+IntegerType getInt8Ty(MLIRContext *ctx) { return IntegerType::get(ctx, 8); }
 
-LLVM::LLVMIntegerType getInt64Ty(MLIRContext *ctx) {
-  return LLVM::LLVMIntegerType::get(ctx, 8);
-}
-
+IntegerType getInt64Ty(MLIRContext *ctx) { return IntegerType::get(ctx, 64); }
 
 LLVM::LLVMPointerType getInt8PtrTy(MLIRContext *ctx) {
   return LLVM::LLVMPointerType::get(getInt8Ty(ctx));
 }
-
 
 bool PtrType::classof(Type type) {
   return llvm::isa<PtrDialect>(type.getDialect());
@@ -121,7 +115,7 @@ void IntToPtrOp::print(OpAsmPrinter &p) {
 // === DOUBLE TO PTR ===
 
 void DoubleToPtrOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                       Value v) {
+                          Value v) {
   FloatType ft = v.getType().dyn_cast<FloatType>();
   assert(ft && "expected argument to be of float type");
   state.addOperands(v);
@@ -131,8 +125,6 @@ void DoubleToPtrOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
 void DoubleToPtrOp::print(OpAsmPrinter &p) {
   p.printGenericOp(this->getOperation());
 };
-
-
 
 // === FNPTR TO VOID PTR ===
 // === FNPTR TO VOID PTR ===
@@ -157,8 +149,8 @@ void FnToVoidPtrOp::print(OpAsmPrinter &p) {
 // === MEMREF TO VOID PTR ===
 // === MEMREF TO VOID PTR ===
 
-void MemrefToVoidPtrOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                          Value v) {
+void MemrefToVoidPtrOp::build(mlir::OpBuilder &builder,
+                              mlir::OperationState &state, Value v) {
   assert(v.getType().isa<MemRefType>());
   state.addOperands(v);
   state.addTypes(VoidPtrType::get(builder.getContext()));
@@ -167,7 +159,6 @@ void MemrefToVoidPtrOp::build(mlir::OpBuilder &builder, mlir::OperationState &st
 void MemrefToVoidPtrOp::print(OpAsmPrinter &p) {
   p.printGenericOp(this->getOperation());
 };
-
 
 // === PTR TO INT ===
 // === PTR TO INT ===
@@ -194,9 +185,9 @@ void PtrToIntOp::print(OpAsmPrinter &p) {
 // === PTR TO FLOAT ===
 
 void PtrToFloatOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                       Value vptr, FloatType ty) {
+                         Value vptr, FloatType ty) {
   assert(vptr.getType().isa<VoidPtrType>() &&
-      "expected argument to be a void pointer type");
+         "expected argument to be a void pointer type");
   state.addOperands(vptr);
   state.addTypes(ty);
 };
@@ -252,13 +243,13 @@ void PtrStringOp::print(OpAsmPrinter &p) {
 };
 
 ParseResult PtrStringOp::parse(OpAsmParser &parser, OperationState &result) {
-    StringAttr attr;
-    if (parser.parseAttribute<StringAttr>(attr, "value", result.attributes)) {
-      return failure();
-    }
+  StringAttr attr;
+  if (parser.parseAttribute<StringAttr>(attr, "value", result.attributes)) {
+    return failure();
+  }
 
-    result.addTypes(CharPtrType::get(parser.getBuilder().getContext()));
-    return success();
+  result.addTypes(CharPtrType::get(parser.getBuilder().getContext()));
+  return success();
 }
 
 class PtrTypeConverter : public mlir::LLVMTypeConverter {
@@ -267,15 +258,11 @@ public:
 
   PtrTypeConverter(MLIRContext *ctx) : LLVMTypeConverter(ctx) {
     // !ptr.void -> i8*
-    addConversion([](ptr::VoidPtrType ty) {
-      LLVM::LLVMType i8 = LLVM::LLVMIntegerType::get(ty.getContext(), 8);
-      return LLVM::LLVMPointerType::get(i8);
-    });
+    addConversion(
+        [](ptr::VoidPtrType ty) { return getInt8PtrTy(ty.getContext()); });
     // !ptr.char -> i8*
-    addConversion([](ptr::CharPtrType ty) {
-      LLVM::LLVMType i8 = LLVM::LLVMIntegerType::get(ty.getContext(), 8);
-      return LLVM::LLVMPointerType::get(i8);
-    });
+    addConversion(
+        [](ptr::CharPtrType ty) { return getInt8PtrTy(ty.getContext()); });
   };
 };
 // === UNDEF OP ===
@@ -369,19 +356,25 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     Value fn = rands[0];
     rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(
-        rator, LLVM::LLVMPointerType::get(LLVM::LLVMIntegerType::get(fn.getContext(), 8)), fn);
+        rator,
+        getInt8PtrTy(fn.getContext()),
+        fn);
     return success();
   }
 };
 
-// memref: |%13 = llvm.insertvalue %1, %12[4, 0] : !llvm.struct<(ptr<i64>, ptr<i64>, i64, array<1 x i64>, array<1 x i64>)>|
+// memref: |%13 = llvm.insertvalue %1, %12[4, 0] : !llvm.struct<(ptr<i64>,
+// ptr<i64>, i64, array<1 x i64>, array<1 x i64>)>|
 struct Memref2VoidPtrLowering : public ConversionPattern {
 public:
   explicit Memref2VoidPtrLowering(TypeConverter &tc, MLIRContext *context)
-      : ConversionPattern(MemrefToVoidPtrOp::getOperationName(), 1, tc, context) {}
+      : ConversionPattern(MemrefToVoidPtrOp::getOperationName(), 1, tc,
+                          context) {}
 
-  // !llvm.struct<(ptr<i64>, ptr<i64>, i64, array<1 x i64>, array<1 x i64>)>| -> !ptr.void
-  static FuncOp getOrInsertBoxI64Memref(PatternRewriter &rewriter, ModuleOp m, TypeConverter &tc) {
+  // !llvm.struct<(ptr<i64>, ptr<i64>, i64, array<1 x i64>, array<1 x i64>)>| ->
+  // !ptr.void
+  static FuncOp getOrInsertBoxI64Memref(PatternRewriter &rewriter, ModuleOp m,
+                                        TypeConverter &tc) {
     const std::string name = "boxI64Memref";
     if (FuncOp fn = m.lookupSymbol<FuncOp>(name)) {
       return fn;
@@ -401,7 +394,6 @@ public:
     return fn;
   }
 
-
   LogicalResult
   matchAndRewrite(Operation *rator, ArrayRef<Value> rands,
                   ConversionPatternRewriter &rewriter) const override {
@@ -409,21 +401,25 @@ public:
     Value memref = rands[0];
     llvm::errs() << "memref: |" << memref << "|\n";
     llvm::errs() << "memref.type: " << memref.getType() << "|\n";
-//    assert(false);
+    //    assert(false);
     FuncOp boxMemref = getOrInsertBoxI64Memref(rewriter, mod, *typeConverter);
     rewriter.replaceOpWithNewOp<CallOp>(rator, boxMemref, rands);
     return success();
   }
 };
 
-//   llvm.func @unboxI64Memref(!llvm.ptr<i8>) -> !llvm.struct<(ptr<i64>, ptr<i64>, i64, array<1 x i64>, array<1 x i64>)> attributes {sym_visibility = "private"}
+//   llvm.func @unboxI64Memref(!llvm.ptr<i8>) -> !llvm.struct<(ptr<i64>,
+//   ptr<i64>, i64, array<1 x i64>, array<1 x i64>)> attributes {sym_visibility
+//   = "private"}
 struct Ptr2MemrefOpLowering : public ConversionPattern {
 public:
   explicit Ptr2MemrefOpLowering(TypeConverter &tc, MLIRContext *context)
       : ConversionPattern(PtrToMemrefOp::getOperationName(), 1, tc, context) {}
 
-  // !llvm.struct<(ptr<i64>, ptr<i64>, i64, array<1 x i64>, array<1 x i64>)>| -> !ptr.void
-  static FuncOp getOrInsertUnboxI64Memref(PatternRewriter &rewriter, ModuleOp m, TypeConverter &tc) {
+  // !llvm.struct<(ptr<i64>, ptr<i64>, i64, array<1 x i64>, array<1 x i64>)>| ->
+  // !ptr.void
+  static FuncOp getOrInsertUnboxI64Memref(PatternRewriter &rewriter, ModuleOp m,
+                                          TypeConverter &tc) {
     const std::string name = "unboxI64Memref";
     if (FuncOp fn = m.lookupSymbol<FuncOp>(name)) {
       return fn;
@@ -444,7 +440,6 @@ public:
     return fn;
   }
 
-
   LogicalResult
   matchAndRewrite(Operation *rator, ArrayRef<Value> rands,
                   ConversionPatternRewriter &rewriter) const override {
@@ -454,8 +449,6 @@ public:
     return success();
   }
 };
-
-
 
 struct StringOpLowering : public ConversionPattern {
 public:
@@ -470,21 +463,21 @@ public:
       std::string str = strattr.getValue().str();
 
       builder.setInsertionPointToStart(module.getBody());
-      auto type = LLVM::LLVMArrayType::get(
-          getInt8Ty(builder.getContext()), str.size()+1);
-      global = builder.create<LLVM::GlobalOp>(loc, type, true,
-                                              LLVM::Linkage::Internal, name,
-                                              builder.getStringAttr(StringRef(str.c_str(), str.size()+1)));
+      auto type = LLVM::LLVMArrayType::get(getInt8Ty(builder.getContext()),
+                                           str.size() + 1);
+      global = builder.create<LLVM::GlobalOp>(
+          loc, type, true, LLVM::Linkage::Internal, name,
+          builder.getStringAttr(StringRef(str.c_str(), str.size() + 1)));
     }
 
     // Get the pointer to the first character in the global string.
     Value globalPtr = builder.create<LLVM::AddressOfOp>(loc, global);
     Value cst0 = builder.create<LLVM::ConstantOp>(
-        loc, LLVM::LLVMIntegerType::get(builder.getContext(), 64),
+        loc, getInt64Ty(builder.getContext()),
         builder.getIntegerAttr(builder.getIndexType(), 0));
-    return builder.create<LLVM::GEPOp>(
-        loc, getInt8PtrTy(builder.getContext()), globalPtr,
-        ArrayRef<Value>({cst0, cst0}));
+    return builder.create<LLVM::GEPOp>(loc, getInt8PtrTy(builder.getContext()),
+                                       globalPtr,
+                                       ArrayRef<Value>({cst0, cst0}));
   }
 
   explicit StringOpLowering(TypeConverter &tc, MLIRContext *context)
@@ -526,9 +519,12 @@ public:
   matchAndRewrite(Operation *rator, ArrayRef<Value> rands,
                   ConversionPatternRewriter &rewriter) const override {
     Value ptr = rands[0];
-    LLVM::LLVMType retty =
+    // LLVM::LLVMType retty =
+    //     typeConverter->convertType(rator->getResult(0).getType())
+    //         .cast<LLVM::LLVMType>();
+    IntegerType retty =
         typeConverter->convertType(rator->getResult(0).getType())
-            .cast<LLVM::LLVMType>();
+            .cast<IntegerType>();
     rewriter.replaceOpWithNewOp<LLVM::PtrToIntOp>(rator, retty, ptr);
     return success();
   }
@@ -558,15 +554,14 @@ public:
   matchAndRewrite(Operation *rator, ArrayRef<Value> rands,
                   ConversionPatternRewriter &rewriter) const override {
     Value ptr = rands[0];
-    LLVM::LLVMType retty =
-        typeConverter->convertType(rator->getResult(0).getType())
-            .cast<LLVM::LLVMType>();
+    // LLVM::LLVMType retty =
+    //     typeConverter->convertType(rator->getResult(0).getType())
+    //         .cast<LLVM::LLVMType>();
+    Type retty = typeConverter->convertType(rator->getResult(0).getType());
     rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(rator, retty, ptr);
     return success();
   }
 };
-
-
 
 FunctionType convertFunctionType(FunctionType fnty, TypeConverter &tc,
                                  OpBuilder &builder) {
@@ -581,7 +576,6 @@ FunctionType convertFunctionType(FunctionType fnty, TypeConverter &tc,
   }
   return builder.getFunctionType(argtys, rettys);
 };
-
 
 class ConstantOpLowering : public ConversionPattern {
 public:
@@ -599,7 +593,6 @@ public:
 
     FunctionType outty = convertFunctionType(fnty, *typeConverter, rewriter);
 
-
     ConstantOp newconst = rewriter.create<ConstantOp>(constant.getLoc(), outty,
                                                       constant.getValue());
     constant.getResult().replaceAllUsesWith(newconst.getResult());
@@ -610,7 +603,8 @@ public:
 };
 
 /*
-// https://github.com/spcl/open-earth-compiler/blob/master/lib/Conversion/StencilToStandard/ConvertStencilToStandard.cpp#L45
+//
+https://github.com/spcl/open-earth-compiler/blob/master/lib/Conversion/StencilToStandard/ConvertStencilToStandard.cpp#L45
 class FuncOpLowering : public ConversionPattern {
 public:
   explicit FuncOpLowering(TypeConverter &tc, MLIRContext *context)
@@ -689,7 +683,6 @@ public:
 };
 */
 
-
 class PtrUndefOpLowering : public ConversionPattern {
 public:
   explicit PtrUndefOpLowering(TypeConverter &tc, MLIRContext *context)
@@ -727,7 +720,6 @@ bool isTypeLegal(Type t) {
   }
   return true;
 }
-
 
 struct LowerPointerPass : public Pass {
   LowerPointerPass() : Pass(mlir::TypeID::get<LowerPointerPass>()){};
@@ -786,8 +778,6 @@ struct LowerPointerPass : public Pass {
         });
  */
 
-
-
     // // OK why is it not able to legalize func? x(
     // populateAffineToStdConversionPatterns(patterns, &getContext());
     // populateLoopToStdConversionPatterns(patterns, &getContext());
@@ -795,14 +785,11 @@ struct LowerPointerPass : public Pass {
     patterns.insert<Fn2VoidPtrLowering>(typeConverter, &getContext());
     patterns.insert<Memref2VoidPtrLowering>(typeConverter, &getContext());
 
-//    patterns.insert<CallOpLowering>(typeConverter, &getContext());
-
-
+    //    patterns.insert<CallOpLowering>(typeConverter, &getContext());
 
     patterns.insert<StringOpLowering>(typeConverter, &getContext());
     patterns.insert<Int2PtrOpLowering>(typeConverter, &getContext());
     patterns.insert<DoubleToPtrOpLowering>(typeConverter, &getContext());
-
 
     patterns.insert<Ptr2IntOpLowering>(typeConverter, &getContext());
     patterns.insert<Ptr2FloatOpLowering>(typeConverter, &getContext());
@@ -815,7 +802,7 @@ struct LowerPointerPass : public Pass {
     // &getContext());
     // patterns.insert<HaskConstructOpConversionPattern>(typeConverter,
     //                                                   &getContext());
-     // patterns.insert<ConstantOpLowering>(typeConverter, &getContext());
+    // patterns.insert<ConstantOpLowering>(typeConverter, &getContext());
     // patterns.insert<FuncOpLowering>(typeConverter, &getContext());
     // patterns.insert<ReturnOpLowering>(typeConverter, &getContext());
 

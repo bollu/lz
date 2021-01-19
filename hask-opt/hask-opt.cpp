@@ -86,7 +86,7 @@ int main(int argc, char **argv) {
   registry.insert<mlir::standalone::HaskDialect>();
   registry.insert<mlir::grin::GRINDialect>();
   registry.insert<mlir::ptr::PtrDialect>();
-  registry.insert<mlir::unification::UnificationDialect>();
+  registry.insert<mlir::unif::UnificationDialect>();
 
   // registry.insert<mlir::StandardOpsDialect>();
   // registry.insert<mlir::AffineDialect>();

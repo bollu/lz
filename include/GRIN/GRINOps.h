@@ -59,7 +59,7 @@ public:
   static StringRef getOperationName() { return "grn.box"; };
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   std::string getDataConstructorName() {
-    return this->getAttrOfType<FlatSymbolRefAttr>("value").getValue().str();
+    return this->getOperation()->getAttrOfType<FlatSymbolRefAttr>("value").getValue().str();
   }
   void print(OpAsmPrinter &p);
 };

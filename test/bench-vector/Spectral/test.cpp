@@ -61,6 +61,7 @@ double *test(double *us, int len) {
     return out;
 }
 
+#define NDEBUG
 #ifdef NDEBUG
 
 void BM_test(benchmark::State& state) {
@@ -68,7 +69,7 @@ void BM_test(benchmark::State& state) {
     double *as = readArray<double>("as.bin", &len);
 
     for (auto _ : state) {
-        test(as, len);
+        benchmark::DoNotOptimize(test(as, len));
     }
 
     double *out = test(as, len);
