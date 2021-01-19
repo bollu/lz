@@ -36,7 +36,7 @@ public:
 };
 
 class UnifConstructorOp
-    : public Op<UnifRootOp, OpTrait::OneResult, OpTrait::VariadicOperands> {
+    : public Op<UnifConstructorOp, OpTrait::OneResult, OpTrait::VariadicOperands> {
 public:
   using Op::Op;
   static StringRef getOperationName() { return "unif.constructor"; };
@@ -62,6 +62,15 @@ public:
   };
   Value getParent() { return this->getOperand(); }
   static StringRef getNameKey() { return "value"; }
+  static ParseResult parse(OpAsmParser &parser, OperationState &result);
+  void print(OpAsmPrinter &p);
+};
+
+class UnifUnifyOp
+    : public Op<UnifUnifyOp, OpTrait::OneResult, OpTrait::NOperands<2>::Impl> {
+public:
+  using Op::Op;
+  static StringRef getOperationName() { return "unif.unify"; };
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   void print(OpAsmPrinter &p);
 };

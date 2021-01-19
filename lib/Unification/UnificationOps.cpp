@@ -33,6 +33,11 @@ ParseResult UnifRootOp::parse(OpAsmParser &parser, OperationState &result) {
   return success();
 }
 
+void UnifRootOp::print(OpAsmPrinter &p) {
+  p.printGenericOp(this->getOperation());
+  return;
+};
+
 // CONSTRUCTOR OP
 // CONSTRUCTOR OP
 // CONSTRUCTOR OP
@@ -54,17 +59,19 @@ ParseResult UnifConstructorOp::parse(OpAsmParser &parser,
   // ")"
   if (failed(parser.parseOptionalRParen())) {
     while (1) {
+      // ","
+      if (failed(parser.parseComma())) {
+        return failure();
+      }
       // <arg>
       OpAsmParser::OperandType arg;
       parser.parseOperand(arg);
       parser.resolveOperand(arg,
                             UnifNodeType::get(parser.getBuilder().getContext()),
                             result.operands);
-      // ")" | "," <rest>
+      // ")"?
       if (succeeded(parser.parseOptionalRParen())) {
         break;
-      } else if (failed(parser.parseComma())) {
-        return failure();
       }
     }
   }
@@ -86,13 +93,17 @@ void UnifConstructorOp::print(OpAsmPrinter &p) {
 
 ParseResult UnifVarOp::parse(OpAsmParser &parser, OperationState &result) {
   StringAttr name;
-  if (failed(parser.parseAttribute<StringAttr>(name))) {
+  if (parser.parseLParen() || parser.parseAttribute<StringAttr>(name)) {
     return failure();
   }
+
   result.addAttribute(UnifConstructorOp::getConstructorNameKey(), name);
 
   OpAsmParser::OperandType parent;
-  parser.parseOperand(parent);
+  if (parser.parseComma() || parser.parseOperand(parent) ||
+      parser.parseRParen()) {
+    return failure();
+  }
   parser.resolveOperand(parent,
                         UnifNodeType::get(parser.getBuilder().getContext()),
                         result.operands);
@@ -102,6 +113,34 @@ ParseResult UnifVarOp::parse(OpAsmParser &parser, OperationState &result) {
 };
 
 void UnifVarOp::print(OpAsmPrinter &p) {
+  p.printGenericOp(this->getOperation());
+  return;
+};
+
+// UNIFY OP
+// UNIFY OP
+// UNIFY OP
+// UNIFY OP
+// UNIFY OP
+// UNIFY OP
+
+ParseResult UnifUnifyOp::parse(OpAsmParser &parser, OperationState &result) {
+  OpAsmParser::OperandType lhs, rhs;
+  if (parser.parseLParen() || parser.parseOperand(lhs) || parser.parseComma() ||
+      parser.parseOperand(rhs) || parser.parseRParen()) {
+    return failure();
+  }
+  parser.resolveOperand(lhs,
+                        UnifNodeType::get(parser.getBuilder().getContext()),
+                        result.operands);
+  parser.resolveOperand(rhs,
+                        UnifNodeType::get(parser.getBuilder().getContext()),
+                        result.operands);
+  result.addTypes(UnifNodeType::get(parser.getBuilder().getContext()));
+  return success();
+};
+
+void UnifUnifyOp::print(OpAsmPrinter &p) {
   p.printGenericOp(this->getOperation());
   return;
 };

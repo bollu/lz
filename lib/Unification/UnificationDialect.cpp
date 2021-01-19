@@ -19,6 +19,7 @@
 #include "mlir/Support/LogicalResult.h"
 
 // dilect lowering
+#include "Unification/UnificationOps.h"
 #include "mlir/Pass/PassRegistry.h"
 #include "mlir/Transforms/DialectConversion.h"
 // https://github.com/llvm/llvm-project/blob/80d7ac3bc7c04975fd444e9f2806e4db224f2416/mlir/examples/toy/Ch6/toyc.cpp
@@ -44,10 +45,16 @@ UnificationDialect &UnifType::getDialect() {
 }
 UnificationDialect::UnificationDialect(mlir::MLIRContext *context)
     : Dialect(getDialectNamespace(), context, TypeID::get<UnificationDialect>()) {
+
+  addTypes<UnifNodeType>();
+  addOperations<UnifRootOp>();
+  addOperations<UnifConstructorOp>();
+  addOperations<UnifVarOp>();
+  addOperations<UnifUnifyOp>();
 }
 
 mlir::Type UnificationDialect::parseType(mlir::DialectAsmParser &parser) const {
-    if (parser.parseOptionalKeyword("node")) {
+    if (succeeded(parser.parseOptionalKeyword("node"))) {
         return parser.getBuilder().getType<UnifNodeType>();
     }
     assert(false && "unknown type for unification dialect");

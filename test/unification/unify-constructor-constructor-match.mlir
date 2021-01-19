@@ -1,16 +1,16 @@
 // Foo(a, B) ~ Foo(A, b)
-func @main() {
-  %r = unf.root
-  %B = unf.leaf "B"
-  %a = unf.var "a" %unk
-  %b = unf.var "b" %unk
-  %A = unf.leaf "A"
+func @main() -> !unif.node {
+  %r = unif.root
+  %B = unif.constructor("B")
+  %a = unif.var("a", %r)
+  %b = unif.var("b", %r)
+  %A = unif.constructor("A")
 
-  %lhs = unf.constructor("Foo", %a, %B)
-  %rhs = unf.constructor("Foo", %B, %a)
+  %lhs = unif.constructor("Foo", %a, %B)
+  %rhs = unif.constructor("Foo", %B, %a)
 
-  %result = unf.unify(%lhs, %rhs)
-  return %result
+  %result = unif.unify(%lhs, %rhs)
+  return %result : !unif.node
 }
 
 
