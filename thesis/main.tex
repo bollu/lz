@@ -1,0 +1,448 @@
+% - Week 1 is on the website: https://math216.wordpress.com/2020/06/27/discussion-for-this-week-starting-june-27-2020/
+% - Week 2:https://math216.wordpress.com/2020/07/06/readings-and-problem-set-for-after-the-second-pseudolecture/
+% - Week 3: https://math216.wordpress.com/2020/07/13/reading-and-problems-after-the-third-pseudolecture/
+% Link to rising sea: https://math.stanford.edu/~vakil/216blog/FOAGnov1817public.pdf
+% https://agittoc.zulipchat.com/
+\documentclass{book}
+
+%%% % https://tex.stackexchange.com/a/97128
+\usepackage[sc,osf]{mathpazo}   % With old-style figures and real smallcaps.
+%%% \linespread{1.025}              % Palatino leads a little more leading
+%%% % Euler for math and numbers
+%%% \usepackage[euler-digits,small]{eulervm}
+
+% \usepackage{cmbright}
+
+
+\usepackage{mathtools}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{minted}
+\usepackage{hyperref}
+\usepackage{tikz}
+\usepackage{tikz-cd}
+\usepackage{cancel}
+\usepackage{mathtools}
+
+% https://tex.stackexchange.com/questions/469588/strike-out-an-arrow-with-a-small-oblique-segment-like-with-nrightarrow
+% \newcommand*\Neg[2][0mu]{\Neginternal{#1}{\negslash}{#2}}
+% \newcommand*\sNeg[2][0mu]{\Neginternal{#1}{\snegslash}{#2}}
+% \newcommand*\negslash[1]{\m@th#1\not\mathrel{\phantom{=}}}
+% \newcommand*\snegslash[1]{\rotatebox[origin=c]{60}{$\m@th#1-$}}
+
+
+\newcommand{\Hom}{\operatorname{Hom}}
+\newcommand{\Tr}{\operatorname{Tr}}
+\newcommand{\tr}{\operatorname{tr}}
+\newcommand{\F}{\ensuremath{\mathcal{F}}}
+\newcommand{\G}{\ensuremath{\mathcal{G}}}
+\newcommand{\N}{\ensuremath{\mathbb{N}}}
+\newcommand{\Z}{\ensuremath{\mathbb{Z}}}
+\newcommand{\T}{\ensuremath{\mathbb{T}}}
+\newcommand{\Q}{\ensuremath{\mathbb{Q}}}
+\newcommand{\C}{\ensuremath{\mathbb{C}}}
+\newcommand{\Cstar}{\ensuremath{\mathbb{C}^*}}
+\newcommand{\R}{\ensuremath{\mathbb{R}}}
+\newcommand{\CP}{\ensuremath{\mathbb{CP}}}
+\renewcommand{\P}{\ensuremath{\mathbb{P}}}
+\newcommand{\A}{\ensuremath{\mathbb{A}}}
+\renewcommand{\O}{\ensuremath{\mathcal{O}}}
+\newcommand{\RP}{\ensuremath{\mathbb{RP}}}
+\newcommand{\Spec}{\operatorname{Spec}}
+\newcommand{\spec}{\operatorname{Spec}}
+\newcommand{\m}{\mathfrak{m}}
+\newcommand{\p}{\mathfrak{p}}
+\newcommand{\q}{\mathfrak{q}}
+\newcommand{\mSpec}{\m\operatorname{Spec}}
+\newcommand{\mspec}{\m\operatorname{Spec}}
+\newcommand{\frakp}{\ensuremath{\mathfrak{p}}}
+\newcommand{\fraka}{\ensuremath{\mathfrak{a}}}
+\newcommand{\coker}{\operatorname{coker}}
+\newcommand{\colim}{\operatorname{colim}}
+\newcommand{\Span}{\operatorname{span}}
+\newcommand{\spn}{\Span}
+\newcommand{\inv}{{\ensuremath{-1}}}
+\newcommand{\im}{\operatorname{Im}}
+\newcommand{\piinv}{\ensuremath{\pi^\inv}}
+\renewcommand{\k}{\mathbb{k}} % field 
+\newcommand{\pinv}{\piinv}
+\newcommand{\piinverse}{\piinv}
+\newcommand{\supp}{\operatorname{Support}}
+\newcommand{\Set}{\ensuremath{\mathbf{Set}}}
+\newcommand{\rad}{\sqrt} % radical
+\newcommand{\ann}{\operatorname{Annhilator}} % annhilator
+\newcommand{\osum}{\oplus} % I confuse it often enough
+\newcommand{\tensor}{\otimes} % I confuse it often enough
+\renewcommand{\c}{\complement} % got tiring
+\newcommand{\geqzero}{\ensuremath{\geq 0}}
+\newcommand{\gezero}{\gezero}
+\newcommand{\gtzero}{\ensuremath{> 0}}
+\newcommand{\sym}{\operatorname{Sym}}
+\newcommand{\Sym}{\sym}
+\newcommand{\nil}{\operatorname{NilRadical}}
+\newcommand{\Nil}{\nil}
+\newcommand{\grade}{\ensuremath{\bullet}}
+
+\DeclarePairedDelimiter\ceil{\lceil}{\rceil}
+\DeclarePairedDelimiter\floor{\lfloor}{\rfloor}
+\DeclarePairedDelimiter\fracpart{\{}{\}}
+\theoremstyle{definition}
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{example}[theorem]{Example}
+\newtheorem{nonexample}[theorem]{Non Example}
+\newtheorem{aside}[theorem]{Aside}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{exercise}[theorem]{Exercise}
+\newtheorem{note}[theorem]{Note}
+\newtheorem{slogan}[theorem]{Slogan}
+\newtheorem{Proposition}[theorem]{Proposition}
+
+\begin{document}
+\tableofcontents
+
+% https://qchu.wordpress.com/2009/08/30/the-orthogonality-relations-for-representations-of-finite-groups/
+
+
+\chapter{Repr Theory of finite groups: Benjamin Steinberg: Ch 3}
+\begin{theorem} Semisimplicity of representations of finite groups:
+Every representation can be written as a direct sum of irreducible representations.
+\end{theorem}
+\begin{proof}
+Let $\rho : G \rightarrow GL(V)$ be a representation. If $\rho$ is irreducible,
+we are done. Otherwise, let $W \subsetneq V$ be a non-trivial $G$ invariant 
+subspace of $V$. Now, let $\langle \cdot, \cdot \rangle$ be any
+inner product (which definitely exists. Take a basis and create an inner product
+from that). From this, Induce an averaged inner product:
+
+\begin{align*}
+\langle v_1, v_2 \rangle_G \equiv 
+\sum_{g \in G}  \langle \rho(g) v_1, \rho(g) v_2 \rangle
+\end{align*}
+
+Under this inner product, $\rho(h)$ is unitary for all $h \in H$. This is
+proved as follows:
+
+\begin{align*}
+&\langle \rho(h) v_1, \rho(h) v_2 \rangle_H = \sum_{g \in G}  \langle (\rho(g)(\rho(h) v_1)), \rho(g)(\rho(h)(v_2)) \rangle \\
+&= \sum_{g \in G}  \langle \rho(gh) (v_1), \rho(gh)(v_2) \rangle \\
+&= \sum_{g = g' h^{-1} \in G}  \langle \rho(gh) (v_1), \rho(gh)(v_2) \rangle \\
+&= \sum_{g = g' h^{-1} \in G}  \langle \rho(g' h^{-1} h) (v_1), \rho(g' h^{-1} h)(v_2) \rangle \\
+&= \sum_{g = g' h^{-1} \in G}  \langle \rho(g') (v_1), \rho(g')(v_2) \rangle \\
+&= \langle v_1 , v_2 \rangle_G
+\end{align*}
+
+Thus, we have $W$ as a $G$ invariant subspace of the unitary $\rho(g)$. So we
+can define the orthogonal subspace $W^\perp \equiv \{ v \in V : \langle v, W \rangle_G = 0 \}$. That is:
+$W^\perp \equiv \{ v \in V : \forall w \in W, \langle v, w \rangle_G = 0\}$.
+This is intuitively invariant , because if it were not, then we would have some
+element $g \in G$ that would pull elements of $W^\perp$ into $W$: $W^\perp \xmapsto{g} W$.
+But this would mean that $W \xmapsto{g^{-1}} W^\perp$. This is impossible because $W$
+is a $G$-invariant subspace.
+
+Formally, let $w^\perp \in W^\perp$. Now note that if $\rho(g) w^\perp \in W$,
+then there exists a $w \in W$ such that $\langle \rho(g)w^{\perp}, w \rangle \neq 0$.
+This gives us the computation:
+
+\begin{align*}
+&\langle \rho(g)w^{\perp}, w \rangle \neq 0 \\ 
+&=\langle \rho(g)w^{\perp}, \rho(g) \rho(g^{-1}) w \rangle \neq 0 \\ 
+&\text{$\rho(g)$ is unitary, so can be removed from inner product computation} \\
+&= \langle w^{\perp}, \rho(g^{-1}) w \rangle \neq 0 \\ 
+&\text{(Let $w' = \rho(g^{-1})w \in W$ as $W$ is $G$-invariant)} \\
+&= \langle w^{\perp}, w'\rangle \neq 0 \\ 
+\end{align*}
+
+But this means that $w^{\perp}$ is not orthogonal to $W$, a contradiction. 
+
+\end{proof}
+
+
+\section{3.3: Equivalent 1D representations are equal}
+
+Let $p, q : G \rightarrow \C^*$. Let there be an isomorphism $T: \C^*  \rightarrow \C^*$
+such that $p = Tq T^{-1}$. 
+
+Write with respect to a basis. $p(x) = \lambda_p x, q(x) = \lambda_q x, T(x) = \lambda_Tx $.
+This gives us the equation:
+
+\begin{align*}
+&p = T q T^\inv \\
+&p(x) = T(q(T^\inv(x))) \\
+&\lambda_p(x) = \lambda_t(\lambda_q(1/\lambda_t))x \\
+&\lambda_p(x) = \lambda_q(x) \\
+&\lambda_p = \lambda_q
+\end{align*}
+
+\section{3.5: average of representations is a projection}
+Let $p: G \rightarrow GL(V)$ be a representation. Define the fixed
+subspace $V^G = \{ v \in V : \forall g \in G, p_g(v)  = v \}$.
+
+First we see that this subspace is $G$ invariant. Let $v \in V^G$. $p_g(v) = v$
+(by definition of $V^G$), hence $p_g(v) \in V^G$. 
+
+Define $P: V \rightarrow V; P(v) \equiv 1/|G|\sum_{g \in G}p_g(v)$.
+We need to show that $P : V \rightarrow V^G$ (That is, the image lies entirely in $V^G$).
+
+Consider $v \in V$. Now compute:
+
+\begin{align*}
+&p_h(P(v)) = p_h(1/|G|\sum_{g \in G} p_g(v)) \\
+& = 1/|G|\sum_{g \in G} p_h(p_g(v)) \\
+& = 1/|G|\sum_{g \in G} p_{hg}(v) \\
+& \text{($g \mapsto hg$ is a bijection. $\sum_{g \in G} p_{hg}$ visits each element)} \\
+& = 1/|G|\sum_{g \in G} p_{g}(v) = P(v)\\
+\end{align*}
+
+$p_h(P(v)) = P(v)$ hence $\forall v \in V, P(v) \in V^G$.
+
+
+Next we are to show that $P: V \rightarrow V^G$ is a projection: $P \circ P = P$.
+See that the image of $P$ is entirely in $V^G$. Now we need to show that $P(v \in V^G) = v$:
+\begin{align*}
+&P(v \in V^G) = 1/|G| \sum_{g \in G} p_h(v) \\
+&\text{(since $v \in V^G$, $v$ is fixed by all $p_h$)} \\
+&P(v \in V^G) = 1/|G| \sum_{g \in G} v = 1/|G| (|G| v) = v
+\end{align*}
+
+Hence, $P \circ P = P$.
+
+Now, we can show that $dim(V^G)$ is the rank of $P$. In the eigenbasis of $P$,
+we will have a $+1$ for each basis vector in the image $V^G$ and a zero 
+everywhere else. Thus the rank of $P$ is the dimension of $V^G$.
+
+Similarly, by the eigenbasis argument, the trace of $P$ will add up all the $1$s
+in the eigenbasis, which is equal to the dimension of $V^G$.
+
+Thus we conclude:
+
+$$
+dim(V^G) = rank(P) = Tr(P) = 1/|G| \sum_g Tr(p_g)
+$$
+
+\section{3.6: conjugates don't have to be equivalent}
+Let $p: G \rightarrow GL(C)$ be a representation. Set $s(v) = \overline{p(v)}$.
+Show that $p, s$ do not have to be equivalent.
+
+Let $G \equiv \mathbb Z/3Z$. Let $p(1) \equiv e^{i\pi/3}$. We get $s(1) = \overline{p(1)} = \overline{e^{i \pi/3}} = e^{i 2 \pi/3}$.
+These are not equivalent, because they are 1D representations and are not
+isomorphic (recall that equivalent 1D representations are isomorphic).
+
+\section{3.7: bijection between unitary 1D representations of $\Z$ and elements of $\T$}
+
+Recall that $\T \equiv \{ e^{ir} : r \in \R \}$.
+
+Consider a 1D representation of $\Z$, $p: \Z \rightarrow \Cstar$.
+We must have that $p(z) p^{-1}(z) = 1$. Since $p$ is unitary, we have that $p^{-1} = p^\dagger = p^*$.
+Thus we get $p(z)p^*(z) = 1$, or $|p(z)|^2 = 1$. Hence $p(z) \in \T$. Biject
+to $T$ considering the image of $1 \mapsto p(1) \in T$, since the representation of $\Z$
+is determined by the image of $1$ under $p$.
+
+\section{3.8: Eigenvectors}
+(TODO).
+
+\chapter{Repr Theory of finite groups: Benjamin Steinberg: Ch 4}
+
+Point of interest that I had never noticed: the space of representation morphisms/intertwinings
+themselves form a vector space!
+
+\begin{theorem}
+Irreducible representations (irreps) of an abelian $G$ have degree 1 
+\end{theorem}
+\begin{proof}
+Let $\phi: G \rightarrow V$ where $G$ is abelian.
+For some $h \in G$. Define $T \equiv \phi_h$. Now note that:
+
+$$ T \phi_g = \phi_h \phi_g = \phi{hg} = \phi_g \phi_h = \phi_g T $$. So we have
+a $T$ that is an intertwining of $\phi$ with $\phi$: $T_h \in \Hom(\phi, \phi)$.
+Thus, by schur's lemma, we must have that $T_h = \lambda_h I$. Now let $v \in V$.
+Consider some element $kv \in \C v$: $T_h(kv) = \lambda_h (kv) \in \C v$.
+Hence, $T_h(\C v) \in \C v$.  
+
+Now we can see that $\C v$ is a $G$ invariant subspace, since the choice of $h$
+was arbitrary.
+
+But since the representation $\phi$ is irreducible, we must have that $\C v$
+equals the whole space $V$, and thus $\dim V = 1$
+
+\end{proof}
+
+\begin{theorem}
+representations of abelian groups are simultaneously diagonalizable.
+\end{theorem}
+\begin{proof}
+Let $\phi: G \rightarrow GL(V)$. Since all operators $\phi_g, \phi_h$ commute
+pairwise, they are all simultaneously diagonalizable with each other. Hence
+there exists some invertible transform $T$ such that $T \phi_g T^{-1}$ is
+diagonal for all $g \in G$ ($T$ is invariant of $G$).
+\end{proof}
+
+\begin{definition}
+Group algebra: The inner product space of functions $L(G) \equiv \mathbb C^G = \{ f: G \rightarrow \C \}$,
+with inner product given by $\langle f | f' \rangle \equiv  1/|G|\sum_{g \in G} f(g) \overline{f'(g)}$,
+and algebra given by convolution: $(f f')(g) \equiv \sum_{hh' = g}f(h_1)f'(h')$.
+\end{definition}
+
+\begin{lemma}
+All linear maps can be averaged to get intertwinings. Let $p: G \rightarrow GL(V)$
+and $r: G \rightarrow GL(W)$. Let $T \in \Hom(V, W)$ be a linear map. Now
+define $T^\sharp: V \rightarrow W;  T^\sharp \equiv 1/|G| \sum_{g \in G} p_g; T; r_{g^-1}$.
+We will show:
+\begin{enumerate}
+\item $T^\sharp \in \Hom(p, r)$ is an intertwining for any linear map.
+\item $T \in \Hom_G(p, r)$ then $T^\sharp = T$.
+\item $( \cdot )^\sharp : \Hom(V, W) \rightarrow  \Hom_G(p, r)$ is linear.
+\item $( \cdot )^\sharp : \Hom(V, W) \rightarrow  \Hom_G(p, r)$ is onto.
+\end{enumerate}
+
+Thus, the map $( \cdot)^\sharp$ is a projection from the space $\Hom(V, W)$ to the
+subspace $\Hom_G(p, r)$.
+\end{lemma}
+\begin{proof}
+We verify that $T^\sharp$ is an intertwining by direct computation. We need
+to check that $p_g; T^\sharp = T^\sharp; r_g$:
+
+\begin{align*}
+&x; T^\sharp; r_g =  \\
+&x; 1/|G| \sum_{x \in G} (p_g; T; r^{g^{-1}}); r_g \\
+&1/|G| \sum_{x \in G} (x; p_g; T; r^{e}) \\
+&1/|G| \sum_{x \in G} (x; p_g; T) \\
+\end{align*}
+
+To prove (2), if $T \in \Hom(p, r)$, then consider:
+
+\begin{align*}
+&T^\sharp(x) = 1/|G|\sum_{g \in G} r_{g^{-1}} (T(p_g (x))) \\
+& = 1/|G|\sum_{g \in G} r_{g^{-1}} (r_g(T (x))) \\
+& = 1/|G|\sum_{g \in G} r_{e}(T (x))) \\
+& = 1/|G|\sum_{g \in G} (T (x))) \\
+& = T(x)
+\end{align*}
+
+(3) To establish linearity, we compute once again:
+
+
+\begin{align*}
+&(c_1T_1 + c_2 T_2)^\sharp(x) = 1/|G|\sum_{g \in G} r_{g^{-1}} (c_1 T_1 + c_2 T_2) p_g \\
+&(c_1T_1 + c_2 T_2)^\sharp(x) = \\
+& \quad c_1 \cdot 1/|G|\sum_{g \in G} r_{g^{-1}}  T_1 \rho_g + 
+ c_2 \cdot 1/|G|\sum_{g \in G} r_{g^{-1}} T_2 \rho_g \\
+&= c_1 T_1^\sharp + c_2 T_2^\sharp
+\end{align*}
+
+
+(3) immediately follows. The map is onto because $\Hom(p, r) \subseteq \Hom(V, W)$.
+Hence, every element $T \in \Hom(p, r)$ is mapped onto itself by $T$ itself:
+every $T \in \Hom(p, r) \in Hom(V, W)$, we have that $T^\sharp = T \in \Hom(p, r) \in \Hom(V, W)$.
+
+
+Alternatively, note that $\Hom(p, r)$ is a subspace of $\Hom(V, W)$, and that 
+$\sharp$ is a projection. Since projections are always onto their \emph{image}, we are done.
+\end{proof}
+
+\begin{theorem}
+We know exactly what $T^\sharp$ looks like.
+If $p \in GL(V)$, $r \in GL(W)$, $T \in \Hom(V, W)$:
+\begin{enumerate}
+\item If $p \neq r$ then $T^\sharp = 0$
+\item If $p = r$ then $T^\sharp = \frac{\Tr(t)}{\deg(p)} I$
+\end{enumerate}
+\end{theorem}
+\begin{proof}
+If $p \neq r$ then $\Hom(p, r) = 0$ and hence $T^\sharp \in \Hom(p, r) = 0$.
+
+If $p = r$ then by Schur's lemma $T^\sharp = \lambda I$ for some $\lambda in \C$. Recall
+the argument: Let $T$ have full eigenspectrum. Then, note that the eigenspaces
+of different eigenvalues are orthogonal. But that's impossible if the
+representation is irreducible. So we have only a single eigenspace, corresponding
+to the single eigenvalue $\lambda$.  Thus we must have that $T^\sharp = \lambda I$.
+We want to know precisely what $\lambda$ is. Since $T \in \hom(p, r)$, we have
+that $V = W$ and $T \in \Hom(V, V)$. Thus, 
+
+\begin{align*}
+&\Tr(T^\sharp) = \lambda \Tr(I_{V, V}) \\
+& \Tr(T^\sharp) = \lambda \dim V = \lambda \deg \phi \\
+& \lambda = \Tr(T^\sharp)/deg \phi
+\end{align*}
+
+We can now relate $\Tr(T^\sharp)$  to $\Tr(T)$ using the definition of $T^\sharp$,
+and remember that $p = r$:
+\begin{align*}
+&\Tr(T^\sharp) = 1/|G| \sum_{g \in G} Tr(r_{g^{-1}} T p_g) \\
+&= 1/|G| \sum_{g \in G}\Tr(p_{g^{-1}} T p_g) \\
+&= 1/|G| \sum_{g \in G} \Tr(p_g p_{g^{-1}} T) \\
+& = 1/|G| \sum_{g \in G} \Tr(p_{g g^{-1}} T) = 1/|G| \sum_{g \in G}\Tr(p_e T) \\
+&= 1/|G| \sum_{g \in G} \Tr(I T) \\
+&= \Tr(T)
+\end{align*}
+
+Hence, $T^\sharp = \lambda I = \frac{\Tr(T^\sharp)}{\deg \phi}I = \frac{\Tr(T)}{\deg \phi}I$
+\end{proof}
+
+\begin{theorem}
+Let $p: G \rightarrow U_n(\C)$, $r: G \rightarrow U_m(\C)$ be unitary representations
+of $G$. Let $A^x_y \equiv \delta^x_k \delta^i_y \in M_{mn}(\C)$. Then we will
+show that ${A^\sharp}^l_j = \langle p^i_j, r^k_l \rangle$.
+\end{theorem}
+\begin{proof}
+Since $r$ is unitary, $r_g^{-1} = r_g^\dagger$. Thus, $r[l][k]^{-1} = \overline{r[k][l](g)}$.
+This gives us the computation:
+
+\end{proof}
+
+
+\section{Characters and class functions}
+
+Let $\phi: G \rightarrow GL(V)$ be a representation. Define $\chi_\phi(g) \equiv \Tr(\phi(g))$.
+Now $\chi_\phi: G \rightarrow \C^*$ is a 1 dimensional representation.
+
+To be able to compute anything with characters, we need to choose a basis to
+compute a trace. So we will from now on pick matrix representations, where
+we will identify $GL(V)$ with $U_n(V)$ (space of unitary matrices) with an          
+appropriate choice of basis.
+
+\chapter{Borcherds: Orthogonality relations}
+
+\begin{itemize}
+\item Link: \url{https://www.youtube.com/watch?v=BixUw1oHBec}
+\end{itemize}
+
+\begin{theorem} Schur's Lemma: If $V, W$ are irreducible then $\Hom_G(V, W)$ is 1D
+if $V = W$ and $0D$ if $V \neq W$.
+\end{theorem}
+\begin{proof}
+Let $T \in \Hom_G(V, W)$. The kernel of $T$ is a $G$ invariant subspace of $V$. since $V$
+is irreducible either $\ker T = V$ (the map is zero) or $\ker T = 0$ the map is
+injective. Similarly, $\Im(T)$ is $G$ invariant subspace  of $W$. Either $\Im(T) = 0$
+and the map is zero, or $\Im(T) = W$ and the map is surjective. Hence the map
+is either 0, or injective and surjective (thus bijective).
+
+
+If the map is zero, then $\Hom_G(V, W) = 0$ since $T$ was arbitrary.
+If the map is bijective, then every map in $\Hom_G(V, W)$ is invertible. This 
+makes $\Hom_G(V, W)$ a division algebra over $\C$. The complex numbers are
+algebraically closed, and hence it must be isomorphic to $\C$ (why? This seems
+like a very interesting argument).
+
+This tells us that $\sum_g \chi_i(g) \chi_j(g) = 0 : i \neq j$, and
+$\sum_g \chi_i(g) \chi_j(g) = |G| : i = j$. This is because $\Hom_G(V_j, V_i)$ is
+$1$ or $0$ depending on whether $i = j$ or not.
+\end{proof}
+
+\chapter{Clebsh gordon theory}
+Given two irreducible representations $r: G \rightarrow GL(V)$, $s: G \rightarrow GL(W)$,
+their tensor product $r \tensor s: G \rightarrow GL(V \tensor W)$ need not
+be irreducible. Decomposing $r \tensor s$ into irreducible representations is
+the Clebsh Gordon problem.
+
+\chapter{Fully Worked out theory for $S_3$}
+
+\chapter{Borcherds: Schur indicator}
+
+See that the usual averaging inner product is sesquilinear: it's linear
+in the left, and conjugate linear in the right.
+
+We want to understand the space of $G$ invariant \textbf{bilinear} forms: $V \tensor V \rightarrow \C$.
+
+\end{document}

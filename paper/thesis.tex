@@ -491,6 +491,41 @@ Our contributions are:
       non-strictness.
 \end{itemize}
 
+\section{Stuff that doesn't work}
+\begin{itemize}
+\item circular references: SSA by default cannot handle circular references.
+      We need to use the "relaxed SSA" that allows graphs. It's unclear how well
+      this adapts.
+\item A garbage collector. The usual story here, we don't really make a fair
+      comparison.
+\item Any realistic program exhibiting "difficult" laziness. I feel what would
+      be interesting would be to implement, say, GRIN, along with a sophisticated
+      pointer analysis using the MLIR analysis-as-rewrite story here.
+\item A proof of correctness of the naive demand analysis I wrote.
+\end{itemize}
+
+
+\section{Stuff that does work}
+\begin{itemize}
+\item An encoding of laziness that works for the simple stuff I've tried
+\item A simple version of "demand analysis" that eliminates first order laziness.
+\item Some toy examples where we generate better IR than GHC because we can
+     expose the "real work" to LLVM/MLIR in a way that they understand, by
+     eliminating the noise that is laziness.
+\end{itemize}
+
+\section{What I feel would make a good paper/thesis}
+\begin{itemize}
+\item Our story of performing worker/wrapper by outlining/inlining is
+\emph{intriguing}. I don't think it's \emph{strong}. So, to remedy that, we can:
+\item (1) Make our laziness encoding bulletproof, connect to CBPV for example,
+          handle circular references, etc.
+\item (2) Make a strong case that MLIR is an interesting target for this breed of language.
+          So, perform unification in MLIR, typeclass resolution in MLIR, perform some
+          analysis/optimisation. Ths way, we show an end-to-end prototype of something that
+          sorta works, instead of one thing that sorta works (?)
+\end{itemize}
+
 
 \section{Strictness Annotations: The Bad And The Ugly}
 
@@ -1547,8 +1582,13 @@ like overloading, have been transformed away.
 Recall that optimal lambda lifting is $O(n^2)$. I don't know the
 algorithm; I'd have to study it before I implement it.
 
+\subsection{Stretch: Separate dialect for pattern matching}
+\subsection{Stretch: rewrite based demand analysis}
 \subsection{Stretch: rewrite based unification}
-\subsection{Stretch: rewrite based tabled typeclass generation}
+We introduce a dialect for performing unification.
+
+
+\subsection{Stretch: rewrite based tabled typeclass unification}
 \subsection{Stretch: As static as possible garbage collection}
 
 
