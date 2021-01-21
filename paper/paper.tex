@@ -1014,7 +1014,179 @@ while retaining the pleasing simplicity of this outlining/inlining paradigm.
 
 \section{Worker wrapper by local rewrites: Non-tail-calls}
 
-Currently implementing the constructor simplification
+{\footnotesize
+\begin{lstlisting}[language=c++, caption=Step 0: the initial program]
+SimpleInt g(Thunk<SimpleInt> i) {
+  SimpleInt icons = force(i);
+  int ihash = casedefault(icons);
+  if (ihash <= 0) {
+    return SimpleInt(42);
+  } else {
+    int prev = ihash - 1;
+    SimpleInt siprev = SimpleInt(prev);
+    Thunk<SimpleInt> siprev_t = thunkify(siprev);
+    SimpleInt g_prev_v = g(siprev_t);
+    int g_prev_v_hash = casedefault(g_prev_v);
+    int rethash = g_prev_v_hash + 2;
+    SimpleInt ret = SimpleInt(rethash);
+    return ret;
+  }
+}
+\end{lstlisting}
+
+
+\begin{lstlisting}[language=c++, caption=Step 1: outline everything after \texttt{force}]
+SimpleInt g2(SimpleInt i) {
+  int ihash = casedefault(icons);
+  if (ihash <= 0) {
+    return SimpleInt(42);
+  } else {
+    int prev = ihash - 1;
+    SimpleInt siprev = SimpleInt(prev);
+    Thunk<SimpleInt> siprev_t = thunkify(siprev);
+    SimpleInt g_prev_v = g(siprev_t);
+    int g_prev_v_hash = casedefault(g_prev_v);
+    int rethash = g_prev_v_hash + 2;
+    SimpleInt ret = SimpleInt(rethash);
+    return ret;
+  }
+}
+SimpleInt g(Thunk<SimpleInt> i) {
+  SimpleInt icons = force(i);
+  g2(icons);
+}
+\end{lstlisting}
+
+
+\begin{lstlisting}[language=c++, caption=Step 2: outline everything after \texttt{force}]
+SimpleInt g2(SimpleInt i) {
+  int ihash = casedefault(icons);
+  if (ihash <= 0) {
+    return SimpleInt(42);
+  } else {
+    int prev = ihash - 1;
+    SimpleInt siprev = SimpleInt(prev);
+    Thunk<SimpleInt> siprev_t = thunkify(siprev);
+    SimpleInt g_prev_v = g(siprev_t);
+    int g_prev_v_hash = casedefault(g_prev_v);
+    int rethash = g_prev_v_hash + 2;
+    SimpleInt ret = SimpleInt(rethash);
+    return ret;
+  }
+}
+SimpleInt g(Thunk<SimpleInt> i) {
+  SimpleInt icons = force(i);
+  g2(icons);
+}
+\end{lstlisting}
+
+
+\begin{lstlisting}[language=c++, caption=Step 2: replace recursive call to \texttt{g}]
+SimpleInt g2(SimpleInt i) {
+  int ihash = casedefault(icons);
+  if (ihash <= 0) {
+    return SimpleInt(42);
+  } else {
+    int prev = ihash - 1;
+    SimpleInt siprev = SimpleInt(prev);
+    <@\textcolor{diffold}{ Thunk<SimpleInt> siprev\_t = thunkify(siprev)} @>;
+    <@\textcolor{diffold}{ SimpleInt g\_prev\_v = g(siprev\_t);} @>
+    <@\textcolor{diffnew}{ SimpleInt g\_prev\_v = g2(siprev);} @>
+    int g_prev_v_hash = casedefault(g_prev_v);
+    int rethash = g_prev_v_hash + 2;
+    SimpleInt ret = SimpleInt(rethash);
+    return ret;
+  }
+}
+SimpleInt g(Thunk<SimpleInt> i) {
+  SimpleInt icons = force(i);
+  g2(icons);
+}
+\end{lstlisting}
+
+
+\begin{lstlisting}[language=c++, caption=Step 3: outline block after \texttt{casedefault}]
+SimpleInt g3(int i) {
+  if (ihash <= 0) {
+    return SimpleInt(42);
+  } else {
+    int prev = ihash - 1;
+    SimpleInt siprev = SimpleInt(prev);
+    g_prev_v = g2(siprev);
+    int g_prev_v_hash = casedefault(g_prev_v);
+    int rethash = g_prev_v_hash + 2;
+    SimpleInt ret = SimpleInt(rethash);
+    return ret;
+  }
+}
+
+SimpleInt g2(SimpleInt i) {
+  int ihash = casedefault(icons);
+  return g3(ihash);
+}
+\end{lstlisting}
+
+\begin{lstlisting}[language=c++, caption=Step 4: replace \texttt{g2} with \texttt{g3}]
+SimpleInt g3(int i) {
+  if (ihash <= 0) {
+    return SimpleInt(42);
+  } else {
+    int prev = ihash - 1;
+    <@\textcolor{diffold}{SimpleInt siprev = SimpleInt(prev);} @>
+    <@\textcolor{diffold}{g\_prev\_v = g2(siprev);}@>
+    <@\textcolor{diffnew}{g\_prev\_v = g3(prev);}@>
+    int g_prev_v_hash = casedefault(g_prev_v);
+    int rethash = g_prev_v_hash + 2;
+    SimpleInt ret = SimpleInt(rethash);
+    return ret;
+  }
+}
+\end{lstlisting}
+
+\begin{lstlisting}[language=c++, caption=Step 5: float out \texttt{SimpleInt}]
+SimpleInt g3(int ihash) {
+  int out;
+  if (ihash <= 0) {
+    <@ \textcolor{diffold}{return SimpleInt(42)}; @>
+    <@ \textcolor{diffnew}{out = 42;} @>
+  } else {
+    int prev = ihash - 1;
+    SimpleInt g_prev_v = g3(prev);
+    int g_prev_v_hash = casedefault(g_prev_v);
+    int rethash = g_prev_v_hash + 2;
+    <@\textcolor{diffold}{SimpleInt ret = SimpleInt(rethash);} @>
+    <@\textcolor{diffold}{return ret;}@>
+    <@\textcolor{diffnew}{out = rethash;} @>
+  }
+  <@ \textcolor{diffnew}{return SimpleInt(out);} @>
+}
+\end{lstlisting}
+
+\begin{lstlisting}[language=c++, caption=Step 5: taking stock]
+SimpleInt g3(int ihash) {
+  int out;
+  if (ihash <= 0) {
+    out = 42;
+  } else {
+    int prev = ihash - 1;
+    SimpleInt g_prev_v = g3(siprev);
+    int g_prev_v_hash = casedefault(g_prev_v);
+    int rethash = g_prev_v_hash + 2;
+    out = rethash;
+  }
+  return SimpleInt(out);
+}
+SimpleInt g2(SimpleInt i) {
+  int ihash = casedefault(icons);
+  return g3(ihash);
+}
+
+SimpleInt g(Thunk<SimpleInt> i) {
+  SimpleInt icons = force(i);
+  g2(icons);
+}
+\end{lstlisting}
+
 
 \section{Worker wrapper by local rewrites: Sum types}
 
@@ -1055,7 +1227,7 @@ Currently implementing the constructor simplification
 }
 
 % =========================
-\vspace{15em}
+\vspace{18em}
 
 \begin{tabular}{l l}
 \begin{minipage}[t][1cm][b]{0.5\textwidth}
@@ -1085,7 +1257,6 @@ Currently implementing the constructor simplification
 &
 \begin{minipage}[t][1cm][b]{0.5\textwidth}
 {\footnotesize
-
 \inference{
 \texttt{func f(\%x1, ... \%wrapxi: @ADT, ..., \%xn) \{} \\
 \texttt{   \%xi = case (\%wrapxi) [\@Wrapper -> \string^ entry(\%v) \{ return \%v \}]} \\
@@ -1109,7 +1280,7 @@ Currently implementing the constructor simplification
 \end{minipage}
 \end{tabular}
 
-\vspace{15em}
+\vspace{20em}
 
 \begin{tabular}{ll}
 \begin{minipage}[t][1cm][b]{0.5\textwidth}
@@ -1154,7 +1325,7 @@ Currently implementing the constructor simplification
 \end{tabular}
 
 
-\vspace{15em}
+\vspace{18em}
 \begin{tabular}{ll}
 \begin{minipage}[t][1cm][b]{0.5\textwidth}
 {\footnotesize
