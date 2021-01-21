@@ -101,6 +101,7 @@
 \lstset{style=mystyle}
 
 
+
 % Use to keep figure in same section
 % \usepackage[section]{placeins}
 
@@ -229,6 +230,23 @@
 \newcommand{\assignarrow}{\xrightarrow{~\texttt{asgn}~}}
 \newcommand{\phiarrow}{\xrightarrow{phi}}
 \newcommand{\controlflowarrow}{\xrightarrow{~\texttt{ctrl}~}}
+
+\lstset{
+language=C++,
+basicstyle=\small\ttfamily,
+escapeinside={<@}{@>},
+columns=fullflexible,
+keywords=[2]{old},
+keywords=[3]{new},
+keywordstyle={\color{blue!80!black}},
+keywordstyle=[2]{\color{red!80!black}},
+keywordstyle=[3]{\color{green!50!black}},
+}
+
+\colorlet{diffold}{red!80!black}
+\colorlet{diffnew}{green!50!black}
+
+
 
 
 \makeatletter\if@ACM@journal\makeatother
@@ -844,14 +862,13 @@ SimpleInt f2(SimpleInt icons) {
         int prev = ihash - 1;
         SimpleInt siprev = SimpleInt(prev);
         Thunk<SimpleInt> siprev_t = thunkify(siprev);
-        SimpleInt f_prev_v = apStrict(f, siprev_t);
+        SimpleInt f_prev_v = f(siprev_t);
         return f_prev_v;
     }
 }
-
 SimpleInt f(Thunk<SimpleInt> i) {
     SimpleInt icons = force(i);
-    SimpleInt ret = apStrict(f2, icons);
+    SimpleInt ret = f2(icons);
     return ret;
 }
 \end{lstlisting}
@@ -861,7 +878,7 @@ SimpleInt f(Thunk<SimpleInt> i) {
 
 %\begin{figure}[htb!]
 %\begin{minted}{cpp}
-\begin{lstlisting}[language=c++, caption=Step 2: Removing the strict application]
+\begin{lstlisting}[language=c++, caption=Step 2: Removing the un-necessary lazy recursive call]
 SimpleInt f2(SimpleInt icons) {
     int ihash = casedefault(icons);
     if (ihash <= 0) {
@@ -869,16 +886,16 @@ SimpleInt f2(SimpleInt icons) {
     } else {
         int prev = ihash - 1;
         SimpleInt siprev = SimpleInt(prev);
-        // Thunk<SimpleInt> siprev_t = thunkify(siprev);
-        // SimpleInt f_prev_v = apStrict(f, siprev_t);
-        Thunk<SimpleInt> f_prev_v = apStrict(f2, siprev);
+        <@\textcolor{diffold}{Thunk<SimpleInt> siprev\_t = thunkify(siprev);}@>
+        <@\textcolor{diffold}{SimpleInt f\_prev\_v = f(siprev\_t);} @>
+       <@ \textcolor{diffnew}{Thunk<SimpleInt> f\_prev\_v = f2(siprev);} @>
         return f_prev_v;
     }
 }
 
 SimpleInt f(Thunk<SimpleInt> i) {
     SimpleInt icons = force(i);
-    SimpleInt ret = apStrict(f2, icons);
+    SimpleInt ret = f2(icons);
     return ret;
 }
 \end{lstlisting}
@@ -895,22 +912,18 @@ SimpleInt f3(int icons) {
     } else {
         int prev = ihash - 1;
         SimpleInt siprev = SimpleInt(prev);
-        Thunk<SimpleInt> f_prev_v = apStrict(f2, siprev);
+        Thunk<SimpleInt> f_prev_v = f2(siprev);
         return f_prev_v;
     }
 }
 
 SimpleInt f2(SimpleInt icons) {
     int ihash = casedefault(icons);
-    SimpleInt ret = apStrict(f3, ihash);
-    return ret;
-}
+    <@ \textcolor{diffnew}{SimpleInt ret = f3(ihash);} @>
 
-SimpleInt f(Thunk<SimpleInt> i) {
-    SimpleInt icons = force(i);
-    SimpleInt ret = apStrict(f2, icons);
     return ret;
 }
+...
 \end{lstlisting}
 }
 %\caption{ Step 3: outline everything after casedefault(icons) into f3}
@@ -924,24 +937,52 @@ SimpleInt f3(int icons) {
         return SimpleInt(42);
     } else {
         int prev = ihash - 1;
-        Thunk<SimpleInt> f_prev_v = apStrict(f3, prev);
+        <@ \textcolor{diffold}{SimpleInt siprev = SimpleInt(prev);} @>
+        <@ \textcolor{diffold}{Thunk<SimpleInt> f\_prev\_v = f2(siprev);} @>
+        <@ \textcolor{diffnew}{Thunk<SimpleInt> f\_prev\_v = f3(prev);} @>
         return f_prev_v;
     }
 }
+...
+\end{lstlisting}
+}
+
+%\caption{Step 4: replace call f2(SimpleInt(prev)) to f3(prev)}
+%\end{figure}
+
+
+{\footnotesize
+\begin{lstlisting}[language=c++, caption=taking stock]
+SimpleInt f3(int icons) {
+    if (ihash <= 0) {
+        return SimpleInt(42);
+    } else {
+        int prev = ihash - 1;
+        <@ \textcolor{diffnew}{Thunk<SimpleInt> f\_prev\_v = f3(prev);} @>
+        return f_prev_v;
+    }
+}
+
 SimpleInt f2(SimpleInt icons) {
     int ihash = casedefault(icons);
-    SimpleInt ret = apStrict(f3, ihash);
+    <@ \textcolor{diffnew}{SimpleInt ret = f3(ihash);} @>
     return ret;
 }
 SimpleInt f(Thunk<SimpleInt> i) {
     SimpleInt icons = force(i);
-    SimpleInt ret = apStrict(f2, icons);
+    SimpleInt ret = f2(icons);
     return ret;
 }
 \end{lstlisting}
 }
-%\caption{Step 4: replace call f2(SimpleInt(prev)) to f3(prev)}
-%\end{figure}
+
+At this point, we have a clean program that has been worker/wrappered. We can
+see that the call chain looks as follows:
+
+$$
+f \xrightarrow{\texttt{force}} f_2 \xrightarrow{\texttt{unwrap}} f_3 \to f_3 \dots \xrightarrow{\texttt{wrap}} f_2
+\xrightarrow{\texttt{thunk}} f
+$$
 
 
 %\begin{figure}[htb!]
