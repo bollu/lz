@@ -1393,6 +1393,92 @@ The full test suite also extensively tests Haskell's semantics of parallelism,
 software transactional memory, and other features that are orthogonal to the
 problem of representing and optimizing non strictness.
 
+\subsection{A toy example: eliminating wrapper overhead}
+
+\begin{lstlisting}[language=llvm,caption="Original program with wrapper and laziness overhead"]
+module {
+// fact 0 = 1
+// fact n = n*fact(n-1)
+func @f (%i : !lz.thunk<i64>) -> i64 {
+  %ival = lz.force(%i):i64
+  %out = lz.caseint %ival 
+   [0 ->   { 
+    ^entry:
+    %c1 = constant 1 : i64
+    lz.return %c1 : i64
+   }]
+   [@default -> {
+    ^entry:
+    %c1 = constant 1 : i64
+    %idec = subi %ival, %c1 : i64
+    %idecthnk = lz.thunkify(%idec : i64) 
+    %f = constant @f : (!lz.thunk<i64>) -> i64
+    %f_idec_thnk = lz.ap(%f: (!lz.thunk<i64>) -> i64, 
+        %idecthnk)
+    %f_idec_val = lz.force(%f_idec_thnk) : i64
+    %prod = muli %ival, %f_idec_val : i64
+    lz.return %prod : i64
+   }]
+  return %out : i64
+}
+
+func @c8 () -> i64 {
+  %v = std.constant 8 : i64
+  return %v: i64
+}
+
+func @main() -> i64 {
+  %f = constant @f : (!lz.thunk<i64>) -> i64
+  %c8f = constant @c8 : () -> i64
+  %c8t = lz.ap(%c8f : () -> i64)
+  %outt = lz.ap(%f: (!lz.thunk<i64>) -> i64, %c8t)
+  %out = lz.force(%outt) : i64
+  return %out : i64
+}
+}
+
+\end{lstlisting}
+
+After worker/wrapper, we get the optimized program:
+
+\begin{lstlisting}[language=llvm,caption="factorial that has been worker/wrapper'd"]
+module  {
+  func @c8() -> i64 {
+    %c8_i64 = constant 8 : i64
+    return %c8_i64 : i64
+  }
+  func @main() -> i64 {
+    %c7_i64 = constant 7 : i64
+    %f = constant @frec_force_outline : (i64) -> i64
+    %c8_i64 = constant 8 : i64
+    %0 = "lz.apEager"(%f, %c7_i64) : ((i64) -> i64, i64) -> i64
+    %1 = muli %0, %c8_i64 : i64
+    return %1 : i64
+  }
+  func @frec_force_outline(%arg0: i64) -> i64 {
+    %c1_i64 = constant 1 : i64
+    %f = constant @frec_force_outline : (i64) -> i64
+    %0 = "lz.caseint"(%arg0) ( {
+      lz.return %c1_i64 : i64
+    },  {
+      %1 = subi %arg0, %c1_i64 : i64
+      %2 = "lz.apEager"(%f, %1) : ((i64) -> i64, i64) -> i64
+      %3 = muli %arg0, %2 : i64
+      lz.return %3 : i64
+    }) {alt0 = 0 : i64, alt1 = @default} : (i64) -> i64
+    return %0 : i64
+  }
+\end{lstlisting}
+
+\sid{Explain how this happens}
+We will explain this transformation step by step. Finally, when lowered to
+LLVM, LLVM's strong loop analyses is able to compute a closed form for 
+\texttt{frec\_force\_outline}, ending in a constant time computation.
+
+\subsection{A toy example: eliminating laziness and exposing loop optimisation}
+
+
+
 \section{Related Work}
 
 \subsection{Demand analysis}
