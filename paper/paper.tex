@@ -1190,6 +1190,10 @@ SimpleInt g(Thunk<SimpleInt> i) {
 
 \section{Worker wrapper by local rewrites: Sum types}
 
+The transformation of floating out common patterns works equally well
+for branches as it does for sum types, since a case analysis on a sum
+type is the same as a branch on the tag.
+
 
 \section{Worker wrapper by local rewrites: Sum types + non-tail-calls}
 
