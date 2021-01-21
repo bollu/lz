@@ -375,21 +375,6 @@ are possible in the strict world, that are not possible in the non-strict world.
 We model \emph{divergent computations as undefined behaviour}, giving the
 compiler far more freedom to optimize and reorder a mix of strict and non-strict
 code.
-% 5 
-We first consider the various deficiencies of introducing an explicit "bang pattern"
-or "strictness annotation" as is done within the Glasgow Haskell compiler today.
-Then we demonstrate how setting divergent computations to be undefined behaviour 
-cleanly enables the compiler to optimize these programs.
-% 6
-This modelling of divergence as undefined behaviour enables us to write an
-\emph{optimizing} compiler that can reason about a mix of strictness and non
-strictness. Furthermore, it enables us to modularly add non-strictness into
-an existing strict language. We demonstrate this with a prototype optimizing
-functional language called Lizzy. Lizzy uses MLIR as a backend. We introduce
-a new dialect \lz in MLIR for modularly expressing non-strictness.  As a benchmark,
-we consider a shootout between GHC's optimization of vector and matrix
-computations, and \lz's ability to optimize the same computations.
-% (http://www.easterbrook.ca/steve/2010/01/how-to-write-a-scientific-abstract-in-six-easy-steps/)
 \end{abstract}
 
 
@@ -481,14 +466,13 @@ in Haskell compiled by the Glasgow Haskell Compiler.
 % }
 Our contributions are:                                          
 \begin{itemize}
-\item A formal semantics for bang patterns in the Haskell language.
-\item A study of where bang patterns inhibit GHC's ability to reason about strictness.
-\item A novel yet simple extension to a lazy language semantics that remove this
-      inability of GHC (and lazy languages in general) to reason about strictness.
-\item An implementation of a prototype lazy language (Lizzy) that chooses this
-      approach pervasively.
 \item A new dialect (\lz) for MLIR to encode these semantics, and provide modular
       non-strictness.
+\item A translator from STG to \lz that exhibits the ability to 
+      eliminate laziness and leverage MLIR's loop optimisation  framework.
+\item A rewrite driven strategy for worker/wrapper that interleaves 
+     worker/wrapper analysis along with worker/wrapper rewriting, by phrasing
+     the worker/wrapper problem as an outlining/inlining problem.
 \end{itemize}
 
 \section{Stuff that doesn't work}
@@ -527,205 +511,6 @@ Our contributions are:
 \end{itemize}
 
 
-\section{Strictness Annotations: The Bad And The Ugly}
-
-We first motivate why strictness annotations inhibit the compiler
-from being able to optimize programs. Consider the program in
-\autoref{fig:lazy-loop}, where \texttt{out} declares
-a binding \raw{x = loop} and proceeds to not use it. This allows GHC
-to optimize out the program into \raw{out = 42}. On the
-other hand, consider  \autoref{fig:strict-loop} where \raw{out}
-declares  \emph{strict} binding \raw{!x  = loop} and proceeds to not
-use it. 
-
-
-\begin{lstlisting}[language=haskell,caption=unoptimized \raw{out} and optimized \raw{outOptimized}]
-{-# LANGUAGE BangPatterns #-}
-loop, out, out' :: Int
-loop = loop;
-out = let x = loop in 42
-outOptimized = 42
-main :: IO ()
-main = do print out; print out'
-\end{lstlisting}
-
-\begin{lstlisting}[language=haskell, caption=unoptimized \raw{outStrict} with an incorrect optimization in \raw{outStrictOptimized}]
-{-# LANGUAGE BangPatterns #-}
-loop, out, out' :: Int
-loop = loop;
-outStrict = let !x = loop in 42
-outStrictOptimized = 42 -- INCORRECT TRANSFORM
-main :: IO ()
-main = do print out; print out'
-\end{lstlisting}
-% \caption{An example of how strictness annotations break equational reasoning}
-
-\begin{lstlisting}[language=haskell, caption=Original haskell program]
-{-# LANGUAGE BangPatterns #-}
-out b = let large = unknown 10 in 
-  if False then large else 42
-out' b = let !large = unknown  10 in 
-  if False then large else 42
-main :: IO ()
-main = do print out; print out'
-\end{lstlisting}
-
-\begin{lstlisting}[language=Haskell, caption=Correct optimization that is incorrect with a bang pattern]
-{-# LANGUAGE BangPatterns #-}
-loop, out, out' :: Int
-loop = loop;
-out b= if b then 
-  let large = unknown 10 in large else 42
--- | incorrect. If `large` had been divergent, 
--- then `out` no longer
--- exhibits divergence
-out' b = if b then 
-  let !large = unknown 10 in large else 42
-
-main :: IO ()
-main = do print out; print out'
-\end{lstlisting}
-% \caption{An example of how strictness annotations disallow floating a \texttt{let}
-%          down into the use-site, inhibiting optimization}
-
-
-
-
-\section{Undefined Behaviour For Divergence?}
-
-As we have shown, the existence of bang patterns obviates equational reasoning.
-We are now in a bind: we can choose to forego bang patterns, thereby
-regaining equational reasoning with a loss of performance. This is not a 
-very reasonable suggestion, as bang patterns are critical for controlling
-evaluation ordering, and ensuring that we do not build up thunks.
-
-We first propose a simple, outrageous, solution:  Ban all divergence.
-We define divergence to be \emph{undefined behaviour}. In essence, this
-allows the compiler to assume that \emph{no value} is divergent, for if a
-value were divergent, then \emph{anything} can happen. We analyze the
-merits and deficiencies of this proposal, and then provide a more
-refined version of the above solution.
-
-% \begin{figure}[ht]
-% \begin{minted}{hs}
-% {-# LANGUAGE BangPatterns #-}
-% loop, out, out' :: Int
-% outStrict = let !x = loop in 42
-% -- ==If x were not divergent==, 
-% --   it is safe to set out' to 42.
-% -- ==If x were divergent==
-% --   It is undefined behaviour. Anything can
-% --   happen, including evaluating out' to 42.
-% outStrictOptimized = 42 
-% main :: IO ()
-% main = do print out; print out'
-% \end{minted}
-% \caption{An example of how defining divergence as UB allows continued
-%          equational reasoning with bang patterns.}
-% \label{fig:strict-loop-ub}
-% \end{figure}
-
-
-Consider the program in \autoref{fig:strict-loop}. Here, according
-to our semantics, we define \emph{divergence as undefined behaviour}.
-Interpreted according to these semantics, here's how we legally
-allow the transformation \raw{outStrictOptimized = 42}:
-
-\begin{itemize}
-    \item Since \raw{x} is forced, we must evaluate \raw{loop} into weak head normal form.
-    \item \raw{loop} does not have a weak head normal form. This is a divergent computation.
-    \item Since we have divergence, \emph{anything} can happen [we can refine $\bot$ into a
-    value that is greater than $\bot$].
-    \item We choose to refine $\bot$ into $42$ as $\bot \sqsubset 42$.
-\end{itemize}
-
-%\begin{figure}
-%\begin{minted}{hs}
-\begin{lstlisting}[language=haskell, caption=An example of how defining divergence as UB is too agressive]
-{-# LANGUAGE BangPatterns #-}
--- | never evaluates to a value.
-main = putStrLn "42"; main
-mainOptimized = return () 
- -- | legal if divergence is UB.
-\end{lstlisting}
-%\end{minted}
-%\label{fig:io-loop}
-%\caption{An example of how defining divergence as UB is too agressive}
-%\end{figure}
-
-
-On the other hand, this definition is \emph{far too agressive}. Consider
-the program in \autoref{fig:io-loop}. Here, main prints $42$ forever,
-never returning the final \raw{IO ()} that it is expected to. Thus,
-we can \emph{optimize this program} into \raw{mainOptimized = return ()}
-if divergence is undefined behaviour. This is not what we want! We wish
-to allow programs which \emph{make progess without halting}, while
-still being able to exploit undefined behaviour. Thus, we must change our
-semantics to adapt to this need.
-
-\section{Progressive operational semantics}
-
-Naively speaking, one maybe tempted to summarize our approach as
-"make divergence undefined". While this is appealing, this is both too
-strong, and too naive. For example, such a definition would allow us to
-optimize away programs that \emph{progress} without \emph{terminating}.
-A tiny example of such a program, which prints ``42'' forever is
-given in \autoref{fig:print-forever}
-
-% \begin{figure}[ht]
-% \begin{minted}{hs}
-\begin{lstlisting}[language=haskell, caption=A program that makes progress without terminating.  We wish to preserve such program semantics]
-action :: IO (); action = putStrLn "42";
-main :: IO (); main = action >> main
-\end{lstlisting}
-% \end{minted}
-% \label{fig:print-forever}
-% \caption{A program that makes progress without terminating.  We wish to preserve such program semantics}
-% \end{figure}
-
-% \begin{figure}[ht]
-    
-%\begin{subfigure}[b]{0.48\textwidth}
-%\begin{minted}{hs}
-\begin{lstlisting}[language=haskell]
-{-# LANGUAGE BangPatterns #-}
-loop :: Int; loop = loop
-ex1 = let x = loop in 42
-ex2 = let !x = loop in 42
-ex3 = let !x = loop in x
--- | New program
-{-# LANGUAGE BangPatterns #-}
-loop :: Int; loop = loop
-ex1 = 42
-ex2 = 42
-ex3 = let !x = loop in x
-ex3' = loop -- equivalent semantics
-\end{lstlisting}
-% \end{minted}
-% \subcaption{Maxmially transformed programs with our proposed semantics}
-% \end{subfigure}
-% \caption{Programs that exhibit a range of behviours, clarifying what values we do and do not eliminate}
-% \end{figure}
-
-We call our semantics \emph{progressive}, which tries to make as much progress
-as possible before getting stuck at a stuck term.
-\section{Formal Semantics Of Bang Patterns in Haskell}
-
-There is currently no formal definition of bang patterns in the Haskell language.
-The semantics are defined based on how the Glasgow Haskell Compiler chooses
-to manipulate these strictness annotations. So wherever we have previously argued
-that it would be ``incorrect'' for GHC to perform these transforms, we have been
-arguing from the position of:
-
-\begin{itemize}
-\item This is what GHC does today, and that is the current state of definition for bang patterns.
-\item Were GHC to make the above transformation, we believe it would violate the
-      intuitions that many people have about how GHC \emph{ought} to transform code.
-      \sid{I asked bgamari who works on GHC full-time, he said that GHC does not perform the above transform most likely.
-           Similarly, other friends (carter, davean) who commit into GHC also said likely not.}
-\end{itemize}
-
-To begin our discussion, we first formalize the semantics of bang patterns.
 \textbf{TODO: fill in semantics here.}
 \section{\lz: Its Syntax, Type system, semantics}
 \subsection{A high level overview of \mlir}
@@ -1315,7 +1100,7 @@ Currently implementing the constructor simplification
 }
 
 % =========================
-\vspace{20em}
+\vspace{15em}
 
 \begin{tabular}{l l}
 \begin{minipage}[t][1cm][b]{0.5\textwidth}
@@ -1369,8 +1154,9 @@ Currently implementing the constructor simplification
 \end{minipage}
 \end{tabular}
 
-\vspace{10em}
+\vspace{15em}
 
+\begin{tabular}{ll}
 \begin{minipage}[t][1cm][b]{0.5\textwidth}
 {\footnotesize
 \inference{
@@ -1385,42 +1171,39 @@ Currently implementing the constructor simplification
 } % end footnotesize
 \subcaption{Case of known constructor: remove indirection}
 \end{minipage}
-
-\vspace{10em}
-
-\begin{minipage}[t][1cm][b]{0.5\textwidth}
-{\footnotesize
-\inference{
-FOO
-}{
-BAR
-}
-} % end footnotesize
-\subcaption{Inline a function call}
-\end{minipage}
-\caption{Local rewrites performed to eliminate laziness (1)}
-\end{figure*}
-
-\begin{figure*}
+&
 
 \begin{minipage}[t][1cm][b]{0.5\textwidth}
 {\footnotesize
 \inference{
-FOO
+\texttt{data C = MkC(V) }\\
+\texttt{@f(\%inc: C)} \\
+\texttt{ case inc} \\
+\texttt{   [C inv -> } \\
+\texttt{     \%inv = extract(@MKC, \%inc) : V}\\
+\texttt{     \%w = ... : V; \%wc = construct(@MKC, w) : C} \\
+\texttt{     \%rec = apEager(@f, wc)]}\\
 }{
-BAR
+\texttt{@frec(\%inv: V)}\\
+\texttt{ \%inv = extract(@MKC, \%inc) : V}\\
+\texttt{ \%w = ... : V; \%wc = construct(@MKC, w) : C} \\
+\texttt{ \%rec = apEager(@f, wc)}\\
+\texttt{@f(\%inc: C)} \\
+\texttt{ \%inv = extract(\%inc) : V}\\
+\texttt{ apEager(@frec, inv)}\\
 }
 } % end footnotesize
 \subcaption{Outline recursive call of constructor that is immediately unwrapped}
 \end{minipage}
 % OutlineRecursiveApEagerOfConstructorPattern
+\end{tabular}
 
 
-
+\vspace{15em}
+\begin{tabular}{ll}
 \begin{minipage}[t][1cm][b]{0.5\textwidth}
 {\footnotesize
 \inference{
-FOO
 }{
 BAR
 }
@@ -1428,35 +1211,45 @@ BAR
 \subcaption{Outline pattern matching branches on a function input}
 % OutlineCaseOfFnInput
 \end{minipage}
+&
 
 \begin{minipage}[t][1cm][b]{0.5\textwidth}
 {\footnotesize
 \inference{
-FOO
+\texttt{data C = MKC(V) }\\
+\texttt{@f(...)}\\
+\texttt{  ...}\\
+\texttt{  \%out = constructor(C, \%w)}\\
+\texttt{  lz.return (\%out)}\\
 }{
-BAR
+\texttt{data C = MKC(V) }\\
+\texttt{@finner(...)} \\
+\texttt{ ...} \\
+\texttt{ lz.return \%w} \\
+\texttt{ } \\
+\texttt{@f(...)}\\
+\texttt{ \%w = call \%f(...)}\\
+\texttt{ \%out = constructor(C, \%w)}\\
+\texttt{ lz.return (\%out)}
 }
 } % end footnotesize
 \subcaption{Outline return of constructor}
 % outline return of constructor
 \end{minipage}
-
-
-\begin{minipage}[t][1cm][b]{0.5\textwidth}
-{\footnotesize
-\inference{
-FOO
-}{
-BAR
-}
-} % end footnotesize
-\subcaption{Peel constructor from case}
-% peel constructor from case
-\end{minipage}
-
-%% % \begin{minted}{text}
-%% % Inlining
-%% % \end{minted}
+\end{tabular}
+%% 
+%% 
+%% \begin{minipage}[t][1cm][b]{0.5\textwidth}
+%% {\footnotesize
+%% \inference{
+%% FOO
+%% }{
+%% BAR
+%% }
+%% } % end footnotesize
+%% \subcaption{Peel constructor from case}
+%% % peel constructor from case
+%% \end{minipage}
 \caption{Local rewrites performed to eliminate laziness (2)}
 \end{figure*}
 
