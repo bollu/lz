@@ -1,3 +1,3 @@
-thesis.pdf: thesis.tex
-	latexmk thesis.tex -shell-escape  -pdf
+paper.pdf: paper.tex
+	latexmk paper.tex -shell-escape  -pdf
 	# pdflatex thesis.tex --shell-escape
