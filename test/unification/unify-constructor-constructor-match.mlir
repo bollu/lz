@@ -1,3 +1,5 @@
+// Test lowering of ap & force.
+// RUN: hask-opt %s --lz-unifier
 // Foo(a, B) ~ Foo(A, b)
 func @main() -> !unif.node {
   %r = unif.root
