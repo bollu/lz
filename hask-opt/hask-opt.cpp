@@ -39,6 +39,7 @@
 #include "Interpreter.h"
 #include "Pointer/PointerDialect.h"
 #include "Unification/UnificationDialect.h"
+#include "Unification/UnificationOps.h"
 #include "Runtime.h"
 
 #include "LZJIT/LZJIT.h"
@@ -74,6 +75,7 @@ int main(int argc, char **argv) {
   // mlir::registerSCFToStandardPass();
 
   mlir::standalone::registerWorkerWrapperPass();
+  mlir::unif::registerUnifierPass();
   mlir::standalone::registerLowerHaskPass();
   mlir::ptr::registerLowerPointerPass();
   registerLZJITPass();

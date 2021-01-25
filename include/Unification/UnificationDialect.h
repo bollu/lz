@@ -37,7 +37,5 @@ public:
   static UnifNodeType get(MLIRContext *context) { return Base::get(context); }
 };
 
-void registerLowerUnificationPass();
-
 }; // namespace unif
 }; // namespace mlir

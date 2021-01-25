@@ -75,5 +75,8 @@ public:
   void print(OpAsmPrinter &p);
 };
 
+std::unique_ptr<mlir::Pass> createUnifierPass();
+void registerUnifierPass();
+
 } // namespace unif
 } // namespace mlir
