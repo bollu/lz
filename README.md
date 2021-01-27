@@ -16,6 +16,7 @@ Convert GHC Core to MLIR.
 - Example GHC perf slide because of laziness: https://gitlab.haskell.org/ghc/ghc/-/issues/19102#note_319557
 - [Novel GC algorithm for pure funcitonal languages](https://www.reddit.com/r/haskell/comments/knzfhn/novel_garbage_collection_technique_for_immutable/)
 - [supercompiler by evaluation](https://www.microsoft.com/en-us/research/wp-content/uploads/2016/07/supercomp-by-eval.pdf)
+- [GHC grin has benchmark suite](https://github.com/grin-compiler/ghc-grin/tree/master/ghc-grin-benchmark/boquist-grin-bench)
 
 
 
@@ -30,6 +31,132 @@ Convert GHC Core to MLIR.
 
 
 # Log:  [newest] to [oldest]
+
+# Wed, 27th Jan
+
+- `ghc-wpc` is amazing, it's tooling that _actually works_.
+
+
+```
+bollu@cantordust:~/temp/ > cat foo.hs  
+{-# LANGUAGE NoImplicitPrelude #-}
+module Foo where
+
+data Bar = MkBar
+
+foo :: Bar
+foo = MkBar
+
+
+bollu@cantordust:~/temp/ > lsfoo  foo.ghc_stgapp  foo.hi  foo.hs  foo.o  foo.o_modpak
+bollu@cantordust:~/temp/ > rm foo.hi foo.o_modpak foo.o foo.ghc_stgapp 
+bollu@cantordust:~/temp/ > ~/work/ghc-whole-program-compiler-project/ghc-wpc/_build/stage1/bin/ghc foo.hs [1 of 1] Compiling Foo              ( foo.hs, foo.o )
+bollu@cantordust:~/temp/ > /home/bollu/work/ghc-whole-program-compiler-project/external-stg/dist-newstyle/build/x86_64-linux/ghc-8.8.3/external-stg-0.1.0.1/x/ext-stg/build/ext-stg/ext-stg show foo.o_modpak
+{- stg -}
+package main
+module Foo where
+
+using ghc-prim : GHC.Types
+using main : Foo
+
+externals
+  (ghc-prim_GHC.Types.[] : LiftedRep (forall a. [a]))
+  (ghc-prim_GHC.Types.krep$* : LiftedRep (KindRep))
+
+type
+  ghc-prim_GHC.Types.KindRep
+    ghc-prim_GHC.Types.KindRepTyConApp :: AlgDataCon [LiftedRep,LiftedRep]
+    ghc-prim_GHC.Types.KindRepVar :: AlgDataCon [IntRep]
+    ghc-prim_GHC.Types.KindRepApp :: AlgDataCon [LiftedRep,LiftedRep]
+    ghc-prim_GHC.Types.KindRepFun :: AlgDataCon [LiftedRep,LiftedRep]
+    ghc-prim_GHC.Types.KindRepTYPE :: AlgDataCon [LiftedRep]
+    ghc-prim_GHC.Types.KindRepTypeLitS :: AlgDataCon [LiftedRep,AddrRep]
+    ghc-prim_GHC.Types.KindRepTypeLitD :: AlgDataCon [LiftedRep,LiftedRep]
+  
+  ghc-prim_GHC.Types.Module
+    ghc-prim_GHC.Types.Module :: AlgDataCon [LiftedRep,LiftedRep]
+  
+  ghc-prim_GHC.Types.TrName
+    ghc-prim_GHC.Types.TrNameS :: AlgDataCon [AddrRep]
+    ghc-prim_GHC.Types.TrNameD :: AlgDataCon [LiftedRep]
+  
+  ghc-prim_GHC.Types.TyCon
+    ghc-prim_GHC.Types.TyCon :: AlgDataCon [WordRep,WordRep,LiftedRep,LiftedRep,IntRep,LiftedRep]
+  
+  ghc-prim_GHC.Types.[]
+    ghc-prim_GHC.Types.[] :: AlgDataCon []
+    ghc-prim_GHC.Types.: :: AlgDataCon [LiftedRep,LiftedRep]
+  
+  main_Foo.Bar
+    main_Foo.MkBar :: AlgDataCon []
+  
+
+(main_Foo.MkBar : LiftedRep (Bar)) =
+  main_Foo.MkBar :: AlgDataCon [] 
+
+(main_Foo.$tc'MkBar1 : AddrRep (Addr#)) =
+  "'MkBar"
+
+(main_Foo.$tc'MkBar2 : LiftedRep (TrName)) =
+  ghc-prim_GHC.Types.TrNameS :: AlgDataCon [AddrRep] main_Foo.$tc'MkBar1
+
+(main_Foo.$tcBar1 : AddrRep (Addr#)) =
+  "Bar"
+
+(main_Foo.$tcBar2 : LiftedRep (TrName)) =
+  ghc-prim_GHC.Types.TrNameS :: AlgDataCon [AddrRep] main_Foo.$tcBar1
+
+(main_Foo.$trModule3 : AddrRep (Addr#)) =
+  "Foo"
+
+(main_Foo.$trModule4 : LiftedRep (TrName)) =
+  ghc-prim_GHC.Types.TrNameS :: AlgDataCon [AddrRep] main_Foo.$trModule3
+
+(main_Foo.$trModule1 : AddrRep (Addr#)) =
+  "main"
+
+(main_Foo.$trModule2 : LiftedRep (TrName)) =
+  ghc-prim_GHC.Types.TrNameS :: AlgDataCon [AddrRep] main_Foo.$trModule1
+
+(main_Foo.$trModule : LiftedRep (Module)) =
+  ghc-prim_GHC.Types.Module :: AlgDataCon [LiftedRep,LiftedRep] main_Foo.$trModule2 main_Foo.$trModule4
+
+(main_Foo.$tcBar : LiftedRep (TyCon)) =
+  ghc-prim_GHC.Types.TyCon :: AlgDataCon [WordRep,WordRep,LiftedRep,LiftedRep,IntRep,LiftedRep] #Word#9087065647546038855 #Word#17224336406314564570 main_Foo.$trModule main_Foo.$tcBar2 #Int#0 ghc-prim_GHC.Types.krep$*
+
+(main_Foo.$krep : LiftedRep (KindRep)) =
+  ghc-prim_GHC.Types.KindRepTyConApp :: AlgDataCon [LiftedRep,LiftedRep] main_Foo.$tcBar ghc-prim_GHC.Types.[]
+
+(main_Foo.$tc'MkBar : LiftedRep (TyCon)) =
+  ghc-prim_GHC.Types.TyCon :: AlgDataCon [WordRep,WordRep,LiftedRep,LiftedRep,IntRep,LiftedRep] #Word#3328458281052523173 #Word#5691101527919328307 main_Foo.$trModule main_Foo.$tc'MkBar2 #Int#0 main_Foo.$krep
+
+(main_Foo.foo : LiftedRep (Bar)) =
+  main_Foo.MkBar :: AlgDataCon [] 
+
+foreign stub C header {
+
+}
+foreign stub C source {
+
+}
+foreign files
+```
+
+# Tue, 26th Jan
+
+thinking more carefully about the story, I realise that I can't actually
+compare the results of the """demand analysis""" because I don't have an
+analysis in the first place. I can only witness the results of the analysis by
+proxy, by witnessing whether the worker/wrapper took place or not. So in a
+sense, we don't actually compute any intermediate information!
+
+```
+testsuite/tests/stranal
+testsuite/tests/cpranal
+testsuite/tests/arityanal
+```
+
+- To read: [CPR analysis](http://research.microsoft.com/~simonpj/Papers/cpr/index.htm)
 
 # Tue, 19th Jan
 

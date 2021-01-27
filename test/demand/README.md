@@ -22,3 +22,45 @@ in (y,1)
 ```
 - Projections for demand analysis
 
+
+# Projections for demand analysis
+
+```
+nil :: [a] -> [a]
+nil [] = []
+nil (x:xs) = error "err"
+```
+
+```
+cons :: [a] -> [a]
+cons [] = error "err"
+cons (a:as) = a:as
+```
+
+```
+length :: [a] -> a
+legnth [] = 0
+legnth (x:xs) = 1+length xs
+```
+
+```
+before ::
+before = 
+```
+
+```
+doubles ::
+doubles = 
+```
+```
+append ::
+append = 
+```
+
+
+```
+reverse ::
+reverse = 
+```
+
+
