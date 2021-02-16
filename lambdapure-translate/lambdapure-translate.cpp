@@ -1,9 +1,9 @@
-#include <iostream>
 #include "Hask/HaskDialect.h"
 #include "Hask/HaskOps.h"
 #include "mlir/InitAllTranslations.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Translation.h"
+#include <iostream>
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopedHashTable.h"
@@ -11,6 +11,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include "lambdapure/Dialect.h"
 
 // https://github.com/llvm/llvm-project/blob/e21adfa32d8822f9ea4058c3e365a841d87cb3ee/mlir/lib/Target/LLVMIR/ConvertFromLLVMIR.cpp
 using namespace mlir;
@@ -26,7 +27,6 @@ using namespace llvm;
 // === AST ===
 // === AST ===
 // === AST ===
-
 
 enum VarType { object, u64, u32, u16, u8 };
 std::string stringOfType(VarType t);
@@ -391,7 +391,6 @@ std::string stringOfType(std::vector<VarType> ts, VarType t) {
 // LEX & PARSE ===
 // LEX & PARSE ===
 
-
 class Mapping {
 public:
   std::string var;
@@ -458,7 +457,7 @@ public:
         return p->ty;
       }
     }
-    assert (false && "unable to find type.");
+    assert(false && "unable to find type.");
   }
   void print() {
     std::cout << "-----SymbolTable-----" << std::endl;
@@ -470,14 +469,12 @@ public:
 
 }; // class ScopeTable
 
-
 // === LEXER ===
 // === LEXER ===
 // === LEXER ===
 // === LEXER ===
 // === LEXER ===
 // === LEXER ===
-
 
 enum Token : int {
   tok_eof = 0,
@@ -543,7 +540,8 @@ private:
     // lastLocation = mlir::Location(mlir::LocationAttr())
     // lastLocation.line = curLine;
     // lastLocation.col = curCol;
-    lastLocation = mlir::FileLineColLoc::get("UNKNOWN-FILE", curLine, curCol, context);
+    lastLocation =
+        mlir::FileLineColLoc::get("UNKNOWN-FILE", curLine, curCol, context);
     if (isalpha(lastChar) ||
         lastChar == '_') { // if this is [a-zA-Z][a-zA-Z0-9_]
       identifierStr = lastChar;
@@ -552,7 +550,7 @@ private:
       while (isalnum(lastChar) || lastChar == '_' || lastChar == '.' ||
              lastChar == '\'') { //[a-zA-Z][a-zA-Z0-9_.]
         if (lastChar == '\'') {  // replace apostrophe with _prime, c cant have
-                                // it in function names
+                                 // it in function names
           identifierStr += "_prime_";
         } else if (lastChar == '.') {
           identifierStr += "_dot_";
@@ -604,7 +602,7 @@ private:
 
 public:
   Lexer(llvm::StringRef buffer)
-      : context(nullptr), 
+      : context(nullptr),
         lastLocation(mlir::FileLineColLoc::get("UNKNOWN-FILE", 1, 1, context)),
         buffer(buffer) {}
 
@@ -656,7 +654,7 @@ private:
     } else if (lexer.getId() == "u64") {
       result = u64;
     } else {
-      assert (false && "unable to parse type!");
+      assert(false && "unable to parse type!");
     }
 
     lexer.getNextToken(); // consume type
@@ -732,7 +730,8 @@ private:
   }
   std::unique_ptr<ExprAST> ParseExpression() {
     if (lexer.getCurToken() == tok_id) {
-      return ParseCallExpr();;
+      return ParseCallExpr();
+      ;
     }
     if (lexer.getCurToken() == tok_app) {
       return ParseAppExpr();
@@ -811,8 +810,8 @@ private:
     while (lexer.getCurToken() == tok_let) {
       stmts.push_back(ParseLetStmt());
     }
-    return std::make_unique<FBodyAST>(std::move(stmts),
-                                      ParseRetStmt());;
+    return std::make_unique<FBodyAST>(std::move(stmts), ParseRetStmt());
+    ;
   }
 
   std::unique_ptr<FunctionAST> ParseFunction() {
@@ -866,7 +865,6 @@ public:
     }
   }
 }; // class Parser
-
 
 // === MLIRGEN ===
 // === MLIRGEN ===
@@ -932,7 +930,7 @@ private:
   mlir::Type typeGen(VarType t) {
     switch (t) {
     case object:
-      return ObjectType::get(builder.getContext());
+      return mlir::lambdapure::ObjectType::get(builder.getContext());
     case u8:
       return builder.getIntegerType(8);
     default:
@@ -949,7 +947,7 @@ private:
     for (VarType t : functionAST.getArgTypes()) {
       inputs.push_back(typeGen(t));
     }
-    mlir::Type retTy;
+    // mlir::Type retTy;
     auto FName = functionAST.getName();
     auto func_type =
         builder.getFunctionType(inputs, typeGen(functionAST.getRetType()));
@@ -990,7 +988,8 @@ private:
   }
 
   mlir::LogicalResult mlirGen(DirectRetStmtAST &direct) {
-    llvm::StringRef var = direct.getVar();
+    // llvm::StringRef var = direct.getVar();
+      std::string var = std::string(direct.getVar());
     mlir::Value result = scopeTable.lookup(var);
     builder.create<ReturnOp>(loc(), result);
     // if(!result){
@@ -1004,15 +1003,16 @@ private:
   }
 
   mlir::LogicalResult mlirGen(CaseStmtAST &casestmt) {
-    llvm::StringRef var = casestmt.getVar();
+    // llvm::StringRef var = casestmt.getVar();
+      std::string var = std::string(casestmt.getVar());
     mlir::Value curr_val = scopeTable.lookup(var);
     auto bodies = casestmt.getBodies();
     mlir::Type t = curr_val.getType();
-    if (t.isa<ObjectType>()) {
+    if (t.isa<mlir::lambdapure::ObjectType>()) {
       curr_val =
-          builder.create<TagGetOp>(loc(), builder.getIntegerType(8), curr_val);
+          builder.create<mlir::lambdapure::TagGetOp>(loc(), builder.getIntegerType(8), curr_val);
     }
-    auto caseOp = builder.create<CaseOp>(loc(), curr_val, bodies.size());
+    auto caseOp = builder.create<mlir::lambdapure::CaseOp>(loc(), curr_val, bodies.size());
     int i = 0;
     for (auto &body : bodies) {
       auto &region = caseOp.getRegion(i);
@@ -1030,13 +1030,13 @@ private:
       return mlirGen(cast<DirectRetStmtAST>(ret));
     case RetStmtAST::Case:
       return mlirGen(cast<CaseStmtAST>(ret));
-    default:
-      return mlir::failure();
+    // default:
+    //   return mlir::failure();
     }
   }
 
   mlir::Value mlirGen(NumberExprAST &expr) {
-    return builder.create<IntegerConstOp>(loc(), expr.getValue());
+    return builder.create<mlir::lambdapure::IntegerConstOp>(loc(), expr.getValue());
   }
 
   mlir::Value mlirGen(VariableExprAST &expr) {
@@ -1050,7 +1050,7 @@ private:
     for (auto &varExpr : expr.getArgs()) {
       args.push_back(mlirGen(*varExpr));
     }
-    return builder.create<AppOp>(loc(), funcVal, args, ty);
+    return builder.create<mlir::lambdapure::AppOp>(loc(), funcVal, args, ty);
   }
 
   mlir::Value mlirGen(CallExprAST &expr, mlir::Type ty) {
@@ -1061,7 +1061,7 @@ private:
     std::string fName = expr.getFName();
     std::vector<mlir::Type> results;
     results.push_back(ty);
-    return builder.create<CallOp>(loc(), fName, args, ty);
+    return builder.create<mlir::lambdapure::CallOp>(loc(), fName, args, ty);
   }
 
   mlir::Value mlirGen(PapExprAST &expr, mlir::Type ty) {
@@ -1070,12 +1070,12 @@ private:
       args.push_back(mlirGen(*varExpr));
     }
     std::string fName = expr.getFName();
-    return builder.create<PapOp>(loc(), fName, args);
+    return builder.create<mlir::lambdapure::PapOp>(loc(), fName, args);
   }
 
   mlir::Value mlirGen(ProjExprAST &expr, mlir::Type ty) {
     auto varExpr = expr.getVar();
-    return builder.create<ProjectionOp>(loc(), expr.getIndex(),
+    return builder.create<mlir::lambdapure::ProjectionOp>(loc(), expr.getIndex(),
                                         mlirGen(*varExpr), ty);
   }
 
@@ -1084,7 +1084,7 @@ private:
     for (auto &varExpr : expr.getArgs()) {
       args.push_back(mlirGen(*varExpr));
     }
-    return builder.create<ConstructorOp>(loc(), expr.getTag(), args, ty);
+    return builder.create<mlir::lambdapure::ConstructorOp>(loc(), expr.getTag(), args, ty);
     // return nullptr;
   }
 
@@ -1105,10 +1105,7 @@ private:
       return mlirGen(cast<ProjExprAST>(expr), ty);
     case ExprAST::PapExpr:
       return mlirGen(cast<PapExprAST>(expr), ty);
-    default:
-      std::cout << "Invalid expression found in lambdapure AST" << std::endl;
-      return nullptr;
-    }
+    };
   }
 
   mlir::LogicalResult mlirGen(FBodyAST &fBodyAST) {
@@ -1126,22 +1123,20 @@ private:
   }
 };
 
-
 mlir::OwningModuleRef mlirGen(mlir::MLIRContext &context,
                               ModuleAST &moduleAST) {
   return MLIRGenImpl(context).mlirGen(moduleAST);
 }
 
-
-//  === translateLambdapureToModule === 
-//  === translateLambdapureToModule === 
-//  === translateLambdapureToModule === 
-//  === translateLambdapureToModule === 
-//  === translateLambdapureToModule === 
-//  === translateLambdapureToModule === 
-//  === translateLambdapureToModule === 
-//  === translateLambdapureToModule === 
-//  === translateLambdapureToModule === 
+//  === translateLambdapureToModule ===
+//  === translateLambdapureToModule ===
+//  === translateLambdapureToModule ===
+//  === translateLambdapureToModule ===
+//  === translateLambdapureToModule ===
+//  === translateLambdapureToModule ===
+//  === translateLambdapureToModule ===
+//  === translateLambdapureToModule ===
+//  === translateLambdapureToModule ===
 
 OwningModuleRef translateLambdapureToModule(llvm::SourceMgr &sourceMgr,
                                             MLIRContext *context) {
@@ -1166,7 +1161,6 @@ OwningModuleRef translateLambdapureToModule(llvm::SourceMgr &sourceMgr,
   Lexer lexer = Lexer(buffer);
   Parser parser = Parser(lexer);
   std::unique_ptr<ModuleAST> lambdapureModule = parser.parse();
-
 
   context->loadDialect<standalone::HaskDialect>();
   // OwningModuleRef module(ModuleOp::create(

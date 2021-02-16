@@ -27,7 +27,6 @@ public:
       assert(false && "unable to find key");
     }
     assert(it != m.end());
-
     return it->second;
   }
 
