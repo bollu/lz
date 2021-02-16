@@ -32,6 +32,62 @@ Convert GHC Core to MLIR.
 
 # Log:  [newest] to [oldest]
 
+# Feb 017, 2021
+
+- Cool, seems like I have lambdapure working. LEAN program:
+
+```
+set_option trace.compiler.ir.init true
+
+inductive L
+| Nil
+| Cons : Nat -> L -> L
+
+open L
+instance : Inhabited L := ⟨Nil⟩
+
+def filter : L -> L
+| Nil => Nil
+| Cons n l => if n > 5 then filter l else Cons n (filter l)
+
+partial def make' : Nat -> Nat -> L
+| n,d =>
+  if d = 0 then Cons n Nil
+  else Cons (n-d) (make' n (d -1))                     
+
+def make (n : Nat) : L := make' n n
+
+unsafe def main : List String → IO UInt32
+| _ => let x := make 100; pure 0
+
+
+def main2 : L := make 100 
+```
+
+
+All I had to change in the generated code from matt's lambdapure:
+
+```
+sed -i "s|runtime/lean.h|lean/lean.h|g"  out.cpp
+sed -i "s|return 0;|main2(); return 0;|g" out.cpp
+leanc out.cpp -o out
+```
+
+- It appears that `leanc` knows what paths to use to get things working.
+- Time to pull all code from `lambdapure` into `lz`.
+- I also want to overhaul the part of `lambdapure` that generates the MLIR
+  to deal with the erased stuff (the boxes).
+
+
+# Fri, 29th Jan
+
+- GHC-wpc feedback: consider splitting into a `Maybe AltDefault`? This type of
+  factoring of the default is quite ungainly to work with
+```
+[Alt' idBnd idOcc dcOcc tcOcc]      -- The DEFAULT case is always *first*
+                                     -- if it is there at all
+```
+
 # Wed, 27th Jan
 
 - `ghc-wpc` is amazing, it's tooling that _actually works_.
@@ -50,7 +106,8 @@ foo = MkBar
 
 bollu@cantordust:~/temp/ > lsfoo  foo.ghc_stgapp  foo.hi  foo.hs  foo.o  foo.o_modpak
 bollu@cantordust:~/temp/ > rm foo.hi foo.o_modpak foo.o foo.ghc_stgapp 
-bollu@cantordust:~/temp/ > ~/work/ghc-whole-program-compiler-project/ghc-wpc/_build/stage1/bin/ghc foo.hs [1 of 1] Compiling Foo              ( foo.hs, foo.o )
+bollu@cantordust:~/temp/ > ~/work/ghc-whole-program-compiler-project/ghc-wpc/_build/stage1/bin/ghc foo.hs
+[1 of 1] Compiling Foo              ( foo.hs, foo.o )
 bollu@cantordust:~/temp/ > /home/bollu/work/ghc-whole-program-compiler-project/external-stg/dist-newstyle/build/x86_64-linux/ghc-8.8.3/external-stg-0.1.0.1/x/ext-stg/build/ext-stg/ext-stg show foo.o_modpak
 {- stg -}
 package main

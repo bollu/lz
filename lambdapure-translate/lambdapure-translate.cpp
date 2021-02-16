@@ -1,0 +1,941 @@
+#include <iostream>
+#include "Hask/HaskDialect.h"
+#include "Hask/HaskOps.h"
+#include "mlir/InitAllTranslations.h"
+#include "mlir/Support/LogicalResult.h"
+#include "mlir/Translation.h"
+
+// https://github.com/llvm/llvm-project/blob/e21adfa32d8822f9ea4058c3e365a841d87cb3ee/mlir/lib/Target/LLVMIR/ConvertFromLLVMIR.cpp
+using namespace mlir;
+
+
+// === AST ===
+// === AST ===
+// === AST ===
+// === AST ===
+// === AST ===
+// === AST ===
+// === AST ===
+// === AST ===
+// === AST ===
+// === AST ===
+
+
+enum VarType { object, u64, u32, u16, u8 };
+std::string stringOfType(VarType t);
+std::string stringOfType(std::vector<VarType> ts);
+std::string stringOfType(std::vector<VarType> ts, VarType t);
+
+class ExprAST {
+
+public:
+  enum Kind {
+    NumberExpr,
+    VarExpr,
+    AppExpr,
+    PapExpr,
+    CallExpr,
+    ProjExpr,
+    CtorExpr,
+  };
+
+  ExprAST(Kind kind) : kind(kind) {}
+  virtual ~ExprAST() = default;
+  virtual void print() = 0;
+
+  Kind getKind() const { return kind; }
+
+private:
+  Kind kind;
+};
+
+/// Numeral literal expression
+class NumberExprAST : public ExprAST {
+  int Val;
+
+public:
+  NumberExprAST(double Val) : ExprAST(NumberExpr), Val(Val) {}
+  void print();
+  int getValue() { return Val; }
+  /// LLVM style RTTI
+  static bool classof(const ExprAST *c) { return c->getKind() == NumberExpr; }
+};
+
+// Variable expression
+class VariableExprAST : public ExprAST {
+  std::string Name;
+
+public:
+  VariableExprAST(const std::string &Name) : ExprAST(VarExpr), Name(Name) {}
+  std::string getName() { return Name; }
+  void print();
+  static bool classof(const ExprAST *c) { return c->getKind() == VarExpr; }
+};
+
+// AppAST -indirect function call
+class AppExprAST : public ExprAST {
+  std::string FName;
+  std::vector<std::unique_ptr<VariableExprAST>> Args;
+
+public:
+  AppExprAST(const std::string &FName,
+             std::vector<std::unique_ptr<VariableExprAST>> Args)
+      : ExprAST(AppExpr), FName(FName), Args(std::move(Args)) {}
+
+  void print();
+  std::string getFName() { return FName; }
+  llvm::ArrayRef<std::unique_ptr<VariableExprAST>> getArgs() { return Args; }
+  static bool classof(const ExprAST *c) { return c->getKind() == AppExpr; }
+};
+
+class PapExprAST : public ExprAST {
+  std::string FName;
+  std::vector<std::unique_ptr<VariableExprAST>> Args;
+
+public:
+  PapExprAST(const std::string &FName,
+             std::vector<std::unique_ptr<VariableExprAST>> Args)
+      : ExprAST(PapExpr), FName(FName), Args(std::move(Args)) {}
+  void print();
+  std::string getFName() { return FName; }
+  llvm::ArrayRef<std::unique_ptr<VariableExprAST>> getArgs() { return Args; }
+  static bool classof(const ExprAST *c) { return c->getKind() == PapExpr; }
+};
+// direct function call
+class CallExprAST : public ExprAST {
+  std::string FName;
+  std::vector<std::unique_ptr<VariableExprAST>> Args;
+
+public:
+  CallExprAST(const std::string &FName,
+              std::vector<std::unique_ptr<VariableExprAST>> Args)
+      : ExprAST(CallExpr), FName(FName), Args(std::move(Args)) {}
+  void print();
+  std::string getFName() { return FName; }
+  llvm::ArrayRef<std::unique_ptr<VariableExprAST>> getArgs() { return Args; }
+  static bool classof(const ExprAST *c) { return c->getKind() == CallExpr; }
+};
+
+class CtorExprAST : public ExprAST {
+  int Tag;
+  std::vector<std::unique_ptr<VariableExprAST>> Args;
+
+public:
+  CtorExprAST(int Tag, std::vector<std::unique_ptr<VariableExprAST>> Args)
+      : ExprAST(CtorExpr), Tag(Tag), Args(std::move(Args)) {}
+  void print();
+  int getTag() { return Tag; }
+  llvm::ArrayRef<std::unique_ptr<VariableExprAST>> getArgs() { return Args; }
+  static bool classof(const ExprAST *c) { return c->getKind() == CtorExpr; }
+};
+
+class ProjExprAST : public ExprAST {
+  int I;
+  std::unique_ptr<VariableExprAST> Var;
+
+public:
+  ProjExprAST(int i, std::unique_ptr<VariableExprAST> Var)
+      : ExprAST(ProjExpr), I(i), Var(std::move(Var)) {}
+  void print();
+  int getIndex() { return I; }
+  VariableExprAST *getVar() { return Var.get(); }
+  std::string getVarName() { return Var->getName(); }
+  static bool classof(const ExprAST *c) { return c->getKind() == ProjExpr; }
+};
+
+/// StatementAST - statment can be either let = expr , ret variable, or case x
+/// of F
+class StmtAST {
+public:
+  virtual ~StmtAST() = default;
+  virtual void print() = 0;
+  Location getLoc() { return location; }
+  StmtAST(Location location) : location(location) {}
+
+private:
+  Location location;
+};
+
+class LetStmtAST : public StmtAST {
+  std::string Var;
+  std::unique_ptr<ExprAST> Rhs;
+  VarType Vtype;
+
+public:
+  LetStmtAST(Location location, const std::string Var,
+             std::unique_ptr<ExprAST> Rhs, VarType Vtype)
+      : StmtAST(location), Var(Var), Rhs(std::move(Rhs)), Vtype(Vtype) {}
+  void print();
+  std::string getName() { return Var; }
+  VarType getVtype() { return Vtype; }
+  ExprAST *getExpr() { return Rhs.get(); }
+};
+
+class RetStmtAST : public StmtAST {
+
+public:
+  enum Kind {
+    Direct,
+    Case,
+  };
+  RetStmtAST(Kind Kind, Location Location) : StmtAST(Location), Kind(Kind) {}
+  virtual ~RetStmtAST() = default;
+  virtual void print() = 0;
+  Kind getKind() const { return Kind; }
+
+private:
+  Kind Kind;
+};
+
+class DirectRetStmtAST : public RetStmtAST {
+  std::string Var;
+
+public:
+  DirectRetStmtAST(Location location, const std::string &Var)
+      : RetStmtAST(Direct, location), Var(Var) {}
+  void print();
+  std::string getVar() { return Var; }
+  static bool classof(const RetStmtAST *c) { return c->getKind() == Direct; }
+};
+
+class FBodyAST {
+  std::vector<std::unique_ptr<LetStmtAST>> Stmts;
+  std::unique_ptr<RetStmtAST> Ret;
+
+public:
+  FBodyAST(std::vector<std::unique_ptr<LetStmtAST>> Stmts,
+           std::unique_ptr<RetStmtAST> Ret)
+      : Stmts(std::move(Stmts)), Ret(std::move(Ret)) {}
+
+  void print();
+  llvm::ArrayRef<std::unique_ptr<LetStmtAST>> getStmts() { return Stmts; }
+  RetStmtAST *getRet() { return Ret.get(); }
+};
+
+class CaseStmtAST : public RetStmtAST {
+  std::vector<std::unique_ptr<FBodyAST>> Bodies;
+  std::string Var;
+
+public:
+  CaseStmtAST(Location location, std::vector<std::unique_ptr<FBodyAST>> Bodies,
+              const std::string &Var)
+      : RetStmtAST(Case, location), Bodies(std::move(Bodies)), Var(Var) {}
+  void print();
+  std::string getVar() { return Var; }
+  llvm::ArrayRef<std::unique_ptr<FBodyAST>> getBodies() { return Bodies; }
+  static bool classof(const RetStmtAST *c) { return c->getKind() == Case; }
+};
+
+class FunctionAST {
+  Location location;
+  std::string FName;
+  std::vector<std::unique_ptr<VariableExprAST>> Args;
+  std::unique_ptr<FBodyAST> FBody;
+  std::vector<VarType> ArgTypes;
+  VarType RetType;
+
+public:
+  FunctionAST(Location location, const std::string &FName,
+              std::vector<std::unique_ptr<VariableExprAST>> Args,
+              std::unique_ptr<FBodyAST> FBody, std::vector<VarType> ArgTypes,
+              VarType RetType)
+      : location(location), FName(FName), Args(std::move(Args)),
+        FBody(std::move(FBody)), ArgTypes(std::move(ArgTypes)),
+        RetType(RetType) {}
+
+  std::string getName() { return FName; }
+  Location getLoc() { return location; }
+  llvm::ArrayRef<std::unique_ptr<VariableExprAST>> getArgs() { return Args; }
+  FBodyAST *getFBody() { return FBody.get(); }
+  VarType getRetType() { return RetType; }
+  llvm::ArrayRef<VarType> getArgTypes() { return ArgTypes; }
+  void print();
+};
+
+class ModuleAST {
+  std::vector<std::unique_ptr<FunctionAST>> FList;
+
+public:
+  ModuleAST(std::vector<std::unique_ptr<FunctionAST>> FList)
+      : FList(std::move(FList)) {}
+
+  llvm::ArrayRef<std::unique_ptr<FunctionAST>> getFList() { return FList; }
+  void print();
+};
+
+// I cry. Remove this to pass indent as state.
+static std::string offset = "";
+
+void FBodyAST::print() {
+  offset = offset + " ";
+  for (int i = 0; i < (int)Stmts.size(); ++i) {
+    std::cout << offset;
+    Stmts.at(i)->print();
+  }
+  std::cout << offset;
+  Ret->print();
+}
+
+void ModuleAST::print() {
+  std::cout << "-------------------AST-----------------------" << std::endl;
+  std::cout << "---------------------------------------------" << std::endl
+            << std::endl;
+  for (int i = 0; i < (int)FList.size(); ++i) {
+    FList.at(i)->print();
+  }
+  std::cout << "--------------------------------------------" << std::endl;
+}
+
+void FunctionAST::print() {
+  std::cout << offset << FName << " (" << stringOfType(ArgTypes, RetType)
+            << ") ";
+  for (int i = 0; i < (int)Args.size(); ++i) {
+    Args.at(i)->print();
+    std::cout << " ";
+  }
+  std::cout << std::endl << std::endl;
+  FBody->print();
+  offset = "";
+  std::cout << std::endl << std::endl;
+}
+
+void DirectRetStmtAST::print() {
+  std::cout << offset << "return " << Var << std::endl;
+}
+
+void LetStmtAST::print() {
+  std::cout << offset << "Let " << stringOfType(Vtype) << " " << Var << " = ";
+  Rhs->print();
+  std::cout << std::endl;
+}
+
+void VariableExprAST::print() { std::cout << Name; }
+
+void NumberExprAST::print() { std::cout << Val; }
+void AppExprAST::print() {
+  std::cout << "app " << FName;
+  for (int i = 0; i < (int)Args.size(); ++i) {
+    std::cout << " ";
+    Args.at(i)->print();
+  }
+}
+
+void PapExprAST::print() {
+  std::cout << "pap " << FName;
+  for (int i = 0; i < (int)Args.size(); ++i) {
+    std::cout << " ";
+    Args.at(i)->print();
+  }
+}
+
+void CallExprAST::print() {
+  std::cout << "Call " << FName;
+  for (int i = 0; i < (int)Args.size(); ++i) {
+    std::cout << " ";
+    Args.at(i)->print();
+  }
+}
+
+void CtorExprAST::print() {
+  std::cout << "Ctor " << Tag;
+  for (int i = 0; i < (int)Args.size(); ++i) {
+    std::cout << " ";
+    Args.at(i)->print();
+  }
+}
+void ProjExprAST::print() {
+  std::cout << "Proj"
+            << "[" << getIndex() << "] " << getVarName() << std::endl;
+}
+
+void CaseStmtAST::print() {
+  std::cout << offset << "Case  on " << getVar() << " : " << std::endl;
+  offset = offset + " ";
+  for (int i = 0; i < (int)Bodies.size(); ++i) {
+    Bodies.at(i)->print();
+    std::cout << std::endl;
+  }
+  offset = "";
+}
+
+std::string stringOfType(VarType t) {
+  if (t == object) {
+    return "object";
+  } else {
+    return "int";
+  }
+}
+std::string stringOfType(std::vector<VarType> ts) {
+  std::string result = "";
+  for (VarType t : ts) {
+    result = result + stringOfType(t) + " -> ";
+  }
+  return result;
+}
+std::string stringOfType(std::vector<VarType> ts, VarType t) {
+  return stringOfType(ts) + "-> " + stringOfType(t);
+}
+
+// LEX & PARSE ===
+// LEX & PARSE ===
+// LEX & PARSE ===
+// LEX & PARSE ===
+// LEX & PARSE ===
+// LEX & PARSE ===
+// LEX & PARSE ===
+
+
+class Mapping {
+public:
+  std::string var;
+  mlir::Value val;
+  mlir::Type ty;
+  Mapping(std::string var, mlir::Value val, mlir::Type ty)
+      : var(var), val(val), ty(ty) {}
+};
+
+class ScopeTable {
+private:
+  std::vector<Mapping *> curr;
+  std::vector<Mapping *> prev;
+
+  bool exist(std::string var) {
+    for (auto p : curr) {
+      if (p->var.compare(var) == 0) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+public:
+  void scope() {
+    for (auto p : curr) {
+      prev.push_back(p);
+    }
+  }
+  void descope() {
+    curr.clear();
+    for (auto p : prev) {
+      curr.push_back(p);
+    }
+    prev.clear();
+  }
+  mlir::LogicalResult declare(llvm::StringRef var, mlir::Value val,
+                              mlir::Type ty) {
+    return declare(var.str(), val, ty);
+  }
+
+  mlir::LogicalResult declare(std::string var, mlir::Value val, mlir::Type ty) {
+    if (exist(var)) {
+      return mlir::failure();
+    } else {
+      curr.push_back(new Mapping(var, val, ty));
+    }
+    return mlir::success();
+  }
+  mlir::Value lookup(llvm::StringRef var) { return lookup(var.str()); }
+  mlir::Value lookup(std::string var) {
+    for (auto p : curr) {
+      if (p->var.compare(var) == 0) {
+        return p->val;
+      }
+    }
+    return nullptr;
+  }
+
+  mlir::Type lookupType(llvm::StringRef var) { return lookupType(var.str()); }
+  mlir::Type lookupType(std::string var) {
+    for (auto p : curr) {
+      if (p->var.compare(var) == 0) {
+        return p->ty;
+      }
+    }
+    assert (false && "unable to find type.");
+  }
+  void print() {
+    std::cout << "-----SymbolTable-----" << std::endl;
+    for (auto p : curr) {
+      std::cout << p->var << std::endl;
+    }
+    std::cout << "---------------------" << std::endl;
+  }
+
+}; // class ScopeTable
+
+
+// === LEXER ===
+// === LEXER ===
+// === LEXER ===
+// === LEXER ===
+// === LEXER ===
+// === LEXER ===
+
+
+enum Token : int {
+  tok_eof = 0,
+
+  // symbols
+  tok_semicolon = 59,  // ';'
+  tok_colon = 58,      // ':'
+  tok_apostrophe = 39, // '
+  // keywords
+  tok_def = -2,  // def
+  tok_let = -3,  // let
+  tok_ret = -4,  // ret
+  tok_case = -5, // case
+  tok_app = -6,  // app
+  tok_ctor = -7, // ctor
+  tok_proj = -8, // proj
+  tok_pap = -9,
+  //....
+  // values
+  tok_id = -100, // identifier
+  tok_lit = -101 // literal number
+};
+
+class Lexer {
+private:
+  // buffer
+  mlir::MLIRContext *context = nullptr;
+  Location lastLocation;
+  llvm::StringRef buffer;
+  int bufferIndex = 0;
+  // Location
+  int curLine = 1;
+  int curCol = 1;
+
+  // tokens
+  std::string identifierStr;
+  double numVal = 0;
+  Token curTok = tok_eof;
+  Token lastChar = Token(' ');
+
+  int getNextChar() {
+
+    if (bufferIndex >= (int)buffer.size()) {
+      return EOF;
+    } else {
+      curCol++;
+      int res = buffer.begin()[bufferIndex];
+      if (res == '\n') {
+        curCol = 1;
+        curLine++;
+      }
+      bufferIndex++;
+      return res;
+    }
+  }
+
+  Token getTok() {
+    while (isspace(lastChar)) {
+      lastChar = Token(getNextChar());
+    }
+
+    // mlir::Location
+    // lastLocation = mlir::Location(mlir::LocationAttr())
+    // lastLocation.line = curLine;
+    // lastLocation.col = curCol;
+    lastLocation = mlir::FileLineColLoc::get("UNKNOWN-FILE", curLine, curCol, context);
+    if (isalpha(lastChar) ||
+        lastChar == '_') { // if this is [a-zA-Z][a-zA-Z0-9_]
+      identifierStr = lastChar;
+      lastChar = Token(getNextChar());
+
+      while (isalnum(lastChar) || lastChar == '_' || lastChar == '.' ||
+             lastChar == '\'') { //[a-zA-Z][a-zA-Z0-9_.]
+        if (lastChar == '\'') {  // replace apostrophe with _prime, c cant have
+                                // it in function names
+          identifierStr += "_prime_";
+        } else if (lastChar == '.') {
+          identifierStr += "_dot_";
+        } else {
+          identifierStr += lastChar;
+        }
+        lastChar = Token(getNextChar());
+      };
+      if (identifierStr == "def")
+        return tok_def;
+      if (identifierStr == "let")
+        return tok_let;
+      if (identifierStr == "ret")
+        return tok_ret;
+      if (identifierStr == "case")
+        return tok_case;
+      if (identifierStr == "app")
+        return tok_app;
+      if (identifierStr == "proj")
+        return tok_proj;
+      if (identifierStr.find("ctor_") != std::string::npos)
+        return tok_ctor;
+      if (identifierStr == "pap")
+        return tok_pap;
+
+      return tok_id;
+    }
+
+    if (isdigit(lastChar)) { // Number(no floats): [0-9]*
+      std::string NumStr;
+      do {
+        NumStr += lastChar;
+        lastChar = Token(getNextChar());
+      } while (isdigit(lastChar));
+      numVal = std::stoi(NumStr.c_str());
+      return tok_lit;
+    }
+
+    if (lastChar == EOF) {
+      return tok_eof;
+    }
+    // ending case: return characters in single token(ascii)
+    Token ThisChar = Token(lastChar);
+    lastChar = Token(getNextChar());
+    return ThisChar;
+  }
+
+  // std::string curLineBuffer = "\n";
+
+public:
+  Lexer(std::string filename, llvm::StringRef buffer)
+      : context(nullptr), 
+        lastLocation(mlir::FileLineColLoc::get("UNKNOWN-FILE", 1, 1, context)),
+        buffer(buffer) {}
+
+  Token getCurToken() { return curTok; }
+  Token getNextToken() { return curTok = getTok(); }
+  void consume(Token tok) {
+    assert(tok == curTok && "consume Token mismatch expectation");
+    getNextToken();
+  }
+
+  std::string getId() { return identifierStr; }
+
+  double getValue() {
+    assert(curTok == tok_lit);
+    return numVal;
+  }
+
+  Location getLoc() { return lastLocation; }
+  int getLine() { return curLine; }
+  int getCol() { return curCol; }
+};
+
+// === PARSER ===
+// === PARSER ===
+// === PARSER ===
+// === PARSER ===
+// === PARSER ===
+// === PARSER ===
+// === PARSER ===
+// === PARSER ===
+
+class Parser {
+
+private:
+  Lexer &lexer;
+
+  // we can ignore binop precedence as there are none builtin
+
+  VarType ParseType() {
+    VarType result;
+    if (lexer.getId() == "obj") {
+      result = object;
+    } else if (lexer.getId() == "u8") {
+      result = u8;
+    } else if (lexer.getId() == "u16") {
+      result = u16;
+    } else if (lexer.getId() == "u32") {
+      result = u32;
+    } else if (lexer.getId() == "u64") {
+      result = u64;
+    } else {
+      assert (false && "unable to parse type!");
+    }
+
+    lexer.getNextToken(); // consume type
+    return result;
+  }
+
+  std::unique_ptr<NumberExprAST> ParseNumberExpr() {
+    auto res = std::make_unique<NumberExprAST>(lexer.getValue());
+    lexer.getNextToken(); // consume number
+    return res;
+  }
+  std::unique_ptr<VariableExprAST> ParseVarExpr() {
+    auto res = std::make_unique<VariableExprAST>(lexer.getId());
+    lexer.getNextToken(); // consume var
+    return res;
+  }
+
+  std::unique_ptr<AppExprAST> ParseAppExpr() {
+    lexer.getNextToken(); // consume app
+    std::string fname = lexer.getId();
+    lexer.getNextToken(); // consume funcname
+    std::vector<std::unique_ptr<VariableExprAST>> args;
+    while (lexer.getCurToken() != tok_semicolon) {
+      args.push_back(ParseVarExpr());
+    }
+    return std::make_unique<AppExprAST>(fname, std::move(args));
+  }
+
+  std::unique_ptr<PapExprAST> ParsePapExpr() {
+    lexer.getNextToken(); // consume pap
+    std::string fname = lexer.getId();
+    lexer.getNextToken(); // consume funcname
+    std::vector<std::unique_ptr<VariableExprAST>> args;
+    while (lexer.getCurToken() != tok_semicolon) {
+      args.push_back(ParseVarExpr());
+    }
+    return std::make_unique<PapExprAST>(fname, std::move(args));
+  }
+
+  std::unique_ptr<CallExprAST> ParseCallExpr() {
+    std::string fname = lexer.getId();
+    lexer.getNextToken(); // consume funcname
+    std::vector<std::unique_ptr<VariableExprAST>> args;
+    while (lexer.getCurToken() != tok_semicolon) {
+
+      args.push_back(ParseVarExpr());
+    }
+    return std::make_unique<CallExprAST>(fname, std::move(args));
+  }
+
+  std::unique_ptr<CtorExprAST> ParseCtorExpr() {
+    int Tag = std::stoi(lexer.getId().substr(5).c_str());
+    lexer.getNextToken(); // consume ctor_x
+    lexer.getNextToken(); // consume '['
+    lexer.getNextToken(); // consume ConstrName
+    lexer.getNextToken(); // consume ']'
+    std::vector<std::unique_ptr<VariableExprAST>> Args;
+    while (lexer.getCurToken() != tok_semicolon) {
+      Args.push_back(ParseVarExpr());
+    }
+    return std::make_unique<CtorExprAST>(Tag, std::move(Args));
+  }
+
+  std::unique_ptr<ProjExprAST> ParseProjExpr() {
+
+    lexer.getNextToken(); // consume "proj"
+    lexer.getNextToken(); // consume '['
+    int i = lexer.getValue();
+    lexer.getNextToken(); // consume Numval
+    lexer.getNextToken(); // consume ']'
+
+    return std::make_unique<ProjExprAST>(i, ParseVarExpr());
+  }
+  std::unique_ptr<ExprAST> ParseExpression() {
+    if (lexer.getCurToken() == tok_id) {
+      return ParseCallExpr();;
+    }
+    if (lexer.getCurToken() == tok_app) {
+      return ParseAppExpr();
+    } else if (lexer.getCurToken() == tok_pap) {
+      return ParsePapExpr();
+    } else if (lexer.getCurToken() == tok_lit) {
+      return ParseNumberExpr();
+    } else if (lexer.getCurToken() == tok_ctor) {
+      return ParseCtorExpr();
+    } else if (lexer.getCurToken() == tok_proj) {
+
+      return ParseProjExpr();
+    } else {
+      std::cout << "Invalid Expression, nullptr" << std::endl;
+      return nullptr;
+    }
+  }
+
+  // let var := expression
+  std::unique_ptr<LetStmtAST> ParseLetStmt() {
+    lexer.getNextToken(); // consume let
+    std::string var = lexer.getId();
+    lexer.getNextToken();
+    lexer.getNextToken(); // consume var name :
+    VarType t = ParseType();
+    lexer.getNextToken();
+    lexer.getNextToken(); // consume  :=
+    auto expr = ParseExpression();
+    lexer.getNextToken(); // consume ';'
+
+    return std::make_unique<LetStmtAST>(lexer.getLoc(), var, std::move(expr),
+                                        t);
+  }
+
+  std::unique_ptr<DirectRetStmtAST> ParseDirectRetStmt() {
+    lexer.getNextToken(); // consume ret
+    std::string var = lexer.getId();
+    lexer.getNextToken(); // consume var
+    return std::make_unique<DirectRetStmtAST>(lexer.getLoc(), var);
+  }
+
+  std::unique_ptr<CaseStmtAST> ParseCaseStmt() {
+    lexer.getNextToken(); // consume case
+    std::string var = lexer.getId();
+    std::vector<std::unique_ptr<FBodyAST>> bodies;
+    lexer.getNextToken(); // consume var name
+    lexer.getNextToken(); // consume :
+    lexer.getNextToken(); // consume type
+    lexer.getNextToken(); // consume of
+
+    while (lexer.getCurToken() == tok_id) {
+      lexer.getNextToken(); // consume branch
+      lexer.getNextToken();
+      lexer.getNextToken();
+      lexer.getNextToken(); // consume ->
+      bodies.push_back(ParseFBody());
+    }
+    return std::make_unique<CaseStmtAST>(lexer.getLoc(), std::move(bodies),
+                                         var);
+  }
+
+  std::unique_ptr<RetStmtAST> ParseRetStmt() {
+    if (lexer.getCurToken() == tok_ret) {
+      return ParseDirectRetStmt();
+    } else if (lexer.getCurToken() == tok_case) {
+      return ParseCaseStmt();
+    } else {
+      std::cout << lexer.getCurToken() << std::endl;
+      std::cout << "Error in return statement, nullptr" << std::endl;
+      return nullptr;
+    }
+  }
+
+  std::unique_ptr<FBodyAST> ParseFBody() {
+    std::vector<std::unique_ptr<LetStmtAST>> stmts;
+    while (lexer.getCurToken() == tok_let) {
+      stmts.push_back(ParseLetStmt());
+    }
+    return std::make_unique<FBodyAST>(std::move(stmts),
+                                      ParseRetStmt());;
+  }
+
+  std::unique_ptr<FunctionAST> ParseFunction() {
+    std::vector<std::unique_ptr<VariableExprAST>> Args;
+    std::vector<VarType> ArgTypes;
+    lexer.getNextToken(); // eat def
+    std::string FName = lexer.getId();
+    if (FName == "main") {
+      FName = "_lean_main";
+    }
+    while (true) {
+      lexer.getNextToken(); // eat fname or ) depending on first or later
+                            // iteration
+      if (lexer.getCurToken() != '(') {
+        break;
+      }
+      lexer.getNextToken(); // eat '('
+      Args.push_back(ParseVarExpr());
+      lexer.getNextToken(); // consume :
+      ArgTypes.push_back(ParseType());
+    }
+    lexer.getNextToken(); // consume :
+    VarType retType = ParseType();
+    lexer.getNextToken();
+    lexer.getNextToken(); // eat :=
+    auto FBody = ParseFBody();
+    return std::make_unique<FunctionAST>(lexer.getLoc(), FName, std::move(Args),
+                                         std::move(FBody), std::move(ArgTypes),
+                                         retType);
+  }
+
+public:
+  Parser(Lexer &lexer) : lexer(lexer) {}
+
+  std::unique_ptr<ModuleAST> parse() {
+    lexer.getNextToken(); // get rid of start of file token
+    std::vector<std::unique_ptr<FunctionAST>> FList;
+    while (true) {
+      switch (lexer.getCurToken()) {
+      case tok_eof:
+        return std::make_unique<ModuleAST>(std::move(FList));
+      case tok_def:
+        FList.push_back(ParseFunction());
+        break;
+      default:
+        std::cout << "unexpected token: " << lexer.getId() << "["
+                  << lexer.getCurToken() << "]" << std::endl;
+        lexer.getNextToken();
+        break;
+      }
+    }
+  }
+}; // class Parser
+
+
+// === IMPORTER ===
+// === IMPORTER ===
+// === IMPORTER ===
+// === IMPORTER ===
+// === IMPORTER ===
+// === IMPORTER ===
+// === IMPORTER ===
+// === IMPORTER ===
+// === IMPORTER ===
+// === IMPORTER ===
+//
+struct Importer {
+  Importer(MLIRContext *context, ModuleOp module)
+      : b(context), context(context), module(module),
+        unknownLoc(FileLineColLoc::get("imported-bitcode", 0, 0, context)) {
+    b.setInsertionPointToStart(module.getBody());
+    context->isMultithreadingEnabled();
+    (void)context;
+    (void)currentEntryBlock;
+  }
+
+private:
+  OpBuilder b;
+  /// The current context.
+  __attribute__((unused)) MLIRContext *context;
+  /// The current module being created.
+  ModuleOp module;
+  /// The entry block of the current function being processed.
+  Block *currentEntryBlock;
+  /// Unknown location
+  Location unknownLoc;
+};
+
+OwningModuleRef translateLambdapureToModule(llvm::SourceMgr &sourceMgr,
+                                            MLIRContext *context) {
+  // llvm::SMDiagnostic err;
+  // llvm::LLVMContext llvmContext;
+  // int *lambdapureModule = nullptr;
+  // std::unique_ptr<llvm::Module> llvmModule = llvm::parseIR(
+  //     *sourceMgr.getMemoryBuffer(sourceMgr.getMainFileID()), err,
+  //     llvmContext);
+  // if (!llvmModule) {
+  //   std::string errStr;
+  //   llvm::raw_string_ostream errStream(errStr);
+  //   err.print(/*ProgName=*/"", errStream);
+  //   emitError(UnknownLoc::get(context)) << errStream.str();
+  //   return {};
+  // }
+  context->loadDialect<standalone::HaskDialect>();
+  OwningModuleRef module(ModuleOp::create(
+      FileLineColLoc::get("", /*line=*/0, /*column=*/0, context)));
+
+  Importer deserializer(context, module.get());
+  // for (llvm::GlobalVariable &gv : llvmModule->globals()) {
+  //   if (!deserializer.processGlobal(&gv))
+  //     return {};
+  // }
+  // for (llvm::Function &f : llvmModule->functions()) {
+  //   if (failed(deserializer.processFunction(&f)))
+  //     return {};
+  // }
+
+  return module;
+}
+
+int main(int argc, char **argv) {
+  mlir::TranslateToMLIRRegistration fromLambdapure(
+      "import-lambdapure",
+      [](llvm::SourceMgr &sourceMgr, MLIRContext *context) {
+        return ::translateLambdapureToModule(sourceMgr, context);
+      });
+
+  // TODO: Register standalone translations here.
+
+  return failed(
+      mlir::mlirTranslateMain(argc, argv, "MLIR Translation Testing Tool"));
+}
+
