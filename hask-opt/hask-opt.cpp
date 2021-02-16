@@ -40,6 +40,7 @@
 #include "Pointer/PointerDialect.h"
 #include "Unification/UnificationDialect.h"
 #include "Unification/UnificationOps.h"
+#include "lambdapure/Dialect.h"
 #include "Runtime.h"
 
 #include "LZJIT/LZJIT.h"
@@ -87,6 +88,7 @@ int main(int argc, char **argv) {
   registry.insert<mlir::LLVM::LLVMDialect>();
   registry.insert<mlir::standalone::HaskDialect>();
   registry.insert<mlir::grin::GRINDialect>();
+  registry.insert<mlir::lambdapure::LambdapureDialect>();
   registry.insert<mlir::ptr::PtrDialect>();
   registry.insert<mlir::unif::UnificationDialect>();
 
