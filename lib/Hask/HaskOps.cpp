@@ -70,7 +70,7 @@ ParseResult HaskReturnOp::parse(OpAsmParser &parser, OperationState &result) {
 
 void HaskReturnOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
                          Value v) {
-  state.addOperands(v);
+    state.addOperands(v);
   // state.addTypes(v.getType());
 };
 
