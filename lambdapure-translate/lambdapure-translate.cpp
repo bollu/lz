@@ -501,7 +501,7 @@ enum Token : int {
 class Lexer {
 private:
   // buffer
-  mlir::MLIRContext *context = nullptr;
+  mlir::MLIRContext *context;
   Location lastLocation;
   llvm::StringRef buffer;
   int bufferIndex = 0;
@@ -601,8 +601,8 @@ private:
   // std::string curLineBuffer = "\n";
 
 public:
-  Lexer(llvm::StringRef buffer)
-      : context(nullptr),
+  Lexer(mlir::MLIRContext *context, llvm::StringRef buffer)
+      : context(context),
         lastLocation(mlir::FileLineColLoc::get("UNKNOWN-FILE", 1, 1, context)),
         buffer(buffer) {}
 
@@ -1158,10 +1158,12 @@ OwningModuleRef translateLambdapureToModule(llvm::SourceMgr &sourceMgr,
       sourceMgr.getMemoryBuffer(sourceMgr.getMainFileID());
 
   llvm::StringRef buffer = file->getBuffer();
-  Lexer lexer = Lexer(buffer);
+  Lexer lexer = Lexer(context, buffer);
   Parser parser = Parser(lexer);
   std::unique_ptr<ModuleAST> lambdapureModule = parser.parse();
 
+  context->loadDialect<mlir::StandardOpsDialect>();
+  context->loadDialect<mlir::lambdapure::LambdapureDialect>();
   context->loadDialect<standalone::HaskDialect>();
   // OwningModuleRef module(ModuleOp::create(
   //     FileLineColLoc::get("", /*line=*/0, /*column=*/0, context)));
