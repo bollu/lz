@@ -18,8 +18,18 @@ LambdapureDialect::LambdapureDialect(mlir::MLIRContext *ctxt)
 #define GET_OP_LIST
 #include "lambdapure/Ops.cpp.inc"
       >();
+  // this doesn't seem to be enough?
   addTypes<ObjectType>();
 }
+
+mlir::Type LambdapureDialect::parseType(mlir::DialectAsmParser &parser) const {
+  if (succeeded(parser.parseOptionalKeyword("Object"))) {
+      return parser.getBuilder().getType<ObjectType>();
+  } else {
+      assert(false && "unknown type");
+  }
+}
+
 
 void LambdapureDialect::printType(mlir::Type type,
                                   mlir::DialectAsmPrinter &printer) const {

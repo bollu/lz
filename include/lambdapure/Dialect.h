@@ -21,7 +21,7 @@ public:
   /// several utilities for casting between dialects.
   static llvm::StringRef getDialectNamespace() { return "lambdapure"; }
 
-  // mlir::Type parseType(mlir::DialectAsmParser &parser) const override;
+  mlir::Type parseType(mlir::DialectAsmParser &parser) const override;
   void printType(mlir::Type type,
                  mlir::DialectAsmPrinter &printer) const override;
 };
