@@ -1,5 +1,9 @@
 add_mlir_dialect_library(MLIRlambdapure
     Dialect.cpp
+    LambdapureToLeanLowering.cpp
+    ReferenceRewritePattern.cpp
+    TranslateToCpp.cpp
+    DestructiveUpdates.cpp
     ADDITIONAL_HEADER_DIRS
     ${PROJECT_SOURCE_DIR}/include/lambdapure
     DEPENDS

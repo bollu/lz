@@ -9,6 +9,12 @@ namespace lambdapure {
 std::unique_ptr<mlir::Pass> createLambdapureToLeanLowering();
 std::unique_ptr<mlir::Pass> createReferenceRewriterPattern();
 std::unique_ptr<mlir::Pass> createDestructiveUpdatePattern();
+
+void registerLambdapureToLeanLowering();
+void registerReferenceRewriterPattern();
+void registerDestructiveUpdatePattern();
+
+
 } // namespace lambdapure
 } // namespace mlir
 

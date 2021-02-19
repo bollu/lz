@@ -1,8 +1,8 @@
 #ifndef LAMBDAPURE_DIALECT_H_
 #define LAMBDAPURE_DIALECT_H_
 
-#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
 namespace mlir {

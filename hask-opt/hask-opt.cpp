@@ -41,6 +41,7 @@
 #include "Unification/UnificationDialect.h"
 #include "Unification/UnificationOps.h"
 #include "lambdapure/Dialect.h"
+#include "lambdapure/Passes.h"
 #include "Runtime.h"
 
 #include "LZJIT/LZJIT.h"
@@ -82,6 +83,9 @@ int main(int argc, char **argv) {
   registerLZJITPass();
   registerLZDumpLLVMPass();
   registerLzInterpretPass();
+  mlir::lambdapure::registerLambdapureToLeanLowering();
+  // mlir::lambdapure::registerReferenceRewriterPattern();
+  // mlir::lambdapure::registerDestructiveUpdatePattern();
 
   mlir::DialectRegistry registry;
   mlir::registerAllDialects(registry);

@@ -1,7 +1,10 @@
+#include "lambdapure/Passes.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/Pass/PassRegistry.h"
+#include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
 
 using namespace llvm;
@@ -24,12 +27,11 @@ LambdapureDialect::LambdapureDialect(mlir::MLIRContext *ctxt)
 
 mlir::Type LambdapureDialect::parseType(mlir::DialectAsmParser &parser) const {
   if (succeeded(parser.parseOptionalKeyword("Object"))) {
-      return parser.getBuilder().getType<ObjectType>();
+    return parser.getBuilder().getType<ObjectType>();
   } else {
-      assert(false && "unknown type");
+    assert(false && "unknown type");
   }
 }
-
 
 void LambdapureDialect::printType(mlir::Type type,
                                   mlir::DialectAsmPrinter &printer) const {
@@ -97,3 +99,30 @@ namespace mlir {
 #include "lambdapure/Ops.cpp.inc"
 
 } // namespace mlir
+
+namespace mlir {
+namespace lambdapure {
+void registerLambdapureToLeanLowering() {
+  ::mlir::registerPass("lz-lambdapure-to-lean",
+                       "Perform lowering from lambdapure to lean",
+                       []() -> std::unique_ptr<::mlir::Pass> {
+                         return createLambdapureToLeanLowering();
+                       });
+}
+void registerReferenceRewriterPattern() {
+  ::mlir::registerPass("lz-lambdapure-reference-rewriter",
+                       "Rewrite refconts in lambdapure.",
+                       []() -> std::unique_ptr<::mlir::Pass> {
+                         return createReferenceRewriterPattern();
+                       });
+}
+void registerDestructiveUpdatePattern() {
+  ::mlir::registerPass("lz-lambdapure-destructive-updates",
+                       "Optimses object creation with destructive updates.",
+                       []() -> std::unique_ptr<::mlir::Pass> {
+                         return createDestructiveUpdatePattern();
+                       });
+}
+
+} // namespace lambdapure
+}; // namespace mlir

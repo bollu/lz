@@ -96,7 +96,6 @@ void LambdapureToLeanLoweringPass::runOnOperation() {
     signalPassFailure();
   }
 }
-
 std::unique_ptr<Pass> mlir::lambdapure::createLambdapureToLeanLowering() {
   return std::make_unique<LambdapureToLeanLoweringPass>();
 }
