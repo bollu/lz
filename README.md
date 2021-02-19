@@ -1,8 +1,6 @@
 # Core-MLIR
 ![Compile paper](../../workflows/Build%20and%20test%20[from%20upstream]/badge.svg)
 
-Convert GHC Core to MLIR.
-
 - [Link to download the latest build of my master thesis](https://github.com/bollu/coremlir/releases/latest/download/thesis.pdf)
 - [`fast-math` haskell library has some RULES limitations](https://github.com/liyang/fast-math/)
 
@@ -32,7 +30,12 @@ Convert GHC Core to MLIR.
 
 # Log:  [newest] to [oldest]
 
-# Feb 017, 2021
+# Feb 19 2021
+
+- Fix lexer/parser to be able to parse input LEAN file.
+- Pull lowering to c++ pass into `mlir-translate`.
+- Generate code correctly (?) from lowering.
+# Feb 17, 2021
 
 - Cool, seems like I have lambdapure working. LEAN program:
 
