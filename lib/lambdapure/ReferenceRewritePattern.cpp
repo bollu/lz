@@ -145,3 +145,6 @@ public:
 };
 } // end anonymous namespace
 
+std::unique_ptr<Pass> mlir::lambdapure::createReferenceRewriterPattern() {
+  return std::make_unique<ReferenceRewriterPattern>();
+}

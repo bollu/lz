@@ -84,8 +84,8 @@ int main(int argc, char **argv) {
   registerLZDumpLLVMPass();
   registerLzInterpretPass();
   mlir::lambdapure::registerLambdapureToLeanLowering();
-  // mlir::lambdapure::registerReferenceRewriterPattern();
-  // mlir::lambdapure::registerDestructiveUpdatePattern();
+  mlir::lambdapure::registerReferenceRewriterPattern();
+  mlir::lambdapure::registerDestructiveUpdatePattern();
 
   mlir::DialectRegistry registry;
   mlir::registerAllDialects(registry);
