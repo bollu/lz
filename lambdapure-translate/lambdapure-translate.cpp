@@ -28,7 +28,7 @@ using namespace llvm;
 // === AST ===
 // === AST ===
 
-enum VarType { object, u64, u32, u16, u8 };
+enum VarType { object, u64, u32, u16, u8 , box};
 std::string stringOfType(VarType t);
 std::string stringOfType(std::vector<VarType> ts);
 std::string stringOfType(std::vector<VarType> ts, VarType t);
@@ -480,9 +480,11 @@ enum Token : int {
   tok_eof = 0,
 
   // symbols
-  tok_semicolon = 59,  // ';'
-  tok_colon = 58,      // ':'
-  tok_apostrophe = 39, // '
+  tok_semicolon = ';',   // ';'
+  tok_colon = ':',       // ':'
+  tok_apostrophe = '\'', // '
+  tok_l_square_brack = '[',
+  tok_r_square_brack = ']',
   // keywords
   tok_def = -2,  // def
   tok_let = -3,  // let
@@ -491,7 +493,8 @@ enum Token : int {
   tok_app = -6,  // app
   tok_ctor = -7, // ctor
   tok_proj = -8, // proj
-  tok_pap = -9,
+  tok_pap = -9, // pap
+  tok_box = -10, // ◾
   //....
   // values
   tok_id = -100, // identifier
@@ -515,26 +518,39 @@ private:
   Token curTok = tok_eof;
   Token lastChar = Token(' ');
 
-  int getNextChar() {
+  Token getNextChar() {
 
     if (bufferIndex >= (int)buffer.size()) {
-      return EOF;
+      return Token(EOF);
     } else {
       curCol++;
-      int res = buffer.begin()[bufferIndex];
+      StringRef bufCur = buffer.drop_front(bufferIndex);
+      if (bufCur.startswith("◾")) {
+        curCol++;
+        bufferIndex += 4;
+        return Token(Token::tok_box);
+      }
+
+      auto res = buffer.begin()[bufferIndex];
       if (res == '\n') {
         curCol = 1;
         curLine++;
       }
       bufferIndex++;
-      return res;
+      return Token(res);
     }
   }
 
   Token getTok() {
     while (isspace(lastChar)) {
-      lastChar = Token(getNextChar());
+      lastChar = getNextChar();
     }
+
+    if (lastChar == Token::tok_box) {
+      return lastChar;
+    }
+    
+    identifierStr = "~UNK~";
 
     // mlir::Location
     // lastLocation = mlir::Location(mlir::LocationAttr())
@@ -542,15 +558,17 @@ private:
     // lastLocation.col = curCol;
     lastLocation =
         mlir::FileLineColLoc::get("UNKNOWN-FILE", curLine, curCol, context);
-    if (isalpha(lastChar) ||
-        lastChar == '_') { // if this is [a-zA-Z][a-zA-Z0-9_]
+    // if this is [a-zA-Z][a-zA-Z0-9_]
+    if (isalpha(lastChar) || lastChar == '_') {
       identifierStr = lastChar;
       lastChar = Token(getNextChar());
 
+      //[a-zA-Z][a-zA-Z0-9_.]
       while (isalnum(lastChar) || lastChar == '_' || lastChar == '.' ||
-             lastChar == '\'') { //[a-zA-Z][a-zA-Z0-9_.]
-        if (lastChar == '\'') {  // replace apostrophe with _prime, c cant have
-                                 // it in function names
+             lastChar == '\'') {
+        // replace apostrophe with _prime, c cant have
+        // it in function names
+        if (lastChar == '\'') {
           identifierStr += "_prime_";
         } else if (lastChar == '.') {
           identifierStr += "_dot_";
@@ -589,9 +607,14 @@ private:
       return tok_lit;
     }
 
+    // >>> ord("◾") |  9726
+    // if (lastChar == 9726 || lastChar == -30) {
+    // }
+
     if (lastChar == EOF) {
       return tok_eof;
     }
+
     // ending case: return characters in single token(ascii)
     Token ThisChar = Token(lastChar);
     lastChar = Token(getNextChar());
@@ -634,8 +657,20 @@ public:
 // === PARSER ===
 // === PARSER ===
 
-class Parser {
 
+void unexpectedTokenError(Lexer &lexer) {
+    std::cout << "unexpected token: " << lexer.getId() << " ";
+    if (lexer.getCurToken() > 0) {
+        std::cout << "|" << (char)lexer.getCurToken() << "|";
+    } else {
+        std::cout << "|" << lexer.getCurToken() << "|";
+    }
+    std::cout << " loc |" << lexer.getLine() << ":" << lexer.getCol() << "|"
+        << std::endl;
+    lexer.getNextToken();
+}
+
+class Parser {
 private:
   Lexer &lexer;
 
@@ -653,7 +688,10 @@ private:
       result = u32;
     } else if (lexer.getId() == "u64") {
       result = u64;
+    } else if (lexer.getCurToken() == Token::tok_box) {
+      result = box;
     } else {
+      unexpectedTokenError(lexer);
       assert(false && "unable to parse type!");
     }
 
@@ -799,8 +837,10 @@ private:
     } else if (lexer.getCurToken() == tok_case) {
       return ParseCaseStmt();
     } else {
-      std::cout << lexer.getCurToken() << std::endl;
-      std::cout << "Error in return statement, nullptr" << std::endl;
+      unexpectedTokenError(lexer);
+      assert(false && "unable to parse return statement.");
+      // std::cout << lexer.getCurToken() << std::endl;
+      // std::cout << "Error in return statement, nullptr" << std::endl;
       return nullptr;
     }
   }
@@ -856,12 +896,30 @@ public:
       case tok_def:
         FList.push_back(ParseFunction());
         break;
-      default:
-        std::cout << "unexpected token: " << lexer.getId() << "["
-                  << lexer.getCurToken() << "]" << std::endl;
+     case tok_l_square_brack: {
+        // TODO: check that we found [init]
+        lexer.getNextToken(); // eatj
+        Token rbrack = lexer.getNextToken();
+        assert (rbrack == tok_r_square_brack && "expected [init]");
+
         lexer.getNextToken();
         break;
+    }
+
+      default: {
+        std::cout << "unexpected token: " << lexer.getId() << " ";
+        if (lexer.getCurToken() > 0) {
+          std::cout << "|" << (char)lexer.getCurToken() << "|";
+        } else {
+          std::cout << "|" << lexer.getCurToken() << "|";
+        }
+        std::cout << " loc |" << lexer.getLine() << ":" << lexer.getCol() << "|"
+                  << std::endl;
+        lexer.getNextToken();
+        assert(false && "unkexpected token");
+        break;
       }
+      } // end switch
     }
   }
 }; // class Parser
@@ -989,9 +1047,9 @@ private:
 
   mlir::LogicalResult mlirGen(DirectRetStmtAST &direct) {
     // llvm::StringRef var = direct.getVar();
-      std::string var = std::string(direct.getVar());
+    std::string var = std::string(direct.getVar());
     mlir::Value result = scopeTable.lookup(var);
-    builder.create<ReturnOp>(loc(), result);
+    builder.create<lambdapure::ReturnOp>(loc(), result);
     // if(!result){
     //   builder.create<ReturnOp>(loc());
     //
@@ -1004,15 +1062,16 @@ private:
 
   mlir::LogicalResult mlirGen(CaseStmtAST &casestmt) {
     // llvm::StringRef var = casestmt.getVar();
-      std::string var = std::string(casestmt.getVar());
+    std::string var = std::string(casestmt.getVar());
     mlir::Value curr_val = scopeTable.lookup(var);
     auto bodies = casestmt.getBodies();
     mlir::Type t = curr_val.getType();
     if (t.isa<mlir::lambdapure::ObjectType>()) {
-      curr_val =
-          builder.create<mlir::lambdapure::TagGetOp>(loc(), builder.getIntegerType(8), curr_val);
+      curr_val = builder.create<mlir::lambdapure::TagGetOp>(
+          loc(), builder.getIntegerType(8), curr_val);
     }
-    auto caseOp = builder.create<mlir::lambdapure::CaseOp>(loc(), curr_val, bodies.size());
+    auto caseOp = builder.create<mlir::lambdapure::CaseOp>(loc(), curr_val,
+                                                           bodies.size());
     int i = 0;
     for (auto &body : bodies) {
       auto &region = caseOp.getRegion(i);
@@ -1030,13 +1089,14 @@ private:
       return mlirGen(cast<DirectRetStmtAST>(ret));
     case RetStmtAST::Case:
       return mlirGen(cast<CaseStmtAST>(ret));
-    // default:
-    //   return mlir::failure();
+      // default:
+      //   return mlir::failure();
     }
   }
 
   mlir::Value mlirGen(NumberExprAST &expr) {
-    return builder.create<mlir::lambdapure::IntegerConstOp>(loc(), expr.getValue());
+    return builder.create<mlir::lambdapure::IntegerConstOp>(loc(),
+                                                            expr.getValue());
   }
 
   mlir::Value mlirGen(VariableExprAST &expr) {
@@ -1075,8 +1135,8 @@ private:
 
   mlir::Value mlirGen(ProjExprAST &expr, mlir::Type ty) {
     auto varExpr = expr.getVar();
-    return builder.create<mlir::lambdapure::ProjectionOp>(loc(), expr.getIndex(),
-                                        mlirGen(*varExpr), ty);
+    return builder.create<mlir::lambdapure::ProjectionOp>(
+        loc(), expr.getIndex(), mlirGen(*varExpr), ty);
   }
 
   mlir::Value mlirGen(CtorExprAST &expr, mlir::Type ty) {
@@ -1084,7 +1144,8 @@ private:
     for (auto &varExpr : expr.getArgs()) {
       args.push_back(mlirGen(*varExpr));
     }
-    return builder.create<mlir::lambdapure::ConstructorOp>(loc(), expr.getTag(), args, ty);
+    return builder.create<mlir::lambdapure::ConstructorOp>(loc(), expr.getTag(),
+                                                           args, ty);
     // return nullptr;
   }
 
@@ -1123,10 +1184,9 @@ private:
   }
 };
 
-mlir::OwningModuleRef mlirGen(mlir::MLIRContext &context,
-                              ModuleAST &moduleAST) {
-  return MLIRGenImpl(context).mlirGen(moduleAST);
-}
+// mlir::OwningModuleRef mlirGen(mlir::MLIRContext &context,
+//                              ModuleAST &moduleAST) {
+//}
 
 //  === translateLambdapureToModule ===
 //  === translateLambdapureToModule ===
@@ -1178,7 +1238,8 @@ OwningModuleRef translateLambdapureToModule(llvm::SourceMgr &sourceMgr,
   //     return {};
   // }
 
-  return mlirGen(*context, *lambdapureModule);
+  return MLIRGenImpl(*context).mlirGen(*lambdapureModule);
+  // return mlirGen(*context, *lambdapureModule);
 }
 
 int main(int argc, char **argv) {
