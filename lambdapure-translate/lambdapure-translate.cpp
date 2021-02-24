@@ -476,7 +476,8 @@ public:
 // === LEXER ===
 // === LEXER ===
 
-enum Token : int {
+
+enum TokenType : int {
   tok_eof = 0,
 
   // symbols
@@ -514,13 +515,13 @@ private:
   // tokens
   std::string identifierStr;
   double numVal = 0;
-  Token curTok = tok_eof;
-  Token lastChar = Token(' ');
+  TokenType curTok = tok_eof;
+  TokenType lastChar = TokenType(' ');
 
-  Token getNextChar() {
+  TokenType getNextChar() {
     if (buffer.size() == 0) {
       std::cout << "\nEOF\n";
-      return Token(EOF);
+      return TokenType(EOF);
     }
     curCol++;
     // StringRef bufCur = buffer.drop_front(bufferIndex);
@@ -529,7 +530,7 @@ private:
       buffer = buffer.drop_front(boxstr.size());
       curCol++;
       std::cout << "\nCHAR: " << std::string(boxstr) << "\n";
-      return Token(Token::tok_box);
+      return TokenType(TokenType::tok_box);
     }
 
     char res = buffer[0];
@@ -540,10 +541,10 @@ private:
     }
 
     std::cout << "\nCHAR: " << (char) res << "\n";
-    return Token(res);
+    return TokenType(res);
   }
 
-  Token getTok() {
+  TokenType getTok() {
     identifierStr = "~UNK~";
 
     while (isspace(lastChar)) {
@@ -557,7 +558,7 @@ private:
     lastLocation =
         mlir::FileLineColLoc::get("UNKNOWN-FILE", curLine, curCol, context);
 
-    if (lastChar == Token::tok_box) {
+    if (lastChar == TokenType::tok_box) {
       return lastChar;
     }
     
@@ -566,7 +567,7 @@ private:
     // if this is [a-zA-Z][a-zA-Z0-9_]
     if (isalpha(lastChar) || lastChar == '_') {
       identifierStr = lastChar;
-      lastChar = Token(getNextChar());
+      lastChar = TokenType(getNextChar());
 
       //[a-zA-Z][a-zA-Z0-9_.]
       while (isalnum(lastChar) || lastChar == '_' || lastChar == '.' ||
@@ -580,7 +581,7 @@ private:
         } else {
           identifierStr += lastChar;
         }
-        lastChar = Token(getNextChar());
+        lastChar = TokenType(getNextChar());
       };
       if (identifierStr == "def")
         return tok_def;
@@ -606,7 +607,7 @@ private:
       std::string NumStr;
       do {
         NumStr += lastChar;
-        lastChar = Token(getNextChar());
+        lastChar = TokenType(getNextChar());
       } while (isdigit(lastChar));
       numVal = std::stoi(NumStr.c_str());
       return tok_lit;
@@ -621,8 +622,8 @@ private:
     }
 
     // ending case: return characters in single token(ascii)
-    Token ThisChar = Token(lastChar);
-    lastChar = Token(getNextChar());
+    TokenType ThisChar = TokenType(lastChar);
+    lastChar = TokenType(getNextChar());
     return ThisChar;
   }
 
@@ -634,9 +635,9 @@ public:
         lastLocation(mlir::FileLineColLoc::get("UNKNOWN-FILE", 1, 1, context)),
         buffer(buffer) {}
 
-  Token getCurToken() { return curTok; }
-  Token getNextToken() { return curTok = getTok(); }
-  void consume(Token tok) {
+  TokenType getCurToken() { return curTok; }
+  TokenType getNextToken() { return curTok = getTok(); }
+  void consume(TokenType tok) {
     assert(tok == curTok && "consume Token mismatch expectation");
     getNextToken();
   }
@@ -716,7 +717,7 @@ private:
       result = u32;
     } else if (lexer.getId() == "u64") {
       result = u64;
-    } else if (lexer.getCurToken() == Token::tok_box) {
+    } else if (lexer.getCurToken() == TokenType::tok_box) {
       result = u64;
       // result = box;
     } else {
@@ -953,7 +954,7 @@ public:
      case tok_l_square_brack: {
         // TODO: check that we found [init]
         lexer.getNextToken(); // eatj
-        Token rbrack = lexer.getNextToken();
+        TokenType rbrack = lexer.getNextToken();
         assert (rbrack == tok_r_square_brack && "expected [init]");
 
         lexer.getNextToken();
