@@ -507,7 +507,6 @@ private:
   mlir::MLIRContext *context;
   Location lastLocation;
   llvm::StringRef buffer;
-  int bufferIndex = 0;
   // Location
   int curLine = 1;
   int curCol = 1;
@@ -519,38 +518,37 @@ private:
   Token lastChar = Token(' ');
 
   Token getNextChar() {
-
-    if (bufferIndex >= (int)buffer.size()) {
+    if (buffer.size() == 0) {
+      std::cout << "\nEOF\n";
       return Token(EOF);
-    } else {
-      curCol++;
-      StringRef bufCur = buffer.drop_front(bufferIndex);
-      if (bufCur.startswith("◾")) {
-        curCol++;
-        bufferIndex += 4;
-        return Token(Token::tok_box);
-      }
-
-      auto res = buffer.begin()[bufferIndex];
-      if (res == '\n') {
-        curCol = 1;
-        curLine++;
-      }
-      bufferIndex++;
-      return Token(res);
     }
+    curCol++;
+    // StringRef bufCur = buffer.drop_front(bufferIndex);
+    const StringRef boxstr = "◾"; 
+    if (buffer.startswith(boxstr)) {
+      buffer = buffer.drop_front(boxstr.size());
+      curCol++;
+      std::cout << "\nCHAR: " << std::string(boxstr) << "\n";
+      return Token(Token::tok_box);
+    }
+
+    char res = buffer[0];
+    buffer = buffer.drop_front(1);
+    if (res == '\n') {
+      curCol = 1;
+      curLine++;
+    }
+
+    std::cout << "\nCHAR: " << (char) res << "\n";
+    return Token(res);
   }
 
   Token getTok() {
+    identifierStr = "~UNK~";
+
     while (isspace(lastChar)) {
       lastChar = getNextChar();
     }
-
-    if (lastChar == Token::tok_box) {
-      return lastChar;
-    }
-    
-    identifierStr = "~UNK~";
 
     // mlir::Location
     // lastLocation = mlir::Location(mlir::LocationAttr())
@@ -558,6 +556,13 @@ private:
     // lastLocation.col = curCol;
     lastLocation =
         mlir::FileLineColLoc::get("UNKNOWN-FILE", curLine, curCol, context);
+
+    if (lastChar == Token::tok_box) {
+      return lastChar;
+    }
+    
+
+
     // if this is [a-zA-Z][a-zA-Z0-9_]
     if (isalpha(lastChar) || lastChar == '_') {
       identifierStr = lastChar;
@@ -670,6 +675,28 @@ void unexpectedTokenError(Lexer &lexer) {
     lexer.getNextToken();
 }
 
+
+struct DebugCall {
+  static int indent;
+  const char *name;
+  DebugCall (const char *name): name(name) {
+
+    for(int i = 0; i < indent*2; ++i) { std::cout << " "; }
+    std::cout << "vvv" << name << "\n"; 
+    indent++;
+
+  }
+
+  ~DebugCall() { 
+    for(int i = 0; i < indent*2; ++i) { std::cout << " "; }
+    std::cout << "^^^" << name << "\n"; 
+
+    indent--;
+  }
+};
+
+int DebugCall::indent = 0;
+
 class Parser {
 private:
   Lexer &lexer;
@@ -677,6 +704,7 @@ private:
   // we can ignore binop precedence as there are none builtin
 
   VarType ParseType() {
+    DebugCall d(__PRETTY_FUNCTION__);
     VarType result;
     if (lexer.getId() == "obj") {
       result = object;
@@ -689,7 +717,8 @@ private:
     } else if (lexer.getId() == "u64") {
       result = u64;
     } else if (lexer.getCurToken() == Token::tok_box) {
-      result = box;
+      result = u64;
+      // result = box;
     } else {
       unexpectedTokenError(lexer);
       assert(false && "unable to parse type!");
@@ -700,17 +729,23 @@ private:
   }
 
   std::unique_ptr<NumberExprAST> ParseNumberExpr() {
+    DebugCall d(__PRETTY_FUNCTION__);
+
     auto res = std::make_unique<NumberExprAST>(lexer.getValue());
     lexer.getNextToken(); // consume number
     return res;
   }
   std::unique_ptr<VariableExprAST> ParseVarExpr() {
+    DebugCall d(__PRETTY_FUNCTION__);
+
     auto res = std::make_unique<VariableExprAST>(lexer.getId());
     lexer.getNextToken(); // consume var
     return res;
   }
 
   std::unique_ptr<AppExprAST> ParseAppExpr() {
+    DebugCall d(__PRETTY_FUNCTION__);
+
     lexer.getNextToken(); // consume app
     std::string fname = lexer.getId();
     lexer.getNextToken(); // consume funcname
@@ -733,6 +768,8 @@ private:
   }
 
   std::unique_ptr<CallExprAST> ParseCallExpr() {
+    DebugCall d(__PRETTY_FUNCTION__);
+
     std::string fname = lexer.getId();
     lexer.getNextToken(); // consume funcname
     std::vector<std::unique_ptr<VariableExprAST>> args;
@@ -744,6 +781,8 @@ private:
   }
 
   std::unique_ptr<CtorExprAST> ParseCtorExpr() {
+    DebugCall d(__PRETTY_FUNCTION__);
+
     int Tag = std::stoi(lexer.getId().substr(5).c_str());
     lexer.getNextToken(); // consume ctor_x
     lexer.getNextToken(); // consume '['
@@ -767,6 +806,8 @@ private:
     return std::make_unique<ProjExprAST>(i, ParseVarExpr());
   }
   std::unique_ptr<ExprAST> ParseExpression() {
+      DebugCall d(__PRETTY_FUNCTION__);
+
     if (lexer.getCurToken() == tok_id) {
       return ParseCallExpr();
       ;
@@ -790,6 +831,8 @@ private:
 
   // let var := expression
   std::unique_ptr<LetStmtAST> ParseLetStmt() {
+    DebugCall d(__PRETTY_FUNCTION__);
+
     lexer.getNextToken(); // consume let
     std::string var = lexer.getId();
     lexer.getNextToken();
@@ -805,6 +848,8 @@ private:
   }
 
   std::unique_ptr<DirectRetStmtAST> ParseDirectRetStmt() {
+    DebugCall d(__PRETTY_FUNCTION__);
+
     lexer.getNextToken(); // consume ret
     std::string var = lexer.getId();
     lexer.getNextToken(); // consume var
@@ -812,6 +857,8 @@ private:
   }
 
   std::unique_ptr<CaseStmtAST> ParseCaseStmt() {
+    DebugCall d(__PRETTY_FUNCTION__);
+
     lexer.getNextToken(); // consume case
     std::string var = lexer.getId();
     std::vector<std::unique_ptr<FBodyAST>> bodies;
@@ -832,6 +879,8 @@ private:
   }
 
   std::unique_ptr<RetStmtAST> ParseRetStmt() {
+    DebugCall d(__PRETTY_FUNCTION__);
+
     if (lexer.getCurToken() == tok_ret) {
       return ParseDirectRetStmt();
     } else if (lexer.getCurToken() == tok_case) {
@@ -846,15 +895,18 @@ private:
   }
 
   std::unique_ptr<FBodyAST> ParseFBody() {
+    DebugCall d(__PRETTY_FUNCTION__);
     std::vector<std::unique_ptr<LetStmtAST>> stmts;
     while (lexer.getCurToken() == tok_let) {
       stmts.push_back(ParseLetStmt());
     }
     return std::make_unique<FBodyAST>(std::move(stmts), ParseRetStmt());
-    ;
+    
   }
 
   std::unique_ptr<FunctionAST> ParseFunction() {
+    DebugCall d(__PRETTY_FUNCTION__);
+
     std::vector<std::unique_ptr<VariableExprAST>> Args;
     std::vector<VarType> ArgTypes;
     lexer.getNextToken(); // eat def
@@ -868,11 +920,13 @@ private:
       if (lexer.getCurToken() != '(') {
         break;
       }
+      
       lexer.getNextToken(); // eat '('
       Args.push_back(ParseVarExpr());
       lexer.getNextToken(); // consume :
       ArgTypes.push_back(ParseType());
     }
+
     lexer.getNextToken(); // consume :
     VarType retType = ParseType();
     lexer.getNextToken();
@@ -907,15 +961,7 @@ public:
     }
 
       default: {
-        std::cout << "unexpected token: " << lexer.getId() << " ";
-        if (lexer.getCurToken() > 0) {
-          std::cout << "|" << (char)lexer.getCurToken() << "|";
-        } else {
-          std::cout << "|" << lexer.getCurToken() << "|";
-        }
-        std::cout << " loc |" << lexer.getLine() << ":" << lexer.getCol() << "|"
-                  << std::endl;
-        lexer.getNextToken();
+        unexpectedTokenError(lexer);
         assert(false && "unkexpected token");
         break;
       }
