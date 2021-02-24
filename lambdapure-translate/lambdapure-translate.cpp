@@ -525,10 +525,13 @@ private:
     }
     curCol++;
     // StringRef bufCur = buffer.drop_front(bufferIndex);
-    const StringRef boxstr = "◾"; 
+    const StringRef boxstr = "◾";
     if (buffer.startswith(boxstr)) {
       buffer = buffer.drop_front(boxstr.size());
       curCol++;
+      std::cout << "box str (after): |" << buffer.begin()[0] << "|\n";
+      // assert(false && "box string");
+
       std::cout << "\nCHAR: " << std::string(boxstr) << "\n";
       return TokenType(TokenType::tok_box);
     }
@@ -559,7 +562,9 @@ private:
         mlir::FileLineColLoc::get("UNKNOWN-FILE", curLine, curCol, context);
 
     if (lastChar == TokenType::tok_box) {
-      return lastChar;
+        TokenType ThisChar = TokenType(lastChar);
+        lastChar = TokenType(getNextChar());
+        return ThisChar;
     }
     
 
