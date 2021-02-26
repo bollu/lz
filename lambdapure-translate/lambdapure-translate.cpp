@@ -17,6 +17,10 @@
 using namespace mlir;
 using namespace llvm;
 
+extern "C" {
+const char *__asan_default_options() { return "detect_leaks=0"; }
+}
+
 // === AST ===
 // === AST ===
 // === AST ===
