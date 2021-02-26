@@ -1,0 +1,20 @@
+
+
+def check._main (x_1 : obj) : u32 :=
+  case x_1 : obj of
+  Tree.Nil →
+    let x_2 : u32 := 0;
+    ret x_2
+  Tree.Node →
+    let x_3 : obj := proj[0] x_1;
+    let x_4 : obj := proj[1] x_1;
+    let x_5 : u32 := 1;
+    let x_6 : u32 := check._main x_3;
+    let x_7 : u32 := UInt32.add x_5 x_6;
+    let x_8 : u32 := check._main x_4;
+    let x_9 : u32 := UInt32.add x_7 x_8;
+    ret x_9
+
+def check (x_1 : obj) : u32 :=
+  let x_2 : u32 := check._main x_1;
+  ret x_2

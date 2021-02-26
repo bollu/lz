@@ -1,0 +1,33 @@
+
+
+def add (x_1 : obj) (x_2 : obj) : obj :=
+  let x_3 : obj := Nat.add x_1 x_2;
+  ret x_3
+
+def sub (x_1 : obj) (x_2 : obj) : obj :=
+  let x_3 : obj := Nat.sub x_1 x_2;
+  ret x_3
+
+def mul (x_1 : obj) (x_2 : obj) : obj :=
+  let x_3 : obj := Nat.mul x_1 x_2;
+  ret x_3
+
+def div (x_1 : obj) (x_2 : obj) : obj :=
+  let x_3 : obj := Nat.div x_1 x_2;
+  ret x_3
+
+def lt (x_1 : obj) (x_2 : obj) : u8 :=
+  let x_3 : u8 := Nat.decLt x_2 x_1;
+  ret x_3
+
+def eq (x_1 : obj) (x_2 : obj) : u8 :=
+  let x_3 : u8 := Nat.decEq x_1 x_2;
+  ret x_3
+
+def le (x_1 : obj) (x_2 : obj) : u8 :=
+  let x_3 : u8 := Nat.decLe x_2 x_1;
+  ret x_3
+
+def gt (x_1 : obj) (x_2 : obj) : u8 :=
+  let x_3 : u8 := Nat.decLt x_1 x_2;
+  ret x_3

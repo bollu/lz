@@ -1,0 +1,4 @@
+
+
+def const (x_1 : obj) : obj :=
+  ret x_1

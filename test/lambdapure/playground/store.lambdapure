@@ -1,0 +1,139 @@
+def test :obj :=
+  let x_1 : obj := pap add_one;
+  ret x_1
+
+
+def main._closed_2 : obj :=
+  let x_1 : obj := pap add_one;
+  ret x_1
+
+
+  def add_one (x_1 : obj) : obj :=
+    let x_2 : obj := 1;
+    let x_3 : obj := Nat.add x_1 x_2;
+    ret x_3
+
+
+def test (x_1 : obj) :obj :=
+  let x_2 : obj := proj[0] x_1;
+  ret x_2
+
+
+def map (x_1 : obj) (x_2 : obj) : obj :=
+  case x_2 : obj of
+  L.Nil →
+    ret x_2
+  L.Cons →
+    let x_3 : obj := proj[0] x_2;
+    let x_4 : obj := proj[1] x_2;
+    let x_5 : obj := app x_1 x_3;
+    let x_6 : obj := ctor_1[L.Cons] x_5 x_4;
+    ret x_6
+
+def add_one (x_1 : obj) : obj :=
+  let x_2 : obj := 1;
+  let x_3 : obj := Nat.add x_1 x_2;
+  ret x_3
+
+
+
+
+def cons2 (x_3: obj) (x_4 :obj)  : obj :=
+  let x_1 : obj := ctor_0[Tree.Nil];
+  let x_2 : obj := ctor_0[Tree.Nil] x_1;
+  ret x_2
+  def main : obj := let x :obj := 0; ret x
+
+  def test (x_1 : obj) :obj :=
+    let x_2 : obj := proj[0] x_1;
+    ret x_2
+
+    def higherorder (x_1 : obj) (x_2 : obj) (x_3 :obj) (x_4:obj): obj :=
+      let x_4 : obj := ctor_0[Tree.Nil] x_2 x_2;
+      ret x_4
+
+
+
+    def higherorder (x_1 : obj) (x_2 : obj) : obj :=
+          let x_3 : obj := app x_1 x_2;
+          ret x_3
+
+
+          def const2 : obj :=
+            let x_1 : obj := 1;
+            ret x_1
+
+
+            def baz (x_1 : obj) (x_2 : obj) : u8 :=
+              let x_3 : u8 := Nat.decLt x_2 x_1;
+              ret x_3
+
+
+def main(x_1 : obj) : obj := ret x_1
+
+
+
+
+def make'._main._closed_1 : obj :=
+  let x_1 : obj := ctor_0[Tree.Nil];
+  let x_2 : obj := ctor_1[Tree.Node] x_1 x_1;
+  ret x_2
+
+
+def test (x_1 : obj) :obj :=
+  let x_2 : obj := proj[0] x_1;
+  ret x_2
+
+
+
+
+
+              def const2 : obj :=
+                let x_1 : obj := 1;
+                ret x_1
+
+
+
+
+  def higherorder: obj :=
+    let x_3 : obj := 1;
+    let x_2 : obj := 2;
+    ret x_3
+
+
+
+
+
+
+
+    def higherorder2 (x_1 : obj) (x_2 : obj) (x_3 : obj) : obj :=
+      let x_4 : obj := app x_1 x_2 x_3;
+      ret x_4
+
+
+      def baz (x_1 : obj) (x_2 : obj) : obj :=
+        let x_3 : u8 := Nat.decLt x_2 x_1;
+        case x_3 : obj of
+        Bool.false →
+          ret x_2
+        Bool.true →
+          ret x_1
+
+
+
+
+            def nested_case (x_1 : obj) (x_2 : obj) : obj :=
+              let x_3 : u8 := Nat.decLt x_2 x_1;
+              case x_3 : obj of
+              Bool.false →
+                ret x_2
+              Bool.true →
+                let x_4 : obj := 0;
+                let x_5 : u8 := Nat.decEq x_1 x_4;
+                case x_5 : obj of
+                Bool.false →
+                  ret x_1
+                Bool.true →
+                  let x_6 : obj := 1;
+                  let x_7 : obj := Nat.add x_1 x_6;
+                  ret x_7

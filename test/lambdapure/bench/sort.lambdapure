@@ -1,0 +1,24 @@
+
+
+def L.Inhabited : obj :=
+  let x_1 : obj := ctor_0[L.Nil];
+  ret x_1
+
+def addElement (x_1 : obj) (x_2 : obj) : obj :=
+  let x_3 : obj := ctor_1[L.Cons] x_1 x_2;
+  ret x_3/mnt/c/Users/Matthew/Desktop/lambdapure/tests/bench/sort.lean:12:24: error: type expected at
+  List
+term has type
+  Type ? → Type ?
+/mnt/c/Users/Matthew/Desktop/lambdapure/tests/bench/sort.lean:12:24: error: type expected at
+  List
+term has type
+  Type ? → Type ?
+/mnt/c/Users/Matthew/Desktop/lambdapure/tests/bench/sort.lean:12:24: error: type expected at
+  List
+term has type
+  Type ? → Type ?
+/mnt/c/Users/Matthew/Desktop/lambdapure/tests/bench/sort.lean:16:14: error: type expected at
+  List
+term has type
+  Type ? → Type ?

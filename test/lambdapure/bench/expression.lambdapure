@@ -1,0 +1,51 @@
+
+
+def mkAdd (x_1 : obj) (x_2 : obj) : obj :=
+  let x_3 : obj := ctor_0[Expr.Val] x_1;
+  let x_4 : obj := ctor_1[Expr.Add] x_3 x_2;
+  ret x_4
+
+def const_fold (x_1 : obj) : obj :=
+  case x_1 : obj of
+  Expr.Val →
+    ret x_1
+  Expr.Add →
+    let x_2 : obj := proj[0] x_1;
+    let x_3 : obj := proj[1] x_1;
+    case x_2 : obj of
+    Expr.Val →
+      let x_4 : obj := proj[0] x_2;
+      case x_3 : obj of
+      Expr.Val →
+        let x_5 : obj := proj[0] x_3;
+        let x_6 : obj := Nat.add x_4 x_5;
+        let x_7 : obj := ctor_0[Expr.Val] x_6;
+        ret x_7
+      Expr.Add →
+        ret x_1
+      Expr.Mul →
+        ret x_1
+    Expr.Add →
+      ret x_1
+    Expr.Mul →
+      ret x_1
+  Expr.Mul →
+    let x_8 : obj := proj[0] x_1;
+    let x_9 : obj := proj[1] x_1;
+    case x_8 : obj of
+    Expr.Val →
+      let x_10 : obj := proj[0] x_8;
+      case x_9 : obj of
+      Expr.Val →
+        let x_11 : obj := proj[0] x_9;
+        let x_12 : obj := Nat.mul x_10 x_11;
+        let x_13 : obj := ctor_0[Expr.Val] x_12;
+        ret x_13
+      Expr.Add →
+        ret x_1
+      Expr.Mul →
+        ret x_1
+    Expr.Add →
+      ret x_1
+    Expr.Mul →
+      ret x_1

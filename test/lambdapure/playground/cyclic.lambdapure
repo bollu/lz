@@ -1,0 +1,11 @@
+/mnt/c/Users/Matthew/Desktop/lambdapure/tests/playground/cyclic.lean:13:20: error: unknown identifier 'glue'
+/mnt/c/Users/Matthew/Desktop/lambdapure/tests/playground/cyclic.lean:1:0: error: don't know how to synthesize placeholder
+  (sorryAx ?m_1)
+context:
+⊢ Sort ?
+
+
+def main (x_1 : obj) (x_2 : obj) : obj :=
+  let x_3 : u32 := 0;
+  let x_4 : obj := ctor_0[EStateM.Result.ok] x_3 x_2;
+  ret x_4

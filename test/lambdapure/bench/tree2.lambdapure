@@ -1,0 +1,3 @@
+/mnt/c/Users/Matthew/Desktop/lambdapure/tests/bench/tree2.lean:8:4: error: well founded recursion is disabled because we deleted the tactic framework
+/mnt/c/Users/Matthew/Desktop/lambdapure/tests/bench/tree2.lean:12:4: warning: failed to generate bytecode for 'makeTreeWithDepth'
+compiler failed to infer low level type, unknown declaration 'make'

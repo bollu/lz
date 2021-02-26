@@ -276,91 +276,91 @@ static std::string offset = "";
 void FBodyAST::print() {
   offset = offset + " ";
   for (int i = 0; i < (int)Stmts.size(); ++i) {
-    std::cout << offset;
+    std::cerr << offset;
     Stmts.at(i)->print();
   }
-  std::cout << offset;
+  std::cerr << offset;
   Ret->print();
 }
 
 void ModuleAST::print() {
-  std::cout << "-------------------AST-----------------------" << std::endl;
-  std::cout << "---------------------------------------------" << std::endl
+  std::cerr << "-------------------AST-----------------------" << std::endl;
+  std::cerr << "---------------------------------------------" << std::endl
             << std::endl;
   for (int i = 0; i < (int)FList.size(); ++i) {
     FList.at(i)->print();
   }
-  std::cout << "--------------------------------------------" << std::endl;
+  std::cerr << "--------------------------------------------" << std::endl;
 }
 
 void FunctionAST::print() {
-  std::cout << offset << FName << " (" << stringOfType(ArgTypes, RetType)
+  std::cerr << offset << FName << " (" << stringOfType(ArgTypes, RetType)
             << ") ";
   for (int i = 0; i < (int)Args.size(); ++i) {
     Args.at(i)->print();
-    std::cout << " ";
+    std::cerr << " ";
   }
-  std::cout << std::endl << std::endl;
+  std::cerr << std::endl << std::endl;
   FBody->print();
   offset = "";
-  std::cout << std::endl << std::endl;
+  std::cerr << std::endl << std::endl;
 }
 
 void DirectRetStmtAST::print() {
-  std::cout << offset << "return " << Var << std::endl;
+  std::cerr << offset << "return " << Var << std::endl;
 }
 
 void LetStmtAST::print() {
-  std::cout << offset << "Let " << stringOfType(Vtype) << " " << Var << " = ";
+  std::cerr << offset << "Let " << stringOfType(Vtype) << " " << Var << " = ";
   Rhs->print();
-  std::cout << std::endl;
+  std::cerr << std::endl;
 }
 
-void VariableExprAST::print() { std::cout << Name; }
+void VariableExprAST::print() { std::cerr << Name; }
 
-void NumberExprAST::print() { std::cout << Val; }
+void NumberExprAST::print() { std::cerr << Val; }
 void AppExprAST::print() {
-  std::cout << "app " << FName;
+  std::cerr << "app " << FName;
   for (int i = 0; i < (int)Args.size(); ++i) {
-    std::cout << " ";
+    std::cerr << " ";
     Args.at(i)->print();
   }
 }
 
 void PapExprAST::print() {
-  std::cout << "pap " << FName;
+  std::cerr << "pap " << FName;
   for (int i = 0; i < (int)Args.size(); ++i) {
-    std::cout << " ";
+    std::cerr << " ";
     Args.at(i)->print();
   }
 }
 
 void CallExprAST::print() {
-  std::cout << "Call " << FName;
+  std::cerr << "Call " << FName;
   for (int i = 0; i < (int)Args.size(); ++i) {
-    std::cout << " ";
+    std::cerr << " ";
     Args.at(i)->print();
   }
 }
 
 void CtorExprAST::print() {
-  std::cout << "Ctor " << Tag;
+  std::cerr << "Ctor " << Tag;
   for (int i = 0; i < (int)Args.size(); ++i) {
-    std::cout << " ";
+    std::cerr << " ";
     Args.at(i)->print();
   }
 }
 void ProjExprAST::print() {
-  std::cout << "Proj"
+  std::cerr << "Proj"
             << "[" << getIndex() << "] " << getVarName() << std::endl;
 }
 
 void CaseStmtAST::print() {
-  std::cout << offset << "Case  on " << getVar() << " : " << std::endl;
+  std::cerr << offset << "Case  on " << getVar() << " : " << std::endl;
   offset = offset + " ";
   for (int i = 0; i < (int)Bodies.size(); ++i) {
     Bodies.at(i)->print();
-    std::cout << std::endl;
+    std::cerr << std::endl;
   }
   offset = "";
 }
@@ -460,11 +460,11 @@ public:
     assert(false && "unable to find type.");
   }
   void print() {
-    std::cout << "-----SymbolTable-----" << std::endl;
+    std::cerr << "-----SymbolTable-----" << std::endl;
     for (auto p : curr) {
-      std::cout << p->var << std::endl;
+      std::cerr << p->var << std::endl;
     }
-    std::cout << "---------------------" << std::endl;
+    std::cerr << "---------------------" << std::endl;
   }
 
 }; // class ScopeTable
@@ -520,7 +520,7 @@ private:
 
   TokenType getNextChar() {
     if (buffer.size() == 0) {
-      std::cout << "\nEOF\n";
+      std::cerr << "\nEOF\n";
       return TokenType(EOF);
     }
     curCol++;
@@ -529,10 +529,9 @@ private:
     if (buffer.startswith(boxstr)) {
       buffer = buffer.drop_front(boxstr.size());
       curCol++;
-      std::cout << "box str (after): |" << buffer.begin()[0] << "|\n";
+      // std::cerr << "box str (after): |" << buffer.begin()[0] << "|\n";
       // assert(false && "box string");
-
-      std::cout << "\nCHAR: " << std::string(boxstr) << "\n";
+      // std::cerr << "\nCHAR: " << std::string(boxstr) << "\n";
       return TokenType(TokenType::tok_box);
     }
 
@@ -543,7 +542,7 @@ private:
       curLine++;
     }
 
-    std::cout << "\nCHAR: " << (char) res << "\n";
+    // std::cerr << "\nCHAR: " << (char) res << "\n";
     return TokenType(res);
   }
 
@@ -670,13 +669,13 @@ public:
 
 
 void unexpectedTokenError(Lexer &lexer) {
-    std::cout << "unexpected token: " << lexer.getId() << " ";
+    std::cerr << "unexpected token: " << lexer.getId() << " ";
     if (lexer.getCurToken() > 0) {
-        std::cout << "|" << (char)lexer.getCurToken() << "|";
+        std::cerr << "|" << (char)lexer.getCurToken() << "|";
     } else {
-        std::cout << "|" << lexer.getCurToken() << "|";
+        std::cerr << "|" << lexer.getCurToken() << "|";
     }
-    std::cout << " loc |" << lexer.getLine() << ":" << lexer.getCol() << "|"
+    std::cerr << " loc |" << lexer.getLine() << ":" << lexer.getCol() << "|"
         << std::endl;
     lexer.getNextToken();
 }
@@ -687,16 +686,15 @@ struct DebugCall {
   const char *name;
   DebugCall (const char *name): name(name) {
 
-    for(int i = 0; i < indent*2; ++i) { std::cout << " "; }
-    std::cout << "vvv" << name << "\n"; 
+    // for(int i = 0; i < indent*2; ++i) { std::cerr << " "; }
+    // std::cerr << "vvv" << name << "\n"; 
     indent++;
 
   }
 
   ~DebugCall() { 
-    for(int i = 0; i < indent*2; ++i) { std::cout << " "; }
-    std::cout << "^^^" << name << "\n"; 
-
+    // for(int i = 0; i < indent*2; ++i) { std::cerr << " "; }
+    // std::cerr << "^^^" << name << "\n"; 
     indent--;
   }
 };
@@ -830,7 +828,7 @@ private:
 
       return ParseProjExpr();
     } else {
-      std::cout << "Invalid Expression, nullptr" << std::endl;
+      std::cerr << "Invalid Expression, nullptr" << std::endl;
       return nullptr;
     }
   }
@@ -894,8 +892,8 @@ private:
     } else {
       unexpectedTokenError(lexer);
       assert(false && "unable to parse return statement.");
-      // std::cout << lexer.getCurToken() << std::endl;
-      // std::cout << "Error in return statement, nullptr" << std::endl;
+      // std::cerr << lexer.getCurToken() << std::endl;
+      // std::cerr << "Error in return statement, nullptr" << std::endl;
       return nullptr;
     }
   }
@@ -1227,7 +1225,7 @@ private:
       mlir::Type ty = typeGen(letstmt->getVtype());
       mlir::Value value = mlirGen(*expr, ty);
       if (failed(scopeTable.declare(letstmt->getName(), value, ty))) {
-        std::cout << "Failed to declare variable in let stament" << std::endl;
+        std::cerr << "Failed to declare variable in let stament" << std::endl;
         return mlir::failure();
       }
     }

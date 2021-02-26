@@ -1,0 +1,16 @@
+
+
+def bar (x_1 : obj) (x_2 : obj) (x_3 : obj) : obj :=
+  let x_4 : obj := Nat.add x_2 x_3;
+  let x_5 : u8 := Nat.decLt x_4 x_1;
+  case x_5 : obj of
+  Bool.false →
+    let x_6 : obj := 1;
+    ret x_6
+  Bool.true →
+    let x_7 : obj := 0;
+    ret x_7
+
+def foo (x_1 : obj) (x_2 : obj) (x_3 : obj) : obj :=
+  let x_4 : obj := bar x_1 x_2 x_3;
+  ret x_4
