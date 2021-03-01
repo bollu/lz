@@ -524,7 +524,7 @@ private:
 
   TokenType getNextChar() {
     if (buffer.size() == 0) {
-      std::cerr << "\nEOF\n";
+      // std::cerr << "\nEOF\n";
       return TokenType(EOF);
     }
     curCol++;

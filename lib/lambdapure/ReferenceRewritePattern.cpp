@@ -140,6 +140,11 @@ public:
     builder.setInsertionPoint(op);
     for (int i = 0; i < (int)args.size(); ++i) {
       if (consumes[i] == -1) {
+          // HACK: don't really understand why the current code does not handle this
+        if (!args[i].getType().isa<lambdapure::ObjectType>()) { 
+            llvm::errs() << "arg of incorrect type: |" << args[i] << "|\n";
+            continue;
+        }
         builder.create<lambdapure::DecOp>(builder.getUnknownLoc(), args[i]);
       }
       assert(consumes[i] >= -1);
@@ -153,7 +158,7 @@ public:
     }
     return false;
   }
-};
+};                  
 } // end anonymous namespace
 
 std::unique_ptr<Pass> mlir::lambdapure::createReferenceRewriterPattern() {
