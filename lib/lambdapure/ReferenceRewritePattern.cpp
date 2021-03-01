@@ -142,6 +142,7 @@ public:
       if (consumes[i] == -1) {
         builder.create<lambdapure::DecOp>(builder.getUnknownLoc(), args[i]);
       }
+      assert(consumes[i] >= -1);
     }
   }
 
