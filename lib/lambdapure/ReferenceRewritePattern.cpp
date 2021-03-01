@@ -117,18 +117,26 @@ public:
 
   int consume(std::vector<mlir::Value> &args, std::vector<int> &consumes,
               mlir::Value val) {
-    for (int i = 0; i < (int)args.size(); ++i) {
+    std::cerr << "consumes: " << consumes.size() << " |args: " << args.size() << "\n";
+    // assert(consumes.size() == args.size());
+    // HACK! THINK ABOUT THIS PROPERLY!
+    // for (int i = 0; i < (int)args.size(); ++i) {
+    for (int i = 0; i < (int)consumes.size(); ++i) {
       if (args[i] == val) {
         consumes[i]++;
         return consumes[i];
       }
     }
-    assert(false && "should not reach here.");
+    return 0; 
+    // assert(false && "should not reach here.");
   }
+
   void addAllDecs(Operation *op, std::vector<mlir::Value> &args,
                   std::vector<int> &consumes, mlir::OpBuilder &builder) {
     builder.setInsertionPoint(op);
-    for (int i = 0; i < (int)args.size(); ++i) {
+    // HACK! THINK ABOUT THIS PROPERLY
+    // for (int i = 0; i < (int)args.size(); ++i) {
+    for (int i = 0; i < (int)consumes.size(); ++i) {
       if (consumes[i] == -1) {
         builder.create<lambdapure::DecOp>(builder.getUnknownLoc(), args[i]);
       }
