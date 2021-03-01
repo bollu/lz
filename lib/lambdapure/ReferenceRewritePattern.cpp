@@ -25,11 +25,13 @@ public:
       args.push_back(f.getArgument(i));
       consumes.push_back(-1); // assume ownerships => starts with -1
     }
+    assert(args.size() == consumes.size());
     runOnRegion(args, consumes, f.getBody());
   }
 
   void runOnRegion(std::vector<mlir::Value> args, std::vector<int> consumes,
                    mlir::Region &region) {
+    assert(args.size() == consumes.size());
     for (auto it = region.op_begin(); it != region.op_end(); ++it) {
       auto context = it->getContext();
       auto builder = mlir::OpBuilder(context);
@@ -54,6 +56,7 @@ public:
         }
       } else if (name == "lambdapure.ConstructorOp") {
         args.push_back(it->getOpResult(0));
+        consumes.push_back(0); // TODO HACK: is this correct?
         for (int i = 0; i < (int)it->getNumOperands(); ++i) {
           onValue(&*it, args, consumes, it->getOperand(i), builder);
         }
@@ -87,6 +90,7 @@ public:
 
   void runOnResetRegion(mlir::Value resetValue, std::vector<mlir::Value> args,
                         std::vector<int> consumes, mlir::Region &region) {
+    assert(args.size() == consumes.size());
     for (auto it = region.op_begin(); it != region.op_end(); ++it) {
       auto name = it->getName().getStringRef().str();
       if (name == "lambdapure.ProjectionOp" &&
@@ -103,6 +107,7 @@ public:
   void onValue(Operation *op, std::vector<mlir::Value> &args,
                std::vector<int> &consumes, mlir::Value val,
                mlir::OpBuilder &builder) {
+    assert(args.size() == consumes.size());
     if (isIn(args, val)) {
       int c = consume(args, consumes, val);
       if (c >= 1) {
@@ -118,10 +123,8 @@ public:
   int consume(std::vector<mlir::Value> &args, std::vector<int> &consumes,
               mlir::Value val) {
     std::cerr << "consumes: " << consumes.size() << " |args: " << args.size() << "\n";
-    // assert(consumes.size() == args.size());
-    // HACK! THINK ABOUT THIS PROPERLY!
-    // for (int i = 0; i < (int)args.size(); ++i) {
-    for (int i = 0; i < (int)consumes.size(); ++i) {
+    assert(args.size() == consumes.size());
+    for (int i = 0; i < (int)args.size(); ++i) {
       if (args[i] == val) {
         consumes[i]++;
         return consumes[i];
@@ -133,10 +136,9 @@ public:
 
   void addAllDecs(Operation *op, std::vector<mlir::Value> &args,
                   std::vector<int> &consumes, mlir::OpBuilder &builder) {
+    assert(args.size() == consumes.size());
     builder.setInsertionPoint(op);
-    // HACK! THINK ABOUT THIS PROPERLY
-    // for (int i = 0; i < (int)args.size(); ++i) {
-    for (int i = 0; i < (int)consumes.size(); ++i) {
+    for (int i = 0; i < (int)args.size(); ++i) {
       if (consumes[i] == -1) {
         builder.create<lambdapure::DecOp>(builder.getUnknownLoc(), args[i]);
       }

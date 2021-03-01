@@ -30,6 +30,24 @@
 
 # Log:  [newest] to [oldest]
 
+# March 1, 2021
+
+```cpp
+if (desUpdates) {
+pm.addNestedPass<mlir::FuncOp >(mlir::lambdapure::createDestructiveUpdatePattern());
+}
+if (refCount) {
+pm.addNestedPass<mlir::FuncOp >(mlir::lambdapure::createReferenceRewriterPattern());;
+}
+if (runtimeLowering) {
+pm.addPass(mlir::lambdapure::createLambdapureToLeanLowering());
+}
+```
+
+So, this is the order we need to run these passes in. First destructive
+updates, then reference rewriter.
+
+
 # Feb 19 2021
 
 - Fix lexer/parser to be able to parse input LEAN file.
