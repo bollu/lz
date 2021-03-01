@@ -36,7 +36,7 @@ public:
     for (int i = 0; i < (int)f.getNumArguments(); ++i) {
       auto val = f.getArgument(i);
       auto type = val.getType();
-      if (mlir::lambdapure::ObjectType::classof(type)) {
+      if (type.isa<lambdapure::ObjectType>()) {
         args.push_back(val);
       }
     }
@@ -46,32 +46,49 @@ public:
     cleanAfterReuseInsertion(f);
   }
 
-  void runOnRegion(std::vector<mlir::Value> cand, mlir::Region &region) {
+  void runOnRegion(std::vector<mlir::Value> candidates, mlir::Region &region) {
     // auto context = region.getContext();
     // auto builder = mlir::OpBuilder(context);
-
-    for (auto op = region.op_begin(); op != region.op_end(); ++op) {
-      auto name = op->getName().getStringRef().str();
-      if (name == "lambdapure.ConstructorOp") {
-        // checkControlPath //checkSize //
-        int const_size = op->getNumOperands();
-        for (auto candidate : cand) {
-          if (checkControlPath(candidate, &*op)) {
+      for (lambdapure::ConstructorOp op : region.getOps<lambdapure::ConstructorOp>()) {
+        int const_size = op.getNumOperands();
+        for (auto candidate : candidates) {
+          if (!checkControlPath(candidate, op)) continue;
             int cand_size = getCandidateSize(candidate, region);
-            if (const_size <= cand_size) {
+            if (const_size > cand_size) continue;
               insertReuse(candidate, region);
-            }
-          }
-        }
-
-      } else if (name == "lambdapure.CaseOp") {
-        for (int i = 0; i < (int)op->getNumRegions(); ++i) {
-          std::vector<mlir::Value> new_cand(cand);
-          auto &case_region = op->getRegion(i);
-          runOnRegion(new_cand, case_region);
         }
       }
-    }
+
+      for(lambdapure::CaseOp op : region.getOps<lambdapure::CaseOp>()) {
+          for (int i = 0; i < (int)op->getNumRegions(); ++i) {
+              std::vector<mlir::Value> new_candidates(candidates);
+              auto &case_region = op->getRegion(i);
+              runOnRegion(new_candidates, case_region);
+          }
+      }
+
+    // for (auto op = region.op_begin(); op != region.op_end(); ++op) {
+    //   auto name = op->getName().getStringRef().str();
+    //   if (name == "lambdapure.ConstructorOp") {
+    //     // checkControlPath //checkSize //
+    //     int const_size = op->getNumOperands();
+    //     for (auto candidate : candidates) {
+    //       if (checkControlPath(candidate, &*op)) {
+    //         int cand_size = getCandidateSize(candidate, region);
+    //         if (const_size <= cand_size) {
+    //           insertReuse(candidate, region);
+    //         }
+    //       }
+    //     }
+
+    //   } else if (name == "lambdapure.CaseOp") {
+    //     for (int i = 0; i < (int)op->getNumRegions(); ++i) {
+    //       std::vector<mlir::Value> new_cand(candidates);
+    //       auto &case_region = op->getRegion(i);
+    //       runOnRegion(new_cand, case_region);
+    //     }
+    //   }
+    // }
   }
 
   void insertReuse(mlir::Value reuseVal, Region &region) {
@@ -92,18 +109,31 @@ public:
     new_region_2.op_begin()->erase();
   }
 
+  // Guess: return largest index that is projected out from this value
+  // TODO HACKHow does this work cross-module?
   int getCandidateSize(mlir::Value candidate, Region &region) {
     int size = -2;
-    for (auto op = region.op_begin(); op != region.op_end(); ++op) {
-      auto name = op->getName().getStringRef().str();
-      if (name == "lambdapure.ProjectionOp") {
-        auto val = op->getOperand(0);
-        int index = op->getAttrOfType<IntegerAttr>("index").getInt();
+
+    for(lambdapure::ProjectionOp proj : region.getOps<lambdapure::ProjectionOp>()) {
+        mlir::Value val = proj.getOperand();
+        // HACK TODO: create API for this projection.
+        int index = proj.getOperation()->getAttrOfType<IntegerAttr>("index").getInt();
         if (val == candidate) {
-          size = std::max(size, index);
+            size = std::max(size, index);
         }
-      }
     }
+    // for (auto op = region.op_begin(); op != region.op_end(); ++op) {
+    //   auto name = op->getName().getStringRef().str();
+    //   if (name == "lambdapure.ProjectionOp") {
+    //     auto val = op->getOperand(0);
+    //     int index = op->getAttrOfType<IntegerAttr>("index").getInt();
+    //     if (val == candidate) {
+    //       size = std::max(size, index);
+    //     }
+    //   }
+    // }
+
+    // why do we return (size + 1) ?
     return size + 1;
   }
 
@@ -130,49 +160,78 @@ public:
   }
 
   void cleanAfterReuseInsertion(mlir::FuncOp f) {
-    f.walk([&](mlir::Operation *op) {
-      if (op->getName().getStringRef().str() == "lambdapure.ConstructorOp" &&
-          op->use_empty()) {
-        op->erase();
-      }
+    f.walk([&](lambdapure::ConstructorOp op) {
+        if (op->use_empty()) { op->erase(); }
     });
+    // f.walk([&](mlir::Operation *op) {
+    //   if (op->getName().getStringRef().str() == "lambdapure.ConstructorOp" &&
+    //       op->use_empty()) {
+    //     op->erase();
+    //   }
+    // });
   }
 
   void insertReuseConstructor(mlir::Region &region) {
     auto builder = mlir::OpBuilder(region.getContext());
-    for (auto op = region.op_begin(); op != region.op_end(); ++op) {
-      auto name = op->getName().getStringRef().str();
-      if (name == "lambdapure.ResetOp") {
-        auto reuseVal = op->getOperand(0);
-        auto &resetRegion = op->getRegion(0);
-        for (auto inner_op = resetRegion.op_begin();
-             inner_op != region.op_end(); ++inner_op) {
-          auto inner_name = inner_op->getName().getStringRef().str();
-          if (inner_name == "lambdapure.ConstructorOp") {
-            builder.setInsertionPoint(&*inner_op);
-            int tag = inner_op->getAttrOfType<IntegerAttr>("tag").getInt();
+    for (lambdapure::ResetOp op : region.getOps<lambdapure::ResetOp>()) {
+        mlir::Value reuseVal = op.getOperand();
+        // vvv ResetOp should have SingleRegion?
+        mlir::Region &resetRegion = op.getRegion(0);
+
+        for(lambdapure::ConstructorOp c : resetRegion.getOps<lambdapure::ConstructorOp>()) {
+            builder.setInsertionPoint(c);
+            const int tag = c->getAttrOfType<IntegerAttr>("tag").getInt();
             std::vector<mlir::Value> operands;
             operands.push_back(reuseVal);
-            for (auto operand = inner_op->operand_begin();
-                 operand != inner_op->operand_end(); ++operand) {
-              mlir::Value new_operand = *operand;
-              operands.push_back(new_operand);
+            for(auto operand : c.operands()) {
+                operands.push_back(operand);
             }
-            auto new_result = builder.create<lambdapure::ReuseConstructorOp>(
-                op->getLoc(), tag, operands);
-            inner_op->replaceAllUsesWith(new_result);
+            lambdapure::ReuseConstructorOp reuse  = 
+                 builder.create<lambdapure::ReuseConstructorOp>( op->getLoc(), tag, operands);
+            c->replaceAllUsesWith(reuse);
+            // TODO HACK: why clear() ?
             operands.clear();
-          }
         }
-      }
 
-      else if (name == "lambdapure.CaseOp") {
-        for (int i = 0; i < (int)op->getNumRegions(); ++i) {
-          auto &case_region = op->getRegion(i);
-          insertReuseConstructor(case_region);
+        for (lambdapure::CaseOp c : resetRegion.getOps<lambdapure::CaseOp>()) {
+            for (int i = 0; i < (int)c.getNumRegions(); ++i) {
+                insertReuseConstructor(c.getRegion(i));
+            }
         }
-      }
     }
+    // for (auto op = region.op_begin(); op != region.op_end(); ++op) {
+    //   auto name = op->getName().getStringRef().str();
+    //   if (name == "lambdapure.ResetOp") {
+    //     auto reuseVal = op->getOperand(0);
+    //     auto &resetRegion = op->getRegion(0);
+    //     for (auto inner_op = resetRegion.op_begin();
+    //          inner_op != region.op_end(); ++inner_op) {
+    //       auto inner_name = inner_op->getName().getStringRef().str();
+    //       if (inner_name == "lambdapure.ConstructorOp") {
+    //         builder.setInsertionPoint(&*inner_op);
+    //         int tag = inner_op->getAttrOfType<IntegerAttr>("tag").getInt();
+    //         std::vector<mlir::Value> operands;
+    //         operands.push_back(reuseVal);
+    //         for (auto operand = inner_op->operand_begin();
+    //              operand != inner_op->operand_end(); ++operand) {
+    //           mlir::Value new_operand = *operand;
+    //           operands.push_back(new_operand);
+    //         }
+    //         auto new_result = builder.create<lambdapure::ReuseConstructorOp>(
+    //             op->getLoc(), tag, operands);
+    //         inner_op->replaceAllUsesWith(new_result);
+    //         operands.clear();
+    //       }
+    //     }
+    //   }
+
+    //   else if (name == "lambdapure.CaseOp") {
+    //     for (int i = 0; i < (int)op->getNumRegions(); ++i) {
+    //       auto &case_region = op->getRegion(i);
+    //       insertReuseConstructor(case_region);
+    //     }
+    //   }
+    // }
   }
 
   bool checkControlPath(mlir::Value candidate, Operation *op) {
