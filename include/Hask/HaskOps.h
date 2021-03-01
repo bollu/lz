@@ -330,6 +330,97 @@ public:
 };
 
 
+
+class ReuseConstructorOp
+    : public Op<ReuseConstructorOp, OpTrait::OneResult, OpTrait::ZeroRegion,
+                MemoryEffectOpInterface::Trait> {
+public:
+  using Op::Op;
+  static StringRef getOperationName() { return "lz.reuseconstruct"; };
+  static const char *getDataConstructorAttrKey() { return "dataconstructor"; }
+  static const char *getDataTypeAttrKey() { return "datatype"; }
+  StringRef getDataConstructorName() {
+    return getOperation()->getAttrOfType<FlatSymbolRefAttr>(getDataConstructorAttrKey())
+        .getValue();
+  }
+
+  // int getNumOperands() { return this->getOperation()->getNumOperands(); }
+  // Value getOperand(int i) { return this->getOperation()->getOperand(i); }
+  // Operation::operand_range getOperands() {
+  //   return this->getOperation()->getOperands();
+  // }
+  static ParseResult parse(OpAsmParser &parser, OperationState &result);
+  void print(OpAsmPrinter &p);
+
+  void
+  getEffects(SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+                 &effects) {}
+};
+
+class ProjectionOp
+    : public Op<ProjectionOp, OpTrait::OneResult, OpTrait::OneOperand, 
+                OpTrait::ZeroRegion,
+                MemoryEffectOpInterface::Trait> {
+public:
+  using Op::Op;
+  static StringRef getOperationName() { return "lz.project"; };
+  static const char *getIndexAttrKey() { return "value"; }
+  int getIndex() {
+    return getOperation()->getAttrOfType<IntegerAttr>(getIndexAttrKey()).getInt();
+  }
+
+  // int getNumOperands() { return this->getOperation()->getNumOperands(); }
+  // Value getOperand(int i) { return this->getOperation()->getOperand(i); }
+  // Operation::operand_range getOperands() {
+  //   return this->getOperation()->getOperands();
+  // }
+  static ParseResult parse(OpAsmParser &parser, OperationState &result);
+  void print(OpAsmPrinter &p);
+
+  void
+  getEffects(SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+                 &effects) {}
+};
+
+class PapOp
+    : public Op<PapOp, OpTrait::OneResult, MemoryEffectOpInterface::Trait> {
+public:
+  using Op::Op;
+  static StringRef getOperationName() { return "lz.pap"; };
+  Value getFn() { return this->getOperation()->getOperand(0); };
+  int getNumFnArguments() {
+    return this->getOperation()->getNumOperands() - 1;
+  };
+  Value getFnArgument(int i) {
+    return this->getOperation()->getOperand(i + 1);
+  };
+
+  SmallVector<Value, 4> getFnArguments() {
+    SmallVector<Value, 4> args;
+    for (int i = 0; i < getNumFnArguments(); ++i) {
+      args.push_back(getFnArgument(i));
+    }
+    return args;
+  }
+  void
+  getEffects(SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+                 &effects) {}
+
+  // NOTE: the return type should be the return type of the *function*. The ApOp
+  // will wrap the fnretty in a ThunkType
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                    Value fnref, SmallVectorImpl<Value> &params, Type fnretty);
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                    FuncOp fn, SmallVectorImpl<Value> &params);
+
+  static ParseResult parse(OpAsmParser &parser, OperationState &result);
+  void print(OpAsmPrinter &p);
+};
+
+
+
+
+
 /*
 class HaskThunkToPtrOp
     : public Op<HaskThunkToPtrOp, OpTrait::OneOperand, OpTrait::OneResult,

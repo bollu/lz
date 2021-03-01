@@ -168,6 +168,67 @@ void ApOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
   state.addTypes(builder.getType<ThunkType>(fn.getType().getResult(0)));
 };
 
+// === PAPOP OP ===
+// === PAPOP OP ===
+// === PAPOP OP ===
+// === PAPOP OP ===
+// === PAPOP OP ===
+
+ParseResult PapOp::parse(OpAsmParser &parser, OperationState &result) {
+  // OpAsmParser::OperandType operand_fn;
+  OpAsmParser::OperandType op_fn;
+  // (<fn-arg>
+  if (parser.parseLParen()) {
+    return failure();
+  }
+  if (parser.parseOperand(op_fn)) {
+    return failure();
+  }
+
+  // : type
+  FunctionType ratorty;
+  if (parser.parseColonType<FunctionType>(ratorty)) {
+    return failure();
+  }
+  if (parser.resolveOperand(op_fn, ratorty, result.operands)) {
+    return failure();
+  }
+
+  if (FunctionType fnty = ratorty.dyn_cast<FunctionType>()) {
+    std::vector<Type> paramtys = fnty.getInputs();
+    // Type retty = fnty.getResultType();
+
+    for (int i = 0; i < (int)paramtys.size(); ++i) {
+      if (parser.parseComma()) {
+        return failure();
+      }
+      OpAsmParser::OperandType op;
+      if (parser.parseOperand(op))
+        return failure();
+      if (parser.resolveOperand(op, paramtys[i], result.operands)) {
+        return failure();
+      }
+    }
+
+    if (parser.parseRParen())
+      return failure();
+    result.addTypes(parser.getBuilder().getType<ThunkType>(fnty.getResult(0)));
+  } else {
+    InFlightDiagnostic err =
+        parser.emitError(parser.getCurrentLocation(),
+                         "expected function type, got non function type: [");
+    err << ratorty << "]";
+    return failure();
+  }
+
+  return success();
+};
+
+void PapOp::print(OpAsmPrinter &p) {
+  p.printGenericOp(this->getOperation());
+  return;
+};
+
 // === CASESSA OP ===
 // === CASESSA OP ===
 // === CASESSA OP ===

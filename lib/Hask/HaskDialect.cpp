@@ -46,6 +46,7 @@ HaskDialect::HaskDialect(mlir::MLIRContext *context)
     // DeclareDataConstructorOp,
     HaskReturnOp,
     ApOp,
+    PapOp,
     ApEagerOp,
     ThunkifyOp,
     CaseOp,
