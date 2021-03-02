@@ -1180,9 +1180,11 @@ private:
       args.push_back(mlirGen(*varExpr));
     }
     std::string fName = expr.getFName();
-    std::vector<mlir::Type> results;
-    results.push_back(ty);
-    return builder.create<mlir::lambdapure::CallOp>(loc(), fName, args, ty);
+    // llvm::SmallVector<mlir::Type, 4> results;
+    // results.push_back(ty);
+    // return builder.create<mlir::lambdapure::CallOp>(loc(), fName, args, ty);
+    mlir::CallOp call =  builder.create<mlir::CallOp>(loc(), ty, fName, args);
+    return call.getResult(0);
   }
 
   mlir::Value mlirGen(PapExprAST &expr, mlir::Type ty) {
