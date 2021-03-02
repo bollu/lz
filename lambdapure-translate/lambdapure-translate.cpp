@@ -1106,6 +1106,7 @@ private:
     std::string var = std::string(direct.getVar());
     mlir::Value result = scopeTable.lookup(var);
     // builder.create<lambdapure::ReturnOp>(loc(), result);
+    // builder.create<standalone::HaskReturnOp>(loc(), result);
     builder.create<standalone::HaskReturnOp>(loc(), result);
     // if(!result){
     //   builder.create<ReturnOp>(loc());
@@ -1128,17 +1129,23 @@ private:
           loc(), curr_val);
     }
 
-    assert(false && "TODO: switch up case");
-    auto caseOp = builder.create<mlir::lambdapure::CaseOp>(loc(), curr_val,
+    // assert(false && "TODO: switch up case");
+    // auto caseOp = builder.create<mlir::lambdapure::CaseOp>(loc(), curr_val,
+    //                                                         bodies.size());
+    auto caseOp = builder.create<mlir::standalone::CaseOp>(loc(), curr_val,
                                                            bodies.size());
+
     int i = 0;
     for (auto &body : bodies) {
-      auto &region = caseOp.getRegion(i);
-      auto block = builder.createBlock(&region);
+      mlir::Region &region = caseOp->getRegion(i);
+      mlir::Block *block = builder.createBlock(&region);
       builder.setInsertionPointToStart(block);
       mlirGen(*body);
       ++i;
     }
+    builder.setInsertionPointAfter(caseOp);
+    // builder.create<mlir::ReturnOp>(loc(), caseOp.getResult());
+    builder.create<standalone::HaskReturnOp>(loc(), caseOp.getResult());
     return mlir::success();
   }
 
@@ -1155,8 +1162,7 @@ private:
 
   mlir::Value mlirGen(NumberExprAST &expr) {
     // return builder.create<mlir::lambdapure::IntegerConstOp>(loc(), expr.getValue());
-    return builder.create<mlir::ConstantIntOp>(loc(), expr.getValue(), 
-            builder.getI64Type());
+    return builder.create<standalone::IntegerConstOp>(loc(), expr.getValue());
   }
 
   mlir::Value mlirGen(VariableExprAST &expr) {
@@ -1182,9 +1188,10 @@ private:
     std::string fName = expr.getFName();
     // llvm::SmallVector<mlir::Type, 4> results;
     // results.push_back(ty);
-    // return builder.create<mlir::lambdapure::CallOp>(loc(), fName, args, ty);
-    mlir::CallOp call =  builder.create<mlir::CallOp>(loc(), ty, fName, args);
-    return call.getResult(0);
+    // TODO HACK: need to resolve all functions correctly.
+    return builder.create<mlir::lambdapure::CallOp>(loc(), fName, args, ty);
+    // mlir::CallOp call =  builder.create<mlir::CallOp>(loc(), ty, fName, args);
+    // return call.getResult(0);
   }
 
   mlir::Value mlirGen(PapExprAST &expr, mlir::Type ty) {

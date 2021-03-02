@@ -443,6 +443,21 @@ public:
                  &effects) {}
 };
 
+class IntegerConstOp : public Op<IntegerConstOp, OpTrait::ZeroOperands, OpTrait::OneResult, OpTrait::ZeroRegion,
+  MemoryEffectOpInterface::Trait> {
+  public:
+  using Op::Op;
+  static StringRef getOperationName() { return "lz.int"; };
+  static const char *getValueAttrKey() { return "constructorName"; }
+
+  static ParseResult parse(OpAsmParser &parser, OperationState &result);
+  void print(OpAsmPrinter &p);
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state, int i);
+  void
+  getEffects(SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+                 &effects) {}
+
+};
 
 
 /*

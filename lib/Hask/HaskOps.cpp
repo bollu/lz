@@ -855,10 +855,38 @@ void TagGetOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
 
 void ProjectionOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,int ix, mlir::Value v, mlir::Type retty) {
   state.addOperands(v);
-  mlir::Attribute ixattr = builder.getIntegerAttr(builder.getI64Type(), ix);
-  state.addAttribute(ProjectionOp::getIndexAttrKey(), ixattr);
+  state.addAttribute(ProjectionOp::getIndexAttrKey(), builder.getI64IntegerAttr(ix));
   state.addTypes(retty);
 };
+
+// === IntegerConstOp  OP ===
+// === IntegerConstOp  OP ===
+// === IntegerConstOp  OP ===
+// === IntegerConstOp  OP ===
+// === IntegerConstOp  OP ===
+
+void IntegerConstOp::build(mlir::OpBuilder &builder, mlir::OperationState &state, int i) {
+  state.addAttribute(IntegerConstOp::getValueAttrKey(), builder.getI64IntegerAttr(i));
+  state.addTypes(builder.getType<ValueType>());
+};
+
+ParseResult IntegerConstOp::parse(OpAsmParser &parser, OperationState &result) {
+  mlir::OpAsmParser::OperandType in;
+  mlir::IntegerAttr i;
+  if (parser.parseLParen() || parser.parseAttribute<mlir::IntegerAttr>(i) || parser.parseRParen()) {
+    return failure();
+  }
+  result.addAttribute(IntegerConstOp::getValueAttrKey(), i);
+  result.addTypes(parser.getBuilder().getType<ValueType>());
+  return success();
+};
+
+
+void IntegerConstOp::print(OpAsmPrinter &p) {
+  p.printGenericOp(this->getOperation());
+  return;
+};
+
 
 
 
