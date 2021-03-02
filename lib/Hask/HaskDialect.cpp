@@ -55,6 +55,8 @@ HaskDialect::HaskDialect(mlir::MLIRContext *context)
     HaskConstructOp,
     CaseIntOp,
     HaskLambdaOp,
+    TagGetOp,
+    ProjectionOp,
     IntegerConstOp>();
   addTypes<
     // HaskFnType,

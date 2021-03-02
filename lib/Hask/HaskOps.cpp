@@ -846,6 +846,15 @@ void TagGetOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
     state.addTypes(builder.getI64Type());
 };
 
+ParseResult TagGetOp::parse(OpAsmParser &parser, OperationState &result) {
+    assert(false && "unimplemented");
+};
+
+void TagGetOp::print(OpAsmPrinter &p) {
+  p.printGenericOp(this->getOperation());
+  return;
+};
+
 // === PROJECTION  OP ===
 // === PROJECTION  OP ===
 // === PROJECTION  OP ===
@@ -857,6 +866,16 @@ void ProjectionOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,i
   state.addOperands(v);
   state.addAttribute(ProjectionOp::getIndexAttrKey(), builder.getI64IntegerAttr(ix));
   state.addTypes(retty);
+};
+
+ParseResult ProjectionOp::parse(OpAsmParser &parser, OperationState &result) {
+    assert(false && "unimplemented");
+};
+
+
+void ProjectionOp::print(OpAsmPrinter &p) {
+  p.printGenericOp(this->getOperation());
+  return;
 };
 
 // === IntegerConstOp  OP ===
