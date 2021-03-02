@@ -418,6 +418,19 @@ public:
 };
 
 
+class TagGetOp
+    : public Op<TagGetOp, OpTrait::OneOperand, OpTrait::OneResult, OpTrait::ZeroRegion,
+                MemoryEffectOpInterface::Trait> {
+public:
+  using Op::Op;
+  static StringRef getOperationName() { return "lz.tagget"; };
+  static ParseResult parse(OpAsmParser &parser, OperationState &result);
+  void print(OpAsmPrinter &p);
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state, Value v);
+  void
+  getEffects(SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+                 &effects) {}
+};
 
 
 

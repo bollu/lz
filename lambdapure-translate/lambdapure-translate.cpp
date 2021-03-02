@@ -12,6 +12,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include "lambdapure/Dialect.h"
+#include "Hask/HaskDialect.h"
 
 // https://github.com/llvm/llvm-project/blob/e21adfa32d8822f9ea4058c3e365a841d87cb3ee/mlir/lib/Target/LLVMIR/ConvertFromLLVMIR.cpp
 using namespace mlir;
@@ -1042,7 +1043,8 @@ private:
   mlir::Type typeGen(VarType t) {
     switch (t) {
     case object:
-      return mlir::lambdapure::ObjectType::get(builder.getContext());
+      // return mlir::lambdapure::ObjectType::get(builder.getContext());
+      return standalone::ValueType::get(builder.getContext());
     case u8:
       return builder.getIntegerType(8);
     default:
@@ -1103,7 +1105,8 @@ private:
     // llvm::StringRef var = direct.getVar();
     std::string var = std::string(direct.getVar());
     mlir::Value result = scopeTable.lookup(var);
-    builder.create<lambdapure::ReturnOp>(loc(), result);
+    // builder.create<lambdapure::ReturnOp>(loc(), result);
+    builder.create<standalone::HaskReturnOp>(loc(), result);
     // if(!result){
     //   builder.create<ReturnOp>(loc());
     //
@@ -1120,9 +1123,9 @@ private:
     mlir::Value curr_val = scopeTable.lookup(var);
     auto bodies = casestmt.getBodies();
     mlir::Type t = curr_val.getType();
-    if (t.isa<mlir::lambdapure::ObjectType>()) {
-      curr_val = builder.create<mlir::lambdapure::TagGetOp>(
-          loc(), builder.getIntegerType(8), curr_val);
+    if (t.isa<mlir::standalone::ValueType>()) {
+      curr_val = builder.create<mlir::standalone::TagGetOp>(
+          loc(), curr_val);
     }
     auto caseOp = builder.create<mlir::lambdapure::CaseOp>(loc(), curr_val,
                                                            bodies.size());

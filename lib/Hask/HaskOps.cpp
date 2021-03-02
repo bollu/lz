@@ -801,6 +801,19 @@ void ThunkifyOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
 }
 
 
+// === TAG GET  OP ===
+// === TAG GET  OP ===
+// === TAG GET  OP ===
+// === TAG GET  OP ===
+// === TAG GET  OP ===
+
+void TagGetOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                         Value v) {
+    state.addOperands(v);
+    state.addTypes(builder.getI64Type());
+};
+
+
 /*
 // === THUNK TO PTR OP ===
 // === THUNK TO PTR OP ===
