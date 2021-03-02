@@ -208,6 +208,11 @@ public:
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
                     Value scrutinee, SmallVectorImpl<mlir::Attribute> &lhss,
                     SmallVectorImpl<mlir::Region *> &rhss, mlir::Type retty);
+
+  // for lambdapure.
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                    Value scrutinee, int numrhss);
+
 };
 
 class CaseIntOp

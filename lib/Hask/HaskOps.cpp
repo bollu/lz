@@ -235,7 +235,7 @@ void PapOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
   // hack! we need to construct the type properly.
   // state.addOperands(fnref);
   // state.addAttribute("value", fnname);
-  assert(false && "add attribute for function name");
+  state.addAttribute("value", builder.getSymbolRefAttr(fnname));
   state.addOperands(params);
   state.addTypes(builder.getType<standalone::ValueType>());
 };
@@ -344,6 +344,26 @@ void CaseOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
   }
   state.addTypes(retty);
 };
+
+void CaseOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                    Value scrutinee, int numrhss) {
+  // vv TODO HACK: we need to allow arbitrary scrutinee types? x(
+  // if(!scrutinee.getType().isa<ValueType>()) {
+  //   llvm::errs() << " |scrutinee: |" << scrutinee << "|\ntype: "<< scrutinee.getType()<< "|\n";
+  // }
+
+  // assert(scrutinee.getType().isa<ValueType>());
+  state.addOperands(scrutinee);
+  // vvv TODO: Check if this is 0 or 1 indexed
+  for(int i = 0; i < numrhss; ++i) {
+    mlir::FlatSymbolRefAttr ixAttr = builder.getSymbolRefAttr(std::to_string(i+1));
+    state.addAttribute("alt" + std::to_string(i), ixAttr);
+    state.addRegion();
+  }
+  state.addTypes(builder.getType<ValueType>());
+  // hack! Say that this case doesn't return anything...
+}
+
 
 // === APEAGEROP OP ===
 // === APEAGEROP OP ===
