@@ -907,7 +907,60 @@ void IntegerConstOp::print(OpAsmPrinter &p) {
 };
 
 
+// === INC OP ===
+// === INC OP ===
+// === INC OP ===
+// === INC OP ===
+// === INC OP ===
 
+
+void IncOp::build(mlir::OpBuilder &builder, mlir::OperationState &state, Value v) {
+  assert(v.getType().isa<ValueType>() && "incop input must be lz::Value");
+  state.addOperands(v);
+};
+
+ParseResult IncOp::parse(OpAsmParser &parser, OperationState &result) {
+  mlir::OpAsmParser::OperandType in;
+  if (parser.parseLParen() || parser.parseOperand(in) || parser.parseRParen()) {
+    return failure();
+  }
+  parser.resolveOperand(in, parser.getBuilder().getType<ValueType>(), 
+          result.operands);
+  return success();
+};
+
+
+void IncOp::print(OpAsmPrinter &p) {
+  p.printGenericOp(this->getOperation());
+  return;
+};
+
+// === DEC OP ===
+// === DEC OP ===
+// === DEC OP ===
+// === DEC OP ===
+// === DEC OP ===
+
+void DecOp::build(mlir::OpBuilder &builder, mlir::OperationState &state, Value v) {
+  assert(v.getType().isa<ValueType>() && "incop input must be lz::Value");
+  state.addOperands(v);
+};
+
+ParseResult DecOp::parse(OpAsmParser &parser, OperationState &result) {
+  mlir::OpAsmParser::OperandType in;
+  if (parser.parseLParen() || parser.parseOperand(in) || parser.parseRParen()) {
+    return failure();
+  }
+  parser.resolveOperand(in, parser.getBuilder().getType<ValueType>(), 
+          result.operands);
+  return success();
+};
+
+
+void DecOp::print(OpAsmPrinter &p) {
+  p.printGenericOp(this->getOperation());
+  return;
+};
 
 /*
 // === THUNK TO PTR OP ===

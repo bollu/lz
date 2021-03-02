@@ -460,6 +460,27 @@ class IntegerConstOp : public Op<IntegerConstOp, OpTrait::ZeroOperands, OpTrait:
 };
 
 
+// This makes me sad, because it has a side effect x( 
+class IncOp : public Op<IncOp, OpTrait::OneOperand, OpTrait::ZeroResult, OpTrait::ZeroRegion> {
+  public:
+  using Op::Op;
+  static StringRef getOperationName() { return "lz.inc"; };
+  static ParseResult parse(OpAsmParser &parser, OperationState &result);
+  void print(OpAsmPrinter &p);
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state, mlir::Value v);
+};
+
+// This makes me sad, because it has a side effect x( 
+class DecOp : public Op<DecOp, OpTrait::OneOperand, OpTrait::ZeroResult, OpTrait::ZeroRegion> {
+  public:
+  using Op::Op;
+  static StringRef getOperationName() { return "lz.dec"; };
+  static ParseResult parse(OpAsmParser &parser, OperationState &result);
+  void print(OpAsmPrinter &p);
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state, mlir::Value v);
+};
+
+
 /*
 class HaskThunkToPtrOp
     : public Op<HaskThunkToPtrOp, OpTrait::OneOperand, OpTrait::OneResult,

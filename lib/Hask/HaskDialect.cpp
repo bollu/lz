@@ -57,7 +57,10 @@ HaskDialect::HaskDialect(mlir::MLIRContext *context)
     HaskLambdaOp,
     TagGetOp,
     ProjectionOp,
-    IntegerConstOp>();
+    IntegerConstOp,
+    IncOp,
+    DecOp
+        >();
   addTypes<
     // HaskFnType,
     // ADTType,

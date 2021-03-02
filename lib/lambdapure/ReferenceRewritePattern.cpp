@@ -1,3 +1,5 @@
+#include "Hask/HaskDialect.h"
+#include "Hask/HaskOps.h"
 #include "lambdapure/Dialect.h"
 #include "lambdapure/Passes.h"
 #include "mlir/IR/Matchers.h"
@@ -171,11 +173,11 @@ public:
       int c = consume(args, consumes, val);
       if (c >= 1) {
         builder.setInsertionPoint(op);
-        builder.create<lambdapure::IncOp>(builder.getUnknownLoc(), val);
+        builder.create<mlir::standalone::IncOp>(builder.getUnknownLoc(), val);
       }
     } else {
       builder.setInsertionPoint(op);
-      builder.create<lambdapure::IncOp>(builder.getUnknownLoc(), val);
+      builder.create<mlir::standalone::IncOp>(builder.getUnknownLoc(), val);
     }
   }
 
@@ -206,7 +208,7 @@ public:
           llvm::errs() << "arg of incorrect type: |" << args[i] << "|\n";
           continue;
         }
-        builder.create<lambdapure::DecOp>(builder.getUnknownLoc(), args[i]);
+        builder.create<mlir::standalone::DecOp>(builder.getUnknownLoc(), args[i]);
       }
       assert(consumes[i] >= -1);
     }
