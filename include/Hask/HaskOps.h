@@ -377,6 +377,9 @@ public:
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   void print(OpAsmPrinter &p);
 
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,int index, mlir::Value v,
+  mlir::Type retty);
+
   void
   getEffects(SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
                  &effects) {}
@@ -409,9 +412,12 @@ public:
   // NOTE: the return type should be the return type of the *function*. The ApOp
   // will wrap the fnretty in a ThunkType
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                    Value fnref, SmallVectorImpl<Value> &params, Type fnretty);
-  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                    FuncOp fn, SmallVectorImpl<Value> &params);
+                    std::string fnName, SmallVectorImpl<Value> &params);
+
+  // static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
+  //                   Value fnref, SmallVectorImpl<Value> &params, Type fnretty);
+  // static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
+  //                   FuncOp fn, SmallVectorImpl<Value> &params);
 
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   void print(OpAsmPrinter &p);

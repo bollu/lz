@@ -229,6 +229,19 @@ void PapOp::print(OpAsmPrinter &p) {
   return;
 };
 
+void PapOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                 std::string fnname, SmallVectorImpl<Value> &params) {
+
+  // hack! we need to construct the type properly.
+  // state.addOperands(fnref);
+  // state.addAttribute("value", fnname);
+  assert(false && "add attribute for function name");
+  state.addOperands(params);
+  state.addTypes(builder.getType<standalone::ValueType>());
+};
+
+
+
 // === CASESSA OP ===
 // === CASESSA OP ===
 // === CASESSA OP ===
@@ -812,6 +825,21 @@ void TagGetOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
     state.addOperands(v);
     state.addTypes(builder.getI64Type());
 };
+
+// === PROJECTION  OP ===
+// === PROJECTION  OP ===
+// === PROJECTION  OP ===
+// === PROJECTION  OP ===
+// === PROJECTION  OP ===
+
+
+void ProjectionOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,int ix, mlir::Value v, mlir::Type retty) {
+  state.addOperands(v);
+  mlir::Attribute ixattr = builder.getIntegerAttr(builder.getI64Type(), ix);
+  state.addAttribute(ProjectionOp::getIndexAttrKey(), ixattr);
+  state.addTypes(retty);
+};
+
 
 
 /*

@@ -1127,6 +1127,8 @@ private:
       curr_val = builder.create<mlir::standalone::TagGetOp>(
           loc(), curr_val);
     }
+
+    assert(false && "TODO: switch up case");
     auto caseOp = builder.create<mlir::lambdapure::CaseOp>(loc(), curr_val,
                                                            bodies.size());
     int i = 0;
@@ -1152,8 +1154,9 @@ private:
   }
 
   mlir::Value mlirGen(NumberExprAST &expr) {
-    return builder.create<mlir::lambdapure::IntegerConstOp>(loc(),
-                                                            expr.getValue());
+    // return builder.create<mlir::lambdapure::IntegerConstOp>(loc(), expr.getValue());
+    return builder.create<mlir::ConstantIntOp>(loc(), expr.getValue(), 
+            builder.getI64Type());
   }
 
   mlir::Value mlirGen(VariableExprAST &expr) {
@@ -1161,17 +1164,18 @@ private:
   }
 
   mlir::Value mlirGen(AppExprAST &expr, mlir::Type ty) {
-    std::vector<mlir::Value> args = std::vector<mlir::Value>();
-
+    llvm::SmallVector<mlir::Value, 4> args;
     mlir::Value funcVal = scopeTable.lookup(expr.getFName());
     for (auto &varExpr : expr.getArgs()) {
       args.push_back(mlirGen(*varExpr));
     }
-    return builder.create<mlir::lambdapure::AppOp>(loc(), funcVal, args, ty);
+    // return builder.create<mlir::lambdapure::AppOp>(loc(), funcVal, args, ty);
+    return builder.create<standalone::ApOp>(loc(), funcVal, args, ty);
+
   }
 
   mlir::Value mlirGen(CallExprAST &expr, mlir::Type ty) {
-    std::vector<mlir::Value> args = std::vector<mlir::Value>();
+    llvm::SmallVector<mlir::Value, 4> args;
     for (auto &varExpr : expr.getArgs()) {
       args.push_back(mlirGen(*varExpr));
     }
@@ -1182,27 +1186,35 @@ private:
   }
 
   mlir::Value mlirGen(PapExprAST &expr, mlir::Type ty) {
-    std::vector<mlir::Value> args = std::vector<mlir::Value>();
+    llvm::SmallVector<mlir::Value, 4> args;
     for (auto &varExpr : expr.getArgs()) {
       args.push_back(mlirGen(*varExpr));
     }
+
     std::string fName = expr.getFName();
-    return builder.create<mlir::lambdapure::PapOp>(loc(), fName, args);
+    return builder.create<standalone::PapOp>(loc(), fName, args);
   }
 
   mlir::Value mlirGen(ProjExprAST &expr, mlir::Type ty) {
     auto varExpr = expr.getVar();
-    return builder.create<mlir::lambdapure::ProjectionOp>(
+    // return builder.create<mlir::lambdapure::ProjectionOp>(
+    //     loc(), expr.getIndex(), mlirGen(*varExpr), ty);
+    return builder.create<standalone::ProjectionOp>(
         loc(), expr.getIndex(), mlirGen(*varExpr), ty);
+
   }
 
   mlir::Value mlirGen(CtorExprAST &expr, mlir::Type ty) {
-    std::vector<mlir::Value> args = std::vector<mlir::Value>();
+    llvm::SmallVector<mlir::Value, 4> args;
     for (auto &varExpr : expr.getArgs()) {
       args.push_back(mlirGen(*varExpr));
     }
-    return builder.create<mlir::lambdapure::ConstructorOp>(loc(), expr.getTag(),
-                                                           args, ty);
+    // return builder.create<mlir::lambdapure::ConstructorOp>(loc(), expr.getTag(),
+    //                                                        args, ty);
+
+    assert(ty.isa<standalone::ValueType>() && "expected type to be a value type!");
+    return builder.create<standalone::HaskConstructOp>(loc(), std::to_string(expr.getTag()), args);
+
     // return nullptr;
   }
 
