@@ -39,7 +39,7 @@ public:
       MLIRContext *context = o.getContext();
       mlir::OpBuilder builder = mlir::OpBuilder(context);
 
-      if (lambdapure::ReturnOp op = mlir::dyn_cast<lambdapure::ReturnOp>(o)) {
+      if (mlir::standalone::HaskReturnOp op = mlir::dyn_cast<standalone::HaskReturnOp>(o)) {
         // vv HACK TODO: refactor to use this->context
 
         mlir::Value val = op.getOperand();
@@ -47,7 +47,7 @@ public:
         addAllDecs(op.getOperation(), args, consumes, builder);
       }
 
-      if (auto op = mlir::dyn_cast<lambdapure::ConstructorOp>(o)) {
+      if (auto op = mlir::dyn_cast<standalone::HaskConstructOp>(o)) {
         MLIRContext *context = op.getContext();
         mlir::OpBuilder builder = mlir::OpBuilder(context);
 
@@ -58,23 +58,24 @@ public:
         }
       }
 
-      if (auto op = mlir::dyn_cast<lambdapure::CaseOp>(o)) {
-        for (int i = 0; i < (int)op.getNumRegions(); ++i) {
+      if (auto op = mlir::dyn_cast<standalone::CaseOp>(o)) {
+        for (int i = 0; i < (int)op->getNumRegions(); ++i) {
           std::vector<mlir::Value> new_args(args);
           std::vector<int> new_consumes(consumes);
-          Region &region = op.getRegion(i);
+          Region &region = op->getRegion(i);
           runOnRegion(new_args, new_consumes, region);
         }
       }
 
-      if (auto op = mlir::dyn_cast<mlir::lambdapure::ResetOp>(o)) {
+      // who inserts ResetOp??
+      if (auto op = mlir::dyn_cast<lambdapure::ResetOp>(o)) {
         // TODO HACK: doesn't a reset region have exactly 2 regions?!
         // TODO HACK What the fuck is this LOOP?
-        for (int i = 0; i < (int)op.getNumRegions(); ++i) {
+        for (int i = 0; i < (int)op->getNumRegions(); ++i) {
           std::vector<mlir::Value> new_args(args);
           std::vector<int> new_consumes(consumes);
 
-          auto &region = op.getRegion(i);
+          auto &region = op->getRegion(i);
           if (i == 0) {
             runOnResetRegion(op.getOperand(), new_args, new_consumes, region);
           } else {
@@ -83,8 +84,8 @@ public:
         }
       }
 
-      if (mlir::isa<lambdapure::CallOp>(o) || mlir::isa<lambdapure::AppOp>(o) ||
-          mlir::isa<lambdapure::PapOp>(o)) {
+      if (mlir::isa<mlir::CallOp>(o) || mlir::isa<standalone::ApOp>(o) ||
+          mlir::isa<standalone::PapOp>(o)) {
         for (int i = 0; i < (int)o.getNumOperands(); ++i) {
           onValue(&o, args, consumes, o.getOperand(i), builder);
         }
@@ -151,14 +152,15 @@ public:
   void runOnResetRegion(mlir::Value resetValue, std::vector<mlir::Value> args,
                         std::vector<int> consumes, mlir::Region &region) {
     assert(args.size() == consumes.size());
-    for (auto it = region.op_begin(); it != region.op_end(); ++it) {
-      auto name = it->getName().getStringRef().str();
-      if (name == "lambdapure.ProjectionOp" &&
-          it->getOperand(0) == resetValue) {
-        args.push_back(it->getOpResult(0));
-        consumes.push_back(-1);
-      }
-    }
+    assert(false && "upgrade this code");
+    // for (auto it = region.op_begin(); it != region.op_end(); ++it) {
+    //   auto name = it->getName().getStringRef().str();
+    //   if (name == "lambdapure.ProjectionOp" &&
+    //       it->getOperand(0) == resetValue) {
+    //     args.push_back(it->getOpResult(0));
+    //     consumes.push_back(-1);
+    //   }
+    // }
     std::vector<mlir::Value> new_args(args);
     std::vector<int> new_consumes(consumes);
     runOnRegion(new_args, new_consumes, region);
@@ -176,6 +178,7 @@ public:
         builder.create<mlir::standalone::IncOp>(builder.getUnknownLoc(), val);
       }
     } else {
+      llvm::errs() << "val.getType(): " << val.getType() << "|\n";
       builder.setInsertionPoint(op);
       builder.create<mlir::standalone::IncOp>(builder.getUnknownLoc(), val);
     }
@@ -204,7 +207,7 @@ public:
       if (consumes[i] == -1) {
         // HACK: don't really understand why the current code does not handle
         // this
-        if (!args[i].getType().isa<lambdapure::ObjectType>()) {
+        if (!args[i].getType().isa<standalone::ValueType>()) {
           llvm::errs() << "arg of incorrect type: |" << args[i] << "|\n";
           continue;
         }
