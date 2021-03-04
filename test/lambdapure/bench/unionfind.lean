@@ -1,3 +1,10 @@
+--  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | FileCheck %s
+--  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | hask-opt  | FileCheck %s
+--  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | hask-opt  --lz-lambdapure-destructive-updates | FileCheck %s
+--  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | hask-opt  --lz-lambdapure-destructive-updates --lz-lambdapure-reference-rewriter | FileCheck %s
+
+-- CHECK: func @main
+
 def StateT' (m : Type → Type) (σ : Type) (α : Type) := σ → m (α × σ)
 namespace StateT'
 variable {m : Type → Type} [Monad m] {σ : Type} {α β : Type}

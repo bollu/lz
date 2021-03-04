@@ -492,6 +492,7 @@ enum TokenType : int {
   tok_apostrophe = '\'', // '
   tok_l_square_brack = '[',
   tok_r_square_brack = ']',
+  tok_double_quotes = '"',   // '"'
   // keywords
   tok_def = -2,  // def
   tok_let = -3,  // let
@@ -838,12 +839,13 @@ private:
     } else if (lexer.getCurToken() == tok_ctor) {
       return ParseCtorExpr();
     } else if (lexer.getCurToken() == tok_proj) {
-
       return ParseProjExpr();
+    } else if (lexer.getCurToken() == tok_double_quotes) {
+      assert(false && "string parsing is not supported");
     } else {
       std::cerr << "Invalid Expression, nullptr" << std::endl;
       return nullptr;
-    }
+    } 
   }
 
   // let var := expression
