@@ -492,7 +492,6 @@ enum TokenType : int {
   tok_apostrophe = '\'', // '
   tok_l_square_brack = '[',
   tok_r_square_brack = ']',
-  tok_double_quotes = '"',   // '"'
   // keywords
   tok_def = -2,  // def
   tok_let = -3,  // let
@@ -503,6 +502,7 @@ enum TokenType : int {
   tok_proj = -8, // proj
   tok_pap = -9, // pap
   tok_box = -10, // ◾
+  tok_string = -11, // ◾
   //....
   // values
   tok_id = -100, // identifier
@@ -553,11 +553,25 @@ private:
     return TokenType(res);
   }
 
+
   TokenType getTok() {
     identifierStr = "~UNK~";
 
     while (isspace(lastChar)) {
       lastChar = getNextChar();
+    }
+
+    if (lastChar == '"') {
+      identifierStr = "";
+      while(1) {
+        char c = getNextChar();
+        if (c == '"') {
+          lastChar = TokenType(getNextChar());
+          return TokenType::tok_string;
+        }
+        identifierStr += c;
+
+      }
     }
 
     // mlir::Location
@@ -828,7 +842,6 @@ private:
 
     if (lexer.getCurToken() == tok_id) {
       return ParseCallExpr();
-      ;
     }
     if (lexer.getCurToken() == tok_app) {
       return ParseAppExpr();
@@ -840,7 +853,8 @@ private:
       return ParseCtorExpr();
     } else if (lexer.getCurToken() == tok_proj) {
       return ParseProjExpr();
-    } else if (lexer.getCurToken() == tok_double_quotes) {
+    } else if (lexer.getCurToken() == tok_string) {
+      llvm::errs() << "STRING: |" << lexer.getId() << "|\n";
       assert(false && "string parsing is not supported");
     } else {
       std::cerr << "Invalid Expression, nullptr" << std::endl;
