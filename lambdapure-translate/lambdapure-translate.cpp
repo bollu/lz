@@ -13,6 +13,7 @@
 
 #include "lambdapure/Dialect.h"
 #include "Hask/HaskDialect.h"
+#include "Pointer/PointerDialect.h"
 
 // https://github.com/llvm/llvm-project/blob/e21adfa32d8822f9ea4058c3e365a841d87cb3ee/mlir/lib/Target/LLVMIR/ConvertFromLLVMIR.cpp
 using namespace mlir;
@@ -50,6 +51,7 @@ public:
     CallExpr,
     ProjExpr,
     CtorExpr,
+    StringExpr,
   };
 
   ExprAST(Kind kind) : kind(kind) {}
@@ -73,6 +75,20 @@ public:
   /// LLVM style RTTI
   static bool classof(const ExprAST *c) { return c->getKind() == NumberExpr; }
 };
+
+
+// Strings
+class StringExprAST : public ExprAST {
+  std::string s;
+
+public:
+  StringExprAST(std::string s) : ExprAST(StringExpr), s(s) {}
+  void print() { std::cerr << s; }
+  std::string getValue() { return s; }
+  /// LLVM style RTTI
+  static bool classof(const ExprAST *c) { return c->getKind() == StringExpr; }
+};
+
 
 // Variable expression
 class VariableExprAST : public ExprAST {
@@ -324,6 +340,7 @@ void LetStmtAST::print() {
 
 void VariableExprAST::print() { std::cerr << Name; }
 
+
 void NumberExprAST::print() { std::cerr << Val; }
 void AppExprAST::print() {
   std::cerr << "app " << FName;
@@ -568,9 +585,9 @@ private:
         if (c == '"') {
           lastChar = TokenType(getNextChar());
           return TokenType::tok_string;
+        } else {
+          identifierStr += c;
         }
-        identifierStr += c;
-
       }
     }
 
@@ -594,16 +611,19 @@ private:
       identifierStr = lastChar;
       lastChar = TokenType(getNextChar());
 
-      //[a-zA-Z][a-zA-Z0-9_.]
+      //[a-zA-Z][a-zA-Z0-9_.!]
       while (isalnum(lastChar) || lastChar == '_' || lastChar == '.' ||
-             lastChar == '\'') {
+             lastChar == '\'' || lastChar == '!') {
         // replace apostrophe with _prime, c cant have
         // it in function names
         if (lastChar == '\'') {
           identifierStr += "_prime_";
         } else if (lastChar == '.') {
           identifierStr += "_dot_";
-        } else {
+        } else if (lastChar == '!') {
+          identifierStr += "_not_";
+        }  else {
+          assert(isalnum(lastChar) || lastChar == '_');
           identifierStr += lastChar;
         }
         lastChar = TokenType(getNextChar());
@@ -766,6 +786,8 @@ private:
     DebugCall d(__PRETTY_FUNCTION__);
 
     if (lexer.getId() == "~UNK~") {
+      llvm::errs() << "~UNK~ token type: |" << lexer.getCurToken() << " | token as char:" << (char) lexer.getCurToken()
+      <<  "| [" << lexer.getLine() << ":" << lexer.getCol() << "]\n";
       assert(lexer.getCurToken() == TokenType::tok_box);
       errs() << "SUPER HACK: Box at variable: |" << lexer.getLine() << ":" << lexer.getCol() << "|\n";
     }
@@ -806,7 +828,6 @@ private:
     lexer.getNextToken(); // consume funcname
     std::vector<std::unique_ptr<VariableExprAST>> args;
     while (lexer.getCurToken() != tok_semicolon) {
-
       args.push_back(ParseVarExpr());
     }
     return std::make_unique<CallExprAST>(fname, std::move(args));
@@ -854,8 +875,12 @@ private:
     } else if (lexer.getCurToken() == tok_proj) {
       return ParseProjExpr();
     } else if (lexer.getCurToken() == tok_string) {
-      llvm::errs() << "STRING: |" << lexer.getId() << "|\n";
-      assert(false && "string parsing is not supported");
+      llvm::errs() << "STRING: |" << lexer.getId() << "| [" << lexer.getLine() << ":" << lexer.getCol() << "] \n";
+      std::unique_ptr<StringExprAST> ptr =  std::make_unique<StringExprAST>(lexer.getId());
+      lexer.getNextToken(); // consume semicolon.
+      assert(lexer.getCurToken() == tok_semicolon);
+      
+      return ptr; 
     } else {
       std::cerr << "Invalid Expression, nullptr" << std::endl;
       return nullptr;
@@ -874,6 +899,7 @@ private:
     lexer.getNextToken();
     lexer.getNextToken(); // consume  :=
     auto expr = ParseExpression();
+    assert(lexer.getCurToken() == tok_semicolon);
     lexer.getNextToken(); // consume ';'
 
     return std::make_unique<LetStmtAST>(lexer.getLoc(), var, std::move(expr),
@@ -1209,6 +1235,11 @@ private:
 
   }
 
+  mlir::Value mlirGenString(StringExprAST &expr, mlir::Type ty) {
+    return builder.create<ptr::PtrStringOp>(loc(), expr.getValue());
+    // assert(false && "codegen of string is unhandled");
+  }
+
   mlir::Value mlirGenCall(CallExprAST &expr, mlir::Type ty) {
     llvm::SmallVector<mlir::Value, 4> args;
     int i = 0; 
@@ -1285,6 +1316,8 @@ private:
       return mlirGen(cast<ProjExprAST>(expr), ty);
     case ExprAST::PapExpr:
       return mlirGen(cast<PapExprAST>(expr), ty);
+    case ExprAST::StringExpr:
+      return mlirGenString(cast<StringExprAST>(expr), ty);
     };
   }
 
@@ -1344,6 +1377,7 @@ OwningModuleRef translateLambdapureToModule(llvm::SourceMgr &sourceMgr,
   context->loadDialect<mlir::StandardOpsDialect>();
   context->loadDialect<mlir::lambdapure::LambdapureDialect>();
   context->loadDialect<standalone::HaskDialect>();
+  context->loadDialect<ptr::PtrDialect>();
   // OwningModuleRef module(ModuleOp::create(
   //     FileLineColLoc::get("", /*line=*/0, /*column=*/0, context)));
 
