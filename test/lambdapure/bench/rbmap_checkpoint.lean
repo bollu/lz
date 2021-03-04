@@ -3,6 +3,10 @@
 --  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | hask-opt  --lz-lambdapure-destructive-updates | FileCheck %s
 --  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | hask-opt  --lz-lambdapure-destructive-updates --lz-lambdapure-reference-rewriter | FileCheck %s
 
+-- ERROR: THIS FILE ERRORS OUT ON TRYING TO GENERATE LAMBDAPURE
+-- rbmap_checkpoint.lean:17:0: error: expected command, but found term; this
+--   error may be due to parsing precedence levels, consider parenthesizing the
+--   term
 set_option trace.compiler.ir.init true
 
 -- CHECK: func @main

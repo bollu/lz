@@ -56,6 +56,27 @@ Expr.Var →
   jmp block_14 x_15
 ```
 
+
+###### `deriv.lean`
+
+```
+let x_18 : obj := prec(_)._closed_3;
+```
+
+WTF, so it seems like the 'name' of a thing on the RHS can have whatever the fuck? what is the actual
+grammar for lambdapure?
+
+##### `qsort.lean`:
+
+```
+def term↑__1._closed_1 : obj :=
+  let x_1 : obj := "term↑__1";
+  ret x_1
+```
+
+ROFLmao, OK, I need unicode support, or at least a grammar to consult if I
+am going to continue using `char*`.
+
 # March 1, 2021
 
 ```cpp

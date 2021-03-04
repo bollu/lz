@@ -612,8 +612,8 @@ private:
       lastChar = TokenType(getNextChar());
 
       //[a-zA-Z][a-zA-Z0-9_.!]
-      while (isalnum(lastChar) || lastChar == '_' || lastChar == '.' ||
-             lastChar == '\'' || lastChar == '!') {
+      while (lastChar == '\'' || lastChar == '.' || lastChar == '!' || lastChar == '-' ||
+             isalnum(lastChar) || lastChar == '_') {
         // replace apostrophe with _prime, c cant have
         // it in function names
         if (lastChar == '\'') {
@@ -622,7 +622,10 @@ private:
           identifierStr += "_dot_";
         } else if (lastChar == '!') {
           identifierStr += "_not_";
-        }  else {
+        } else if (lastChar == '-') {
+          identifierStr += "_hyphen_";
+        }
+        else {
           assert(isalnum(lastChar) || lastChar == '_');
           identifierStr += lastChar;
         }
@@ -786,7 +789,7 @@ private:
     DebugCall d(__PRETTY_FUNCTION__);
 
     if (lexer.getId() == "~UNK~") {
-      llvm::errs() << "~UNK~ token type: |" << lexer.getCurToken() << " | token as char:" << (char) lexer.getCurToken()
+      llvm::errs() << "~UNK~ token type: |" << lexer.getCurToken() << " | token as char: |" << (char) lexer.getCurToken()
       <<  "| [" << lexer.getLine() << ":" << lexer.getCol() << "]\n";
       assert(lexer.getCurToken() == TokenType::tok_box);
       errs() << "SUPER HACK: Box at variable: |" << lexer.getLine() << ":" << lexer.getCol() << "|\n";
