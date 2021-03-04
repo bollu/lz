@@ -480,6 +480,17 @@ class DecOp : public Op<DecOp, OpTrait::OneOperand, OpTrait::ZeroResult, OpTrait
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state, mlir::Value v);
 };
 
+// Not sure if I should simply remove everything that tries to generate an erased box?
+class ErasedValueOp : public Op<ErasedValueOp, OpTrait::ZeroOperands, OpTrait::OneResult, OpTrait::ZeroRegion> {
+  public:
+  using Op::Op;
+  static StringRef getOperationName() { return "lz.erasedvalue"; };
+  static ParseResult parse(OpAsmParser &parser, OperationState &result);
+  void print(OpAsmPrinter &p);
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state);
+};
+
+
 
 /*
 class HaskThunkToPtrOp

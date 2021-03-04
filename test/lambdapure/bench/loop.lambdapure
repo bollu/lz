@@ -1,4 +1,5 @@
 
+[init]
 def Array.forInUnsafe.loop._at.sum._spec_1 (x_1 : obj) (x_2 : usize) (x_3 : usize) (x_4 : obj) : obj :=
   let x_5 : u8 := USize.decLt x_3 x_2;
   case x_5 : obj of
@@ -11,9 +12,8 @@ def Array.forInUnsafe.loop._at.sum._spec_1 (x_1 : obj) (x_2 : usize) (x_3 : usiz
     let x_9 : usize := USize.add x_3 x_8;
     let x_10 : obj := Array.forInUnsafe.loop._at.sum._spec_1 x_1 x_2 x_9 x_7;
     ret x_10
-
 def sum (x_1 : obj) : obj :=
-  let x_2 : obj := Array.size x_1;
+  let x_2 : obj := Array.size ◾ x_1;
   let x_3 : usize := USize.ofNat x_2;
   let x_4 : usize := 0;
   let x_5 : obj := 0;

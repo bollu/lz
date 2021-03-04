@@ -44,22 +44,23 @@ HaskDialect::HaskDialect(mlir::MLIRContext *context)
   // clang-format off
   addOperations<
     // DeclareDataConstructorOp,
-    HaskReturnOp,
-    ApOp,
-    PapOp,
-    ApEagerOp,
-    ThunkifyOp,
-    CaseOp,
-    // HaskRefOp,
-    ForceOp,
-    HaskConstructOp,
-    CaseIntOp,
-    HaskLambdaOp,
-    TagGetOp,
-    ProjectionOp,
-    IntegerConstOp,
-    IncOp,
-    DecOp
+    HaskReturnOp
+    , ApOp
+    , PapOp
+    , ApEagerOp
+    , ThunkifyOp
+    , CaseOp
+    // , HaskRefOp
+    , ForceOp
+    , HaskConstructOp
+    , CaseIntOp
+    , HaskLambdaOp
+    , TagGetOp
+    , ProjectionOp
+    , IntegerConstOp
+    , IncOp
+    , DecOp
+    , ErasedValueOp
         >();
   addTypes<
     // HaskFnType,

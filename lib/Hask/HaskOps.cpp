@@ -964,6 +964,28 @@ void DecOp::print(OpAsmPrinter &p) {
   return;
 };
 
+// === ERASED VAUE OP ===
+// === ERASED VAUE OP ===
+// === ERASED VAUE OP ===
+// === ERASED VAUE OP ===
+// === ERASED VAUE OP ===
+
+
+void ErasedValueOp::build(mlir::OpBuilder &builder, mlir::OperationState &state) {
+  state.addTypes(builder.getType<standalone::ValueType>());
+};
+
+ParseResult ErasedValueOp::parse(OpAsmParser &parser, OperationState &result) {
+  return success();
+};
+
+
+void ErasedValueOp::print(OpAsmPrinter &p) {
+  p.printGenericOp(this->getOperation());
+  return;
+};
+
+
 /*
 // === THUNK TO PTR OP ===
 // === THUNK TO PTR OP ===

@@ -18,6 +18,7 @@
 using namespace mlir;
 using namespace llvm;
 
+const char * GLOBAL_BOX_NAME = "HACK_SPECIAL_BOX"; 
 extern "C" {
 const char *__asan_default_options() { return "detect_leaks=0"; }
 }
@@ -674,11 +675,11 @@ public:
 
 
 void unexpectedTokenError(Lexer &lexer) {
-    std::cerr << "unexpected token: " << lexer.getId() << " ";
+    std::cerr << "unexpected token| id/text of token: |" << lexer.getId() << "| ";
     if (lexer.getCurToken() > 0) {
-        std::cerr << "|" << (char)lexer.getCurToken() << "|";
+        std::cerr << "token as character: |" << (char)lexer.getCurToken() << "|";
     } else {
-        std::cerr << "|" << lexer.getCurToken() << "|";
+        std::cerr << "token: |" << lexer.getCurToken() << "|";
     }
     std::cerr << " loc |" << lexer.getLine() << ":" << lexer.getCol() << "|"
         << std::endl;
@@ -725,7 +726,9 @@ private:
       result = u32;
     } else if (lexer.getId() == "u64") {
       result = u64;
-    } else if (lexer.getCurToken() == TokenType::tok_box) {
+    } else if (lexer.getId() == "usize") {
+      result = u64;
+    }  else if (lexer.getCurToken() == TokenType::tok_box) {
       result = u64;
       // result = box;
     } else {
@@ -747,7 +750,12 @@ private:
   std::unique_ptr<VariableExprAST> ParseVarExpr() {
     DebugCall d(__PRETTY_FUNCTION__);
 
-    auto res = std::make_unique<VariableExprAST>(lexer.getId());
+    if (lexer.getId() == "~UNK~") {
+      assert(lexer.getCurToken() == TokenType::tok_box);
+      errs() << "SUPER HACK: Box at variable: |" << lexer.getLine() << ":" << lexer.getCol() << "|\n";
+    }
+    std::string varName = lexer.getCurToken() == TokenType::tok_box ? std::string(GLOBAL_BOX_NAME) : lexer.getId();
+    auto res = std::make_unique<VariableExprAST>(varName);
     lexer.getNextToken(); // consume var
     return res;
   }
@@ -1165,26 +1173,43 @@ private:
     return builder.create<standalone::IntegerConstOp>(loc(), expr.getValue());
   }
 
-  mlir::Value mlirGen(VariableExprAST &expr) {
-    return scopeTable.lookup(expr.getName());
+  mlir::Value mlirGenVar(VariableExprAST &expr) {
+    if (expr.getName() == GLOBAL_BOX_NAME) {
+      // create the box value
+      return builder.create<standalone::ErasedValueOp>(loc());
+    } else {
+      return scopeTable.lookup(expr.getName());
+    }
   }
 
   mlir::Value mlirGen(AppExprAST &expr, mlir::Type ty) {
     llvm::SmallVector<mlir::Value, 4> args;
     mlir::Value funcVal = scopeTable.lookup(expr.getFName());
     for (auto &varExpr : expr.getArgs()) {
-      args.push_back(mlirGen(*varExpr));
+      args.push_back(mlirGenVar(*varExpr));
     }
     // return builder.create<mlir::lambdapure::AppOp>(loc(), funcVal, args, ty);
     return builder.create<standalone::ApOp>(loc(), funcVal, args, ty);
 
   }
 
-  mlir::Value mlirGen(CallExprAST &expr, mlir::Type ty) {
+  mlir::Value mlirGenCall(CallExprAST &expr, mlir::Type ty) {
     llvm::SmallVector<mlir::Value, 4> args;
+    int i = 0; 
+    llvm::errs() << "\nCALLOP:\n";
     for (auto &varExpr : expr.getArgs()) {
-      args.push_back(mlirGen(*varExpr));
+      llvm::errs() << "generating argument |" << varExpr->getName() << "|\n";
+      varExpr->print();
+      mlir::Value v = mlirGenVar(*varExpr);
+      assert(v && "incorrect value");
+      llvm::errs() << i++ << ":\n";
+      llvm::errs() << "\t" << v << "\n";
+      llvm::errs() << "---\n";
+      args.push_back(v);
     }
+    llvm::errs() << "\nReturn type: |" << ty << "|\n";
+    llvm::errs() << "======\n";
+
     std::string fName = expr.getFName();
     // llvm::SmallVector<mlir::Type, 4> results;
     // results.push_back(ty);
@@ -1197,7 +1222,7 @@ private:
   mlir::Value mlirGen(PapExprAST &expr, mlir::Type ty) {
     llvm::SmallVector<mlir::Value, 4> args;
     for (auto &varExpr : expr.getArgs()) {
-      args.push_back(mlirGen(*varExpr));
+      args.push_back(mlirGenVar(*varExpr));
     }
 
     std::string fName = expr.getFName();
@@ -1209,14 +1234,14 @@ private:
     // return builder.create<mlir::lambdapure::ProjectionOp>(
     //     loc(), expr.getIndex(), mlirGen(*varExpr), ty);
     return builder.create<standalone::ProjectionOp>(
-        loc(), expr.getIndex(), mlirGen(*varExpr), ty);
+        loc(), expr.getIndex(), mlirGenVar(*varExpr), ty);
 
   }
 
   mlir::Value mlirGen(CtorExprAST &expr, mlir::Type ty) {
     llvm::SmallVector<mlir::Value, 4> args;
     for (auto &varExpr : expr.getArgs()) {
-      args.push_back(mlirGen(*varExpr));
+      args.push_back(mlirGenVar(*varExpr));
     }
     // return builder.create<mlir::lambdapure::ConstructorOp>(loc(), expr.getTag(),
     //                                                        args, ty);
@@ -1233,11 +1258,11 @@ private:
     case ExprAST::NumberExpr:
       return mlirGen(cast<NumberExprAST>(expr));
     case ExprAST::VarExpr:
-      return mlirGen(cast<VariableExprAST>(expr));
+      return mlirGenVar(cast<VariableExprAST>(expr));
     case ExprAST::AppExpr:
       return mlirGen(cast<AppExprAST>(expr), ty);
     case ExprAST::CallExpr:
-      return mlirGen(cast<CallExprAST>(expr), ty);
+      return mlirGenCall(cast<CallExprAST>(expr), ty);
     case ExprAST::CtorExpr:
       return mlirGen(cast<CtorExprAST>(expr), ty);
     case ExprAST::ProjExpr:
