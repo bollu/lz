@@ -30,6 +30,32 @@
 
 # Log:  [newest] to [oldest]
 
+# March 5th, 2021
+
+Need to add support for join points:
+
+```
+block_14 (x_24 : obj) :=
+  case x_13 : obj of
+  Expr.Var →
+    let x_25 : obj := app x_6 x_1 x_2;
+    ret x_25
+  Expr.Val →
+    let x_26 : obj := proj[0] x_13;
+    let x_27 : obj := app x_4 x_8 x_12 x_26;
+    ret x_27
+  Expr.Add →
+    let x_28 : obj := app x_6 x_1 x_2;
+    ret x_28
+  Expr.Mul →
+    let x_29 : obj := app x_6 x_1 x_2;
+    ret x_29;
+case x_12 : obj of
+Expr.Var →
+  let x_15 : obj := ctor_0[PUnit.unit];
+  jmp block_14 x_15
+```
+
 # March 1, 2021
 
 ```cpp
