@@ -11,8 +11,10 @@ inductive Tree
 | Node : Nat -> Tree -> Tree -> Tree
 
 open Tree
+instance : Inhabited Tree := ⟨Nil⟩
+
 partial def make : Nat -> Tree
-| 0 => Leaf
+| 0 => Nil
 | n => Node n (make (n-1)) (make (n-1))
 
 def mapTree : (Nat -> Nat) -> Tree -> Tree
