@@ -221,6 +221,7 @@ public:
     Direct,
     Case,
     Block,
+    Jump
   };
   RetStmtAST(Kind Kind, Location Location) : StmtAST(Location), Kind(Kind) {}
   virtual ~RetStmtAST() = default;
@@ -239,6 +240,16 @@ public:
       : RetStmtAST(Direct, location), Var(Var) {}
   void print() override;
   std::string getVar() { return Var; }
+  static bool classof(const RetStmtAST *c) { return c->getKind() == Direct; }
+};
+
+class JumpRetStmtAST : public RetStmtAST {
+  int blockIx;
+  std::vector<std::string> Vars;
+public:
+  JumpRetStmtAST(Location location, int blockIx, const std::vector<std::string> &Vars)
+      : RetStmtAST(RetStmtAST::Kind::Jump, location), blockIx(blockIx), Vars(Vars) {}
+  void print() override {assert(false && "don't know how to print JumpRetStmtAST"); };
   static bool classof(const RetStmtAST *c) { return c->getKind() == Direct; }
 };
 
@@ -973,6 +984,9 @@ private:
     return std::make_unique<DirectRetStmtAST>(lexer.getLoc(), var);
   }
 
+  std::unique_ptr<JumpRetStmtAST> ParseJumpStmt() {
+  assert(false && "don't know how to parse jump statement");
+  }
   std::unique_ptr<CaseStmtAST> ParseCaseStmt() {
     DebugCall d(__PRETTY_FUNCTION__);
 
@@ -1043,6 +1057,8 @@ private:
       return ParseDirectRetStmt();
     } else if (lexer.getCurToken() == tok_case) {
       return ParseCaseStmt();
+    } else if (lexer.getCurToken() == tok_jmp) {
+      return ParseJumpStmt();
     } else if (startswith(id, "block_")) {
        // unexpectedTokenError(lexer);
        const  std::string blockIdStr = id.substr(strlen("block_"));
@@ -1315,6 +1331,8 @@ private:
       return mlirGen(cast<CaseStmtAST>(ret));
     case RetStmtAST::Block:
       assert(false && "don't know how to codegen block!");
+    case RetStmtAST::Jump:
+      assert(false && "don't know how to codegen jump!");
       }
 
     assert(false && "unhandled retstmt");
