@@ -70,7 +70,7 @@ class NumberExprAST : public ExprAST {
 
 public:
   NumberExprAST(double Val) : ExprAST(NumberExpr), Val(Val) {}
-  void print();
+  void print() override;
   int getValue() { return Val; }
   /// LLVM style RTTI
   static bool classof(const ExprAST *c) { return c->getKind() == NumberExpr; }
@@ -83,7 +83,7 @@ class StringExprAST : public ExprAST {
 
 public:
   StringExprAST(std::string s) : ExprAST(StringExpr), s(s) {}
-  void print() { std::cerr << s; }
+  void print() override { std::cerr << s; }
   std::string getValue() { return s; }
   /// LLVM style RTTI
   static bool classof(const ExprAST *c) { return c->getKind() == StringExpr; }
@@ -97,7 +97,7 @@ class VariableExprAST : public ExprAST {
 public:
   VariableExprAST(const std::string &Name) : ExprAST(VarExpr), Name(Name) {}
   std::string getName() { return Name; }
-  void print();
+  void print() override;
   static bool classof(const ExprAST *c) { return c->getKind() == VarExpr; }
 };
 
@@ -111,7 +111,7 @@ public:
              std::vector<std::unique_ptr<VariableExprAST>> Args)
       : ExprAST(AppExpr), FName(FName), Args(std::move(Args)) {}
 
-  void print();
+  void print() override;
   std::string getFName() { return FName; }
   llvm::ArrayRef<std::unique_ptr<VariableExprAST>> getArgs() { return Args; }
   static bool classof(const ExprAST *c) { return c->getKind() == AppExpr; }
@@ -125,7 +125,7 @@ public:
   PapExprAST(const std::string &FName,
              std::vector<std::unique_ptr<VariableExprAST>> Args)
       : ExprAST(PapExpr), FName(FName), Args(std::move(Args)) {}
-  void print();
+  void print() override;
   std::string getFName() { return FName; }
   llvm::ArrayRef<std::unique_ptr<VariableExprAST>> getArgs() { return Args; }
   static bool classof(const ExprAST *c) { return c->getKind() == PapExpr; }
@@ -139,7 +139,7 @@ public:
   CallExprAST(const std::string &FName,
               std::vector<std::unique_ptr<VariableExprAST>> Args)
       : ExprAST(CallExpr), FName(FName), Args(std::move(Args)) {}
-  void print();
+  void print() override;
   std::string getFName() { return FName; }
   llvm::ArrayRef<std::unique_ptr<VariableExprAST>> getArgs() { return Args; }
   static bool classof(const ExprAST *c) { return c->getKind() == CallExpr; }
@@ -152,7 +152,7 @@ class CtorExprAST : public ExprAST {
 public:
   CtorExprAST(int Tag, std::vector<std::unique_ptr<VariableExprAST>> Args)
       : ExprAST(CtorExpr), Tag(Tag), Args(std::move(Args)) {}
-  void print();
+  void print() override;
   int getTag() { return Tag; }
   llvm::ArrayRef<std::unique_ptr<VariableExprAST>> getArgs() { return Args; }
   static bool classof(const ExprAST *c) { return c->getKind() == CtorExpr; }
@@ -165,7 +165,7 @@ class ProjExprAST : public ExprAST {
 public:
   ProjExprAST(int i, std::unique_ptr<VariableExprAST> Var)
       : ExprAST(ProjExpr), I(i), Var(std::move(Var)) {}
-  void print();
+  void print() override;
   int getIndex() { return I; }
   VariableExprAST *getVar() { return Var.get(); }
   std::string getVarName() { return Var->getName(); }
@@ -194,7 +194,7 @@ public:
   LetStmtAST(Location location, const std::string Var,
              std::unique_ptr<ExprAST> Rhs, VarType Vtype)
       : StmtAST(location), Var(Var), Rhs(std::move(Rhs)), Vtype(Vtype) {}
-  void print();
+  void print() override;
   std::string getName() { return Var; }
   VarType getVtype() { return Vtype; }
   ExprAST *getExpr() { return Rhs.get(); }
@@ -209,7 +209,7 @@ public:
   };
   RetStmtAST(Kind Kind, Location Location) : StmtAST(Location), Kind(Kind) {}
   virtual ~RetStmtAST() = default;
-  virtual void print() = 0;
+  virtual void print() override = 0;
   Kind getKind() const { return Kind; }
 
 private:
@@ -222,7 +222,7 @@ class DirectRetStmtAST : public RetStmtAST {
 public:
   DirectRetStmtAST(Location location, const std::string &Var)
       : RetStmtAST(Direct, location), Var(Var) {}
-  void print();
+  void print() override;
   std::string getVar() { return Var; }
   static bool classof(const RetStmtAST *c) { return c->getKind() == Direct; }
 };
@@ -249,7 +249,7 @@ public:
   CaseStmtAST(Location location, std::vector<std::unique_ptr<FBodyAST>> Bodies,
               const std::string &Var)
       : RetStmtAST(Case, location), Bodies(std::move(Bodies)), Var(Var) {}
-  void print();
+  void print() override;
   std::string getVar() { return Var; }
   llvm::ArrayRef<std::unique_ptr<FBodyAST>> getBodies() { return Bodies; }
   static bool classof(const RetStmtAST *c) { return c->getKind() == Case; }
@@ -1211,6 +1211,8 @@ private:
       // default:
       //   return mlir::failure();
     }
+
+    assert(false && "unhandled retstmt");
   }
 
   mlir::Value mlirGen(NumberExprAST &expr) {
@@ -1322,6 +1324,8 @@ private:
     case ExprAST::StringExpr:
       return mlirGenString(cast<StringExprAST>(expr), ty);
     };
+
+    assert(false && "unhandled expression");
   }
 
   mlir::LogicalResult mlirGen(FBodyAST &fBodyAST) {
