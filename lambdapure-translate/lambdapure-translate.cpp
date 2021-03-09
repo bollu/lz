@@ -19,6 +19,20 @@
 using namespace mlir;
 using namespace llvm;
 
+
+// I cry. Remove this to pass indent as state.
+static std::string offset = "";
+
+
+bool startswith(std::string haystack, std::string needle) {
+  if (haystack.size() < needle.size()) return false;
+  for(int i = 0; i < (int) needle.size(); ++i) {
+    if (haystack[i] != needle[i]) { return false; }
+  }
+  return true;
+}
+
+
 const char * GLOBAL_BOX_NAME = "HACK_SPECIAL_BOX"; 
 extern "C" {
 const char *__asan_default_options() { return "detect_leaks=0"; }
@@ -206,6 +220,7 @@ public:
   enum Kind {
     Direct,
     Case,
+    Block,
   };
   RetStmtAST(Kind Kind, Location Location) : StmtAST(Location), Kind(Kind) {}
   virtual ~RetStmtAST() = default;
@@ -225,6 +240,38 @@ public:
   void print() override;
   std::string getVar() { return Var; }
   static bool classof(const RetStmtAST *c) { return c->getKind() == Direct; }
+};
+
+class BlockRetStmtAST : public RetStmtAST {
+  int blockId;
+  std::vector<std::unique_ptr<VariableExprAST>> Args;
+  std::vector<VarType> ArgTypes;
+  // can a Block have Lets? Don't know!
+  std::unique_ptr<RetStmtAST> Inner; // code that is inside block
+  std::unique_ptr<RetStmtAST> After; // code that comes after block
+public:
+  BlockRetStmtAST(Location location, int blockId,
+                  std::vector<std::unique_ptr<VariableExprAST>> Args,
+                  std::vector<VarType> ArgTypes,
+                  std::unique_ptr<RetStmtAST> Inner,
+                  std::unique_ptr<RetStmtAST> After)
+  : RetStmtAST(Block, location), blockId(blockId),
+        Args(std::move(Args)), ArgTypes(ArgTypes),
+        Inner(std::move(Inner)), After(std::move(After)){}
+  void print() override {
+    std::cerr << offset << "block_" << blockId << "(";
+    for (int i = 0; i < (int)Args.size(); ++i) {
+      Args.at(i)->print();
+      std::cerr << " ";
+    }
+    std::cerr << " := ";
+    std::cerr << std::endl << std::endl;
+    Inner->print();
+    std::cerr << std::endl << std::endl;
+    After->print();
+  };
+  static bool classof(const RetStmtAST *c) { return c->getKind() == Block; }
+
 };
 
 class FBodyAST {
@@ -291,9 +338,6 @@ public:
   llvm::ArrayRef<std::unique_ptr<FunctionAST>> getFList() { return FList; }
   void print();
 };
-
-// I cry. Remove this to pass indent as state.
-static std::string offset = "";
 
 void FBodyAST::print() {
   offset = offset + " ";
@@ -517,8 +561,9 @@ enum TokenType : int {
   tok_app = -6,  // app
   tok_ctor = -7, // ctor
   tok_proj = -8, // proj
-  tok_pap = -9, // pap
-  tok_box = -10, // ◾
+  tok_pap = -9,  // pap
+  tok_jmp = -10, // jmp
+  tok_box = -11, // ◾
   tok_string = -11, // ◾
   //....
   // values
@@ -647,6 +692,8 @@ private:
         return tok_ctor;
       if (identifierStr == "pap")
         return tok_pap;
+      if (identifierStr == "jmp")
+	return tok_jmp;
 
       return tok_id;
     }
@@ -686,6 +733,13 @@ public:
   TokenType getCurToken() { return curTok; }
   TokenType getNextToken() { return curTok = getTok(); }
   void consume(TokenType tok) {
+    if (tok != curTok) {
+      llvm::errs() << "\nCONSUME ERROR. Expected: |" << tok << "|"
+                   << "char:|" << (char)tok << "|"
+                   << "; FOUND |" << curTok << "|"
+                   << "char |" << (char)curTok << "|\n";
+      llvm::errs() << "location: |" << this->curLine << ":" << this->curCol << "|\n";
+    }
     assert(tok == curTok && "consume Token mismatch expectation");
     getNextToken();
   }
@@ -912,9 +966,10 @@ private:
   std::unique_ptr<DirectRetStmtAST> ParseDirectRetStmt() {
     DebugCall d(__PRETTY_FUNCTION__);
 
-    lexer.getNextToken(); // consume ret
+    lexer.consume(TokenType::tok_ret);
+    assert(lexer.getCurToken() == TokenType::tok_id);
     std::string var = lexer.getId();
-    lexer.getNextToken(); // consume var
+    lexer.consume(TokenType::tok_id); // consume var
     return std::make_unique<DirectRetStmtAST>(lexer.getLoc(), var);
   }
 
@@ -940,18 +995,67 @@ private:
                                          var);
   }
 
+  std::unique_ptr<BlockRetStmtAST> ParseBlockRetStmt(int blockId) {
+    Location loc = lexer.getLoc();
+    std::vector<std::unique_ptr<VariableExprAST>> Args;
+    std::vector<VarType> ArgTypes;
+
+    while (true) {
+      if (lexer.getCurToken() != '(') { break; }
+      lexer.consume(TokenType('('));
+      Args.push_back(ParseVarExpr());
+      lexer.consume(TokenType(':'));
+      ArgTypes.push_back(ParseType());
+      lexer.consume(TokenType(')'));
+    }
+
+    // pls cleanup eventually.
+    lexer.consume(TokenType(':'));
+    lexer.consume(TokenType('='));
+
+    llvm::errs() << "=======parsing inner...=======\n";
+
+    std::unique_ptr<RetStmtAST> inner = this->ParseRetStmt();
+
+    llvm::errs() << "=======parsed inner!=======\n";
+
+    lexer.consume(TokenType::tok_semicolon); // consume ; between the inner and outer
+
+    llvm::errs() << "=======parsing outer...=======\n";
+
+    std::unique_ptr<RetStmtAST> outer = this->ParseRetStmt();
+
+    llvm::errs() << "=======parsed outer!=======\n";
+
+    return std::make_unique<BlockRetStmtAST>(loc, blockId,
+                                             std::move(Args),
+                                             ArgTypes,
+                                             std::move(inner),
+                                             std::move(outer));
+    assert(false && "don't know how to parse block ret statement");
+  }
+
   std::unique_ptr<RetStmtAST> ParseRetStmt() {
     DebugCall d(__PRETTY_FUNCTION__);
+    const std::string id = lexer.getId();
 
     if (lexer.getCurToken() == tok_ret) {
       return ParseDirectRetStmt();
     } else if (lexer.getCurToken() == tok_case) {
       return ParseCaseStmt();
+    } else if (startswith(id, "block_")) {
+       // unexpectedTokenError(lexer);
+       const  std::string blockIdStr = id.substr(strlen("block_"));
+       int blockId = atoi(blockIdStr.c_str());
+       lexer.getNextToken(); // eat current identifier;
+       return ParseBlockRetStmt(blockId);
+       assert(false && "unable to parse block_");
     } else {
       unexpectedTokenError(lexer);
       assert(false && "unable to parse return statement.");
       // std::cerr << lexer.getCurToken() << std::endl;
-      // std::cerr << "Error in return statement, nullptr" << std::endl;
+      // std::cerr << "Error in return statement, nullptr"
+      //         << std::endl;
       return nullptr;
     }
   }
@@ -962,6 +1066,7 @@ private:
     while (lexer.getCurToken() == tok_let) {
       stmts.push_back(ParseLetStmt());
     }
+    
     return std::make_unique<FBodyAST>(std::move(stmts), ParseRetStmt());
     
   }
@@ -1208,9 +1313,9 @@ private:
       return mlirGen(cast<DirectRetStmtAST>(ret));
     case RetStmtAST::Case:
       return mlirGen(cast<CaseStmtAST>(ret));
-      // default:
-      //   return mlir::failure();
-    }
+    case RetStmtAST::Block:
+      assert(false && "don't know how to codegen block!");
+      }
 
     assert(false && "unhandled retstmt");
   }
