@@ -253,6 +253,9 @@ public:
   void print() override {
     llvm::errs() << "jmp block_" << BlockIx << " " << Var << "\n";
   };
+
+  int getBlockIx() const { return BlockIx; }
+  std::string getVar() const { return Var; }
   static bool classof(const RetStmtAST *c) { return c->getKind() == Jump; }
 };
 
@@ -271,7 +274,9 @@ public:
                   std::unique_ptr<RetStmtAST> After)
   : RetStmtAST(Block, location), blockId(blockId),
         Args(std::move(Args)), ArgTypes(ArgTypes),
-        Inner(std::move(Inner)), After(std::move(After)){}
+        Inner(std::move(Inner)), After(std::move(After)) {
+    assert(this->Args.size() == ArgTypes.size());
+  }
   void print() override {
     std::cerr << offset << "block_" << blockId << "(";
     for (int i = 0; i < (int)Args.size(); ++i) {
@@ -286,6 +291,24 @@ public:
   };
   static bool classof(const RetStmtAST *c) { return c->getKind() == Block; }
 
+  std::pair<VariableExprAST *, VarType> getArg() {
+    assert(this->Args.size() == 1);
+    assert(this->ArgTypes.size() == 1);
+    assert(this->Args.size() == ArgTypes.size());
+    return { this->Args.at(0).get(), this->ArgTypes.at(0) };
+  }
+
+  RetStmtAST *getAfter() {
+    return this->After.get();
+  }
+
+  RetStmtAST *getInner() {
+    return this->Inner.get();
+  }
+
+  int getBlockId() const {
+    return this->blockId;
+  }
 };
 
 class FBodyAST {
@@ -1224,6 +1247,8 @@ private:
   mlir::ModuleOp theModule;
   mlir::OpBuilder builder;
   llvm::ScopedHashTable<StringRef, mlir::Value> symbolTable;
+  llvm::ScopedHashTable<int, mlir::Block*> blockTable;
+
   ScopeTable scopeTable = ScopeTable();
   mlir::Location lastLoc;
   mlir::Block lastBlock;
@@ -1312,6 +1337,39 @@ private:
     return mlir::success();
   }
 
+  mlir::LogicalResult mlirGenJumpRetStmt(JumpRetStmtAST &jump) {
+
+    assert(blockTable.count(jump.getBlockIx()) && "expected to find BB index");
+    mlir::Block *bb = blockTable.lookup(jump.getBlockIx());
+    mlir::Value var(scopeTable.lookup(jump.getVar()));
+    builder.create<BranchOp>(loc(), bb, var);
+    return success();
+  }
+
+    mlir::LogicalResult mlirGenBlockRetStmt(BlockRetStmtAST &blockAST) {
+    VariableExprAST *var;
+    VarType argty;
+
+    // new scope for this blockAST.
+    ScopedHashTableScope<int, mlir::Block*> Scope(blockTable);
+
+    OpBuilder::InsertionGuard guard(builder);
+
+    std::tie(var, argty) = blockAST.getArg();
+    mlir::Block *bb = builder.createBlock(builder.getInsertionBlock()->getParent(), {}, {typeGen(argty)});
+
+    blockTable.insertIntoScope(&Scope, blockAST.getBlockId(), bb);
+
+    LogicalResult genAfter = mlirGen(*blockAST.getAfter());
+    assert(succeeded(genAfter) && "unable to codegen stuff after a block");
+
+    builder.setInsertionPointToEnd(bb);
+    LogicalResult genInner = mlirGen(*blockAST.getInner());
+    assert(succeeded(genInner) && "unable to codegen stuff inside a block");
+
+    return success();
+  }
+
   mlir::LogicalResult mlirGen(CaseStmtAST &casestmt) {
     // llvm::StringRef var = casestmt.getVar();
     std::string var = std::string(casestmt.getVar());
@@ -1350,9 +1408,9 @@ private:
     case RetStmtAST::Case:
       return mlirGen(cast<CaseStmtAST>(ret));
     case RetStmtAST::Block:
-      assert(false && "don't know how to codegen block!");
+      return mlirGenBlockRetStmt(cast<BlockRetStmtAST>(ret));
     case RetStmtAST::Jump:
-      assert(false && "don't know how to codegen jump!");
+      return mlirGenJumpRetStmt(cast<JumpRetStmtAST>(ret));
       }
 
     assert(false && "unhandled retstmt");
