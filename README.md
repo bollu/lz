@@ -31,6 +31,64 @@
 # Log:  [newest] to [oldest]
 
 # March 9th, 2021
+- Formatting is defined in `Lean/Compiler/IR/Format.lean`:
+
+```
+Lean/Compiler/IR/Format.lean
+
+private def formatExpr : Expr → Format
+  | Expr.ctor i ys      => format i ++ formatArray ys
+  | Expr.reset n x      => "reset[" ++ format n ++ "] " ++ format x
+  | Expr.reuse x i u ys => "reuse" ++ (if u then "!" else "") ++ " " ++ format x ++ " in " ++ format i ++ formatArray ys
+  | Expr.proj i x       => "proj[" ++ format i ++ "] " ++ format x
+  | Expr.uproj i x      => "uproj[" ++ format i ++ "] " ++ format x
+  | Expr.sproj n o x    => "sproj[" ++ format n ++ ", " ++ format o ++ "] " ++ format x
+  | Expr.fap c ys       => format c ++ formatArray ys
+  | Expr.pap c ys       => "pap " ++ format c ++ formatArray ys
+  | Expr.ap x ys        => "app " ++ format x ++ formatArray ys
+  | Expr.box _ x        => "box " ++ format x
+  | Expr.unbox x        => "unbox " ++ format x
+  | Expr.lit v          => format v
+  | Expr.isShared x     => "isShared " ++ format x
+  | Expr.isTaggedPtr x  => "isTaggedPtr " ++ format x
+```
+
+- How `logDecls` works: it creates a `step` that is `format`d. Look for `format` of a `Decl`
+
+```
+inductive LogEntry where
+  | step (cls : Name) (decls : Array Decl)
+  | message (msg : Format)
+
+namespace LogEntry
+protected def fmt : LogEntry → Format
+  | step cls decls => Format.bracket "[" (format cls) "]" ++ decls.foldl (fun fmt decl => fmt ++ Format.line ++ format decl) Format.nil
+  | message msg    => msg
+```
+
+- Where logging is used: `Lean/Compiler/IR.lean`
+
+```
+Lean/Compiler/IR.lean
+28:  logDecls `init decls
+```
+
+- Where logging is defined: `CompilerM.lean`:
+```
+Lean/Compiler/IR/CompilerM.lean:
+
+def tracePrefixOptionName := `trace.compiler.ir
+
+private def isLogEnabledFor (opts : Options) (optName : Name) : Bool :=
+  match opts.find optName with
+  | some (DataValue.ofBool v) => v
+  | other => opts.getBool tracePrefixOptionName
+
+private def logDeclsAux (optName : Name) (cls : Name) (decls : Array Decl) : CompilerM Unit := do
+  let opts ← read
+  if isLogEnabledFor opts optName then
+    log (LogEntry.step cls decls)
+```
 
 - `src/Lean/Compiler/IR/EmitC.lean`
 
