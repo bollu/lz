@@ -1142,7 +1142,7 @@ private:
     //
     builder.setInsertionPointToStart(&entryBlock);
     // auto region = function.getCallableRegion();
-    mlirGen(*functionAST.getFBody());
+    (void)mlirGen(*functionAST.getFBody());
 
     //--------------------------------------------------------
     // experimenting
@@ -1193,7 +1193,7 @@ private:
       mlir::Region &region = caseOp->getRegion(i);
       mlir::Block *block = builder.createBlock(&region);
       builder.setInsertionPointToStart(block);
-      mlirGen(*body);
+      (void)mlirGen(*body);
       ++i;
     }
     builder.setInsertionPointAfter(caseOp);

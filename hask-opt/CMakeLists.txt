@@ -31,7 +31,9 @@ target_link_libraries(hask-opt PRIVATE
         MLIRParser
         MLIRPass
         MLIRSideEffectInterfaces
-        MLIRTargetLLVMIR
+        MLIRLLVMToLLVMIRTranslation
+        MLIRTargetLLVMIRExport
+        # MLIRTargetLLVMIR
         MLIRTransforms
         MLIRSupport)
     # LZJIT)

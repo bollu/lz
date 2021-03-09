@@ -27,8 +27,11 @@ target_link_libraries(frontend PRIVATE
         MLIRParser
         MLIRPass
         MLIRSideEffectInterfaces
-        MLIRTargetLLVMIR
+        MLIRLLVMToLLVMIRTranslation
+        MLIRTargetLLVMIRExport
+        # MLIRTargetLLVMIR
         MLIRTransforms
+        LLVMSupport # hack?
         MLIRSupport)
 
 mlir_check_link_libraries(frontend)
