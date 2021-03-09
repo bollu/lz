@@ -30,6 +30,20 @@
 
 # Log:  [newest] to [oldest]
 
+# March 9th, 2021
+
+- `src/Lean/Compiler/IR/EmitC.lean`
+
+I believe the `(_).closed_3` comes from cached closed terms:
+
+- `/home/bollu/work/lean4/src$ git grep "get_closed_term_name"`
+- `library/compiler/closed_term_cache.cpp:extern "C" object * lean_get_closed_term_name(object * env, object * e);`
+- `library/compiler/closed_term_cache.cpp:    return to_optional<name>(lean_get_closed_term_name(env.to_obj_arg(), e.to_obj_arg()));`
+- `library/compiler/closed_term_cache.h:optional<name> get_closed_term_name(environment const & env, expr const & e);`
+- `library/compiler/extract_closed.cpp:        if (optional<name> c = get_closed_term_name(m_env, e)) {`
+- `library/compiler/lambda_lifting.cpp:        if (optional<name> opt_new_fn = get_closed_term_name(m_env, e)) {`
+
+
 # March 5th, 2021
 
 Need to add support for join points:
