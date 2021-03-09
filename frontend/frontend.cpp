@@ -2104,7 +2104,7 @@ mlirGenCaseAlt(mlir::Value scrutinee, const ExprCase::Alt alt,
     nestedBuilder.setInsertionPointToEnd(&bodyBlock);
     mlirGenBlock(alt.second, nestedBuilder, scopeFn, nestedScopeValue, tc);
     mlir::Attribute lhs =
-        mlir::FlatSymbolRefAttr::get("default", builder.getContext());
+        mlir::FlatSymbolRefAttr::get(builder.getContext(), "default");
     return {lhs, r};
   }
 
@@ -2124,8 +2124,7 @@ mlirGenCaseAlt(mlir::Value scrutinee, const ExprCase::Alt alt,
 
     nestedBuilder.setInsertionPointToEnd(&bodyBlock);
     mlirGenBlock(alt.second, nestedBuilder, scopeFn, nestedScopeValue, tc);
-    mlir::Attribute lhs = mlir::FlatSymbolRefAttr::get(tuplestruct->name.name,
-                                                       builder.getContext());
+    mlir::Attribute lhs = mlir::FlatSymbolRefAttr::get(builder.getContext(), tuplestruct->name.name);
     return {lhs, r};
   }
 
@@ -2197,7 +2196,7 @@ mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder,
 
     mlir::Value vf = builder.create<mlir::ConstantOp>(
         builder.getUnknownLoc(),
-        mlir::FlatSymbolRefAttr::get(call->fnname.name, builder.getContext()));
+        mlir::FlatSymbolRefAttr::get(builder.getContext(), call->fnname.name));
     mlir::Value out = builder.create<mlir::standalone::ApOp>(
         builder.getUnknownLoc(), vf, args, mlirGenType(builder, fnty->retty));
 

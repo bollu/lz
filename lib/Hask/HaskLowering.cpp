@@ -395,7 +395,9 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     auto call = cast<CallOp>(operation);
     SmallVector<Type, 4> resultTypes;
-    typeConverter->convertTypes(call.getResultTypes(), resultTypes);
+    if (failed(typeConverter->convertTypes(call.getResultTypes(), resultTypes))) {
+      return failure();
+    }
 
     rewriter.replaceOpWithNewOp<CallOp>(operation, call.getCallee(),
                                         resultTypes, operands);

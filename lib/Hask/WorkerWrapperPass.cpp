@@ -315,7 +315,7 @@ struct OutlineRecursiveApEagerOfThunkPattern
 
     ConstantOp clonedFnRef = rewriter.create<ConstantOp>(
         rewriter.getUnknownLoc(), mkForcedFnType(called.getType()),
-        mlir::FlatSymbolRefAttr::get(clonedFnName, rewriter.getContext()));
+        mlir::FlatSymbolRefAttr::get(rewriter.getContext(), clonedFnName));
 
     rewriter.replaceOpWithNewOp<ApEagerOp>(
         ap, clonedFnRef, called.getType().getResult(0), clonedFnCallArgs);
@@ -447,7 +447,7 @@ struct OutlineRecursiveApEagerOfConstructorPattern
 
     ConstantOp clonedFnRef = rewriter.create<ConstantOp>(
         ap.getFn().getLoc(), clonedFnTy,
-        mlir::FlatSymbolRefAttr::get(clonedFnName, rewriter.getContext()));
+        mlir::FlatSymbolRefAttr::get(rewriter.getContext(), clonedFnName));
 
     // HaskRefOp clonedFnRef = rewriter.create<HaskRefOp>(
     //     ref.getLoc(), clonedFnName,
@@ -642,7 +642,7 @@ struct OutlineCaseOfFnInput : public mlir::OpRewritePattern<FuncOp> {
       rewriter.setInsertionPointAfter(call);
       ConstantOp outlinedFnNameSymbol = rewriter.create<ConstantOp>(
           call.getLoc(), outlinedFnty,
-          mlir::FlatSymbolRefAttr::get(outlinedFnName, rewriter.getContext()));
+          mlir::FlatSymbolRefAttr::get(rewriter.getContext(), outlinedFnName));
       ApEagerOp outlinedCall = rewriter.create<ApEagerOp>(
           call.getLoc(), outlinedFnNameSymbol,
           outlinedFnty.getResult(0), // type of result
@@ -742,7 +742,7 @@ struct OutlineReturnOfConstructor : public mlir::OpRewritePattern<FuncOp> {
           call.getLoc(),
           rewriter.getFunctionType(parentfn.getType().getInputs(),
                                    constructor.getOperand(0).getType()),
-          mlir::FlatSymbolRefAttr::get(outlinedFnName, rewriter.getContext()));
+          mlir::FlatSymbolRefAttr::get(rewriter.getContext(), outlinedFnName));
 
       ApEagerOp outlinedCall = rewriter.create<ApEagerOp>(
           call.getLoc(), outlinedFnNameSymbol,

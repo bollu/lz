@@ -162,7 +162,7 @@ void ApOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
                  FuncOp fn, SmallVectorImpl<Value> &params) {
   Value fnname = builder.create<ConstantOp>(
       builder.getUnknownLoc(),
-      mlir::FlatSymbolRefAttr::get(fn.getName(), builder.getContext()));
+      mlir::FlatSymbolRefAttr::get(builder.getContext(), fn.getName()));
   state.addOperands(fnname);
   state.addOperands(params);
   state.addTypes(builder.getType<ThunkType>(fn.getType().getResult(0)));
@@ -702,7 +702,7 @@ void HaskConstructOp::build(mlir::OpBuilder &builder,
                             ValueRange args) {
   state.addAttribute(
       HaskConstructOp::getDataConstructorAttrKey(),
-      FlatSymbolRefAttr::get(constructorName, builder.getContext()));
+      FlatSymbolRefAttr::get(builder.getContext(), constructorName));
   state.addOperands(args);
   // return type.
   state.addTypes(ValueType::get(builder.getContext()));

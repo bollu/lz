@@ -383,7 +383,9 @@ public:
     // MLIRContext *context = rewriter.getContext();
     SmallVector<Type, 4> argtys;
 
-    tc.convertType(MemRefType::get({0}, rewriter.getI64Type()), argtys);
+    if (failed (tc.convertType(MemRefType::get({0}, rewriter.getI64Type()), argtys))) {
+      assert(false && "unable to convert memref type.");
+    };
     Type retty = ptr::VoidPtrType::get(rewriter.getContext());
     FunctionType fnty = rewriter.getFunctionType(argtys, retty);
 

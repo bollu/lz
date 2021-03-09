@@ -718,10 +718,10 @@ struct Interpreter {
     llvm::errs() << "\n";
 
     for (Operation &op : block) {
-      if (op.isKnownNonTerminator()) {
-        interpretOperation(op, env);
-      } else if (op.isKnownTerminator()) {
+      if (op.hasTrait<OpTrait::IsTerminator>()) {
         return interpretTerminator(op, env);
+      } else {
+        interpretOperation(op, env);
       }
     }
     assert(false && "unreachable location in InterpretBlock");
