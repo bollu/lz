@@ -244,13 +244,16 @@ public:
 };
 
 class JumpRetStmtAST : public RetStmtAST {
-  int blockIx;
-  std::vector<std::string> Vars;
+  int BlockIx;
+//  std::vector<std::string> Vars;
+  std::string Var; // so far have only seen a single variable
 public:
-  JumpRetStmtAST(Location location, int blockIx, const std::vector<std::string> &Vars)
-      : RetStmtAST(RetStmtAST::Kind::Jump, location), blockIx(blockIx), Vars(Vars) {}
-  void print() override {assert(false && "don't know how to print JumpRetStmtAST"); };
-  static bool classof(const RetStmtAST *c) { return c->getKind() == Direct; }
+  JumpRetStmtAST(Location location, int BlockIx, std::string Var)
+      : RetStmtAST(RetStmtAST::Kind::Jump, location), BlockIx(BlockIx), Var(Var) {}
+  void print() override {
+    llvm::errs() << "jmp block_" << BlockIx << " " << Var << "\n";
+  };
+  static bool classof(const RetStmtAST *c) { return c->getKind() == Jump; }
 };
 
 class BlockRetStmtAST : public RetStmtAST {
@@ -985,7 +988,24 @@ private:
   }
 
   std::unique_ptr<JumpRetStmtAST> ParseJumpStmt() {
-  assert(false && "don't know how to parse jump statement");
+    Location loc = lexer.getLoc();
+    lexer.consume(TokenType::tok_jmp);
+
+    // block_<ix>
+    assert(lexer.getCurToken() == TokenType::tok_id);
+    std::string blockName = lexer.getId();
+    assert(startswith(blockName, "block_"));
+    std::string blockIxStr = blockName.substr(strlen("block_"));
+    int blockIx = atoi(blockIxStr.c_str());
+    lexer.consume(TokenType::tok_id); // consume block_<ix>
+
+    // argument
+    assert(lexer.getCurToken() == TokenType::tok_id);
+    std::string arg = lexer.getId();
+    lexer.consume(TokenType::tok_id); // consume argument
+
+    return std::make_unique<JumpRetStmtAST>(loc, blockIx, arg);
+//    assert(false && "don't know how to parse jump statement");
   }
   std::unique_ptr<CaseStmtAST> ParseCaseStmt() {
     DebugCall d(__PRETTY_FUNCTION__);
