@@ -25,10 +25,17 @@ for (i, fpath) in enumerate(g_fpaths):
     log(f"[{i+1:3}/{g_nfiles}] |{fpath}|")
     data = {"file": str(fpath)}
     try:
-        call = g_opt(fpath).wait()
+        call = g_opt(fpath, "--lz-interpret", "-o", "/dev/null").wait()
+        data["baseline"] = {}
+        data["baseline"]["stdout"] = call.stdout.decode()
+        data["baseline"]["stderr"] = call.stderr.decode()
+
+        call = g_opt(fpath, "--lz-worker-wrapper", "--lz-interpret", "-o", "/dev/null").wait()
+        data["optimised"] = {}
+        data["optimised"]["stdout"] = call.stdout.decode()
+        data["optimised"]["stderr"] = call.stderr.decode()
+
         data["success"] = True
-        data["stdout"] = call.stdout.decode()
-        data["stderr"] = call.stderr.decode()
     except Exception as e:
         data["success"] = False
         data["err"] = str(e)
