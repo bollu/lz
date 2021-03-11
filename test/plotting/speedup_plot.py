@@ -43,7 +43,7 @@ for i, data in enumerate(datapoints):
     log(f"[{i+1:3}/{len(datapoints)}]|{data['file']:80}|{mark}")
     if data["success"] == False:
         continue
-    labels.append(os.path.basename(data['file']))
+    labels.append(data["name"])
     baseline = data["baseline"]["nthunks"] + data["baseline"]["nconstructs"]
     optimised = data["optimised"]["nthunks"] + data["optimised"]["nconstructs"]
     baselines.append(baseline)
@@ -68,7 +68,7 @@ ax.set_ylabel('# instructions overhead', rotation='horizontal', position = (1, 1
 
 # Add some text for labels, title and custom x-axis tick labels, etc.
 ax.set_xticks(x)
-ax.set_xticklabels(labels, rotation='horizontal')
+ax.set_xticklabels(labels, rotation=10)
 ax.legend(ncol=100, frameon=False, loc='lower right', bbox_to_anchor=(0, 1, 1, 0))
 
 # Hide the right and top spines

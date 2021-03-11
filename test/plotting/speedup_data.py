@@ -20,19 +20,19 @@ g_opt = sh.hask_opt
 g_fpaths = glob.glob("../**/*.mlir")
 g_fpaths.extend(glob.glob("../*.mlir"))
 g_fpaths = []
-g_fpaths.append("../grin/sum-upto-grin.mlir")
+# g_fpaths.append(("../grin/sum-upto-grin.mlir", "sum-upto-grin"))
 # g_fpaths.append("../k-lazy.mlir")
 # g_fpaths.append("../foo.mlir")
-g_fpaths.append("../rec.mlir")
+g_fpaths.append(("../rec.mlir", "rec"))
 # g_fpaths.append("../worker-wrapper-fact.mlir")
 # g_fpaths.append("../case-of-boxed-recursive-ap-with-final-construct.mlir")
 # g_fpaths.append("../worker-wrapper-int-tail-recursive.mlir")
 # g_fpaths.append("../add.mlir")
-g_fpaths.append("../worker-wrapper-int-non-tail-recursive.mlir")
-g_fpaths.append("../outline-return-of-constructor.mlir")
+g_fpaths.append(("../worker-wrapper-int-non-tail-recursive.mlir", "ww-1"))
+g_fpaths.append(("../outline-return-of-constructor.mlir", "outline-1"))
 # g_fpaths.append("../either.mlir")
-g_fpaths.append("../fib.mlir")
-g_fpaths.append("../outline-case-of-fn-input.mlir")
+g_fpaths.append(("../fib.mlir", "fib-1"))
+g_fpaths.append(("../outline-case-of-fn-input.mlir", "outline-2"))
 # g_fpaths.append("../Interpreter/stdops.mlir")
 # g_fpaths.append("../Lowering/lower-ap-and-force-2.mlir")
 # g_fpaths.append("../Lowering/lower-construct-return.mlir")
@@ -45,9 +45,9 @@ g_fpaths.append("../outline-case-of-fn-input.mlir")
 # g_fpaths.append("../Lowering/lower-apeager.mlir")
 # g_fpaths.append("../Lowering/lower-thunkify.mlir")
 # g_fpaths.append("../Lowering/lower-lz-and-affine.mlir")
-g_fpaths.append("../fib-strict.mlir")
+g_fpaths.append(("../fib-strict.mlir", "fib-2"))
 # g_fpaths.append("../updatable-thunks-infer-non-upatable.mlir")
-g_fpaths.append("../worker-wrapper-maybe-non-tail-recursive.mlir")
+g_fpaths.append(("../worker-wrapper-maybe-non-tail-recursive.mlir", "ww-2"))
 # g_fpaths.append("../worker-wrapper-maybe-tail-recursive.mlir")
 # g_fpaths.append("../case-usage.mlir")
 # g_fpaths.append("../case-int.mlir")
@@ -55,8 +55,8 @@ g_fpaths.append("../worker-wrapper-maybe-non-tail-recursive.mlir")
 g_nfiles = len(g_fpaths)
 
 g_data = []
-for (i, fpath) in enumerate(g_fpaths):
-    data = {"file": str(fpath)}
+for (i, (fpath, name)) in enumerate(g_fpaths):
+    data = {"file": str(fpath), "name": str(name)}
     try:
         call = g_opt(fpath, "--lz-interpret", "-o", "/dev/null").wait()
         data["baseline"] = {}
