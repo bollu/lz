@@ -1338,11 +1338,15 @@ private:
   }
 
   mlir::LogicalResult mlirGenJumpRetStmt(JumpRetStmtAST &jump) {
-
     assert(blockTable.count(jump.getBlockIx()) && "expected to find BB index");
     mlir::Block *bb = blockTable.lookup(jump.getBlockIx());
+    assert(bb && "expected legal basic block");
     mlir::Value var(scopeTable.lookup(jump.getVar()));
     builder.create<BranchOp>(loc(), bb, var);
+
+    llvm::errs() << "===generated Jump===";
+    bb->dump();
+    llvm::errs() << "====\n";
     return success();
   }
 
@@ -1354,19 +1358,26 @@ private:
     ScopedHashTableScope<int, mlir::Block*> Scope(blockTable);
 
     OpBuilder::InsertionGuard guard(builder);
+    mlir::Block *oldBB = builder.getBlock();
 
     std::tie(var, argty) = blockAST.getArg();
     mlir::Block *bb = builder.createBlock(builder.getInsertionBlock()->getParent(), {}, {typeGen(argty)});
-
+    LogicalResult genInner = mlirGen(*blockAST.getInner());
+    assert(succeeded(genInner) && "unable to codegen stuff inside a block");
     blockTable.insertIntoScope(&Scope, blockAST.getBlockId(), bb);
 
+    builder.setInsertionPointToEnd(oldBB);
     LogicalResult genAfter = mlirGen(*blockAST.getAfter());
     assert(succeeded(genAfter) && "unable to codegen stuff after a block");
 
     builder.setInsertionPointToEnd(bb);
-    LogicalResult genInner = mlirGen(*blockAST.getInner());
-    assert(succeeded(genInner) && "unable to codegen stuff inside a block");
 
+    llvm::errs() << "===generated BlockRet===\n";
+    llvm::errs() << "===oldBB (after)===\n";
+    oldBB->dump();
+    llvm::errs() << "===newBB (current)===\n";
+    bb->dump();
+    llvm::errs() << "=======\n";
     return success();
   }
 
@@ -1599,7 +1610,12 @@ OwningModuleRef translateLambdapureToModule(llvm::SourceMgr &sourceMgr,
   //     return {};
   // }
 
-  return MLIRGenImpl(*context).mlirGen(*lambdapureModule);
+  mlir::ModuleOp module =  MLIRGenImpl(*context).mlirGen(*lambdapureModule);
+  llvm::errs() << "==========final module============\n";
+  llvm::errs() << "==========final module============\n";
+  llvm::errs() << "==========final module============\n";
+  module.dump();
+  return module;
   // return mlirGen(*context, *lambdapureModule);
 }
 
