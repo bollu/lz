@@ -1247,7 +1247,6 @@ private:
   mlir::ModuleOp theModule;
   mlir::OpBuilder builder;
   llvm::ScopedHashTable<StringRef, mlir::Value> symbolTable;
-  llvm::ScopedHashTable<int, mlir::Block*> blockTable;
 
   ScopeTable scopeTable = ScopeTable();
   mlir::Location lastLoc;
@@ -1338,15 +1337,16 @@ private:
   }
 
   mlir::LogicalResult mlirGenJumpRetStmt(JumpRetStmtAST &jump) {
-    assert(blockTable.count(jump.getBlockIx()) && "expected to find BB index");
-    mlir::Block *bb = blockTable.lookup(jump.getBlockIx());
-    assert(bb && "expected legal basic block");
+    // assert(blockTable.count(jump.getBlockIx()) && "expected to find BB index");
+    // mlir::Block *bb = blockTable.lookup(jump.getBlockIx());
+    // assert(bb && "expected legal basic block");
     mlir::Value var(scopeTable.lookup(jump.getVar()));
-    builder.create<standalone::HaskJumpOp>(loc());
-//    builder.create<BranchOp>(loc(), bb, var);
+    standalone::HaskJumpOp op = builder.create<standalone::HaskJumpOp>(loc(), jump.getBlockIx());
+    (void) op;
+    //    builder.create<BranchOp>(loc(), bb, var);
 
     llvm::errs() << "===generated Jump===";
-    bb->dump();
+//    bb->dump();
     llvm::errs() << "====\n";
     return success();
   }
@@ -1355,32 +1355,31 @@ private:
     VariableExprAST *var;
     VarType argty;
 
-    // new scope for this blockAST.
-    standalone::HaskBlockOp block = builder.create<standalone::HaskBlockOp>(loc());
-      (void)block;
-    return success();
-    ScopedHashTableScope<int, mlir::Block*> Scope(blockTable);
+//    ScopedHashTableScope<int, mlir::Block*> Scope(blockTable);
+      OpBuilder::InsertionGuard guard(builder);
+//      mlir::Block *oldBB = builder.getBlock();
+      std::tie(var, argty) = blockAST.getArg();
 
-    OpBuilder::InsertionGuard guard(builder);
-    mlir::Block *oldBB = builder.getBlock();
+      // new scope for this blockAST.
+    standalone::HaskBlockOp op = builder.create<standalone::HaskBlockOp>(loc(), blockAST.getBlockId());
+    mlir::Region &innerRegion = op.getBlockRegion();
+    Block * innerBB = builder.createBlock(&innerRegion, {}, {typeGen(argty)});
+    builder.setInsertionPointToEnd(innerBB);
 
-    std::tie(var, argty) = blockAST.getArg();
-    mlir::Block *bb = builder.createBlock(builder.getInsertionBlock()->getParent(), {}, {typeGen(argty)});
+//    mlir::Block *bb = builder.createBlock(builder.getInsertionBlock()->getParent(), {}, {typeGen(argty)});
     LogicalResult genInner = mlirGen(*blockAST.getInner());
     assert(succeeded(genInner) && "unable to codegen stuff inside a block");
-    blockTable.insertIntoScope(&Scope, blockAST.getBlockId(), bb);
 
-    builder.setInsertionPointToEnd(oldBB);
+
+    mlir::Region &restRegion  = op.getRestRegion();
+    Block * restBB = builder.createBlock(&restRegion);
+    builder.setInsertionPointToEnd(restBB);
     LogicalResult genAfter = mlirGen(*blockAST.getAfter());
     assert(succeeded(genAfter) && "unable to codegen stuff after a block");
 
-    builder.setInsertionPointToEnd(bb);
+//    builder.setInsertionPointToEnd(bb);
 
     llvm::errs() << "===generated BlockRet===\n";
-    llvm::errs() << "===oldBB (after)===\n";
-    oldBB->dump();
-    llvm::errs() << "===newBB (current)===\n";
-    bb->dump();
     llvm::errs() << "=======\n";
     return success();
   }

@@ -996,9 +996,10 @@ ParseResult HaskBlockOp::parse(OpAsmParser &parser, OperationState &result) { as
 void HaskBlockOp::print(OpAsmPrinter &p) {
   p.printGenericOp(*this);
 };
-void HaskBlockOp::build(mlir::OpBuilder &builder, mlir::OperationState &state) {
+void HaskBlockOp::build(mlir::OpBuilder &builder, mlir::OperationState &state, int blockIx) {
   state.addRegion();
   state.addRegion();
+  state.addAttribute("value", builder.getI64IntegerAttr(blockIx));
   return;
   assert(false && "unimplemented");
 }
@@ -1013,7 +1014,8 @@ ParseResult HaskJumpOp::parse(OpAsmParser &parser, OperationState &result) { ass
 void HaskJumpOp::print(OpAsmPrinter &p) {
   p.printGenericOp(*this);
 };
-void HaskJumpOp::build(mlir::OpBuilder &builder, mlir::OperationState &state) {
+void HaskJumpOp::build(mlir::OpBuilder &builder, mlir::OperationState &state, int blockIx) {
+  state.addAttribute("value", builder.getI64IntegerAttr(blockIx));
   return;
   assert(false && "unimplemented");
 }

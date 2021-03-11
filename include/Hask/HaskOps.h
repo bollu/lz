@@ -497,8 +497,13 @@ public:
   static StringRef getOperationName() { return "lz.block"; };
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   void print(OpAsmPrinter &p);
-  static void build(mlir::OpBuilder &builder, mlir::OperationState &state);
-
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state, int blockIx);
+  mlir::Region &getBlockRegion() {
+    return this->getRegion(0);
+  }
+  mlir::Region &getRestRegion() {
+    return this->getRegion(1);
+  }
 };
 
 
@@ -508,7 +513,7 @@ public:
   static StringRef getOperationName() { return "lz.jump"; };
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   void print(OpAsmPrinter &p);
-  static void build(mlir::OpBuilder &builder, mlir::OperationState &state);
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state, int blockIx);
 };
 
 

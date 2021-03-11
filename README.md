@@ -37,6 +37,21 @@
   jump to a BB of its parent. What you can have is a `regioncall %x` instruction to "call"
   the region `%x`
 
+We pass more tests now:
+
+```
+********************
+Failed Tests (4):
+  HASK_OPT :: lambdapure/bench/const_fold.lean
+  HASK_OPT :: lambdapure/bench/deriv.lean
+  HASK_OPT :: lambdapure/bench/qsort.lean
+  HASK_OPT :: lambdapure/bench/rbmap_checkpoint.lean
+
+
+Testing Time: 5.72s
+  Passed    : 13
+```
+
 # March 9th, 2021
 - Formatting is defined in `Lean/Compiler/IR/Format.lean`:
 
