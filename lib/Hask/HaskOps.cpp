@@ -985,6 +985,30 @@ void ErasedValueOp::print(OpAsmPrinter &p) {
   return;
 };
 
+// === HaskBlockOp OP ===
+// === HaskBlockOp OP ===
+// === HaskBlockOp OP ===
+// === HaskBlockOp OP ===
+// === HaskBlockOp OP ===
+
+
+ParseResult HaskBlockOp::parse(OpAsmParser &parser, OperationState &result) { assert(false && "unimplemented"); };
+void HaskBlockOp::print(OpAsmPrinter &p) {
+  p.printGenericOp(*this);
+};
+void HaskBlockOp::build(mlir::OpBuilder &builder, mlir::OperationState &state) { assert(false && "unimplemented"); }
+
+// ===  HaskJumpOp ===
+// ===  HaskJumpOp ===
+// ===  HaskJumpOp ===
+// ===  HaskJumpOp ===
+// ===  HaskJumpOp ===
+
+ParseResult HaskJumpOp::parse(OpAsmParser &parser, OperationState &result) { assert(false && "unimplemented"); };
+void HaskJumpOp::print(OpAsmPrinter &p) {
+  p.printGenericOp(*this);
+};
+void HaskJumpOp::build(mlir::OpBuilder &builder, mlir::OperationState &state) { assert(false && "unimplemented"); }
 
 /*
 // === THUNK TO PTR OP ===

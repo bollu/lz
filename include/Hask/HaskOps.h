@@ -490,6 +490,26 @@ class ErasedValueOp : public Op<ErasedValueOp, OpTrait::ZeroOperands, OpTrait::O
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state);
 };
 
+// first mirror whatever the fuck the original lowering does. Then find "better encodings".
+class HaskBlockOp : public Op<HaskBlockOp, OpTrait::ZeroOperands, OpTrait::NRegions<2>::Impl, OpTrait::IsTerminator> {
+public:
+  using Op::Op;
+  static StringRef getOperationName() { return "lz.block"; };
+  static ParseResult parse(OpAsmParser &parser, OperationState &result);
+  void print(OpAsmPrinter &p);
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state);
+
+};
+
+
+class HaskJumpOp : public Op<HaskJumpOp, OpTrait::ZeroOperands, OpTrait::ZeroResult, OpTrait::IsTerminator> {
+public:
+  using Op::Op;
+  static StringRef getOperationName() { return "lz.jump"; };
+  static ParseResult parse(OpAsmParser &parser, OperationState &result);
+  void print(OpAsmPrinter &p);
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state);
+};
 
 
 /*

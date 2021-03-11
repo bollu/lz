@@ -61,6 +61,8 @@ HaskDialect::HaskDialect(mlir::MLIRContext *context)
     , IncOp
     , DecOp
     , ErasedValueOp
+   , HaskBlockOp
+   , HaskJumpOp
         >();
   addTypes<
     // HaskFnType,

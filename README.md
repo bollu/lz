@@ -30,6 +30,13 @@
 
 # Log:  [newest] to [oldest]
 
+
+# Match 11th, 2021
+
+- Another use case a `%x = mlir.sese { ... }` instruction. You can't have a child region
+  jump to a BB of its parent. What you can have is a `regioncall %x` instruction to "call"
+  the region `%x`
+
 # March 9th, 2021
 - Formatting is defined in `Lean/Compiler/IR/Format.lean`:
 
