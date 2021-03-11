@@ -996,7 +996,12 @@ ParseResult HaskBlockOp::parse(OpAsmParser &parser, OperationState &result) { as
 void HaskBlockOp::print(OpAsmPrinter &p) {
   p.printGenericOp(*this);
 };
-void HaskBlockOp::build(mlir::OpBuilder &builder, mlir::OperationState &state) { assert(false && "unimplemented"); }
+void HaskBlockOp::build(mlir::OpBuilder &builder, mlir::OperationState &state) {
+  state.addRegion();
+  state.addRegion();
+  return;
+  assert(false && "unimplemented");
+}
 
 // ===  HaskJumpOp ===
 // ===  HaskJumpOp ===
@@ -1008,7 +1013,10 @@ ParseResult HaskJumpOp::parse(OpAsmParser &parser, OperationState &result) { ass
 void HaskJumpOp::print(OpAsmPrinter &p) {
   p.printGenericOp(*this);
 };
-void HaskJumpOp::build(mlir::OpBuilder &builder, mlir::OperationState &state) { assert(false && "unimplemented"); }
+void HaskJumpOp::build(mlir::OpBuilder &builder, mlir::OperationState &state) {
+  return;
+  assert(false && "unimplemented");
+}
 
 /*
 // === THUNK TO PTR OP ===

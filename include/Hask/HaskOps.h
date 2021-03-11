@@ -491,7 +491,7 @@ class ErasedValueOp : public Op<ErasedValueOp, OpTrait::ZeroOperands, OpTrait::O
 };
 
 // first mirror whatever the fuck the original lowering does. Then find "better encodings".
-class HaskBlockOp : public Op<HaskBlockOp, OpTrait::ZeroOperands, OpTrait::NRegions<2>::Impl, OpTrait::IsTerminator> {
+class HaskBlockOp : public Op<HaskBlockOp, OpTrait::ZeroOperands, OpTrait::ZeroResult, OpTrait::NRegions<2>::Impl, OpTrait::IsTerminator> {
 public:
   using Op::Op;
   static StringRef getOperationName() { return "lz.block"; };

@@ -1342,7 +1342,8 @@ private:
     mlir::Block *bb = blockTable.lookup(jump.getBlockIx());
     assert(bb && "expected legal basic block");
     mlir::Value var(scopeTable.lookup(jump.getVar()));
-    builder.create<BranchOp>(loc(), bb, var);
+    builder.create<standalone::HaskJumpOp>(loc());
+//    builder.create<BranchOp>(loc(), bb, var);
 
     llvm::errs() << "===generated Jump===";
     bb->dump();
@@ -1355,6 +1356,9 @@ private:
     VarType argty;
 
     // new scope for this blockAST.
+    standalone::HaskBlockOp block = builder.create<standalone::HaskBlockOp>(loc());
+      (void)block;
+    return success();
     ScopedHashTableScope<int, mlir::Block*> Scope(blockTable);
 
     OpBuilder::InsertionGuard guard(builder);
