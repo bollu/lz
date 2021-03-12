@@ -464,15 +464,16 @@ struct Interpreter {
       // TODO: generalize to more than 1 result
       // assert(call.getNumResults() == 1);
 
-      Optional<InterpValue> res = interpretFunction(call.getCallee().str(), args);
+      Optional<InterpValue> res =
+          interpretFunction(call.getCallee().str(), args);
 
       if (call.getNumResults() == 1) {
-          assert(res && "call has a result but function returned no result!");
-          env.addNew(call.getResult(0), *res);
+        assert(res && "call has a result but function returned no result!");
+        env.addNew(call.getResult(0), *res);
       } else {
-          assert(!res && "call has no results but function returned a result!");
+        assert(!res && "call has no results but function returned a result!");
       }
-                 
+
       return;
     }
 
@@ -760,12 +761,11 @@ struct Interpreter {
     }
   }
 
-
   void interpretPrimopPrintInt(ArrayRef<InterpValue> args) {
     llvm::errs().changeColor(llvm::raw_fd_ostream::GREEN);
     llvm::errs() << "--interpreting primop:|printInt|--\n";
     llvm::errs().resetColor();
-    
+
     assert(args.size() == 1 && "printInt expects single argument");
     InterpValue v = args[0];
     assert(v.type == InterpValueType::I64 && "printInt expects int argument");
@@ -780,8 +780,8 @@ struct Interpreter {
     llvm::errs().resetColor();
 
     if (funcname == "printInt") {
-        interpretPrimopPrintInt(args);
-        return {};
+      interpretPrimopPrintInt(args);
+      return {};
     }
 
     // functions are isolated from above; create a fresh environment
@@ -831,20 +831,19 @@ private:
 };
 
 struct LzInterpretPass : public Pass {
-  LzInterpretPass() : Pass(mlir::TypeID::get<LzInterpretPass>()) {};
+  LzInterpretPass() : Pass(mlir::TypeID::get<LzInterpretPass>()){};
   StringRef getName() const override { return "LzInterpretPass"; }
-  Pass::Option<std::string> optionMode{*this,
-                                             "mode",
-                                             llvm::cl::desc("lz/lambdapure"),
-                                             llvm::cl::init("lz")};
-  LzInterpretPass(const LzInterpretPass &other) : Pass(::mlir::TypeID::get<LzInterpretPass>()) {}
+  Pass::Option<std::string> optionMode{
+      *this, "mode", llvm::cl::desc("lz/lambdapure"), llvm::cl::init("lz")};
+  LzInterpretPass(const LzInterpretPass &other)
+      : Pass(::mlir::TypeID::get<LzInterpretPass>()) {}
 
   std::unique_ptr<Pass> clonePass() const override {
     // https://github.com/llvm/llvm-project/blob/5d613e42d3761e106e5dd8d1731517f410605144/mlir/tools/mlir-tblgen/PassGen.cpp#L90
-     auto newInst = std::make_unique<LzInterpretPass>(
+    auto newInst = std::make_unique<LzInterpretPass>(
         *static_cast<const LzInterpretPass *>(this));
-     newInst->copyOptionValuesFrom(this);
-     return newInst;
+    newInst->copyOptionValuesFrom(this);
+    return newInst;
   }
 
   void runOnOperation() override {
@@ -852,16 +851,16 @@ struct LzInterpretPass : public Pass {
     Interpreter I(mod);
 
     InterpValue val = [&]() {
-          if (this->optionMode == "lz") {
-            return *I.interpretFunction("main", {});
-          } else {
-            assert(this->optionMode == "lambdapure");
-            InterpValue argc = InterpValue::i(0);
-            // HACK! this needs to be something like empty array..?
-            InterpValue argv = InterpValue::i(42);
-            return *I.interpretFunction("_lean_main", {argc, argv});
-          }
-        }();
+      if (this->optionMode == "lz") {
+        return *I.interpretFunction("main", {});
+      } else {
+        assert(this->optionMode == "lambdapure");
+        InterpValue argc = InterpValue::i(0);
+        // HACK! this needs to be something like empty array..?
+        InterpValue argv = InterpValue::i(42);
+        return *I.interpretFunction("_lean_main", {argc, argv});
+      }
+    }();
     InterpStats stats = I.getStats();
     llvm::outs() << val << "\n" << stats << "\n";
   }
@@ -872,7 +871,7 @@ std::unique_ptr<mlir::Pass> createLzInterpretPass() {
 }
 
 void registerLzInterpretPass() {
-//  mlir::PassPipelineRegistration
+  //  mlir::PassPipelineRegistration
   ::mlir::registerPass("lz-interpret",
                        "Interpret lz IR and generate statistics of thunking.",
                        []() -> std::unique_ptr<::mlir::Pass> {

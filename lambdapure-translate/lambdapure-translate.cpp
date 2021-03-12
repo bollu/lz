@@ -11,29 +11,29 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include "lambdapure/Dialect.h"
 #include "Hask/HaskDialect.h"
 #include "Pointer/PointerDialect.h"
+#include "lambdapure/Dialect.h"
 
 // https://github.com/llvm/llvm-project/blob/e21adfa32d8822f9ea4058c3e365a841d87cb3ee/mlir/lib/Target/LLVMIR/ConvertFromLLVMIR.cpp
 using namespace mlir;
 using namespace llvm;
 
-
 // I cry. Remove this to pass indent as state.
 static std::string offset = "";
 
-
 bool startswith(std::string haystack, std::string needle) {
-  if (haystack.size() < needle.size()) return false;
-  for(int i = 0; i < (int) needle.size(); ++i) {
-    if (haystack[i] != needle[i]) { return false; }
+  if (haystack.size() < needle.size())
+    return false;
+  for (int i = 0; i < (int)needle.size(); ++i) {
+    if (haystack[i] != needle[i]) {
+      return false;
+    }
   }
   return true;
 }
 
-
-const char * GLOBAL_BOX_NAME = "HACK_SPECIAL_BOX"; 
+const char *GLOBAL_BOX_NAME = "HACK_SPECIAL_BOX";
 extern "C" {
 const char *__asan_default_options() { return "detect_leaks=0"; }
 }
@@ -49,7 +49,7 @@ const char *__asan_default_options() { return "detect_leaks=0"; }
 // === AST ===
 // === AST ===
 
-enum VarType { object, u64, u32, u16, u8 , box};
+enum VarType { object, u64, u32, u16, u8, box };
 std::string stringOfType(VarType t);
 std::string stringOfType(std::vector<VarType> ts);
 std::string stringOfType(std::vector<VarType> ts, VarType t);
@@ -90,7 +90,6 @@ public:
   static bool classof(const ExprAST *c) { return c->getKind() == NumberExpr; }
 };
 
-
 // Strings
 class StringExprAST : public ExprAST {
   std::string s;
@@ -102,7 +101,6 @@ public:
   /// LLVM style RTTI
   static bool classof(const ExprAST *c) { return c->getKind() == StringExpr; }
 };
-
 
 // Variable expression
 class VariableExprAST : public ExprAST {
@@ -217,12 +215,7 @@ public:
 class RetStmtAST : public StmtAST {
 
 public:
-  enum Kind {
-    Direct,
-    Case,
-    Block,
-    Jump
-  };
+  enum Kind { Direct, Case, Block, Jump };
   RetStmtAST(Kind Kind, Location Location) : StmtAST(Location), Kind(Kind) {}
   virtual ~RetStmtAST() = default;
   virtual void print() override = 0;
@@ -245,11 +238,12 @@ public:
 
 class JumpRetStmtAST : public RetStmtAST {
   int BlockIx;
-//  std::vector<std::string> Vars;
+  //  std::vector<std::string> Vars;
   std::string Var; // so far have only seen a single variable
 public:
   JumpRetStmtAST(Location location, int BlockIx, std::string Var)
-      : RetStmtAST(RetStmtAST::Kind::Jump, location), BlockIx(BlockIx), Var(Var) {}
+      : RetStmtAST(RetStmtAST::Kind::Jump, location), BlockIx(BlockIx),
+        Var(Var) {}
   void print() override {
     llvm::errs() << "jmp block_" << BlockIx << " " << Var << "\n";
   };
@@ -272,9 +266,8 @@ public:
                   std::vector<VarType> ArgTypes,
                   std::unique_ptr<RetStmtAST> Inner,
                   std::unique_ptr<RetStmtAST> After)
-  : RetStmtAST(Block, location), blockId(blockId),
-        Args(std::move(Args)), ArgTypes(ArgTypes),
-        Inner(std::move(Inner)), After(std::move(After)) {
+      : RetStmtAST(Block, location), blockId(blockId), Args(std::move(Args)),
+        ArgTypes(ArgTypes), Inner(std::move(Inner)), After(std::move(After)) {
     assert(this->Args.size() == ArgTypes.size());
   }
   void print() override {
@@ -295,20 +288,14 @@ public:
     assert(this->Args.size() == 1);
     assert(this->ArgTypes.size() == 1);
     assert(this->Args.size() == ArgTypes.size());
-    return { this->Args.at(0).get(), this->ArgTypes.at(0) };
+    return {this->Args.at(0).get(), this->ArgTypes.at(0)};
   }
 
-  RetStmtAST *getAfter() {
-    return this->After.get();
-  }
+  RetStmtAST *getAfter() { return this->After.get(); }
 
-  RetStmtAST *getInner() {
-    return this->Inner.get();
-  }
+  RetStmtAST *getInner() { return this->Inner.get(); }
 
-  int getBlockId() const {
-    return this->blockId;
-  }
+  int getBlockId() const { return this->blockId; }
 };
 
 class FBodyAST {
@@ -420,7 +407,6 @@ void LetStmtAST::print() {
 }
 
 void VariableExprAST::print() { std::cerr << Name; }
-
 
 void NumberExprAST::print() { std::cerr << Val; }
 void AppExprAST::print() {
@@ -580,7 +566,6 @@ public:
 // === LEXER ===
 // === LEXER ===
 
-
 enum TokenType : int {
   tok_eof = 0,
 
@@ -591,16 +576,16 @@ enum TokenType : int {
   tok_l_square_brack = '[',
   tok_r_square_brack = ']',
   // keywords
-  tok_def = -2,  // def
-  tok_let = -3,  // let
-  tok_ret = -4,  // ret
-  tok_case = -5, // case
-  tok_app = -6,  // app
-  tok_ctor = -7, // ctor
-  tok_proj = -8, // proj
-  tok_pap = -9,  // pap
-  tok_jmp = -10, // jmp
-  tok_box = -11, // ◾
+  tok_def = -2,     // def
+  tok_let = -3,     // let
+  tok_ret = -4,     // ret
+  tok_case = -5,    // case
+  tok_app = -6,     // app
+  tok_ctor = -7,    // ctor
+  tok_proj = -8,    // proj
+  tok_pap = -9,     // pap
+  tok_jmp = -10,    // jmp
+  tok_box = -11,    // ◾
   tok_string = -11, // ◾
   //....
   // values
@@ -652,7 +637,6 @@ private:
     return TokenType(res);
   }
 
-
   TokenType getTok() {
     identifierStr = "~UNK~";
 
@@ -662,7 +646,7 @@ private:
 
     if (lastChar == '"') {
       identifierStr = "";
-      while(1) {
+      while (1) {
         char c = getNextChar();
         if (c == '"') {
           lastChar = TokenType(getNextChar());
@@ -681,12 +665,10 @@ private:
         mlir::FileLineColLoc::get("UNKNOWN-FILE", curLine, curCol, context);
 
     if (lastChar == TokenType::tok_box) {
-        TokenType ThisChar = TokenType(lastChar);
-        lastChar = TokenType(getNextChar());
-        return ThisChar;
+      TokenType ThisChar = TokenType(lastChar);
+      lastChar = TokenType(getNextChar());
+      return ThisChar;
     }
-    
-
 
     // if this is [a-zA-Z][a-zA-Z0-9_]
     if (isalpha(lastChar) || lastChar == '_') {
@@ -694,8 +676,8 @@ private:
       lastChar = TokenType(getNextChar());
 
       //[a-zA-Z][a-zA-Z0-9_.!]
-      while (lastChar == '\'' || lastChar == '.' || lastChar == '!' || lastChar == '-' ||
-             isalnum(lastChar) || lastChar == '_') {
+      while (lastChar == '\'' || lastChar == '.' || lastChar == '!' ||
+             lastChar == '-' || isalnum(lastChar) || lastChar == '_') {
         // replace apostrophe with _prime, c cant have
         // it in function names
         if (lastChar == '\'') {
@@ -703,11 +685,10 @@ private:
         } else if (lastChar == '.') {
           identifierStr += "_dot_";
         } else if (lastChar == '!') {
-          identifierStr += "_not_";
+          identifierStr += "_bang_";
         } else if (lastChar == '-') {
           identifierStr += "_hyphen_";
-        }
-        else {
+        } else {
           assert(isalnum(lastChar) || lastChar == '_');
           identifierStr += lastChar;
         }
@@ -730,7 +711,7 @@ private:
       if (identifierStr == "pap")
         return tok_pap;
       if (identifierStr == "jmp")
-	return tok_jmp;
+        return tok_jmp;
 
       return tok_id;
     }
@@ -775,7 +756,8 @@ public:
                    << "char:|" << (char)tok << "|"
                    << "; FOUND |" << curTok << "|"
                    << "char |" << (char)curTok << "|\n";
-      llvm::errs() << "location: |" << this->curLine << ":" << this->curCol << "|\n";
+      llvm::errs() << "location: |" << this->curLine << ":" << this->curCol
+                   << "|\n";
     }
     assert(tok == curTok && "consume Token mismatch expectation");
     getNextToken();
@@ -802,34 +784,31 @@ public:
 // === PARSER ===
 // === PARSER ===
 
-
 void unexpectedTokenError(Lexer &lexer) {
-    std::cerr << "unexpected token| id/text of token: |" << lexer.getId() << "| ";
-    if (lexer.getCurToken() > 0) {
-        std::cerr << "token as character: |" << (char)lexer.getCurToken() << "|";
-    } else {
-        std::cerr << "token: |" << lexer.getCurToken() << "|";
-    }
-    std::cerr << " loc |" << lexer.getLine() << ":" << lexer.getCol() << "|"
-        << std::endl;
-    lexer.getNextToken();
+  std::cerr << "unexpected token| id/text of token: |" << lexer.getId() << "| ";
+  if (lexer.getCurToken() > 0) {
+    std::cerr << "token as character: |" << (char)lexer.getCurToken() << "|";
+  } else {
+    std::cerr << "token: |" << lexer.getCurToken() << "|";
+  }
+  std::cerr << " loc |" << lexer.getLine() << ":" << lexer.getCol() << "|"
+            << std::endl;
+  lexer.getNextToken();
 }
-
 
 struct DebugCall {
   static int indent;
   const char *name;
-  DebugCall (const char *name): name(name) {
+  DebugCall(const char *name) : name(name) {
 
     // for(int i = 0; i < indent*2; ++i) { std::cerr << " "; }
-    // std::cerr << "vvv" << name << "\n"; 
+    // std::cerr << "vvv" << name << "\n";
     indent++;
-
   }
 
-  ~DebugCall() { 
+  ~DebugCall() {
     // for(int i = 0; i < indent*2; ++i) { std::cerr << " "; }
-    // std::cerr << "^^^" << name << "\n"; 
+    // std::cerr << "^^^" << name << "\n";
     indent--;
   }
 };
@@ -857,7 +836,7 @@ private:
       result = u64;
     } else if (lexer.getId() == "usize") {
       result = u64;
-    }  else if (lexer.getCurToken() == TokenType::tok_box) {
+    } else if (lexer.getCurToken() == TokenType::tok_box) {
       result = u64;
       // result = box;
     } else {
@@ -880,12 +859,17 @@ private:
     DebugCall d(__PRETTY_FUNCTION__);
 
     if (lexer.getId() == "~UNK~") {
-      llvm::errs() << "~UNK~ token type: |" << lexer.getCurToken() << " | token as char: |" << (char) lexer.getCurToken()
-      <<  "| [" << lexer.getLine() << ":" << lexer.getCol() << "]\n";
+      llvm::errs() << "~UNK~ token type: |" << lexer.getCurToken()
+                   << " | token as char: |" << (char)lexer.getCurToken()
+                   << "| [" << lexer.getLine() << ":" << lexer.getCol()
+                   << "]\n";
       assert(lexer.getCurToken() == TokenType::tok_box);
-      errs() << "SUPER HACK: Box at variable: |" << lexer.getLine() << ":" << lexer.getCol() << "|\n";
+      errs() << "SUPER HACK: Box at variable: |" << lexer.getLine() << ":"
+             << lexer.getCol() << "|\n";
     }
-    std::string varName = lexer.getCurToken() == TokenType::tok_box ? std::string(GLOBAL_BOX_NAME) : lexer.getId();
+    std::string varName = lexer.getCurToken() == TokenType::tok_box
+                              ? std::string(GLOBAL_BOX_NAME)
+                              : lexer.getId();
     auto res = std::make_unique<VariableExprAST>(varName);
     lexer.getNextToken(); // consume var
     return res;
@@ -953,7 +937,7 @@ private:
     return std::make_unique<ProjExprAST>(i, ParseVarExpr());
   }
   std::unique_ptr<ExprAST> ParseExpression() {
-      DebugCall d(__PRETTY_FUNCTION__);
+    DebugCall d(__PRETTY_FUNCTION__);
 
     if (lexer.getCurToken() == tok_id) {
       return ParseCallExpr();
@@ -969,16 +953,18 @@ private:
     } else if (lexer.getCurToken() == tok_proj) {
       return ParseProjExpr();
     } else if (lexer.getCurToken() == tok_string) {
-      llvm::errs() << "STRING: |" << lexer.getId() << "| [" << lexer.getLine() << ":" << lexer.getCol() << "] \n";
-      std::unique_ptr<StringExprAST> ptr =  std::make_unique<StringExprAST>(lexer.getId());
+      llvm::errs() << "STRING: |" << lexer.getId() << "| [" << lexer.getLine()
+                   << ":" << lexer.getCol() << "] \n";
+      std::unique_ptr<StringExprAST> ptr =
+          std::make_unique<StringExprAST>(lexer.getId());
       lexer.getNextToken(); // consume semicolon.
       assert(lexer.getCurToken() == tok_semicolon);
-      
-      return ptr; 
+
+      return ptr;
     } else {
       std::cerr << "Invalid Expression, nullptr" << std::endl;
       return nullptr;
-    } 
+    }
   }
 
   // let var := expression
@@ -1028,7 +1014,7 @@ private:
     lexer.consume(TokenType::tok_id); // consume argument
 
     return std::make_unique<JumpRetStmtAST>(loc, blockIx, arg);
-//    assert(false && "don't know how to parse jump statement");
+    //    assert(false && "don't know how to parse jump statement");
   }
   std::unique_ptr<CaseStmtAST> ParseCaseStmt() {
     DebugCall d(__PRETTY_FUNCTION__);
@@ -1058,7 +1044,9 @@ private:
     std::vector<VarType> ArgTypes;
 
     while (true) {
-      if (lexer.getCurToken() != '(') { break; }
+      if (lexer.getCurToken() != '(') {
+        break;
+      }
       lexer.consume(TokenType('('));
       Args.push_back(ParseVarExpr());
       lexer.consume(TokenType(':'));
@@ -1076,7 +1064,8 @@ private:
 
     llvm::errs() << "=======parsed inner!=======\n";
 
-    lexer.consume(TokenType::tok_semicolon); // consume ; between the inner and outer
+    lexer.consume(
+        TokenType::tok_semicolon); // consume ; between the inner and outer
 
     llvm::errs() << "=======parsing outer...=======\n";
 
@@ -1084,10 +1073,8 @@ private:
 
     llvm::errs() << "=======parsed outer!=======\n";
 
-    return std::make_unique<BlockRetStmtAST>(loc, blockId,
-                                             std::move(Args),
-                                             ArgTypes,
-                                             std::move(inner),
+    return std::make_unique<BlockRetStmtAST>(loc, blockId, std::move(Args),
+                                             ArgTypes, std::move(inner),
                                              std::move(outer));
     assert(false && "don't know how to parse block ret statement");
   }
@@ -1103,12 +1090,12 @@ private:
     } else if (lexer.getCurToken() == tok_jmp) {
       return ParseJumpStmt();
     } else if (startswith(id, "block_")) {
-       // unexpectedTokenError(lexer);
-       const  std::string blockIdStr = id.substr(strlen("block_"));
-       int blockId = atoi(blockIdStr.c_str());
-       lexer.getNextToken(); // eat current identifier;
-       return ParseBlockRetStmt(blockId);
-       assert(false && "unable to parse block_");
+      // unexpectedTokenError(lexer);
+      const std::string blockIdStr = id.substr(strlen("block_"));
+      int blockId = atoi(blockIdStr.c_str());
+      lexer.getNextToken(); // eat current identifier;
+      return ParseBlockRetStmt(blockId);
+      assert(false && "unable to parse block_");
     } else {
       unexpectedTokenError(lexer);
       assert(false && "unable to parse return statement.");
@@ -1125,9 +1112,8 @@ private:
     while (lexer.getCurToken() == tok_let) {
       stmts.push_back(ParseLetStmt());
     }
-    
+
     return std::make_unique<FBodyAST>(std::move(stmts), ParseRetStmt());
-    
   }
 
   std::unique_ptr<FunctionAST> ParseFunction() {
@@ -1146,7 +1132,7 @@ private:
       if (lexer.getCurToken() != '(') {
         break;
       }
-      
+
       lexer.getNextToken(); // eat '('
       Args.push_back(ParseVarExpr());
       lexer.getNextToken(); // consume :
@@ -1176,15 +1162,15 @@ public:
       case tok_def:
         FList.push_back(ParseFunction());
         break;
-     case tok_l_square_brack: {
+      case tok_l_square_brack: {
         // TODO: check that we found [init]
         lexer.getNextToken(); // eatj
         TokenType rbrack = lexer.getNextToken();
-        assert (rbrack == tok_r_square_brack && "expected [init]");
+        assert(rbrack == tok_r_square_brack && "expected [init]");
 
         lexer.getNextToken();
         break;
-    }
+      }
 
       default: {
         unexpectedTokenError(lexer);
@@ -1196,6 +1182,7 @@ public:
   }
 }; // class Parser
 
+
 // === MLIRGEN ===
 // === MLIRGEN ===
 // === MLIRGEN ===
@@ -1206,13 +1193,61 @@ public:
 // === MLIRGEN ===
 // === MLIRGEN ===
 // === MLIRGEN ===
+
 class MLIRGenImpl {
 public:
   MLIRGenImpl(mlir::MLIRContext &context)
       : builder(&context), lastLoc(builder.getUnknownLoc()) {}
+
+
+  void genStdlib(mlir::ModuleOp module) {
+    auto addPrivateFunction = [&](std::string name, FunctionType fty) {
+      mlir::FuncOp f =
+      mlir::FuncOp::create(builder.getUnknownLoc(), name, fty);
+      f.setVisibility(mlir::SymbolTable::Visibility::Private);
+      module.push_back(f);
+    };
+    mlir::standalone::ValueType vty = builder.getType<standalone::ValueType>();
+    mlir::IntegerType i8 = builder.getIntegerType(8);
+    addPrivateFunction("Nat_dot_sub",
+                       builder.getFunctionType({vty, vty}, {vty}));
+    addPrivateFunction("Nat_dot_add",
+                       builder.getFunctionType({vty, vty}, {vty}));
+
+    addPrivateFunction("Nat_dot_repr",
+                       builder.getFunctionType({vty}, {vty}));
+    addPrivateFunction("Nat_dot_decLt",
+                       builder.getFunctionType({vty, vty}, {i8}));
+    addPrivateFunction("Nat_dot_decEq",
+                       builder.getFunctionType({vty, vty}, {i8}));
+    addPrivateFunction("String_dot_instInhabitedString",
+                       builder.getFunctionType({}, {vty}));
+    addPrivateFunction("String_dot_toNat_bang_",
+                       builder.getFunctionType({vty}, {vty}));
+    addPrivateFunction("String_dot_append",
+                       builder.getFunctionType({vty, vty}, {vty}));
+    addPrivateFunction("Array_dot_empty_dot__closed_1",
+                       builder.getFunctionType({}, {vty}));
+    addPrivateFunction("Array_dot_set_bang_",
+                       builder.getFunctionType({vty, vty, vty, vty}, {vty}));
+    addPrivateFunction("Array_dot_push",
+                       builder.getFunctionType({vty, vty, vty}, {vty}));
+    addPrivateFunction("Array_dot_size",
+                       builder.getFunctionType({vty, vty}, {vty}));
+        addPrivateFunction("Array_dot_get",
+                       builder.getFunctionType({vty, vty, vty}, {vty}));
+    addPrivateFunction("List_dot_head_bang__dot__rarg_dot__closed_3",
+                       builder.getFunctionType({}, {vty}));
+    addPrivateFunction("IO_dot_println_dot__at_dot_Lean_dot_instEval_dot__spec_1",
+                       builder.getFunctionType({vty, vty}, {vty}));
+    addPrivateFunction("panic",
+                       builder.getFunctionType({vty, vty, vty}, {vty}));
+  }
   // converts lambdapure AST -> MLIR
   mlir::ModuleOp mlirGen(ModuleAST &moduleAST) {
     theModule = mlir::ModuleOp::create(loc());
+    genStdlib(theModule);
+
     auto funcs = moduleAST.getFList();
     for (auto &funcAST : funcs) {
       mlir::FuncOp func = mlirGen(*funcAST);
@@ -1337,47 +1372,50 @@ private:
   }
 
   mlir::LogicalResult mlirGenJumpRetStmt(JumpRetStmtAST &jump) {
-    // assert(blockTable.count(jump.getBlockIx()) && "expected to find BB index");
-    // mlir::Block *bb = blockTable.lookup(jump.getBlockIx());
+    // assert(blockTable.count(jump.getBlockIx()) && "expected to find BB
+    // index"); mlir::Block *bb = blockTable.lookup(jump.getBlockIx());
     // assert(bb && "expected legal basic block");
     mlir::Value var(scopeTable.lookup(jump.getVar()));
-    standalone::HaskJumpOp op = builder.create<standalone::HaskJumpOp>(loc(), jump.getBlockIx());
-    (void) op;
+    standalone::HaskJumpOp op =
+        builder.create<standalone::HaskJumpOp>(loc(), jump.getBlockIx());
+    (void)op;
     //    builder.create<BranchOp>(loc(), bb, var);
 
     llvm::errs() << "===generated Jump===";
-//    bb->dump();
+    //    bb->dump();
     llvm::errs() << "====\n";
     return success();
   }
 
-    mlir::LogicalResult mlirGenBlockRetStmt(BlockRetStmtAST &blockAST) {
+  mlir::LogicalResult mlirGenBlockRetStmt(BlockRetStmtAST &blockAST) {
     VariableExprAST *var;
     VarType argty;
 
-//    ScopedHashTableScope<int, mlir::Block*> Scope(blockTable);
-      OpBuilder::InsertionGuard guard(builder);
-//      mlir::Block *oldBB = builder.getBlock();
-      std::tie(var, argty) = blockAST.getArg();
+    //    ScopedHashTableScope<int, mlir::Block*> Scope(blockTable);
+    OpBuilder::InsertionGuard guard(builder);
+    //      mlir::Block *oldBB = builder.getBlock();
+    std::tie(var, argty) = blockAST.getArg();
 
-      // new scope for this blockAST.
-    standalone::HaskBlockOp op = builder.create<standalone::HaskBlockOp>(loc(), blockAST.getBlockId());
+    // new scope for this blockAST.
+    standalone::HaskBlockOp op =
+        builder.create<standalone::HaskBlockOp>(loc(), blockAST.getBlockId());
     mlir::Region &innerRegion = op.getBlockRegion();
-    Block * innerBB = builder.createBlock(&innerRegion, {}, {typeGen(argty)});
+    Block *innerBB = builder.createBlock(&innerRegion, {}, {typeGen(argty)});
     builder.setInsertionPointToEnd(innerBB);
 
-//    mlir::Block *bb = builder.createBlock(builder.getInsertionBlock()->getParent(), {}, {typeGen(argty)});
+    //    mlir::Block *bb =
+    //    builder.createBlock(builder.getInsertionBlock()->getParent(), {},
+    //    {typeGen(argty)});
     LogicalResult genInner = mlirGen(*blockAST.getInner());
     assert(succeeded(genInner) && "unable to codegen stuff inside a block");
 
-
-    mlir::Region &restRegion  = op.getRestRegion();
-    Block * restBB = builder.createBlock(&restRegion);
+    mlir::Region &restRegion = op.getRestRegion();
+    Block *restBB = builder.createBlock(&restRegion);
     builder.setInsertionPointToEnd(restBB);
     LogicalResult genAfter = mlirGen(*blockAST.getAfter());
     assert(succeeded(genAfter) && "unable to codegen stuff after a block");
 
-//    builder.setInsertionPointToEnd(bb);
+    //    builder.setInsertionPointToEnd(bb);
 
     llvm::errs() << "===generated BlockRet===\n";
     llvm::errs() << "=======\n";
@@ -1391,8 +1429,7 @@ private:
     auto bodies = casestmt.getBodies();
     mlir::Type t = curr_val.getType();
     if (t.isa<mlir::standalone::ValueType>()) {
-      curr_val = builder.create<mlir::standalone::TagGetOp>(
-          loc(), curr_val);
+      curr_val = builder.create<mlir::standalone::TagGetOp>(loc(), curr_val);
     }
 
     // assert(false && "TODO: switch up case");
@@ -1425,13 +1462,14 @@ private:
       return mlirGenBlockRetStmt(cast<BlockRetStmtAST>(ret));
     case RetStmtAST::Jump:
       return mlirGenJumpRetStmt(cast<JumpRetStmtAST>(ret));
-      }
+    }
 
     assert(false && "unhandled retstmt");
   }
 
   mlir::Value mlirGen(NumberExprAST &expr) {
-    // return builder.create<mlir::lambdapure::IntegerConstOp>(loc(), expr.getValue());
+    // return builder.create<mlir::lambdapure::IntegerConstOp>(loc(),
+    // expr.getValue());
     return builder.create<standalone::IntegerConstOp>(loc(), expr.getValue());
   }
 
@@ -1452,7 +1490,6 @@ private:
     }
     // return builder.create<mlir::lambdapure::AppOp>(loc(), funcVal, args, ty);
     return builder.create<standalone::ApOp>(loc(), funcVal, args, ty);
-
   }
 
   mlir::Value mlirGenString(StringExprAST &expr, mlir::Type ty) {
@@ -1462,7 +1499,7 @@ private:
 
   mlir::Value mlirGenCall(CallExprAST &expr, mlir::Type ty) {
     llvm::SmallVector<mlir::Value, 4> args;
-    int i = 0; 
+    int i = 0;
     llvm::errs() << "\nCALLOP:\n";
     for (auto &varExpr : expr.getArgs()) {
       llvm::errs() << "generating argument |" << varExpr->getName() << "|\n";
@@ -1481,9 +1518,10 @@ private:
     // llvm::SmallVector<mlir::Type, 4> results;
     // results.push_back(ty);
     // TODO HACK: need to resolve all functions correctly.
-    return builder.create<mlir::lambdapure::CallOp>(loc(), fName, args, ty);
-    // mlir::CallOp call =  builder.create<mlir::CallOp>(loc(), ty, fName, args);
-    // return call.getResult(0);
+    //     need to create custom CallOp for
+    // return builder.create<mlir::lambdapure::CallOp>(loc(), fName, args, ty);
+    mlir::CallOp call = builder.create<mlir::CallOp>(loc(), ty, fName, args);
+    return call.getResult(0);
   }
 
   mlir::Value mlirGen(PapExprAST &expr, mlir::Type ty) {
@@ -1500,9 +1538,8 @@ private:
     auto varExpr = expr.getVar();
     // return builder.create<mlir::lambdapure::ProjectionOp>(
     //     loc(), expr.getIndex(), mlirGen(*varExpr), ty);
-    return builder.create<standalone::ProjectionOp>(
-        loc(), expr.getIndex(), mlirGenVar(*varExpr), ty);
-
+    return builder.create<standalone::ProjectionOp>(loc(), expr.getIndex(),
+                                                    mlirGenVar(*varExpr), ty);
   }
 
   mlir::Value mlirGen(CtorExprAST &expr, mlir::Type ty) {
@@ -1510,11 +1547,14 @@ private:
     for (auto &varExpr : expr.getArgs()) {
       args.push_back(mlirGenVar(*varExpr));
     }
-    // return builder.create<mlir::lambdapure::ConstructorOp>(loc(), expr.getTag(),
+    // return builder.create<mlir::lambdapure::ConstructorOp>(loc(),
+    // expr.getTag(),
     //                                                        args, ty);
 
-    assert(ty.isa<standalone::ValueType>() && "expected type to be a value type!");
-    return builder.create<standalone::HaskConstructOp>(loc(), std::to_string(expr.getTag()), args);
+    assert(ty.isa<standalone::ValueType>() &&
+           "expected type to be a value type!");
+    return builder.create<standalone::HaskConstructOp>(
+        loc(), std::to_string(expr.getTag()), args);
 
     // return nullptr;
   }
@@ -1597,12 +1637,12 @@ OwningModuleRef translateLambdapureToModule(llvm::SourceMgr &sourceMgr,
   std::unique_ptr<ModuleAST> lambdapureModule = parser.parse();
 
   context->loadDialect<mlir::StandardOpsDialect>();
-  context->loadDialect<mlir::lambdapure::LambdapureDialect>();
+  // context->loadDialect<mlir::lambdapure::LambdapureDialect>();
   context->loadDialect<standalone::HaskDialect>();
   context->loadDialect<ptr::PtrDialect>();
   // OwningModuleRef module(ModuleOp::create(
   //     FileLineColLoc::get("", /*line=*/0, /*column=*/0, context)));
-
+  
   // Importer deserializer(context, module.get());
   // for (llvm::GlobalVariable &gv : llvmModule->globals()) {
   //   if (!deserializer.processGlobal(&gv))
@@ -1613,7 +1653,7 @@ OwningModuleRef translateLambdapureToModule(llvm::SourceMgr &sourceMgr,
   //     return {};
   // }
 
-  mlir::ModuleOp module =  MLIRGenImpl(*context).mlirGen(*lambdapureModule);
+  mlir::ModuleOp module = MLIRGenImpl(*context).mlirGen(*lambdapureModule);
   llvm::errs() << "==========final module============\n";
   llvm::errs() << "==========final module============\n";
   llvm::errs() << "==========final module============\n";
@@ -1634,4 +1674,3 @@ int main(int argc, char **argv) {
   return failed(
       mlir::mlirTranslateMain(argc, argv, "MLIR Translation Testing Tool"));
 }
-
