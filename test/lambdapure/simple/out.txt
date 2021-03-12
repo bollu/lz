@@ -1,0 +1,176 @@
+module  {
+  func @Expr_dot_constFolding_dot_match_1_dot__rarg(%arg0: !lz.value, %arg1: !lz.value, %arg2: !lz.value, %arg3: !lz.value, %arg4: !lz.value) -> !lz.value {
+    %0 = "lz.tagget"(%arg0) : (!lz.value) -> i64
+    %1 = "lz.case"(%0) ( {
+      %2 = "lz.project"(%arg0) {value = 0 : i64} : (!lz.value) -> !lz.value
+      %3 = "lz.tagget"(%arg1) : (!lz.value) -> i64
+      %4 = "lz.case"(%3) ( {
+        %5 = "lz.ap"(%arg4, %arg0, %arg1) : (!lz.value, !lz.value, !lz.value) -> !lz.thunk<!lz.value>
+        lz.return %5 : !lz.thunk<!lz.value>
+      },  {
+        %5 = "lz.project"(%arg1) {value = 0 : i64} : (!lz.value) -> !lz.value
+        %6 = "lz.project"(%arg1) {value = 1 : i64} : (!lz.value) -> !lz.value
+        "lz.block"() ( {
+        ^bb0(%arg5: !lz.value):  // no predecessors
+          %7 = "lz.tagget"(%6) : (!lz.value) -> i64
+          %8 = "lz.case"(%7) ( {
+            %9 = "lz.project"(%6) {value = 0 : i64} : (!lz.value) -> !lz.value
+            %10 = "lz.ap"(%arg2, %2, %5, %9) : (!lz.value, !lz.value, !lz.value, !lz.value) -> !lz.thunk<!lz.value>
+            lz.return %10 : !lz.thunk<!lz.value>
+          },  {
+            %9 = "lz.ap"(%arg4, %arg0, %arg1) : (!lz.value, !lz.value, !lz.value) -> !lz.thunk<!lz.value>
+            lz.return %9 : !lz.thunk<!lz.value>
+          },  {
+            %9 = "lz.ap"(%arg4, %arg0, %arg1) : (!lz.value, !lz.value, !lz.value) -> !lz.thunk<!lz.value>
+            lz.return %9 : !lz.thunk<!lz.value>
+          }) {alt0 = @"1", alt1 = @"2", alt2 = @"3"} : (i64) -> !lz.value
+          lz.return %8 : !lz.value
+        },  {
+          %7 = "lz.tagget"(%5) : (!lz.value) -> i64
+          %8 = "lz.case"(%7) ( {
+            %9 = "lz.project"(%5) {value = 0 : i64} : (!lz.value) -> !lz.value
+            %10 = "lz.tagget"(%6) : (!lz.value) -> i64
+            %11 = "lz.case"(%10) ( {
+              %12 = "lz.project"(%6) {value = 0 : i64} : (!lz.value) -> !lz.value
+              %13 = "lz.ap"(%arg2, %2, %5, %12) : (!lz.value, !lz.value, !lz.value, !lz.value) -> !lz.thunk<!lz.value>
+              lz.return %13 : !lz.thunk<!lz.value>
+            },  {
+              %12 = "lz.ap"(%arg3, %2, %9, %6) : (!lz.value, !lz.value, !lz.value, !lz.value) -> !lz.thunk<!lz.value>
+              lz.return %12 : !lz.thunk<!lz.value>
+            },  {
+              %12 = "lz.ap"(%arg3, %2, %9, %6) : (!lz.value, !lz.value, !lz.value, !lz.value) -> !lz.thunk<!lz.value>
+              lz.return %12 : !lz.thunk<!lz.value>
+            },  {
+              %12 = "lz.construct"() {dataconstructor = @"0"} : () -> !lz.value
+              "lz.jump"() {value = 10 : i64} : () -> ()
+            },  {
+              %12 = "lz.construct"() {dataconstructor = @"0"} : () -> !lz.value
+              "lz.jump"() {value = 10 : i64} : () -> ()
+            },  {
+              %12 = "lz.ap"(%arg4, %arg0, %arg1) : (!lz.value, !lz.value, !lz.value) -> !lz.thunk<!lz.value>
+              lz.return %12 : !lz.thunk<!lz.value>
+            },  {
+              %12 = "lz.ap"(%arg4, %arg0, %arg1) : (!lz.value, !lz.value, !lz.value) -> !lz.thunk<!lz.value>
+              lz.return %12 : !lz.thunk<!lz.value>
+            },  {
+              %12 = "lz.ap"(%arg4, %arg0, %arg1) : (!lz.value, !lz.value, !lz.value) -> !lz.thunk<!lz.value>
+              lz.return %12 : !lz.thunk<!lz.value>
+            }) {alt0 = @"1", alt1 = @"2", alt2 = @"3", alt3 = @"4", alt4 = @"5", alt5 = @"6", alt6 = @"7", alt7 = @"8"} : (i64) -> !lz.value
+            lz.return %11 : !lz.value
+          }) {alt0 = @"1"} : (i64) -> !lz.value
+          lz.return %8 : !lz.value
+        }) {value = 10 : i64} : () -> ()
+      }) {alt0 = @"1", alt1 = @"2"} : (i64) -> !lz.value
+      lz.return %4 : !lz.value
+    }) {alt0 = @"1"} : (i64) -> !lz.value
+    lz.return %1 : !lz.value
+  }
+  func @Expr_dot_constFolding_dot_match_1(%arg0: i64) -> !lz.value {
+    %0 = "lz.pap"() {value = @Expr_dot_constFolding_dot_match_1_dot__rarg} : () -> !lz.value
+    lz.return %0 : !lz.value
+  }
+  func @Expr_dot_constFolding_dot_match_2_dot__rarg(%arg0: !lz.value, %arg1: !lz.value, %arg2: !lz.value) -> !lz.value {
+    %0 = "lz.tagget"(%arg0) : (!lz.value) -> i64
+    %1 = "lz.case"(%0) ( {
+      %2 = "lz.ap"(%arg2, %arg0) : (!lz.value, !lz.value) -> !lz.thunk<!lz.value>
+      lz.return %2 : !lz.thunk<!lz.value>
+    },  {
+      %2 = "lz.project"(%arg0) {value = 0 : i64} : (!lz.value) -> !lz.value
+      %3 = "lz.project"(%arg0) {value = 1 : i64} : (!lz.value) -> !lz.value
+      %4 = "lz.ap"(%arg1, %2, %3) : (!lz.value, !lz.value, !lz.value) -> !lz.thunk<!lz.value>
+      lz.return %4 : !lz.thunk<!lz.value>
+    },  {
+      %2 = "lz.ap"(%arg2, %arg0) : (!lz.value, !lz.value) -> !lz.thunk<!lz.value>
+      lz.return %2 : !lz.thunk<!lz.value>
+    }) {alt0 = @"1", alt1 = @"2", alt2 = @"3"} : (i64) -> !lz.value
+    lz.return %1 : !lz.value
+  }
+  func @Expr_dot_constFolding_dot_match_2(%arg0: i64) -> !lz.value {
+    %0 = "lz.pap"() {value = @Expr_dot_constFolding_dot_match_2_dot__rarg} : () -> !lz.value
+    lz.return %0 : !lz.value
+  }
+  func @Expr_dot_constFolding(%arg0: !lz.value) -> !lz.value {
+    %0 = "lz.tagget"(%arg0) : (!lz.value) -> i64
+    %1 = "lz.case"(%0) ( {
+      lz.return %arg0 : !lz.value
+    },  {
+      %2 = "lz.project"(%arg0) {value = 0 : i64} : (!lz.value) -> !lz.value
+      %3 = "lz.project"(%arg0) {value = 1 : i64} : (!lz.value) -> !lz.value
+      %4 = "lz.tagget"(%2) : (!lz.value) -> i64
+      %5 = "lz.case"(%4) ( {
+        %6 = "lz.project"(%2) {value = 0 : i64} : (!lz.value) -> !lz.value
+        %7 = "lz.tagget"(%3) : (!lz.value) -> i64
+        %8 = "lz.case"(%7) ( {
+          %9 = "lz.construct"(%2, %3) {dataconstructor = @"1"} : (!lz.value, !lz.value) -> !lz.value
+          lz.return %9 : !lz.value
+        },  {
+          %9 = "lz.project"(%3) {value = 0 : i64} : (!lz.value) -> !lz.value
+          %10 = "lz.project"(%3) {value = 1 : i64} : (!lz.value) -> !lz.value
+          "lz.block"() ( {
+          ^bb0(%arg1: !lz.value):  // no predecessors
+            %11 = "lz.tagget"(%10) : (!lz.value) -> i64
+            %12 = "lz.case"(%11) ( {
+              %13 = "lz.project"(%10) {value = 0 : i64} : (!lz.value) -> !lz.value
+              %14 = "lambdapure.CallOp"(%6, %13) {callee = @Nat_dot_add} : (!lz.value, !lz.value) -> !lz.value
+              %15 = "lz.construct"(%14) {dataconstructor = @"0"} : (!lz.value) -> !lz.value
+              %16 = "lz.construct"(%15, %9) {dataconstructor = @"1"} : (!lz.value, !lz.value) -> !lz.value
+              lz.return %16 : !lz.value
+            },  {
+              %13 = "lz.construct"(%2, %3) {dataconstructor = @"1"} : (!lz.value, !lz.value) -> !lz.value
+              lz.return %13 : !lz.value
+            },  {
+              %13 = "lz.construct"(%2, %3) {dataconstructor = @"1"} : (!lz.value, !lz.value) -> !lz.value
+              lz.return %13 : !lz.value
+            }) {alt0 = @"1", alt1 = @"2", alt2 = @"3"} : (i64) -> !lz.value
+            lz.return %12 : !lz.value
+          },  {
+            %11 = "lz.tagget"(%9) : (!lz.value) -> i64
+            %12 = "lz.case"(%11) ( {
+              %13 = "lz.project"(%9) {value = 0 : i64} : (!lz.value) -> !lz.value
+              %14 = "lz.tagget"(%10) : (!lz.value) -> i64
+              %15 = "lz.case"(%14) ( {
+                %16 = "lz.project"(%10) {value = 0 : i64} : (!lz.value) -> !lz.value
+                %17 = "lambdapure.CallOp"(%6, %16) {callee = @Nat_dot_add} : (!lz.value, !lz.value) -> !lz.value
+                %18 = "lz.construct"(%17) {dataconstructor = @"0"} : (!lz.value) -> !lz.value
+                %19 = "lz.construct"(%18, %9) {dataconstructor = @"1"} : (!lz.value, !lz.value) -> !lz.value
+                lz.return %19 : !lz.value
+              },  {
+                %16 = "lambdapure.CallOp"(%6, %13) {callee = @Nat_dot_add} : (!lz.value, !lz.value) -> !lz.value
+                %17 = "lz.construct"(%16) {dataconstructor = @"0"} : (!lz.value) -> !lz.value
+                %18 = "lz.construct"(%17, %10) {dataconstructor = @"1"} : (!lz.value, !lz.value) -> !lz.value
+                lz.return %18 : !lz.value
+              },  {
+                %16 = "lambdapure.CallOp"(%6, %13) {callee = @Nat_dot_add} : (!lz.value, !lz.value) -> !lz.value
+                %17 = "lz.construct"(%16) {dataconstructor = @"0"} : (!lz.value) -> !lz.value
+                %18 = "lz.construct"(%17, %10) {dataconstructor = @"1"} : (!lz.value, !lz.value) -> !lz.value
+                lz.return %18 : !lz.value
+              },  {
+                %16 = "lz.construct"() {dataconstructor = @"0"} : () -> !lz.value
+                "lz.jump"() {value = 8 : i64} : () -> ()
+              },  {
+                %16 = "lz.construct"() {dataconstructor = @"0"} : () -> !lz.value
+                "lz.jump"() {value = 8 : i64} : () -> ()
+              },  {
+                %16 = "lz.construct"(%2, %3) {dataconstructor = @"1"} : (!lz.value, !lz.value) -> !lz.value
+                lz.return %16 : !lz.value
+              },  {
+                %16 = "lz.construct"(%2, %3) {dataconstructor = @"1"} : (!lz.value, !lz.value) -> !lz.value
+                lz.return %16 : !lz.value
+              },  {
+                %16 = "lz.construct"(%2, %3) {dataconstructor = @"1"} : (!lz.value, !lz.value) -> !lz.value
+                lz.return %16 : !lz.value
+              },  {
+                lz.return %arg0 : !lz.value
+              }) {alt0 = @"1", alt1 = @"2", alt2 = @"3", alt3 = @"4", alt4 = @"5", alt5 = @"6", alt6 = @"7", alt7 = @"8", alt8 = @"9"} : (i64) -> !lz.value
+              lz.return %15 : !lz.value
+            }) {alt0 = @"1"} : (i64) -> !lz.value
+            lz.return %12 : !lz.value
+          }) {value = 8 : i64} : () -> ()
+        }) {alt0 = @"1", alt1 = @"2"} : (i64) -> !lz.value
+        lz.return %8 : !lz.value
+      }) {alt0 = @"1"} : (i64) -> !lz.value
+      lz.return %5 : !lz.value
+    }) {alt0 = @"1", alt1 = @"2"} : (i64) -> !lz.value
+    lz.return %1 : !lz.value
+  }
+}
