@@ -29,6 +29,16 @@
 
 
 # Log:  [newest] to [oldest]
+# March 12th
+
+- `const_fold.lean` fails by `prec(_).`
+- `deriv.lean` fails by `let x_18 : obj := prec(_)._closed_3;`
+- `qsort.lean` fails at  ` let x_1 : obj := "term↑__1"`. It dies at the "up arrow".
+   Need to make lexer robust.
+- `rbmap_checkpoint.lean` fails at `error: expected command, but found term;
+  this error may be due to parsing precedence levels, consider parenthesizing
+  the term` (that is, the file is corrupt?)
+
 
 
 # Match 11th, 2021
@@ -51,6 +61,9 @@ Failed Tests (4):
 Testing Time: 5.72s
   Passed    : 13
 ```
+
+- Tomorrow: bring the interpreter online, for both the "regular ops", and the `Inc/Dec`
+  reference counting ops.
 
 # March 9th, 2021
 - Formatting is defined in `Lean/Compiler/IR/Format.lean`:
