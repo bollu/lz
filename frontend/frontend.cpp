@@ -2378,12 +2378,14 @@ int main(int argc, const char *const *argv) {
   }
 
   // return 0;
-  std::pair<InterpValue, InterpStats> interpOut =
-      interpretModule(mlirmod.get());
-  llvm::outs() << "===running program===\n";
-  llvm::outs() << "value: " << interpOut.first << "\n";
-  llvm::outs() << "statistics:\n" << interpOut.second;
-  llvm::outs() << "\n";
-  llvm::errs().flush();
+  assert(false && "must hook up interpreter");
+
+  // std::pair<InterpValue, InterpStats> interpOut =
+  //    interpretModule(mlirmod.get(), "main");
+  // llvm::outs() << "===running program===\n";
+  // llvm::outs() << "\n";
+  // llvm::outs() << "value: " << interpOut.first << "\n";
+  // llvm::outs() << "statistics:\n" << interpOut.second;
+  // llvm::errs().flush();
   return 0;
 }

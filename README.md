@@ -26,6 +26,8 @@
 - Benchmarks: https://benchmarksgame-team.pages.debian.net/benchmarksgame/program/binarytrees-ghc-7.html
 - compiling _from_ categories: can we have a dialect called `CCC` for closed cartesian
   categories that's compiled efficiently?
+- Can't believe I burned half an hour on this; the correct way to use pass options is to say
+  `--lz-interpret='qwerty=foo'` where `qwerty` is the option declared in `lz-interpret`.
 
 
 # Log:  [newest] to [oldest]

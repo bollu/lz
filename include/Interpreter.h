@@ -285,7 +285,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &o, const InterpStats &s);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &o, const InterpValue &v);
 
 // interpret a module, and interpret the result as an integer. print it out.
-std::pair<InterpValue, InterpStats> interpretModule(mlir::ModuleOp module);
+std::pair<InterpValue, InterpStats> interpretModule(mlir::ModuleOp module, std::string entrypoint);
 
 std::unique_ptr<mlir::Pass> createLzInterpretPass();
 void registerLzInterpretPass();

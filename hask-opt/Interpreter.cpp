@@ -830,28 +830,40 @@ private:
   InterpStats stats;
 };
 
-// interpret a module, and interpret the result as an integer. print it out.
-std::pair<InterpValue, InterpStats> interpretModule(ModuleOp module) {
-  Interpreter I(module);
-  InterpValue val = *I.interpretFunction("main", {});
-  return {val, I.getStats()};
-};
-
 struct LzInterpretPass : public Pass {
-  LzInterpretPass() : Pass(mlir::TypeID::get<LzInterpretPass>()){};
+  LzInterpretPass() : Pass(mlir::TypeID::get<LzInterpretPass>()) {};
   StringRef getName() const override { return "LzInterpretPass"; }
+  Pass::Option<std::string> optionMode{*this,
+                                             "mode",
+                                             llvm::cl::desc("lz/lambdapure"),
+                                             llvm::cl::init("lz")};
+  LzInterpretPass(const LzInterpretPass &other) : Pass(::mlir::TypeID::get<LzInterpretPass>()) {}
 
   std::unique_ptr<Pass> clonePass() const override {
-    auto newInst = std::make_unique<LzInterpretPass>(
+    // https://github.com/llvm/llvm-project/blob/5d613e42d3761e106e5dd8d1731517f410605144/mlir/tools/mlir-tblgen/PassGen.cpp#L90
+     auto newInst = std::make_unique<LzInterpretPass>(
         *static_cast<const LzInterpretPass *>(this));
-    newInst->copyOptionValuesFrom(this);
-    return newInst;
+     newInst->copyOptionValuesFrom(this);
+     return newInst;
   }
 
   void runOnOperation() override {
     mlir::ModuleOp mod(getOperation());
-    std::pair<InterpValue, InterpStats> out = interpretModule(mod);
-    llvm::outs() << out.first << "\n" << out.second << "\n";
+    Interpreter I(mod);
+
+    InterpValue val = [&]() {
+          if (this->optionMode == "lz") {
+            return *I.interpretFunction("main", {});
+          } else {
+            assert(this->optionMode == "lambdapure");
+            InterpValue argc = InterpValue::i(0);
+            // HACK! this needs to be something like empty array..?
+            InterpValue argv = InterpValue::i(42);
+            return *I.interpretFunction("_lean_main", {argc, argv});
+          }
+        }();
+    InterpStats stats = I.getStats();
+    llvm::outs() << val << "\n" << stats << "\n";
   }
 };
 
@@ -860,6 +872,7 @@ std::unique_ptr<mlir::Pass> createLzInterpretPass() {
 }
 
 void registerLzInterpretPass() {
+//  mlir::PassPipelineRegistration
   ::mlir::registerPass("lz-interpret",
                        "Interpret lz IR and generate statistics of thunking.",
                        []() -> std::unique_ptr<::mlir::Pass> {
