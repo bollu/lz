@@ -1,7 +1,10 @@
 #include "Interpreter.h"
 #include "GRIN/GRINOps.h"
+#include "Hask/HaskDialect.h"
+#include "Hask/HaskOps.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "llvm/Support/Casting.h"
 #include <map>
 
 using namespace mlir;
@@ -359,6 +362,11 @@ struct Interpreter {
       }
 
       env.addNew(lam.getResult(), InterpValue::closureLambda(lam, args));
+      return;
+    }
+
+    if (standalone::IntegerConstOp cst = dyn_cast<IntegerConstOp>(op)) {
+      env.addNew(cst.getResult(), InterpValue::i(cst.getValue()));
       return;
     }
 
