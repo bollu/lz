@@ -16,6 +16,11 @@ def filter : L -> L
 | Nil => Nil
 | Cons n l => if n > 5 then filter l else Cons n (filter l)
 
+def length : L -> Nat
+| Nil => 0
+| Cons n l => 1 + length l
+
+
 partial def make' : Nat -> Nat -> L
 | n,d =>
   if d = 0 then Cons n Nil
@@ -23,5 +28,4 @@ partial def make' : Nat -> Nat -> L
 
 def make (n : Nat) : L := make' n n
 
-unsafe def main : List String → IO UInt32
-| _ => pure 0
+def main (xs: List String) : IO UInt32 := let l := length (filter (make 10)); IO.println (toString l) *> pure 1
