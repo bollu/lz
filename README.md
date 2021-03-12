@@ -38,6 +38,8 @@
 - `rbmap_checkpoint.lean` fails at `error: expected command, but found term;
   this error may be due to parsing precedence levels, consider parenthesizing
   the term` (that is, the file is corrupt?)
+- Get `unionfind.lean` running
+- Generate `.c` using `lean --c=foo.c`
 
 
 
