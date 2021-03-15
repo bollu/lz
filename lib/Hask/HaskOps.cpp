@@ -356,7 +356,7 @@ void CaseOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
   state.addOperands(scrutinee);
   // vvv TODO: Check if this is 0 or 1 indexed
   for(int i = 0; i < numrhss; ++i) {
-    mlir::FlatSymbolRefAttr ixAttr = builder.getSymbolRefAttr(std::to_string(i+1));
+    mlir::FlatSymbolRefAttr ixAttr = builder.getSymbolRefAttr(std::to_string(i));
     state.addAttribute("alt" + std::to_string(i), ixAttr);
     state.addRegion();
   }

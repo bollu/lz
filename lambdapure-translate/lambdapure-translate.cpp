@@ -1215,7 +1215,16 @@ public:
 
     addPrivateFunction("UInt32_dot_add",
                        builder.getFunctionType({vty, vty}, {vty}));
+    addPrivateFunction("UInt32_dot_ofNat",
+                       builder.getFunctionType({vty}, {vty}));
+
+
     addPrivateFunction("Nat_dot_add",
+                       builder.getFunctionType({vty, vty}, {vty}));
+    addPrivateFunction("Nat_dot_sub",
+                       builder.getFunctionType({vty, vty}, {vty}));
+
+    addPrivateFunction("Nat_dot_max",
                        builder.getFunctionType({vty, vty}, {vty}));
 
     addPrivateFunction("Nat_dot_repr",
@@ -1559,6 +1568,7 @@ private:
     // expr.getTag(),
     //                                                        args, ty);
 
+    assert(expr.getTag() >= 0 && "expected tag to be >= 0");
     assert(ty.isa<standalone::ValueType>() &&
            "expected type to be a value type!");
     return builder.create<standalone::HaskConstructOp>(

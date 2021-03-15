@@ -307,6 +307,14 @@ struct Interpreter {
       }
 
       llvm::errs() << __FUNCTION__ << ":" << __LINE__ << "\n";
+      if (!case_.getDefaultAltIndex()) {
+        llvm::errs() << "vvvv ERROR CASE vvvvv\n";
+        llvm::errs() << case_ << "\n";
+        llvm::errs() << "scrutinee: " << scrutinee << "\n";
+        llvm::errs () << "ERROR: no valid case alternative, nor valid default alt\n";
+        llvm::errs() << "^^^^ ERROR CASE ^^^^\n";
+      }
+
       assert(case_.getDefaultAltIndex() && "neither match, nor default");
       llvm::errs() << __FUNCTION__ << ":" << __LINE__ << "\n";
       env.addNew(case_,
@@ -380,8 +388,8 @@ struct Interpreter {
 
     if (ProjectionOp pi = dyn_cast<ProjectionOp>(op)) {
       InterpValue constructor = env.lookup(pi->getLoc(), pi.getOperand());
-      int ix = pi.getIndex(); // recall that ix is 1-indexed.
-      env.addNew(pi.getResult(), constructor.constructorArg(ix - 1));
+      int ix = pi.getIndex(); // recall that ix is 0-indexed.
+      env.addNew(pi.getResult(), constructor.constructorArg(ix ));
       return;
     }
 
@@ -796,6 +804,38 @@ struct Interpreter {
 
   };
 
+  Optional<InterpValue> InterpretPrimopNatDecEq(ArrayRef<InterpValue> args) {
+    llvm::errs().changeColor(llvm::raw_fd_ostream::GREEN);
+    llvm::errs() << "--interpreting primop:|Nat.Eq|--\n";
+    llvm::errs().resetColor();
+
+    assert(args.size() == 2 && "Nat.Eq expects single argument");
+    InterpValue v = args[0], w = args[1];
+
+    assert(v.type == InterpValueType::I64 && "Nat.Eq expects int argument");
+    assert(w.type == InterpValueType::I64 && "Nat.Eq expects int argument");
+  // case x_4 : obj of
+  //  Bool.false →
+  //  Bool.true →
+    int tag = v.i() != w.i() ? 0 : 1;
+    return {InterpValue::constructor(std::to_string(tag), {}) };
+  };
+
+  Optional<InterpValue> InterpretPrimopNatSub(ArrayRef<InterpValue> args) {
+    llvm::errs().changeColor(llvm::raw_fd_ostream::GREEN);
+    llvm::errs() << "--interpreting primop:|Nat.Sub|--\n";
+    llvm::errs().resetColor();
+
+    assert(args.size() == 2 && "Nat.Eq expects single argument");
+    InterpValue v = args[0], w = args[1];
+
+    assert(v.type == InterpValueType::I64 && "Nat.Sub expects int argument");
+    assert(w.type == InterpValueType::I64 && "Nat.Sub expects int argument");
+    return {InterpValue::i(v.i() - w.i()) };
+  };
+
+
+
   Optional<InterpValue> interpretPrimopStringPush(ArrayRef<InterpValue> args) {
     llvm::errs().changeColor(llvm::raw_fd_ostream::GREEN);
     llvm::errs() << "--interpreting primop:|StringPush|--\n";
@@ -810,7 +850,8 @@ struct Interpreter {
     return {InterpValue::s(out)};
 
   };
-
+  // https://github.com/leanprover/lean4/blob/cc0712fc827fb0e60b0e00c875aaf2a715455c47/src/Init/System/IO.lean#L20
+  // https://github.com/leanprover/lean4/blob/cc0712fc827fb0e60b0e00c875aaf2a715455c47/src/Init/System/IO.lean#L308
   Optional<InterpValue> interpretPrimopIOPrintln(ArrayRef<InterpValue> args) {
     llvm::errs().changeColor(llvm::raw_fd_ostream::GREEN);
     llvm::errs() << "--interpreting primop:|IO.Println|--\n";
@@ -854,6 +895,16 @@ struct Interpreter {
     if (funcname == "Nat_dot_repr") {
       return interpretPrimopNatRepr(args);
     }
+
+    if (funcname == "Nat_dot_decEq") {
+      return InterpretPrimopNatDecEq(args);
+    }
+
+    if (funcname == "Nat_dot_sub") {
+      return InterpretPrimopNatSub(args);
+    }
+
+
 
     if (funcname == "String_dot_push") {
       return interpretPrimopStringPush(args);
@@ -940,9 +991,24 @@ struct LzInterpretPass : public Pass {
         InterpValue argc = InterpValue::i(0);
 
         // HACK! this needs to be something like empty array..?
-        // 1 = success, 0 = failure I think.
+        // 0 = success, 1 = failure I think.
         // I have no idea what the value inside is supposed to represent.
-        InterpValue argv = InterpValue::constructor("1", {InterpValue::i(420)});
+
+        // def IO.println._at.main._spec_1 (x_1 : obj) (x_2 : obj) : obj :=
+        //   let x_6 : obj := IO.print._at.IO.println._spec_1 x_5 x_2;
+        //    ret x_6 <-(2) whatever println returns; I presume |argv|
+
+        //                        vvv(0) |argv|?
+        // def main (x_1 : obj) (x_2 : obj) : obj :=
+        //   let x_5 : obj := IO.println._at.main._spec_1 x_4 x_2; <-(1) |argv|
+        //   case x_5 : obj of <- (3) argv
+        //   EStateM.Result.ok →
+        //     let x_6 : obj := proj[1] x_5; <- (4) |argv| has two components.
+        //   EStateM.Result.error →
+        //     let x_8 : obj := proj[0] x_5;
+        //     let x_9 : obj := proj[1] x_5;
+
+        InterpValue argv = InterpValue::constructor("0", {InterpValue::i(420), InterpValue::i(420)});
         return *I.interpretFunction("_lean_main", {argc, argv});
       }
     }();
