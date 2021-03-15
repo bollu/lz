@@ -778,9 +778,39 @@ struct Interpreter {
     InterpValue v = args[0];
     assert(v.type == InterpValueType::I64 && "NatRepr expects int argument");
     return {InterpValue::s(std::to_string(v.i()))};
-    // vvv is this a hack? Maybe.
 
   };
+
+  Optional<InterpValue> interpretPrimopStringPush(ArrayRef<InterpValue> args) {
+    llvm::errs().changeColor(llvm::raw_fd_ostream::GREEN);
+    llvm::errs() << "--interpreting primop:|StringPush|--\n";
+    llvm::errs().resetColor();
+
+    assert(args.size() == 2 && "StringPush expects two arguments");
+    InterpValue s = args[0], c = args[1];
+    assert(s.type == InterpValueType::String);
+    assert(c.type == InterpValueType::I64);
+    std::string out = s.s();
+    out += char(c.i());
+    return {InterpValue::s(out)};
+
+  };
+
+  Optional<InterpValue> interpretPrimopIOPrintln(ArrayRef<InterpValue> args) {
+    llvm::errs().changeColor(llvm::raw_fd_ostream::GREEN);
+    llvm::errs() << "--interpreting primop:|IO.Println|--\n";
+    llvm::errs().resetColor();
+
+    assert(args.size() == 2 && "IO.Println expects two arguments");
+    InterpValue s = args[0], argv = args[1];
+    assert(s.type == InterpValueType::String);
+    std::string out = s.s();
+    // vvv is this a hack? Maybe.
+    llvm::outs() << out << "\n";
+    return {argv}; // chain the world state (?)
+  };
+
+
 
 
   void interpretPrimopPrintInt(ArrayRef<InterpValue> args) {
@@ -809,6 +839,14 @@ struct Interpreter {
     if (funcname == "Nat_dot_repr") {
       return interpretPrimopNatRepr(args);
     }
+
+    if (funcname == "String_dot_push") {
+      return interpretPrimopStringPush(args);
+    }
+    if (funcname == "IO_dot_print_dot__at_dot_IO_dot_println_dot__spec_1") {
+      return interpretPrimopIOPrintln(args);
+    }
+
 
     // functions are isolated from above; create a fresh environment
     if (FuncOp haskfn = module.lookupSymbol<FuncOp>(funcname)) {
