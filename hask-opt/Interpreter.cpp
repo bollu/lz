@@ -821,6 +821,24 @@ struct Interpreter {
     return {InterpValue::constructor(std::to_string(tag), {}) };
   };
 
+  Optional<InterpValue> InterpretPrimopNatDecLt(ArrayRef<InterpValue> args) {
+    llvm::errs().changeColor(llvm::raw_fd_ostream::GREEN);
+    llvm::errs() << "--interpreting primop:|Nat.Lt|--\n";
+    llvm::errs().resetColor();
+
+    assert(args.size() == 2 && "Nat.Lt expects single argument");
+    InterpValue v = args[0], w = args[1];
+
+    assert(v.type == InterpValueType::I64 && "Nat.Eq expects int argument");
+    assert(w.type == InterpValueType::I64 && "Nat.Eq expects int argument");
+    // case x_4 : obj of
+    //  Bool.false →
+    //  Bool.true →
+    int tag = v.i() < w.i() ? 1 : 0; // true comes after false.
+    return {InterpValue::constructor(std::to_string(tag), {}) };
+  };
+
+
   Optional<InterpValue> InterpretPrimopNatSub(ArrayRef<InterpValue> args) {
     llvm::errs().changeColor(llvm::raw_fd_ostream::GREEN);
     llvm::errs() << "--interpreting primop:|Nat.Sub|--\n";
@@ -833,6 +851,20 @@ struct Interpreter {
     assert(w.type == InterpValueType::I64 && "Nat.Sub expects int argument");
     return {InterpValue::i(v.i() - w.i()) };
   };
+
+  Optional<InterpValue> InterpretPrimopNatAdd(ArrayRef<InterpValue> args) {
+    llvm::errs().changeColor(llvm::raw_fd_ostream::GREEN);
+    llvm::errs() << "--interpreting primop:|Nat.Sub|--\n";
+    llvm::errs().resetColor();
+
+    assert(args.size() == 2 && "Nat.Eq expects single argument");
+    InterpValue v = args[0], w = args[1];
+
+    assert(v.type == InterpValueType::I64 && "Nat.Sub expects int argument");
+    assert(w.type == InterpValueType::I64 && "Nat.Sub expects int argument");
+    return {InterpValue::i(v.i() + w.i()) };
+  };
+
 
 
 
@@ -895,15 +927,18 @@ struct Interpreter {
     if (funcname == "Nat_dot_repr") {
       return interpretPrimopNatRepr(args);
     }
-
     if (funcname == "Nat_dot_decEq") {
       return InterpretPrimopNatDecEq(args);
     }
-
+    if (funcname == "Nat_dot_decLt") {
+      return InterpretPrimopNatDecLt(args);
+    }
     if (funcname == "Nat_dot_sub") {
       return InterpretPrimopNatSub(args);
     }
-
+    if (funcname == "Nat_dot_add") {
+      return InterpretPrimopNatAdd(args);
+    }
 
 
     if (funcname == "String_dot_push") {

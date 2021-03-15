@@ -5,6 +5,11 @@
 --  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | hask-opt --lz-interpret=mode=lambdapure | FileCheck %s --check-prefix=CHECK-INTERPRET
 
 -- CHECK: func @filter
+-- we only keep elements that are not greater than 5, starting from 0.
+-- So that gives us  0 <= x <= 5, which is 6 elements.
+-- CHECK-INTERPRET: 6
+-- CHECK-INTERPRET: constructor(0 1 420)
+
 
 set_option trace.compiler.ir.init true
 inductive L
