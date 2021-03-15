@@ -370,6 +370,21 @@ struct Interpreter {
       return;
     }
 
+    if (TagGetOp tagget = dyn_cast<TagGetOp>(op)) {
+      InterpValue constructor = env.lookup(tagget->getLoc(), tagget.getOperand());
+      std::string tag = constructor.constructorTag();
+      // This might fuck up royally, let's see
+      env.addNew(tagget.getResult(), InterpValue::constructor(tag, {}));
+      return;
+    }
+
+    if (ProjectionOp pi = dyn_cast<ProjectionOp>(op)) {
+      InterpValue constructor = env.lookup(pi->getLoc(), pi.getOperand());
+      int ix = pi.getIndex(); // recall that ix is 1-indexed.
+      env.addNew(pi.getResult(), constructor.constructorArg(ix - 1));
+      return;
+    }
+
     //============= StdOps ========================//
     if (mlir::ConstantIntOp cint = mlir::dyn_cast<mlir::ConstantIntOp>(op)) {
       env.addNew(cint.getResult(), InterpValue::i(cint.getValue()));
@@ -921,8 +936,11 @@ struct LzInterpretPass : public Pass {
       } else {
         assert(this->optionMode == "lambdapure");
         InterpValue argc = InterpValue::i(0);
+
         // HACK! this needs to be something like empty array..?
-        InterpValue argv = InterpValue::i(42);
+        // 1 = success, 0 = failure I think.
+        // I have no idea what the value inside is supposed to represent.
+        InterpValue argv = InterpValue::constructor("1", {InterpValue::i(420)});
         return *I.interpretFunction("_lean_main", {argc, argv});
       }
     }();

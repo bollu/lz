@@ -4,6 +4,7 @@
 --  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | hask-opt  --lz-lambdapure-destructive-updates --lz-lambdapure-reference-rewriter | FileCheck %s
 
 -- CHECK: func @check
+
 set_option trace.compiler.ir.init true
 inductive Tree
 | Nil
