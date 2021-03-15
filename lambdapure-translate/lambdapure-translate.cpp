@@ -1208,8 +1208,12 @@ public:
       module.push_back(f);
     };
     mlir::standalone::ValueType vty = builder.getType<standalone::ValueType>();
-    mlir::IntegerType i8 = builder.getIntegerType(8);
-    addPrivateFunction("Nat_dot_sub",
+//    mlir::IntegerType i8 = builder.getIntegerType(8);
+//    mlir::IntegerType i64 = builder.getIntegerType(64);
+    addPrivateFunction("panic",
+                       builder.getFunctionType({vty, vty, vty}, {vty}));
+
+    addPrivateFunction("UInt32_dot_add",
                        builder.getFunctionType({vty, vty}, {vty}));
     addPrivateFunction("Nat_dot_add",
                        builder.getFunctionType({vty, vty}, {vty}));
@@ -1217,9 +1221,9 @@ public:
     addPrivateFunction("Nat_dot_repr",
                        builder.getFunctionType({vty}, {vty}));
     addPrivateFunction("Nat_dot_decLt",
-                       builder.getFunctionType({vty, vty}, {i8}));
+                       builder.getFunctionType({vty, vty}, {vty}));
     addPrivateFunction("Nat_dot_decEq",
-                       builder.getFunctionType({vty, vty}, {i8}));
+                       builder.getFunctionType({vty, vty}, {vty}));
     addPrivateFunction("String_dot_instInhabitedString",
                        builder.getFunctionType({}, {vty}));
     addPrivateFunction("String_dot_toNat_bang_",
@@ -1240,8 +1244,6 @@ public:
                        builder.getFunctionType({}, {vty}));
     addPrivateFunction("IO_dot_println_dot__at_dot_Lean_dot_instEval_dot__spec_1",
                        builder.getFunctionType({vty, vty}, {vty}));
-    addPrivateFunction("panic",
-                       builder.getFunctionType({vty, vty, vty}, {vty}));
     // https://github.com/leanprover/lean/blob/72a965986fa5aeae54062e98efb3140b2c4e79fd/library/init/data/string/basic.lean#L39-L40
     addPrivateFunction("String_dot_push", builder.getFunctionType({vty, vty}, {vty}));
     addPrivateFunction("IO_dot_print_dot__at_dot_IO_dot_println_dot__spec_1", builder.getFunctionType({vty, vty}, {vty}));
@@ -1302,9 +1304,12 @@ private:
       // return mlir::lambdapure::ObjectType::get(builder.getContext());
       return standalone::ValueType::get(builder.getContext());
     case u8:
-      return builder.getIntegerType(8);
+      return standalone::ValueType::get(builder.getContext());
+//      return builder.getIntegerType(8);
     default:
-      return builder.getIntegerType(64);
+      return standalone::ValueType::get(builder.getContext());
+
+//      return builder.getIntegerType(64);
     }
   }
 
