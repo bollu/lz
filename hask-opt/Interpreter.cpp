@@ -858,7 +858,9 @@ struct Interpreter {
     if (funcname == "String_dot_push") {
       return interpretPrimopStringPush(args);
     }
-    if (funcname == "IO_dot_print_dot__at_dot_IO_dot_println_dot__spec_1") {
+    // vvv HACK: is this print v/s println?
+    if (funcname == "IO_dot_print_dot__at_dot_IO_dot_println_dot__spec_1" ||
+        funcname == "IO_dot_println_dot__at_dot_Lean_dot_instEval_dot__spec_1") {
       return interpretPrimopIOPrintln(args);
     }
 
