@@ -31,6 +31,15 @@
 
 
 # Log:  [newest] to [oldest]
+
+# March 15th
+
+```
+-- encoding of OK
+let x_4 : obj := ctor_0[EStateM.Result.ok] x_3 x_2;
+```
+
+
 # March 12th
 
 - `const_fold.lean` fails by `prec(_).`

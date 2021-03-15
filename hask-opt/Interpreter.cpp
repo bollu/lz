@@ -769,6 +769,20 @@ struct Interpreter {
     }
   }
 
+  Optional<InterpValue> interpretPrimopNatRepr(ArrayRef<InterpValue> args) {
+    llvm::errs().changeColor(llvm::raw_fd_ostream::GREEN);
+    llvm::errs() << "--interpreting primop:|NatRepr|--\n";
+    llvm::errs().resetColor();
+
+    assert(args.size() == 1 && "printInt expects single argument");
+    InterpValue v = args[0];
+    assert(v.type == InterpValueType::I64 && "NatRepr expects int argument");
+    return {InterpValue::s(std::to_string(v.i()))};
+    // vvv is this a hack? Maybe.
+
+  };
+
+
   void interpretPrimopPrintInt(ArrayRef<InterpValue> args) {
     llvm::errs().changeColor(llvm::raw_fd_ostream::GREEN);
     llvm::errs() << "--interpreting primop:|printInt|--\n";
@@ -792,6 +806,10 @@ struct Interpreter {
       return {};
     }
 
+    if (funcname == "Nat_dot_repr") {
+      return interpretPrimopNatRepr(args);
+    }
+
     // functions are isolated from above; create a fresh environment
     if (FuncOp haskfn = module.lookupSymbol<FuncOp>(funcname)) {
       return interpretRegion(haskfn.getRegion(), args, Env());
@@ -801,6 +819,7 @@ struct Interpreter {
       return interpretRegion(fn.getRegion(), args, Env());
     }
 
+    llvm::errs() << "UNABLE TO FIND FUNCTION |" << funcname << "|\n";
     assert(false && "unable to find function.");
   }
 
@@ -842,7 +861,7 @@ struct LzInterpretPass : public Pass {
   LzInterpretPass() : Pass(mlir::TypeID::get<LzInterpretPass>()){};
   StringRef getName() const override { return "LzInterpretPass"; }
   Pass::Option<std::string> optionMode{
-      *this, "mode", llvm::cl::desc("lz/lambdapure"), llvm::cl::init("lz")};
+      *this, "mode", llvm::cl::desc("mode to run lz interpreter in: choose 'lz' or 'lambdapure'"), llvm::cl::init("lz")};
   LzInterpretPass(const LzInterpretPass &other)
       : Pass(::mlir::TypeID::get<LzInterpretPass>()) {}
 

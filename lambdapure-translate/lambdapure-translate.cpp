@@ -1242,6 +1242,9 @@ public:
                        builder.getFunctionType({vty, vty}, {vty}));
     addPrivateFunction("panic",
                        builder.getFunctionType({vty, vty, vty}, {vty}));
+    // https://github.com/leanprover/lean/blob/72a965986fa5aeae54062e98efb3140b2c4e79fd/library/init/data/string/basic.lean#L39-L40
+    addPrivateFunction("String_dot_push", builder.getFunctionType({vty, vty}, {vty}));
+    addPrivateFunction("IO_dot_print_dot__at_dot_IO_dot_println_dot__spec_1", builder.getFunctionType({vty, vty}, {vty}));
   }
   // converts lambdapure AST -> MLIR
   mlir::ModuleOp mlirGen(ModuleAST &moduleAST) {

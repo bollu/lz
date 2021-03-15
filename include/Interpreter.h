@@ -7,6 +7,7 @@ struct InterpValue;
 
 enum class InterpValueType {
   I64,
+  String,
   MemRef,
   ClosureTopLevel,
   ClosureLambda,
@@ -77,6 +78,16 @@ using MemRef = MemRefT<InterpValue>;
 
 struct InterpValue {
   InterpValueType type;
+  //============= String ======================//
+  static InterpValue s(std::string s) {
+    InterpValue v(InterpValueType::String);
+    v.s_ = s;
+    return v;
+  }
+  std::string s() const {
+    assert(type == InterpValueType::String);
+    return s_;
+  }
 
   //============= I64 ======================//
   static InterpValue i(int i) {
