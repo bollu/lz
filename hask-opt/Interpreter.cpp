@@ -2,13 +2,28 @@
 #include "GRIN/GRINOps.h"
 #include "Hask/HaskDialect.h"
 #include "Hask/HaskOps.h"
+#include "Pointer/PointerOps.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "llvm/Support/Casting.h"
+#include <Pointer/PointerDialect.h>
 #include <map>
 
 using namespace mlir;
 using namespace standalone;
+
+
+// build the argv linked list from stdio.
+InterpValue buildArgv(const Pass::ListOption<std::string> &ss) {
+  // List.nil -> ... ; List.cons -> ... ;
+  InterpValue tail = InterpValue::constructor("0", {});
+  for(int i = ss.size() - 1; i >= 0; i--) {
+    tail = InterpValue::constructor("1", {InterpValue::s(ss[i]), tail});
+  }
+  return tail;
+}
+
+
 llvm::raw_ostream &operator<<(llvm::raw_ostream &o, const InterpStats &s) {
   o << "num_thunkify_calls(" << s.num_thunkify_calls << ")\n";
   o << "num_force_calls(" << s.num_force_calls << ")\n";
@@ -198,6 +213,11 @@ struct Interpreter {
     op.print(llvm::errs(), printGeneric);
     fprintf(stderr, "\n");
     fflush(stdout);
+    // =========== PtrOps ===========================//
+    if (ptr::PtrStringOp ptrStrOp = dyn_cast<ptr::PtrStringOp>(op)) {
+      env.addNew(ptrStrOp.getResult(), InterpValue::s(ptrStrOp.getString()));
+      return;
+    }
 
     //============= HaskOps ========================//
     if (HaskConstructOp cons = dyn_cast<HaskConstructOp>(op)) {
@@ -809,11 +829,11 @@ struct Interpreter {
     llvm::errs() << "--interpreting primop:|Nat.Eq|--\n";
     llvm::errs().resetColor();
 
-    assert(args.size() == 2 && "Nat.Eq expects single argument");
+    assert(args.size() == 2);
     InterpValue v = args[0], w = args[1];
 
-    assert(v.type == InterpValueType::I64 && "Nat.Eq expects int argument");
-    assert(w.type == InterpValueType::I64 && "Nat.Eq expects int argument");
+    assert(v.type == InterpValueType::I64);
+    assert(v.type == InterpValueType::I64);
   // case x_4 : obj of
   //  Bool.false →
   //  Bool.true →
@@ -826,11 +846,11 @@ struct Interpreter {
     llvm::errs() << "--interpreting primop:|Nat.Lt|--\n";
     llvm::errs().resetColor();
 
-    assert(args.size() == 2 && "Nat.Lt expects single argument");
+    assert(args.size() == 2);
     InterpValue v = args[0], w = args[1];
 
-    assert(v.type == InterpValueType::I64 && "Nat.Eq expects int argument");
-    assert(w.type == InterpValueType::I64 && "Nat.Eq expects int argument");
+    assert(v.type == InterpValueType::I64);
+    assert(v.type == InterpValueType::I64);
     // case x_4 : obj of
     //  Bool.false →
     //  Bool.true →
@@ -844,43 +864,63 @@ struct Interpreter {
     llvm::errs() << "--interpreting primop:|Nat.Sub|--\n";
     llvm::errs().resetColor();
 
-    assert(args.size() == 2 && "Nat.Eq expects single argument");
+    assert(args.size() == 2);
     InterpValue v = args[0], w = args[1];
 
-    assert(v.type == InterpValueType::I64 && "Nat.Sub expects int argument");
-    assert(w.type == InterpValueType::I64 && "Nat.Sub expects int argument");
+    assert(v.type == InterpValueType::I64);
+    assert(v.type == InterpValueType::I64);
     return {InterpValue::i(v.i() - w.i()) };
   };
 
   Optional<InterpValue> InterpretPrimopNatAdd(ArrayRef<InterpValue> args) {
     llvm::errs().changeColor(llvm::raw_fd_ostream::GREEN);
-    llvm::errs() << "--interpreting primop:|Nat.Sub|--\n";
+    llvm::errs() << "--interpreting primop:|Nat.Add|--\n";
+    llvm::errs().resetColor();
+
+    assert(args.size() == 2);
+    InterpValue v = args[0], w = args[1];
+
+    assert(v.type == InterpValueType::I64);
+    assert(v.type == InterpValueType::I64);
+    return {InterpValue::i(v.i() + w.i()) };
+  };
+  Optional<InterpValue> InterpretPrimopNatMul(ArrayRef<InterpValue> args) {
+    llvm::errs().changeColor(llvm::raw_fd_ostream::GREEN);
+    llvm::errs() << "--interpreting primop:|Nat.Mul|--\n";
     llvm::errs().resetColor();
 
     assert(args.size() == 2 && "Nat.Eq expects single argument");
     InterpValue v = args[0], w = args[1];
 
-    assert(v.type == InterpValueType::I64 && "Nat.Sub expects int argument");
-    assert(w.type == InterpValueType::I64 && "Nat.Sub expects int argument");
-    return {InterpValue::i(v.i() + w.i()) };
+    assert(v.type == InterpValueType::I64);
+    assert(v.type == InterpValueType::I64);
+    return {InterpValue::i(v.i() * w.i()) };
   };
-
-
-
 
   Optional<InterpValue> interpretPrimopStringPush(ArrayRef<InterpValue> args) {
     llvm::errs().changeColor(llvm::raw_fd_ostream::GREEN);
     llvm::errs() << "--interpreting primop:|StringPush|--\n";
     llvm::errs().resetColor();
 
-    assert(args.size() == 2 && "StringPush expects two arguments");
+    assert(args.size() == 2);
     InterpValue s = args[0], c = args[1];
     assert(s.type == InterpValueType::String);
     assert(c.type == InterpValueType::I64);
     std::string out = s.s();
     out += char(c.i());
     return {InterpValue::s(out)};
+  };
 
+  Optional<InterpValue> interpretPrimopStringAppend(ArrayRef<InterpValue> args) {
+    llvm::errs().changeColor(llvm::raw_fd_ostream::GREEN);
+    llvm::errs() << "--interpreting primop:|StringAppend|--\n";
+    llvm::errs().resetColor();
+
+    assert(args.size() == 2);
+    InterpValue s1 = args[0], s2 = args[1];
+    assert(s1.type == InterpValueType::String);
+    assert(s2.type == InterpValueType::String);
+    return {InterpValue::s(s1.s() + s2.s())};
   };
   // https://github.com/leanprover/lean4/blob/cc0712fc827fb0e60b0e00c875aaf2a715455c47/src/Init/System/IO.lean#L20
   // https://github.com/leanprover/lean4/blob/cc0712fc827fb0e60b0e00c875aaf2a715455c47/src/Init/System/IO.lean#L308
@@ -939,11 +979,17 @@ struct Interpreter {
     if (funcname == "Nat_dot_add") {
       return InterpretPrimopNatAdd(args);
     }
-
-
+    if (funcname == "Nat_dot_mul") {
+      return InterpretPrimopNatMul(args);
+    }
     if (funcname == "String_dot_push") {
       return interpretPrimopStringPush(args);
     }
+    if (funcname == "String_dot_append") {
+      return interpretPrimopStringAppend(args);
+    }
+
+
     // vvv HACK: is this print v/s println?
     if (funcname == "IO_dot_print_dot__at_dot_IO_dot_println_dot__spec_1" ||
         funcname == "IO_dot_println_dot__at_dot_Lean_dot_instEval_dot__spec_1") {
@@ -1003,6 +1049,10 @@ struct LzInterpretPass : public Pass {
   StringRef getName() const override { return "LzInterpretPass"; }
   Pass::Option<std::string> optionMode{
       *this, "mode", llvm::cl::desc("mode to run lz interpreter in: choose 'lz' or 'lambdapure'"), llvm::cl::init("lz")};
+
+  Pass::ListOption<std::string> optionStdio{
+      *this, "stdio", llvm::cl::desc("standard input"), llvm::cl::ZeroOrMore, llvm::cl::CommaSeparated};
+
   LzInterpretPass(const LzInterpretPass &other)
       : Pass(::mlir::TypeID::get<LzInterpretPass>()) {}
 
@@ -1023,7 +1073,18 @@ struct LzInterpretPass : public Pass {
         return *I.interpretFunction("main", {});
       } else {
         assert(this->optionMode == "lambdapure");
-        InterpValue argc = InterpValue::i(0);
+
+        // this is some kind of argv.
+        // def main (x_1 : obj) (x_2 : obj) : obj :=
+        //   case x_1 : obj of
+        //    List.nil → ...
+        //    List.cons →
+        //      let x_5 : obj := proj[0] x_1;
+        //      let x_6 : obj := proj[1] x_1;
+        //      case x_6 : obj of
+        // so, 0: nil; 1: cons. A cons cell is [value, rest-of-list].
+
+        InterpValue argv = buildArgv(optionStdio);
 
         // HACK! this needs to be something like empty array..?
         // 0 = success, 1 = failure I think.
@@ -1043,8 +1104,8 @@ struct LzInterpretPass : public Pass {
         //     let x_8 : obj := proj[0] x_5;
         //     let x_9 : obj := proj[1] x_5;
 
-        InterpValue argv = InterpValue::constructor("0", {InterpValue::i(420), InterpValue::i(420)});
-        return *I.interpretFunction("_lean_main", {argc, argv});
+        InterpValue realworld = InterpValue::constructor("0", {InterpValue::i(420), InterpValue::i(420)});
+        return *I.interpretFunction("_lean_main", {argv, realworld});
       }
     }();
     InterpStats stats = I.getStats();

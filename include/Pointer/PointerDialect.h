@@ -108,6 +108,10 @@ class PtrStringOp
 public:
   using Op::Op;
   static StringRef getOperationName() { return "ptr.string"; };
+  std::string getString() {
+    return this->getOperation()->getAttrOfType<StringAttr>("value").getValue().str();
+  }
+
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
                     const char *str);

@@ -677,7 +677,8 @@ private:
 
       //[a-zA-Z][a-zA-Z0-9_.!]
       while (lastChar == '\'' || lastChar == '.' || lastChar == '!' ||
-             lastChar == '-' || isalnum(lastChar) || lastChar == '_') {
+             lastChar == '-' || lastChar == '*' ||
+             isalnum(lastChar) || lastChar == '_') {
         // replace apostrophe with _prime, c cant have
         // it in function names
         if (lastChar == '\'') {
@@ -688,6 +689,8 @@ private:
           identifierStr += "_bang_";
         } else if (lastChar == '-') {
           identifierStr += "_hyphen_";
+        } else if (lastChar == '*') {
+          identifierStr += "_star_";
         } else {
           assert(isalnum(lastChar) || lastChar == '_');
           identifierStr += lastChar;
@@ -1223,6 +1226,8 @@ public:
                        builder.getFunctionType({vty, vty}, {vty}));
     addPrivateFunction("Nat_dot_sub",
                        builder.getFunctionType({vty, vty}, {vty}));
+    addPrivateFunction("Nat_dot_mul",
+                       builder.getFunctionType({vty, vty}, {vty}));
 
     addPrivateFunction("Nat_dot_max",
                        builder.getFunctionType({vty, vty}, {vty}));
@@ -1256,6 +1261,13 @@ public:
     // https://github.com/leanprover/lean/blob/72a965986fa5aeae54062e98efb3140b2c4e79fd/library/init/data/string/basic.lean#L39-L40
     addPrivateFunction("String_dot_push", builder.getFunctionType({vty, vty}, {vty}));
     addPrivateFunction("IO_dot_print_dot__at_dot_IO_dot_println_dot__spec_1", builder.getFunctionType({vty, vty}, {vty}));
+
+    addPrivateFunction("term__star___dot__closed_3",
+                       builder.getFunctionType({}, {vty})); // const_fold.lean
+    addPrivateFunction("Lean_dot_Parser_dot_Syntax_dot_addPrec_dot__closed_11",
+                       builder.getFunctionType({}, {vty})); // const_fold.lean
+
+
   }
   // converts lambdapure AST -> MLIR
   mlir::ModuleOp mlirGen(ModuleAST &moduleAST) {
