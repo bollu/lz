@@ -35,7 +35,7 @@ open Nat
 -- |   | Expr.Val → // Add ? Val
 -- |   | | let cl2 : obj := Expr.eval._closed_2; // 0
 -- |   | | ret cl2;
--- |   case l : obj of
+-- |   case l : obj of  Add l ?
 -- |   Expr.Add → // Add (Add ? ?)
 -- |   | let x_5 : obj := ctor_0[PUnit.unit];
 -- |   | jmp JUMPBB x_5 // Add (Add ? ?) => JUMP
