@@ -1,4 +1,3 @@
--- Testcase to check a join point / jump instruction
 --  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | FileCheck %s
 --  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | hask-opt  | FileCheck %s
 --  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | hask-opt  --lz-lambdapure-destructive-updates | FileCheck %s
@@ -6,7 +5,8 @@
 --  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | hask-opt  --lz-interpret="mode=lambdapure stdio=1" | FileCheck %s --check-prefix=CHECK-INTERPRET-1
 --  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | hask-opt  --lz-interpret="mode=lambdapure stdio=2" | FileCheck %s --check-prefix=CHECK-INTERPRET-2
 
--- CHECK: func @main
+-- Testcase to check a join point / jump instruction
+-- CHECK: func @_lean_main
 
 set_option trace.compiler.ir.init true
 
@@ -72,7 +72,11 @@ def toNat : Expr -> Nat
  | Add l r => (toNat l) + (toNat r)
  | _ => 1
  	
+end Expr
+open Expr
 
-unsafe def main (xs: List String) : IO Unit := 
-  IO.println (toString (toNat (eval (Add (Val 1) (Val 2)))))
+unsafe def main (xs: List String) : IO Unit := do
+  IO.println (toString (toNat (eval (Add (Foo 1) (Val 2)))));
+  IO.println (toString (toNat (eval (Add (Val 1) (Foo 2)))));
+  IO.println (toString (toNat (eval (Add (Foo 1) (Foo 2)))));
 
