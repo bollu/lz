@@ -23,6 +23,11 @@ InterpValue buildArgv(const Pass::ListOption<std::string> &ss) {
   return tail;
 }
 
+// I have no idea WTF this representation is, but I'm just obeying it.
+InterpValue buildRealWorld() {
+  return InterpValue::constructor("0", {InterpValue::i(420), InterpValue::i(420)});
+
+}
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &o, const InterpStats &s) {
   o << "num_thunkify_calls(" << s.num_thunkify_calls << ")\n";
@@ -754,11 +759,29 @@ struct Interpreter {
       return TerminatorResult(br.dest());
     }
 
-    InterpreterError err(op.getLoc());
-    err << "INTERPRETER ERROR: unknown terminator";
-    llvm::errs() << "---uknown terminator:---\n";
+    if (auto blockop = dyn_cast<standalone::HaskBlockOp>(op)) {
+      Optional<InterpValue> retval = interpretRegion(blockop.getRestRegion(), {}, env);
+      assert(retval && "block operation expects return value.");
+      return TerminatorResult(*retval);
+    }
+
+    // interesting: semantics of jump is determined by "enclosing block",
+    // something that regions help make precise!
+    // vvv TODO: need to figure out what we do with blockIx
+    if (auto jumpop = dyn_cast<standalone::HaskJumpOp>(op)) {
+      standalone::HaskBlockOp parent = jumpop->getParentOfType<standalone::HaskBlockOp>();
+      assert(parent && "jumpop must be surrounded by parent.");
+      InterpValue arg = env.lookup(jumpop->getLoc(), jumpop.getOperand());
+      Optional<InterpValue> retval = interpretRegion(parent.getBlockRegion(), {arg}, env);
+      assert(retval && "block operation expects return value.");
+      return TerminatorResult(*retval);
+    }
+
+    llvm::errs() << "INTERPRETER ERROR: unknown terminator";
+    llvm::errs() << "vvvv:unknown terminator:vvvv\n";
     op.print(llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
-    llvm::errs() << "\n^^^\n";
+    llvm::errs() << "\n^^^^^^^\n";
+    assert(false && "unknown terminator.");
     return TerminatorResult();
   }
 
@@ -944,12 +967,12 @@ struct Interpreter {
     llvm::errs().resetColor();
 
     assert(args.size() == 2 && "IO.Println expects two arguments");
-    InterpValue s = args[0], argv = args[1];
+    InterpValue s = args[0];
     assert(s.type == InterpValueType::String);
     std::string out = s.s();
     // vvv is this a hack? Maybe.
     llvm::outs() << out << "\n";
-    return {argv}; // chain the world state (?)
+    return {buildRealWorld()}; // chain the world state (?)
   };
 
 
@@ -1122,7 +1145,7 @@ struct LzInterpretPass : public Pass {
         //     let x_8 : obj := proj[0] x_5;
         //     let x_9 : obj := proj[1] x_5;
 
-        InterpValue realworld = InterpValue::constructor("0", {InterpValue::i(420), InterpValue::i(420)});
+        InterpValue realworld = buildRealWorld();
         return *I.interpretFunction("_lean_main", {argv, realworld});
       }
     }();

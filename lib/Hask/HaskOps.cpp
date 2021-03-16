@@ -1014,8 +1014,9 @@ ParseResult HaskJumpOp::parse(OpAsmParser &parser, OperationState &result) { ass
 void HaskJumpOp::print(OpAsmPrinter &p) {
   p.printGenericOp(*this);
 };
-void HaskJumpOp::build(mlir::OpBuilder &builder, mlir::OperationState &state, int blockIx) {
+void HaskJumpOp::build(mlir::OpBuilder &builder, mlir::OperationState &state, int blockIx, Value v) {
   state.addAttribute("value", builder.getI64IntegerAttr(blockIx));
+  state.addOperands(v);
   return;
   assert(false && "unimplemented");
 }

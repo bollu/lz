@@ -1404,9 +1404,11 @@ private:
     // assert(blockTable.count(jump.getBlockIx()) && "expected to find BB
     // index"); mlir::Block *bb = blockTable.lookup(jump.getBlockIx());
     // assert(bb && "expected legal basic block");
+
     mlir::Value var(scopeTable.lookup(jump.getVar()));
+    assert(var && "expected legal variable for jump");
     standalone::HaskJumpOp op =
-        builder.create<standalone::HaskJumpOp>(loc(), jump.getBlockIx());
+        builder.create<standalone::HaskJumpOp>(loc(), jump.getBlockIx(), var);
     (void)op;
     //    builder.create<BranchOp>(loc(), bb, var);
 

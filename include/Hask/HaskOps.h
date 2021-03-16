@@ -510,13 +510,13 @@ public:
 };
 
 
-class HaskJumpOp : public Op<HaskJumpOp, OpTrait::ZeroOperands, OpTrait::ZeroResult, OpTrait::IsTerminator> {
+class HaskJumpOp : public Op<HaskJumpOp, OpTrait::OneOperand, OpTrait::ZeroResult, OpTrait::IsTerminator> {
 public:
   using Op::Op;
   static StringRef getOperationName() { return "lz.jump"; };
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   void print(OpAsmPrinter &p);
-  static void build(mlir::OpBuilder &builder, mlir::OperationState &state, int blockIx);
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state, int blockIx, Value v); // ?? what is blockIx? I am actually confused.
 };
 
 

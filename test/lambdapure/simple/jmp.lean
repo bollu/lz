@@ -1,14 +1,22 @@
 --  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | FileCheck %s
 --  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | hask-opt  | FileCheck %s
---  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | hask-opt  --lz-lambdapure-destructive-updates | FileCheck %s
---  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | hask-opt  --lz-lambdapure-destructive-updates --lz-lambdapure-reference-rewriter | FileCheck %s
---  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | hask-opt  --lz-interpret="mode=lambdapure stdio=1" | FileCheck %s --check-prefix=CHECK-INTERPRET-1
---  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | hask-opt  --lz-interpret="mode=lambdapure stdio=2" | FileCheck %s --check-prefix=CHECK-INTERPRET-2
+--  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | hask-opt  --lz-interpret="mode=lambdapure" | FileCheck %s --check-prefix=CHECK-INTERPRET
 
 -- Testcase to check a join point / jump instruction
+
+-- CHECK: "lz.jump"
+-- CHECK: "lz.block"
 -- CHECK: func @_lean_main
 
 set_option trace.compiler.ir.init true
+
+
+-- We've arranged for the output to be 0, 1, 2
+
+-- CHECK-INTERPRET:      0  
+-- CHECK-INTERPRET-NEXT: 1
+-- CHECK-INTERPRET-NEXT: 2
+-- CHECK-INTERPRET-NEXT: constructor(0 420 420)
 
 
 inductive Expr
@@ -69,11 +77,12 @@ def eval : Expr -> Expr
 
 
 def toNat : Expr -> Nat
- | Add l r => (toNat l) + (toNat r)
- | _ => 1
+ | Val v => v
+ | _ => 420
  	
 end Expr
 open Expr
+-- | Check output to be 0, 1, 2
 
 unsafe def main (xs: List String) : IO Unit := do
   IO.println (toString (toNat (eval (Add (Foo 1) (Val 2)))));

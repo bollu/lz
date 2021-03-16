@@ -32,6 +32,13 @@
 
 # Log:  [newest] to [oldest]
 
+# March 16th
+
+```
+// interesting: semantics of jump is determined by "enclosing block",
+// something that regions help make precise!
+if (auto jumpop = dyn_cast<standalone::HaskJumpOp>(op)) { }
+```
 
 # March 15th
 
