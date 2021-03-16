@@ -32,12 +32,17 @@
 
 # Log:  [newest] to [oldest]
 
+
 # March 15th
 
 ```
 -- encoding of OK
 let x_4 : obj := ctor_0[EStateM.Result.ok] x_3 x_2;
 ```
+
+- Todo for tomorrow: get larger problem sizes working in `const_fold.lean`.
+- Add support for arrays in `quicksort.lean`.
+- Add checks for `IncOp/DecOp` by interpreting the immutable beans rewrites.
 
 
 # March 12th

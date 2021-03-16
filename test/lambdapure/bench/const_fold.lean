@@ -2,8 +2,12 @@
 --  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | hask-opt  | FileCheck %s
 --  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | hask-opt  --lz-lambdapure-destructive-updates | FileCheck %s
 --  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | hask-opt  --lz-lambdapure-destructive-updates --lz-lambdapure-reference-rewriter | FileCheck %s
+--  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | hask-opt  --lz-interpret="mode=lambdapure stdio=1" | FileCheck %s --check-prefix=CHECK-INTERPRET-1
+--  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | hask-opt  --lz-interpret="mode=lambdapure stdio=2" | FileCheck %s --check-prefix=CHECK-INTERPRET-2
 
 -- CHECK: func @main
+-- CHECK-INTERPRET-1: 2 2
+-- CHECK-INTERPRET-2: 4 4
 
 set_option trace.compiler.ir.init true
 
@@ -65,10 +69,10 @@ def size : Expr → Nat
 | e         => 1
 
 def toStringAux : Expr → String → String
-| Var v,       r => r ++ "#" ++ toString v
+| Var v,       r => r ++ "##" ++ toString v
 | Val v,       r => r ++ toString v
-| Add e₁ e₂,   r => (toStringAux e₂ ((toStringAux e₁ (r ++ "(")) ++ " + ")) ++ ")"
-| Mul e₁ e₂,   r => (toStringAux e₂ ((toStringAux e₁ (r ++ "(")) ++ " * ")) ++ ")"
+| Add e₁ e₂,   r => (toStringAux e₂ ((toStringAux e₁ (r ++ "((")) ++ " + ")) ++ "))"
+| Mul e₁ e₂,   r => (toStringAux e₂ ((toStringAux e₁ (r ++ "((")) ++ " * ")) ++ "))"
 
 def eval : Expr → Nat
 | Var x   => 0
@@ -86,6 +90,6 @@ unsafe def main : List String → IO UInt32
   let e  := (mkExpr n 1);
   let v₁ := eval e;
   let v₂ := eval (constFolding (reassoc e));
-  IO.println (toString v₁ ++ " " ++ toString v₂);
+  IO.println (toString v₁ ++ "  " ++ toString v₂);
   pure 0
 | _ => pure 1

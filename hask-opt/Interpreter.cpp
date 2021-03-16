@@ -922,6 +922,20 @@ struct Interpreter {
     assert(s2.type == InterpValueType::String);
     return {InterpValue::s(s1.s() + s2.s())};
   };
+
+  Optional<InterpValue> interpretPrimopStringToNat(ArrayRef<InterpValue> args) {
+    llvm::errs().changeColor(llvm::raw_fd_ostream::GREEN);
+    llvm::errs() << "--interpreting primop:|String.toNat!|--\n";
+    llvm::errs().resetColor();
+
+    assert(args.size() == 1);
+    InterpValue v = args[0];
+    assert(v.type == InterpValueType::String);
+    std::string s = v.s();
+    return {InterpValue::i(atoi(s.c_str()))};
+  };
+
+
   // https://github.com/leanprover/lean4/blob/cc0712fc827fb0e60b0e00c875aaf2a715455c47/src/Init/System/IO.lean#L20
   // https://github.com/leanprover/lean4/blob/cc0712fc827fb0e60b0e00c875aaf2a715455c47/src/Init/System/IO.lean#L308
   Optional<InterpValue> interpretPrimopIOPrintln(ArrayRef<InterpValue> args) {
@@ -987,6 +1001,10 @@ struct Interpreter {
     }
     if (funcname == "String_dot_append") {
       return interpretPrimopStringAppend(args);
+    }
+
+    if (funcname == "String_dot_toNat_bang_") {
+      return interpretPrimopStringToNat(args);
     }
 
 
