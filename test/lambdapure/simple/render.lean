@@ -1,5 +1,6 @@
 -- Stolen from https://raw.githubusercontent.com/kmill/lean4-raytracer/master/render.lean
 --import render.Algebra
+-- The value of PI is too large -_-
 
 
 set_option trace.compiler.ir.init true

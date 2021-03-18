@@ -49,7 +49,7 @@ const char *__asan_default_options() { return "detect_leaks=0"; }
 // === AST ===
 // === AST ===
 
-enum VarType { object, u64, u32, u16, u8, box };
+enum VarType { object, u64, u32, u16, u8, Float };
 std::string stringOfType(VarType t);
 std::string stringOfType(std::vector<VarType> ts);
 std::string stringOfType(std::vector<VarType> ts, VarType t);
@@ -639,6 +639,7 @@ private:
 
   TokenType getTok() {
     identifierStr = "~UNK~";
+    llvm::errs() << "getTok() (" << curLine << ":" << curCol << ")\n";
 
     while (isspace(lastChar)) {
       lastChar = getNextChar();
@@ -725,7 +726,7 @@ private:
         NumStr += lastChar;
         lastChar = TokenType(getNextChar());
       } while (isdigit(lastChar));
-      numVal = std::stoi(NumStr.c_str());
+      numVal = std::stoll(NumStr.c_str());
       return tok_lit;
     }
 
@@ -842,6 +843,8 @@ private:
     } else if (lexer.getCurToken() == TokenType::tok_box) {
       result = u64;
       // result = box;
+    } else if (lexer.getId() == "float") { // does this matter?
+      result = Float;
     } else {
       unexpectedTokenError(lexer);
       assert(false && "unable to parse type!");
@@ -1008,7 +1011,7 @@ private:
     std::string blockName = lexer.getId();
     assert(startswith(blockName, "block_"));
     std::string blockIxStr = blockName.substr(strlen("block_"));
-    int blockIx = atoi(blockIxStr.c_str());
+    int blockIx = std::stoi(blockIxStr);
     lexer.consume(TokenType::tok_id); // consume block_<ix>
 
     // argument
@@ -1095,7 +1098,7 @@ private:
     } else if (startswith(id, "block_")) {
       // unexpectedTokenError(lexer);
       const std::string blockIdStr = id.substr(strlen("block_"));
-      int blockId = atoi(blockIdStr.c_str());
+      int blockId = std::stoi(blockIdStr);
       lexer.getNextToken(); // eat current identifier;
       return ParseBlockRetStmt(blockId);
       assert(false && "unable to parse block_");
