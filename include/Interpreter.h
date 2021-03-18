@@ -40,6 +40,11 @@ template <typename T> struct MemRefT {
 
   T load(const KeyTy &key) const {
     llvm::Optional<T> ov = mem[_idx(key)];
+
+    if (!ov) {
+      llvm::errs() << "ERROR: trying to load from flattened index: |" << _idx(key) << "| which has not been stored to.\n";
+    }
+
     assert(ov && "trying to load from index that has not been stored to!");
     return ov.getValue();
   }
@@ -54,6 +59,14 @@ template <typename T> struct MemRefT {
     assert(i >= 0);
     assert(i < (int)dims.size());
     return dims[i];
+  }
+
+  void push1D(T v) {
+    assert(dims.size() == 1);
+    assert((int)mem.size() == dims[0]);
+    mem.push_back({v});
+    dims[0] = mem.size();
+
   }
 
 private:
@@ -113,6 +126,12 @@ struct InterpValue {
   void store(MemRef::KeyTy key, InterpValue v) {
     assert(this->type == InterpValueType::MemRef);
     mem_->store(key, v);
+  }
+
+  // push into a 1D array. Created to support lambdpure runtime.
+  void push1D(InterpValue v) {
+    assert(this->type == InterpValueType::MemRef);
+    mem_->push1D(v);
   }
 
   int sizeOfDim(int i) {

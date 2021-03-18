@@ -61,6 +61,43 @@
   
 - `unionfind.lean` needs me to implement `String_dot_instInhabitedString`
 
+
+- From the file `loop.lean`:
+
+```
+def mkRandomArray : Nat -> Array Nat -> Array Nat
+...
+| i+1, as => mkRandomArray i (as.push (i+1))
+```
+
+generates the MLIR:
+
+
+```mlir
+func @mkRandomArray(%arg0: !lz.value, %arg1: !lz.value) -> !lz.value {
+  ...
+  %7 = "lz.erasedvalue"() : () -> !lz.value -- | what is this a proof *of*?
+  %8 = call @Array_dot_push(%7, %arg1, %6) : (!lz.value, !lz.value, !lz.value) -> !lz.value
+```
+
+So the call to `push` generates an erased value. This means I shouldn't *crash* on erased
+values. I should, well, *erase* them when I code generate useful code. Strange.
+
+
+Similarly for `get`:
+
+```
+func @sumAux(%arg0: !lz.value, %arg1: !lz.value) -> !lz.value {
+  ...
+  %5 = call @Nat_dot_sub(%arg0, %4) : (!lz.value, !lz.value) -> !lz.value
+  %6 = call @instInhabitedNat() : () -> !lz.value
+  %7 = "lz.erasedvalue"() : () -> !lz.value
+  %8 = call @Array_dot_get_bang_(%7, %6, %arg1, %5) : (!lz.value, !lz.value, !lz.value, !lz.value) -> !lz.value
+```
+
+The first two arguments `%7, %6` are proof terms of stuff being inhabited. The `%arg1` is the array, and `%5`
+is the index.
+
 # March 16th
 
 ```
