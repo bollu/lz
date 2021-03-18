@@ -51,6 +51,15 @@
   to appease MLIR is simply pain.
 - Can't believe I burned half an hour on this; the correct way to use pass options is to say
   `--lz-interpret='qwerty=foo'` where `qwerty` is the option declared in `lz-interpret`.
+- I need to fix the lexer and parser eventually. Some programs can't be run because they don't lex properly.
+- [ ] `binarytrees.lean` needs `Task` to be implement to be able to run. Will look into this later, maybe use `async` 
+  dialect? unclear!
+- `deriv.lean` needs the parser to be fixed? (`let x_18 : obj := prec(_)._closed_3;`)  
+- `qsort.lean` needs the parser to be fixed (`let x_1 : obj := "term↑__1";`) Can't parse uparrow (`↑`) right now.
+- `rbmap_checkpointlean` uses a new kind of projection: `let x_6 : u8 := sproj[3, 0] x_1;` I don't know the semantics
+   of this, sadly.
+  
+- `unionfind.lean` needs me to implement `String_dot_instInhabitedString`
 
 # March 16th
 

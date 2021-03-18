@@ -1,28 +1,24 @@
---  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | FileCheck %s
---  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | hask-opt  | FileCheck %s
---  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | hask-opt  --lz-lambdapure-destructive-updates | FileCheck %s
---  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | hask-opt  --lz-lambdapure-destructive-updates --lz-lambdapure-reference-rewriter | FileCheck %s
+---  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | FileCheck %s
+---  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | hask-opt  | FileCheck %s
+---  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | hask-opt  --lz-lambdapure-destructive-updates | FileCheck %s
+---  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | hask-opt  --lz-lambdapure-destructive-updates --lz-lambdapure-reference-rewriter | FileCheck %s
 
--- ERROR: THIS FILE ERRORS OUT ON TRYING TO GENERATE LAMBDAPURE
--- rbmap_checkpoint.lean:17:0: error: expected command, but found term; this
---   error may be due to parsing precedence levels, consider parenthesizing the
---   term
-set_option trace.compiler.ir.init true
+--- TODO: this file uses a new kind of projection: `let x_6 : u8 := sproj[3, 0] x_1;`
+--- CHECK: func @main
 
--- CHECK: func @main
 
 /-
 Copyright (c) 2017 Microsoft Corporation. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
-
-
 prelude
 import Init.Data.Option.Basic
 import Init.Data.List.BasicAux
 import Init.Data.String
 import Init.System.IO
+
+set_option trace.compiler.ir.init true
 
 universes u v w w'
 

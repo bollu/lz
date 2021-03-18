@@ -418,6 +418,13 @@ struct Interpreter {
       return;
     }
 
+    if (ErasedValueOp erased = dyn_cast<ErasedValueOp>(op)) {
+      assert(false && "cannot interpret erased values!");
+      // How can this ever run in the first place?
+      return;
+    }
+
+
     //============= StdOps ========================//
     if (mlir::ConstantIntOp cint = mlir::dyn_cast<mlir::ConstantIntOp>(op)) {
       env.addNew(cint.getResult(), InterpValue::i(cint.getValue()));
@@ -847,6 +854,7 @@ struct Interpreter {
 
   };
 
+
   Optional<InterpValue> InterpretPrimopNatDecEq(ArrayRef<InterpValue> args) {
     llvm::errs().changeColor(llvm::raw_fd_ostream::GREEN);
     llvm::errs() << "--interpreting primop:|Nat.Eq|--\n";
@@ -957,6 +965,14 @@ struct Interpreter {
     std::string s = v.s();
     return {InterpValue::i(atoi(s.c_str()))};
   };
+  Optional<InterpValue> InterpretPrimopArrayEmpty(ArrayRef<InterpValue> args) {
+    llvm::errs().changeColor(llvm::raw_fd_ostream::GREEN);
+    llvm::errs() << "--interpreting primop:|Array.empty|--\n";
+    llvm::errs().resetColor();
+
+    // vvv is this a hack? Maybe.
+    return {InterpValue::mem(new MemRef({1}) ) };
+  };
 
 
   // https://github.com/leanprover/lean4/blob/cc0712fc827fb0e60b0e00c875aaf2a715455c47/src/Init/System/IO.lean#L20
@@ -1029,6 +1045,25 @@ struct Interpreter {
     if (funcname == "String_dot_toNat_bang_") {
       return interpretPrimopStringToNat(args);
     }
+    if (funcname == "String_dot_instInhabitedString") {
+      // comes from | unionfind.lean
+      llvm::errs().changeColor(llvm::raw_fd_ostream::GREEN);
+      llvm::errs() << "--interpreting primop:|String.instInhabitedString|--\n";
+      llvm::errs().resetColor();
+      // This is a wild guess of what "ought" to happen.
+      return {InterpValue::constructor("0", {}) };
+    }
+
+    if (funcname == "List_dot_head_bang__dot__rarg_dot__closed_3") {
+      // HACK! I have no idea what this does
+      // comes from | unionfind.lean
+      llvm::errs().changeColor(llvm::raw_fd_ostream::GREEN);
+      llvm::errs() << "--interpreting primop:|String.instInhabitedString|--\n";
+      llvm::errs().resetColor();
+      // This is a wild guess of what "ought" to happen.
+      return {InterpValue::constructor("0", {}) };
+
+    }
 
 
     // vvv HACK: is this print v/s println?
@@ -1038,7 +1073,13 @@ struct Interpreter {
     }
 
 
-    // functions are isolated from above; create a fresh environment
+    if (funcname == "Array_dot_empty_dot__closed_1") {
+      return InterpretPrimopArrayEmpty(args);
+    }
+
+
+
+      // functions are isolated from above; create a fresh environment
     if (FuncOp haskfn = module.lookupSymbol<FuncOp>(funcname)) {
       return interpretRegion(haskfn.getRegion(), args, Env());
     }

@@ -4,6 +4,7 @@
 --  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | hask-opt  --lz-lambdapure-destructive-updates --lz-lambdapure-reference-rewriter | FileCheck %s
 
 -- CHECK: func @main
+-- TODO: needs the parser to be fixed (`let x_1 : obj := "term↑__1";`) Can't parse uparrow (`↑`) right now.
 
 set_option trace.compiler.ir.init true
 

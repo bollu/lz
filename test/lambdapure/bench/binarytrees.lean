@@ -3,6 +3,8 @@
 --  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | hask-opt  --lz-lambdapure-destructive-updates | FileCheck %s
 --  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | hask-opt  --lz-lambdapure-destructive-updates --lz-lambdapure-reference-rewriter | FileCheck %s
 
+-- STATUS: can be round-tripped, DOES NOT interpret.
+
 -- CHECK: func @main
 
 set_option trace.compiler.ir.init true

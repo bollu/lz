@@ -2,9 +2,9 @@
 --  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | hask-opt  | FileCheck %s
 --  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | hask-opt  --lz-lambdapure-destructive-updates | FileCheck %s
 --  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | hask-opt  --lz-lambdapure-destructive-updates --lz-lambdapure-reference-rewriter | FileCheck %s
---  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | hask-opt  --lz-interpret="mode=lambdapure" | FileCheck %s --check-prefix=CHECK-INTERPRET
+--  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | hask-opt  --lz-interpret="mode=lambdapure stdio=3" | FileCheck %s --check-prefix=CHECK-INTERPRET
 
-
+-- TODO: doesn't run properly; Tries to execute erased content.
 -- CHECK: func @main
 -- CHECK-INTERPRET: num_force_calls(0)
 

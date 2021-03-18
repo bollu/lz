@@ -3,6 +3,7 @@
 --  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | hask-opt  --lz-lambdapure-destructive-updates | FileCheck %s
 --  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | hask-opt  --lz-lambdapure-destructive-updates --lz-lambdapure-reference-rewriter | FileCheck %s
 
+-- Parser needs to be fixed to parse `let x_18 : obj := prec(_)._closed_3;`
 -- CHECK: func @main
 
 set_option trace.compiler.ir.init true

@@ -1215,10 +1215,15 @@ public:
 //    mlir::IntegerType i64 = builder.getIntegerType(64);
     addPrivateFunction("panic",
                        builder.getFunctionType({vty, vty, vty}, {vty}));
-
+    addPrivateFunction("UInt32_dot_decEq",
+                       builder.getFunctionType({vty, vty}, {vty}));
     addPrivateFunction("UInt32_dot_add",
                        builder.getFunctionType({vty, vty}, {vty}));
+    addPrivateFunction("UInt32_dot_sub    ",
+                       builder.getFunctionType({vty, vty}, {vty}));
     addPrivateFunction("UInt32_dot_ofNat",
+                       builder.getFunctionType({vty}, {vty}));
+    addPrivateFunction("UInt32_dot_toNat",
                        builder.getFunctionType({vty}, {vty}));
 
 
@@ -1235,6 +1240,10 @@ public:
     addPrivateFunction("Nat_dot_repr",
                        builder.getFunctionType({vty}, {vty}));
     addPrivateFunction("Nat_dot_decLt",
+                       builder.getFunctionType({vty, vty}, {vty}));
+    addPrivateFunction("Nat_dot_decLe",
+                       builder.getFunctionType({vty, vty}, {vty}));
+    addPrivateFunction("Nat_dot_pow",
                        builder.getFunctionType({vty, vty}, {vty}));
     addPrivateFunction("Nat_dot_decEq",
                        builder.getFunctionType({vty, vty}, {vty}));
@@ -1267,6 +1276,14 @@ public:
     addPrivateFunction("Lean_dot_Parser_dot_Syntax_dot_addPrec_dot__closed_11",
                        builder.getFunctionType({}, {vty})); // const_fold.lean
 
+    // task from binarytrees.lean
+    addPrivateFunction("Task_dot_get",
+                       builder.getFunctionType({vty, vty}, {vty})); // binarytrees.lean
+    addPrivateFunction("Task_dot_spawn",
+                       builder.getFunctionType({vty, vty, vty}, {vty})); // binarytrees.lean
+
+    addPrivateFunction("Task_dot_Priority_dot_default",
+                       builder.getFunctionType({}, {vty})); // binarytrees.lean
 
   }
   // converts lambdapure AST -> MLIR
