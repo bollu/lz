@@ -676,7 +676,7 @@ private:
       lastChar = TokenType(getNextChar());
 
       //[a-zA-Z][a-zA-Z0-9_.!]
-      while ( lastChar == '\'' || lastChar == '.' || lastChar == '!' ||
+      while (lastChar == '\'' || lastChar == '.' || lastChar == '!' ||
              lastChar == '-' || lastChar == '*' ||
              isalnum(lastChar) || lastChar == '_') {
         // replace apostrophe with _prime, c cant have
@@ -1523,10 +1523,13 @@ private:
       args.push_back(mlirGenVar(*varExpr));
     }   
 
-    return builder.create<mlir::CallIndirectOp>(loc(), funcVal, args).getResult(0);
+//    assert(false && "building call indirect op");
+    return builder.create<standalone::ApEagerOp>(loc(), funcVal,
+                                                 builder.getType<standalone::ValueType>(),
+                                                 args).getResult();
 
-    // return builder.create<mlir::lambdapure::AppOp>(loc(), funcVal, args, ty);
-    // return builder.create<standalone::ApOp>(loc(), funcVal, args, ty);
+//     return builder.create<mlir::lambdapure::AppOp>(loc(), funcVal, args, ty);
+//     return builder.create<standalone::ApOp>(loc(), funcVal, args, ty);
   }
 
   mlir::Value mlirGenString(StringExprAST &expr, mlir::Type ty) {

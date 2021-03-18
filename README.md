@@ -34,19 +34,23 @@
 
 
 
-# TODO:
-- Fix MLIR bugs.
-- Refactor to make type annotations less annoying. In particular, `ap`          
-  should not need type of function, only type of arguments and return type
-- Remove the `hask.primop_*`. It's useless. Just use native `int`s.
-- Benchmarks: https://benchmarksgame-team.pages.debian.net/benchmarksgame/program/binarytrees-ghc-7.html
-- compiling _from_ categories: can we have a dialect called `CCC` for closed cartesian
-  categories that's compiled efficiently?
-- Can't believe I burned half an hour on this; the correct way to use pass options is to say
-  `--lz-interpret='qwerty=foo'` where `qwerty` is the option declared in `lz-interpret`.
 
 
 # Log:  [newest] to [oldest]
+
+# March 18th
+
+- So (1) I was lowering indirect calls to `lz.ap` that is completely wrong, because it doesn't
+  actually makes the call, just creates a thunk. The "problem" is that since the dialect is type erased,
+  I need to use an `lz.ap` :(. So I guess I do need to revive the `lz.apeager` after all.
+  I can't use `std.indirectcall` because it needs me to typecast the `func : !lz.value`
+  into `func: (!lz.value, !lz.value) -> !lz.value` which is just as stupid. Matt avoided
+  this by having only one type in his dialect, and a separate `ApEagerOp` as I am cornered
+  into doing.
+- Note to self: DO NOT BUY INTO MLIR DESIGN PRINCIPLES. Just do whatever is convenient, as attempting
+  to appease MLIR is simply pain.
+- Can't believe I burned half an hour on this; the correct way to use pass options is to say
+  `--lz-interpret='qwerty=foo'` where `qwerty` is the option declared in `lz-interpret`.
 
 # March 16th
 
