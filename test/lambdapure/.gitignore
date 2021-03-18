@@ -1,2 +1,4 @@
 *.cpp # generated from running
 *.lambdapure # generated from testing.
+*.c# generated from running
+
