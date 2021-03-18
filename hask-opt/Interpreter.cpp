@@ -443,6 +443,17 @@ struct Interpreter {
       return;
     }
 
+    /*
+    if (PapOp pap = dyn_cast<PapOp>(op)) {
+      std::vector<InterpValue> args;
+      for(int i = 0; i < pap->getNumOperands(); ++i) {
+        args.push_back(env.lookup(pap.getLoc(), pap->getOperand(i)));
+      }
+
+      env.addNew(pap.getResult(), InterpValue::closureTopLevel(pap.getFn(), args));
+    }
+     */
+
 
     //============= StdOps ========================//
     if (mlir::ConstantIntOp cint = mlir::dyn_cast<mlir::ConstantIntOp>(op)) {
@@ -904,7 +915,7 @@ struct Interpreter {
     // case x_4 : obj of
     //  Bool.false →
     //  Bool.true →
-    int tag = v.i() < w.i() ? 1 : 0; // true comes after false.
+    int tag = (v.i() < w.i()) == false ? 0 : 1; // true comes after false.
     return {InterpValue::constructor(std::to_string(tag), {}) };
   };
 
@@ -1033,6 +1044,22 @@ struct Interpreter {
     return arr.load(ixs);
   };
 
+  Optional<InterpValue> InterpretPrimopArraySize(ArrayRef<InterpValue> args) {
+    llvm::errs().changeColor(llvm::raw_fd_ostream::GREEN);
+    llvm::errs() << "--interpreting primop:|Array.size|--\n";
+    llvm::errs().resetColor();
+
+    assert(args.size() == 2);
+    InterpValue proof = args[0], arr = args[1];
+
+    assert(proof.type == InterpValueType::Constructor);
+    assert(proof.constructorTag() == G_ERASED_VALUE_TAG);
+
+    assert(arr.type == InterpValueType::MemRef);
+    return InterpValue::i(arr.sizeOfDim(0));
+  };
+
+
 
 
   // https://github.com/leanprover/lean4/blob/cc0712fc827fb0e60b0e00c875aaf2a715455c47/src/Init/System/IO.lean#L20
@@ -1141,6 +1168,9 @@ struct Interpreter {
     }
     if (funcname == "Array_dot_get_bang_") {
       return InterpretPrimopArrayGet(args);
+    }
+    if (funcname == "Array_dot_size") { // unionfind
+      return InterpretPrimopArraySize(args);
     }
 
     if (funcname == "instInhabitedNat") {

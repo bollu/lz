@@ -98,6 +98,194 @@ func @sumAux(%arg0: !lz.value, %arg1: !lz.value) -> !lz.value {
 The first two arguments `%7, %6` are proof terms of stuff being inhabited. The `%arg1` is the array, and `%5`
 is the index.
 
+#### Parser bug
+
+I'm a little depressed. The lexer/parser do something incorrect. They generate the AST:
+
+```
+test (object -> object -> -> object) x_1 x_2 
+
+  Let object x_3 = 2
+  Let int x_4 = Call Nat_dot_decLt x_1 x_3
+  Case  on x_4 : 
+      Let object x_5 = Call mkNodes x_1 x_2
+      Case  on x_5 : 
+          Let object x_6 = Proj[0] x_5
+
+          Let object x_7 = Proj[1] x_5
+
+          Case  on x_6 : 
+              Let object x_8 = Proj[0] x_6
+
+              Let object x_9 = Ctor 0 x_8
+              Let object x_10 = Ctor 0 x_9 x_7
+              return x_10
+
+                Let object x_11 = 50000
+                Let object x_12 = Call mergePack x_11 x_7
+                Case  on x_12 : 
+                    Let object x_13 = Proj[0] x_12
+
+                    Let object x_14 = Proj[1] x_12
+
+                    Case  on x_13 : 
+                        Let object x_15 = Proj[0] x_13
+
+                        Let object x_16 = Ctor 0 x_15
+                        Let object x_17 = Ctor 0 x_16 x_14
+                        return x_17
+
+                          Let object x_18 = 10000
+                          Let object x_19 = Call mergePack x_18 x_14
+                          Case  on x_19 : 
+                              Let object x_20 = Proj[0] x_19
+
+                              Let object x_21 = Proj[1] x_19
+
+                              Case  on x_20 : 
+                                  Let object x_22 = Proj[0] x_20
+
+                                  Let object x_23 = Ctor 0 x_22
+                                  Let object x_24 = Ctor 0 x_23 x_21
+                                  return x_24
+
+                                    Let object x_25 = 5000
+                                    Let object x_26 = Call mergePack x_25 x_21
+                                    Case  on x_26 : 
+                                        Let object x_27 = Proj[0] x_26
+
+                                        Let object x_28 = Proj[1] x_26
+
+                                        Case  on x_27 : 
+                                            Let object x_29 = Proj[0] x_27
+
+                                            Let object x_30 = Ctor 0 x_29
+                                            Let object x_31 = Ctor 0 x_30 x_28
+                                            return x_31
+
+                                              Let object x_32 = 1000
+                                              Let object x_33 = Call mergePack x_32 x_28
+                                              Case  on x_33 : 
+                                                  Let object x_34 = Proj[0] x_33
+
+                                                  Let object x_35 = Proj[1] x_33
+
+                                                  Case  on x_34 : 
+                                                      Let object x_36 = Proj[0] x_34
+
+                                                      Let object x_37 = Ctor 0 x_36
+                                                      Let object x_38 = Ctor 0 x_37 x_35
+                                                      return x_38
+
+                                                        Let object x_39 = Call numEqs x_35
+                                                        return x_39
+
+                                                          Let object x_40 = Call test_dot__closed_2
+                                                          Let object x_41 = Ctor 0 x_40 x_2
+                                                          return x_41
+
+```
+
+which has no matching "case or" branches (these are only the happy paths).
+The real AST is:
+
+```
+def test (x_1 : obj) (x_2 : obj) : obj :=
+  let x_3 : obj := 2;
+  let x_4 : u8 := Nat.decLt x_1 x_3;
+  case x_4 : obj of
+  Bool.false →
+    let x_5 : obj := mkNodes x_1 x_2;
+    case x_5 : obj of
+    Prod.mk →
+      let x_6 : obj := proj[0] x_5;
+      let x_7 : obj := proj[1] x_5;
+      case x_6 : obj of
+      Except.error →
+        let x_8 : obj := proj[0] x_6;
+        let x_9 : obj := ctor_0[Except.error] x_8;
+        let x_10 : obj := ctor_0[Prod.mk] x_9 x_7;
+        ret x_10
+      Except.ok →
+        let x_11 : obj := 50000;
+        let x_12 : obj := mergePack x_11 x_7;
+        case x_12 : obj of
+        Prod.mk →
+          let x_13 : obj := proj[0] x_12;
+          let x_14 : obj := proj[1] x_12;
+          case x_13 : obj of
+          Except.error →
+            let x_15 : obj := proj[0] x_13;
+            let x_16 : obj := ctor_0[Except.error] x_15;
+            let x_17 : obj := ctor_0[Prod.mk] x_16 x_14;
+            ret x_17
+          Except.ok →
+            let x_18 : obj := 10000;
+            let x_19 : obj := mergePack x_18 x_14;
+            case x_19 : obj of
+            Prod.mk →
+              let x_20 : obj := proj[0] x_19;
+              let x_21 : obj := proj[1] x_19;
+              case x_20 : obj of
+              Except.error →
+                let x_22 : obj := proj[0] x_20;
+                let x_23 : obj := ctor_0[Except.error] x_22;
+                let x_24 : obj := ctor_0[Prod.mk] x_23 x_21;
+                ret x_24
+              Except.ok →
+                let x_25 : obj := 5000;
+                let x_26 : obj := mergePack x_25 x_21;
+                case x_26 : obj of
+                Prod.mk →
+                  let x_27 : obj := proj[0] x_26;
+                  let x_28 : obj := proj[1] x_26;
+                  case x_27 : obj of
+                  Except.error →
+                    let x_29 : obj := proj[0] x_27;
+                    let x_30 : obj := ctor_0[Except.error] x_29;
+                    let x_31 : obj := ctor_0[Prod.mk] x_30 x_28;
+                    ret x_31
+                  Except.ok →
+                    let x_32 : obj := 1000;
+                    let x_33 : obj := mergePack x_32 x_28;
+                    case x_33 : obj of
+                    Prod.mk →
+                      let x_34 : obj := proj[0] x_33;
+                      let x_35 : obj := proj[1] x_33;
+                      case x_34 : obj of
+                      Except.error →
+                        let x_36 : obj := proj[0] x_34;
+                        let x_37 : obj := ctor_0[Except.error] x_36;
+                        let x_38 : obj := ctor_0[Prod.mk] x_37 x_35;
+                        ret x_38
+                      Except.ok →
+                        let x_39 : obj := numEqs x_35;
+                        ret x_39
+  Bool.true →
+    let x_40 : obj := test._closed_2;
+    let x_41 : obj := ctor_0[Prod.mk] x_40 x_2;
+    ret x_41
+```
+
+That is, it looks like:
+
+```
+def test (x_1 : obj) (x_2 : obj) : obj :=
+  let x_3 : obj := 2;
+  let x_4 : u8 := Nat.decLt x_1 x_3;
+  case x_4 : obj of
+  Bool.false →
+    let x_5 : obj := mkNodes x_1 x_2;
+    case x_5 : obj of
+    ...
+  Bool.true → <= MISSING
+    let x_40 : obj := test._closed_2;
+    let x_41 : obj := ctor_0[Prod.mk] x_40 x_2;
+    ret x_41
+```
+
+
+
 # March 16th
 
 ```

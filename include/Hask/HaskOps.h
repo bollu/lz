@@ -395,7 +395,7 @@ class PapOp
 public:
   using Op::Op;
   static StringRef getOperationName() { return "lz.pap"; };
-  Value getFn() { return this->getOperation()->getOperand(0); };
+  std::string getFnName() { return this->getOperation()->getAttrOfType<StringAttr>("value").getValue().str(); }
   int getNumFnArguments() {
     return this->getOperation()->getNumOperands() - 1;
   };

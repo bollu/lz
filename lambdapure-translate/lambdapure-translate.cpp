@@ -1701,6 +1701,10 @@ OwningModuleRef translateLambdapureToModule(llvm::SourceMgr &sourceMgr,
   Parser parser = Parser(lexer);
   std::unique_ptr<ModuleAST> lambdapureModule = parser.parse();
 
+  llvm::errs() << "\nvvvvvv MODULE AST:vvvvvv\n";
+  lambdapureModule->print();
+  llvm::errs() << "\n^^^^^^\n";
+
   context->loadDialect<mlir::StandardOpsDialect>();
   // context->loadDialect<mlir::lambdapure::LambdapureDialect>();
   context->loadDialect<standalone::HaskDialect>();
@@ -1719,10 +1723,10 @@ OwningModuleRef translateLambdapureToModule(llvm::SourceMgr &sourceMgr,
   // }
 
   mlir::ModuleOp module = MLIRGenImpl(*context).mlirGen(*lambdapureModule);
-  llvm::errs() << "==========final module============\n";
-  llvm::errs() << "==========final module============\n";
-  llvm::errs() << "==========final module============\n";
-  module.dump();
+//  llvm::errs() << "==========final module============\n";
+//  llvm::errs() << "==========final module============\n";
+//  llvm::errs() << "==========final module============\n";
+//  module.dump();
   return module;
   // return mlirGen(*context, *lambdapureModule);
 }
