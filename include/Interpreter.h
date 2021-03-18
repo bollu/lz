@@ -91,6 +91,11 @@ using MemRef = MemRefT<InterpValue>;
 
 struct InterpValue {
   InterpValueType type;
+
+  // ============ Reference counting ===========//
+  void refcountIncrement() { this->refcount_++; }
+  void refcountDecrement() { this->refcount_--; }
+
   //============= String ======================//
   static InterpValue s(std::string s) {
     InterpValue v(InterpValueType::String);
@@ -298,8 +303,9 @@ struct InterpValue {
   std::vector<InterpValue> vs_;
   std::string s_;
   mlir::standalone::HaskLambdaOp lam; // ugh
+  int refcount_;
 private:
-  InterpValue(InterpValueType type) : type(type){};
+  InterpValue(InterpValueType type) : type(type), refcount_(0) {};
 };
 
 struct InterpStats {

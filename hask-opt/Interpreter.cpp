@@ -425,6 +425,24 @@ struct Interpreter {
       return;
     }
 
+    if (IncOp inc = dyn_cast<IncOp>(op)) {
+      InterpValue v = env.lookup(inc->getLoc(), inc.getOperand());
+      v.refcountIncrement();
+      env.update(inc.getOperand(), v);
+      return;
+    }
+
+    if (DecOp dec = dyn_cast<DecOp>(op)) {
+      InterpValue v = env.lookup(dec->getLoc(), dec.getOperand());
+      v.refcountDecrement();
+      if (v.refcount_ < -1) {
+        llvm::errs() << "ERROR: reference count dropped below zero: |" << dec << "|\n";
+      }
+      assert(v.refcount_ >= -1 && "expected refcount to be non-negative");
+      env.update(dec.getOperand(), v);
+      return;
+    }
+
 
     //============= StdOps ========================//
     if (mlir::ConstantIntOp cint = mlir::dyn_cast<mlir::ConstantIntOp>(op)) {
