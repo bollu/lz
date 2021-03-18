@@ -1236,6 +1236,8 @@ public:
 
     addPrivateFunction("Nat_dot_max",
                        builder.getFunctionType({vty, vty}, {vty}));
+    addPrivateFunction("instInhabitedNat",
+                       builder.getFunctionType({}, {vty}));
 
     addPrivateFunction("Nat_dot_repr",
                        builder.getFunctionType({vty}, {vty}));
@@ -1257,6 +1259,9 @@ public:
                        builder.getFunctionType({}, {vty}));
     addPrivateFunction("Array_dot_set_bang_",
                        builder.getFunctionType({vty, vty, vty, vty}, {vty}));
+    addPrivateFunction("Array_dot_get_bang_",
+                       builder.getFunctionType({vty, vty, vty, vty}, {vty}));
+
     addPrivateFunction("Array_dot_push",
                        builder.getFunctionType({vty, vty, vty}, {vty}));
     addPrivateFunction("Array_dot_size",
