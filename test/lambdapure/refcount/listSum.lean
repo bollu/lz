@@ -11,8 +11,12 @@ inductive L
 | Cons : Nat -> L -> L
 
 open L
-
 instance : Inhabited L := ⟨Nil⟩
+
+partial def make' : Nat -> Nat -> L
+| n,d =>
+  if d = 0 then Cons n Nil
+  else Cons (n-d) (make' n (d -1))
 
 def make (n : Nat) : L := make' n n
 
