@@ -267,7 +267,8 @@ def test (x_1 : obj) (x_2 : obj) : obj :=
     ret x_41
 ```
 
-That is, it looks like:
+That is, it has both a `Bool.false -> ` branch and a `Bool.true ->` branch (which
+is missing). The real code is:
 
 ```
 def test (x_1 : obj) (x_2 : obj) : obj :=
