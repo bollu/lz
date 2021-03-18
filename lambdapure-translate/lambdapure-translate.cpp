@@ -676,7 +676,7 @@ private:
       lastChar = TokenType(getNextChar());
 
       //[a-zA-Z][a-zA-Z0-9_.!]
-      while (lastChar == '\'' || lastChar == '.' || lastChar == '!' ||
+      while ( lastChar == '\'' || lastChar == '.' || lastChar == '!' ||
              lastChar == '-' || lastChar == '*' ||
              isalnum(lastChar) || lastChar == '_') {
         // replace apostrophe with _prime, c cant have
@@ -1516,11 +1516,17 @@ private:
   mlir::Value mlirGen(AppExprAST &expr, mlir::Type ty) {
     llvm::SmallVector<mlir::Value, 4> args;
     mlir::Value funcVal = scopeTable.lookup(expr.getFName());
+    assert(funcVal && "expected correct function");
+
+    llvm::errs() << "funcVal: |" << funcVal << "|\n";
     for (auto &varExpr : expr.getArgs()) {
       args.push_back(mlirGenVar(*varExpr));
-    }
+    }   
+
+    return builder.create<mlir::CallIndirectOp>(loc(), funcVal, args).getResult(0);
+
     // return builder.create<mlir::lambdapure::AppOp>(loc(), funcVal, args, ty);
-    return builder.create<standalone::ApOp>(loc(), funcVal, args, ty);
+    // return builder.create<standalone::ApOp>(loc(), funcVal, args, ty);
   }
 
   mlir::Value mlirGenString(StringExprAST &expr, mlir::Type ty) {
@@ -1560,7 +1566,6 @@ private:
     for (auto &varExpr : expr.getArgs()) {
       args.push_back(mlirGenVar(*varExpr));
     }
-
     std::string fName = expr.getFName();
     return builder.create<standalone::PapOp>(loc(), fName, args);
   }
