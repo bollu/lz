@@ -1,8 +1,23 @@
 # Core-MLIR
-![Compile paper](../../workflows/Build%20and%20test%20[from%20upstream]/badge.svg)
 
-- [Link to download the latest build of my master thesis](https://github.com/bollu/coremlir/releases/latest/download/thesis.pdf)
-- [`fast-math` haskell library has some RULES limitations](https://github.com/liyang/fast-math/)
+# Priority queue
+- Finish implementing refcounting [track increment and decrement in interpreter].
+- Check if eliminating overhead of LEAN runtime is possible: (1) compile a program using `lean` to c++,
+  (2) generate the LLVM from the program and the LEAN runtime, (3) `llvm-link` everything to make it one big
+  module, (4) run `opt -O3`. 
+- Finish implementing arrays.
+- Show that our (C++/LLVM) backend is as efficient or more efficient than the LEAN code generator.
+- Implement support for LEAN ops in LLVM backend.
+- Make LEAN lazy.
+- Composition of `head . sort` to be lazy.
+- [Real number representations](representation:https://github.com/bollu/fractions/blob/master/potts-phd-exact-real-using-mobius.pdf )
+- Standard data structures examples of how purity without laziness pays a
+  log(n) cost to simulate memory using a BST; Laziness allows us to regain the
+  right bounds (Okasaki).
+- Nixpkgs --- laziness necessary for program semantics. 
+- Look for demand analysis testsuite in GHC.
+
+
 
 
 # Notes on GHC
@@ -15,6 +30,7 @@
 - [Novel GC algorithm for pure funcitonal languages](https://www.reddit.com/r/haskell/comments/knzfhn/novel_garbage_collection_technique_for_immutable/)
 - [supercompiler by evaluation](https://www.microsoft.com/en-us/research/wp-content/uploads/2016/07/supercomp-by-eval.pdf)
 - [GHC grin has benchmark suite](https://github.com/grin-compiler/ghc-grin/tree/master/ghc-grin-benchmark/boquist-grin-bench)
+- [`fast-math` haskell library has some RULES limitations](https://github.com/liyang/fast-math/)
 
 
 
@@ -39,6 +55,9 @@
 // something that regions help make precise!
 if (auto jumpop = dyn_cast<standalone::HaskJumpOp>(op)) { }
 ```
+
+- Wow WTF, I have no idea how to generate a `lz.pap` in a "real function".
+  It seems to only show up in proof erased terms?!
 
 # March 15th
 
