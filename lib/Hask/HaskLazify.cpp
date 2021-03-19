@@ -114,6 +114,13 @@ struct LzLazifyPass : public Pass {
                                                    fnref,
                                                    args,
                                                    call.getCalleeType().getResult(0));
+
+
+        // TODO: I believe this is strictly less precise than the code below,
+        // which places the force RIGHT NEXT TO THE USE!
+        ForceOp forced = builder.create<ForceOp>(builder.getUnknownLoc(), ap);
+        call->replaceAllUsesWith(forced);
+        /*
         for(auto &u : call->getUses()) {
           Operation *user = u.getOwner();
           const int ix = u.getOperandNumber();
@@ -121,7 +128,7 @@ struct LzLazifyPass : public Pass {
           // %y = call f(%x) -> %y = force(ap(f, %x));
           ForceOp forced = builder.create<ForceOp>(builder.getUnknownLoc(), ap);
           user->setOperand(ix, forced);
-        }
+        }*/
 
         return WalkResult::advance();
       }); // end walk for CallOp
