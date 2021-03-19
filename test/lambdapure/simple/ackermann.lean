@@ -35,6 +35,6 @@ def foo : Nat -> Nat -> Nat -> Nat
 -- | This example is not so interesting because dead code elimination gets rid of the work.
 def main (xs: List String) : IO Unit :=
    let x := ackermann 4 1; 
-   IO.println (foo (ackermann 3 3) x 0)
+   IO.println (foo 42 x 0)
 
 
