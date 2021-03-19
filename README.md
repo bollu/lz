@@ -42,9 +42,6 @@
 
 MLIR strangeness of the day: Walking over uses of an argument does not give me the first use!
 
-                                                          
-
-
 ```
 /home/bollu/work/lz/test/lambdapure/simple$ hask-opt error.mlir --lz-lazify
 forcifying user: |%6 = call @Nat_dot_decEq(%arg0, %4) : (!lz.thunk<!lz.value>, !lz.value) -> !lz.value

@@ -22,6 +22,7 @@ struct LzLazifyPass : public Pass {
     return newInst;
   }
 
+
   void runOnOperation() override {
     mlir::ModuleOp mod(getOperation());
     mlir::OpBuilder builder(mod);
@@ -42,7 +43,7 @@ struct LzLazifyPass : public Pass {
       }
 
       // update the *function type* itself.
-      fn.setType(builder.getFunctionType(lazyArgTys, fn->getResultTypes()));
+      fn.setType(builder.getFunctionType(lazyArgTys, fn.getType().getResults()));
 
       // Step 1: change all arguments from T to !lz.thunk<T>
       // Recall that the function type is stashed separately from the
@@ -53,10 +54,22 @@ struct LzLazifyPass : public Pass {
         assert (i < (int)lazyArgTys.size());
         fn.getArgument(i).setType(lazyArgTys[i]);
 
-        // Step 2: at all use sites of argument, insert a
-        for (auto &u : fn.getArgument(i).getUses()) {
-          Operation *user = u.getOwner();
-          const int ix = u.getOperandNumber();
+
+        // Step 2: at all use sites of argument, insert a.
+
+        // Keep this as a vector because we add new uses (inserting Force(%x))
+        // while we iterate on the old ones (y = %x)
+
+        mlir::SmallVector<std::pair<mlir::Operation*, int>, 4> users;
+
+        for(mlir::OpOperand &u : fn.getArgument(i).getUses()) {
+          users.push_back({u.getOwner(), u.getOperandNumber()});
+        }
+
+        for (auto userdata : users) {
+          Operation *user = userdata.first;
+          const int ix = userdata.second;
+
           builder.setInsertionPoint(user);
           // %f = op (%x) -> %f = op(force(%xt));
           ForceOp forced = builder.create<ForceOp>(builder.getUnknownLoc(),
@@ -68,7 +81,6 @@ struct LzLazifyPass : public Pass {
           // user->getOperand(ix).setType(argTy);
           user->setOperand(ix, forced);
           llvm::errs() << "\tafter: |" << *user << "\n"; getchar();
-
         }
       }
     }
@@ -89,11 +101,20 @@ struct LzLazifyPass : public Pass {
 
         erasedCalls.insert(call);
         builder.setInsertionPoint(call);
-        ConstantOp fnref = builder.create<ConstantOp>(builder.getUnknownLoc(),
-                                                   call.getCalleeType(),
-                                                   builder.getStringAttr(call.getCallee()));
 
-        SmallVector<Value, 4> args(call->getOperands()) ;
+        llvm::SmallVector<Type, 4> lazyCallArgTys;
+        for(int i  = 0; i < (int)call.getCalleeType().getNumInputs(); ++i) {
+          lazyCallArgTys.push_back(ThunkType::get(builder.getContext(),
+              call.getCalleeType().getInput(i)));
+        }
+        FunctionType lazyCallType = builder.getFunctionType(lazyCallArgTys, call.getCalleeType().getResults());
+
+        ConstantOp fnref = builder.create<ConstantOp>(builder.getUnknownLoc(),
+                                                      lazyCallType,
+                                                   builder.getSymbolRefAttr(call.getCallee()));
+
+
+        SmallVector<Value, 4> args(call.getArgOperands()) ;
         // TODO: multiple results?
         ApOp ap = builder.create<standalone::ApOp>(builder.getUnknownLoc(),
                                                    fnref,
