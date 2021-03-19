@@ -38,6 +38,49 @@
 
 # Log:  [newest] to [oldest]
 
+# March 19th
+
+MLIR strangeness of the day: Walking over uses of an argument does not give me the first use!
+
+                                                          
+
+
+```
+/home/bollu/work/lz/test/lambdapure/simple$ hask-opt error.mlir --lz-lazify
+forcifying user: |%6 = call @Nat_dot_decEq(%arg0, %4) : (!lz.thunk<!lz.value>, !lz.value) -> !lz.value
+        after: |%6 = call @Nat_dot_decEq(%5, %4) : (!lz.value, !lz.value) -> !lz.value
+
+vvvvv:module:vvvvv
+module  {
+  func private @Nat_dot_sub(!lz.value, !lz.value) -> !lz.value
+  func private @Nat_dot_decEq(!lz.value, !lz.value) -> !lz.value
+  func @ackermann_dot_match_1_dot__rarg(%arg0: !lz.thunk<!lz.value>) {
+    %0 = "lz.int"() {value = 0 : i64} : () -> !lz.value
+    %1 = call @Nat_dot_decEq(%arg0, %0) : (!lz.thunk<!lz.value>, !lz.value) -> !lz.value
+    %2 = "lz.tagget"(%1) : (!lz.value) -> i64
+    %3 = "lz.case"(%2) ( {
+      %4 = "lz.int"() {value = 1 : i64} : () -> !lz.value
+      %5 = "lz.force"(%arg0) : (!lz.thunk<!lz.value>) -> !lz.value
+      %6 = call @Nat_dot_decEq(%5, %4) : (!lz.value, !lz.value) -> !lz.value
+      lz.return %6 : !lz.value
+    }) {alt0 = @"0"} : (i64) -> !lz.value
+    return %3 : !lz.value
+  }
+}
+
+^^^^^^
+error.mlir:6:10: error: 'std.call' op operand type mismatch: expected operand
+type '!lz.value', but provided '!lz.thunk<!lz.value>' for operand number 0
+    %1 = call @Nat_dot_decEq(%arg0, %0) : (!lz.value, !lz.value) -> !lz.value
+         ^
+error.mlir:6:10: note: see current operation:
+%1 = "std.call"(%arg0, %0) {callee = @Nat_dot_decEq} : (!lz.thunk<!lz.value>, !lz.value) -> !lz.value
+```
+
+- See that it never gave me `forcifying user: |%1 = ...|` even though it clearly uses `%arg0`! What's going on?!
+
+
+
 # March 18th
 
 - So (1) I was lowering indirect calls to `lz.ap` that is completely wrong, because it doesn't
