@@ -36,7 +36,6 @@ struct LzLazifyPass : public Pass {
 
       // Step 0: make new function type;
       llvm::SmallVector<mlir::Type, 4> lazyArgTys;
-
       for (int i = 0; i < (int)fn.getNumArguments(); ++i) {
         lazyArgTys.push_back(standalone::ThunkType::get(
             mod->getContext(), fn.getArgument(i).getType()));
@@ -74,13 +73,8 @@ struct LzLazifyPass : public Pass {
           // %f = op (%x) -> %f = op(force(%xt));
           ForceOp forced = builder.create<ForceOp>(builder.getUnknownLoc(),
                                                    fn.getArgument(i));
-          llvm::errs() << "forcifying user: |" << *user; getchar();
-
-          // reset the type that was mutated by calling fn.getArgument(i).setType.
-          // I have NO IDEA WHY THIS TYPE CHANGES.
-          // user->getOperand(ix).setType(argTy);
           user->setOperand(ix, forced);
-          llvm::errs() << "\tafter: |" << *user << "\n"; getchar();
+          // llvm::errs() << "\tafter: |" << *user << "\n"; getchar();
         }
       }
     }
@@ -97,7 +91,7 @@ struct LzLazifyPass : public Pass {
         // only chance a call if we lazified the function itself.
         if (!lazifiedFns.count(call.getCallee().str())) { return WalkResult::advance(); }
 
-        llvm::errs() << "lazifying call: |" << call << "\n"; getchar();
+//        llvm::errs() << "lazifying call: |" << call << "\n"; getchar();
 
         erasedCalls.insert(call);
         builder.setInsertionPoint(call);
@@ -108,11 +102,11 @@ struct LzLazifyPass : public Pass {
               call.getCalleeType().getInput(i)));
         }
         FunctionType lazyCallType = builder.getFunctionType(lazyCallArgTys, call.getCalleeType().getResults());
-
         ConstantOp fnref = builder.create<ConstantOp>(builder.getUnknownLoc(),
                                                       lazyCallType,
-                                                   builder.getSymbolRefAttr(call.getCallee()));
+                                                       builder.getSymbolRefAttr(call.getCallee()));
 
+        assert(call.getCalleeType().getNumResults() > 0 && "ap needs at least one result");
 
         SmallVector<Value, 4> args(call.getArgOperands()) ;
         // TODO: multiple results?
@@ -133,13 +127,21 @@ struct LzLazifyPass : public Pass {
       }); // end walk for CallOp
 
       // erase all now dead calls;
-      for(CallOp c : erasedCalls) {
-        c.erase();
-      }
+      for(CallOp c : erasedCalls) { c.erase(); }
     } // end loop over all functions
 
     llvm::errs() << "vvvvv:module:vvvvv\n";
     mod->print(llvm::errs());
+    llvm::errs() << "\n^^^^^^\n";
+
+    llvm::errs() << "vvvvv:verifying:vvvvv\n";
+    if (mlir::failed(mod.verify())) {
+      llvm::outs() << "ERROR: module fails verification\n";
+      assert(false && "module failed verification");
+      exit(1);
+    } else {
+      llvm::errs() << "module succeeds verification!";
+    }
     llvm::errs() << "\n^^^^^^\n";
 
   }
