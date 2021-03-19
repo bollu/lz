@@ -1,3 +1,6 @@
+//  RUN: hask-opt %s --lz-lazify --verify-each --verify-region-info
+
+
 // The output that we ought to get from the ackermann.lean, but don't yet.
 module  {
   func private @panic(!lz.value, !lz.value, !lz.value) -> !lz.value
