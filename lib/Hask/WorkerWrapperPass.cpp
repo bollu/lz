@@ -207,7 +207,8 @@ struct InlineApEagerPattern : public mlir::OpRewritePattern<ApEagerOp> {
     if (!HaskDialect::isFunctionRecursive(called)) {
       LogicalResult isInlined = inlineRegion(
           inliner, &called.getBody(), ap, ap.getFnArguments(), ap.getResult());
-      assert(succeeded(isInlined) && "unable to inline");
+      return isInlined;
+      // assert(succeeded(isInlined) && "unable to inline");
       return success();
     } else {
       return failure();

@@ -108,7 +108,11 @@ struct LzLazifyPass : public Pass {
 
         assert(call.getCalleeType().getNumResults() > 0 && "ap needs at least one result");
 
-        SmallVector<Value, 4> args(call.getArgOperands()) ;
+        SmallVector<Value, 4> args;
+        for(Value arg : call.getArgOperands()) {
+          args.push_back(builder.create<ThunkifyOp>(builder.getUnknownLoc(), arg));
+        }
+        
         // TODO: multiple results?
         ApOp ap = builder.create<standalone::ApOp>(builder.getUnknownLoc(),
                                                    fnref,

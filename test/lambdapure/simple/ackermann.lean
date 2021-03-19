@@ -11,6 +11,8 @@ set_option trace.compiler.ir.init true
 -- | I'm not sure why lean4 does not understand that this is decidable.
 -- | They too define it as "partial def" in the file
 -- | lean4/tests/lean/run/trace.lean
+
+
 partial def ackermann : Nat -> Nat -> Nat
 | 0, n => n + 1
 | m+1, 0 => ackermann m 1
@@ -27,12 +29,12 @@ def s : (c -> a -> b) -> (c -> a) -> (c -> b)
 
 
 -- | this evaluates to the K combinator. 
-def foo : Nat -> Nat -> Nat
-| x, y => (s k (s k) k) x y 
+def foo : Nat -> Nat -> Nat -> Nat
+| x, y, z => if z == 0 then x else y
 
 -- | This example is not so interesting because dead code elimination gets rid of the work.
 def main (xs: List String) : IO Unit :=
    let x := ackermann 4 1; 
-   IO.println (foo (ackermann 3 3) x)
+   IO.println (foo (ackermann 3 3) x 0)
 
 
