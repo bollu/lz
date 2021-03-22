@@ -49,28 +49,37 @@ instance : ToFormat LitVal := ⟨formatLitVal⟩
 
 private def formatCtorInfo : CtorInfo → Format
   | { name := name, cidx := cidx, usize := usize, ssize := ssize, .. } => do
-    let mut r := f!"ctor_{cidx}"
-    if usize > 0 || ssize > 0 then
-      r := f!"{r}.{usize}.{ssize}"
-    if name != Name.anonymous then
-      r := f!"{r}[{name}]"
+    let mut r := f!"{cidx}"; -- what is the monad?
     r
 
 instance : ToFormat CtorInfo := ⟨formatCtorInfo⟩
 
+private def formatMLIRType : Nat -> Nat -> Format
+| nin, nout => "(" ++ formatArray (mkArray nin "!lz.value") ++ ")" ++ 
+               format "->" ++ 
+               "(" ++ formatArray (mkArray nout "!lz.value") ++ ")"
+
+
 private def formatExpr : Expr → Format
-  | Expr.ctor i ys      => "ctor(" ++ format i ++ formatArrayHanging ys ++ ")"
+  -- v this is a hack, I should instead just give the constructor index.
+  | Expr.ctor i ys      => (escape "lz.ctor") ++  "(" ++  formatArray ys ++ ")"  ++
+                           " {value=" ++ "@" ++ escape (format i) ++ "}" ++
+                           ":" ++ formatMLIRType (ys.size) 1
   | Expr.reset n x      => "// ERR: reset[" ++ format n ++ "] " ++ format x
   | Expr.reuse x i u ys => "// ERR: reuse" ++ (if u then "!" else "") ++ " " ++ format x ++ " in " ++ format i ++ formatArray ys
-  | Expr.proj i x       => (escape "lz.projection") ++ "(" ++ format x ++ ")" ++ "{ value = " ++ format i ++ "}"
+  | Expr.proj i x       => (escape "lz.projection") ++ "(" ++ format x ++ ")" ++ "{value=" ++ format i ++ "}"
   | Expr.uproj i x      => "// ERR: uproj[" ++ format i ++ "] " ++ format x
   | Expr.sproj n o x    => "// ERR: sproj[" ++ format n ++ ", " ++ format o ++ "] " ++ format x
   | Expr.fap c ys       => "// ERR: fap " ++ format c ++ formatArrayHanging ys
-  | Expr.pap c ys       => "lz.pap(" ++ format c ++ formatArrayHanging ys ++ ")"
-  | Expr.ap x ys        => let ys2 := (Array.map formatArg ys); (escape "lz.apEager") ++ "(" ++  formatVar x ++ formatArrayHanging ys2 ++ ")"
+  | Expr.pap c ys       => (escape "lz.pap") ++ "(" ++  formatArrayHanging ys ++ ")" ++
+                           "{value=" ++ "@" ++ format c ++ "}" ++
+                           ":" ++ (formatMLIRType ys.size) 1
+  | Expr.ap x ys        => let ys2 := (Array.map formatArg ys);
+                           (escape "lz.apEager") ++ "(" ++  formatVar x ++ formatArrayHanging ys2 ++ ")" ++
+                           ":" ++ formatMLIRType (1 + ys.size) 1
   | Expr.box _ x        => "// ERR: box " ++ format x
   | Expr.unbox x        => "// ERR: unbox " ++ format x
-  | Expr.lit v          => (escape "lz.int") ++ "(" ++ format v  ++ ")" ++ ": () -> !lz.value"
+  | Expr.lit v          => (escape "lz.int") ++ "(){value=" ++ format v  ++ "}" ++ ": () -> !lz.value"
   | Expr.isShared x     => "// ERR: isShared " ++ format x
   | Expr.isTaggedPtr x  => "// ERR: isTaggedPtr " ++ format x
 
@@ -89,6 +98,7 @@ private partial def formatIRType : IRType → Format
   | IRType.tobject      => "!lz.value"
   | IRType.struct _ tys => "!lz.value" -- "struct " ++ Format.bracket "{" (@Format.joinSep _ ⟨formatIRType⟩ tys.toList ", ") "}"
   | IRType.union _ tys  => "!lz.value"  -- "union " ++ Format.bracket "{" (@Format.joinSep _ ⟨formatIRType⟩ tys.toList ", ") "}"
+
 
 instance : ToFormat IRType := ⟨formatIRType⟩
 instance : ToString IRType := ⟨toString ∘ format⟩
