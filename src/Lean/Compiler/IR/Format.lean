@@ -62,7 +62,7 @@ private def formatMLIRType : Nat -> Nat -> Format
 
 private def formatExpr : Expr → Format
   -- v this is a hack, I should instead just give the constructor index.
-  | Expr.ctor i ys      => (escape "lz.ctor") ++  "(" ++  formatArray ys ++ ")"  ++
+  | Expr.ctor i ys      => (escape "lz.construct") ++  "(" ++  formatArray ys ++ ")"  ++
                            " {value=" ++ "@" ++ escape (format i) ++ "}" ++
                            ":" ++ formatMLIRType (ys.size) 1
   | Expr.reset n x      => "// ERR: reset[" ++ format n ++ "] " ++ format x
