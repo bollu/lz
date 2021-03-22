@@ -85,6 +85,8 @@ int main(int argc, char **argv) {
   registerLZDumpLLVMPass();
   registerLzInterpretPass();
   registerLzLazifyPass();
+  mlir::standalone::registerWrapperWorkerPass();
+
   mlir::lambdapure::registerLambdapureToLeanLowering();
   mlir::lambdapure::registerReferenceRewriterPattern();
   mlir::lambdapure::registerDestructiveUpdatePattern();

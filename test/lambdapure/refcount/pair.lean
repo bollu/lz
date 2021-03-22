@@ -1,3 +1,9 @@
+--  RUN: lean %s 2>&1 | lambdapure-translate --import-lambdapure | hask-opt --lz-interpret=mode=lambdapure | FileCheck %s --check-prefix=CHECK-INTERPRET
+
+
+-- 110 = 55 * 2, where 55 = sum of first 10 numbers
+--  CHECK-INTERPRET: 110
+
 set_option trace.compiler.ir.init true
 inductive L
 | Nil

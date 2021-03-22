@@ -75,6 +75,8 @@ error.mlir:6:10: note: see current operation:
 ```
 
 - See that it never gave me `forcifying user: |%1 = ...|` even though it clearly uses `%arg0`! What's going on?!
+- Fix worker/wrapper bugs so that I can worker/wrapper the example code at "ackermann-ought-to-be-output.mlir"
+   
 
 
 

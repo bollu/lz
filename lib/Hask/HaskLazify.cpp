@@ -32,6 +32,9 @@ struct LzLazifyPass : public Pass {
       if (fn.isDeclaration()) {
         continue;
       }
+      // skip the entrypoint.
+      if (fn.getName() == "_lean_main") { continue; }
+
       lazifiedFns.insert(fn.getName().str());
 
       // Step 0: make new function type;
@@ -55,7 +58,6 @@ struct LzLazifyPass : public Pass {
 
 
         // Step 2: at all use sites of argument, insert a.
-
         // Keep this as a vector because we add new uses (inserting Force(%x))
         // while we iterate on the old ones (y = %x)
 
@@ -112,7 +114,7 @@ struct LzLazifyPass : public Pass {
         for(Value arg : call.getArgOperands()) {
           args.push_back(builder.create<ThunkifyOp>(builder.getUnknownLoc(), arg));
         }
-        
+
         // TODO: multiple results?
         ApOp ap = builder.create<standalone::ApOp>(builder.getUnknownLoc(),
                                                    fnref,

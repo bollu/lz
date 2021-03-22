@@ -1,7 +1,8 @@
 //  RUN: hask-opt %s --lz-lazify --verify-each --verify-region-info
+//  RUN: hask-opt %s --lz-lazify --lz-wrapper-worker --cse --cse --cse  --verify-each --verify-region-info
+//  RUN: hask-opt %s --lz-lazify --lz-wrapper-worker --cse --cse --cse  --verify-each --verify-region-info --lz-interpret=mode=lambdapure | FileCheck %s --check-prefix=CHECK-INTERPRET
+// CHECK-INTERPRET: 42
 
-
-// The output that we ought to get from the ackermann.lean, but don't yet.
 module  {
   func private @panic(!lz.value, !lz.value, !lz.value) -> !lz.value
   func private @UInt32_dot_decEq(!lz.value, !lz.value) -> !lz.value
@@ -55,10 +56,10 @@ module  {
         lz.return %9 : !lz.value
       }) {alt0 = @"0", alt1 = @"1"} : (i64) -> !lz.value
       lz.return %8 : !lz.value
-    },  {
+    }, {
         %9 = "lz.apEager"(%arg2, %arg1) : (!lz.value, !lz.value) -> !lz.value
         lz.return %9 : !lz.value
-      }) {alt0 = @"0", alt1 = @"1"} : (i64) -> !lz.value
+      }) {alt0 = @"0", alt1=@"1"} : (i64) -> !lz.value
     lz.return %3 : !lz.value
   }
   func @ackermann_dot_match_1(%arg0: !lz.value) -> !lz.value {
@@ -89,7 +90,7 @@ module  {
         %9 = "lz.int"() {value = 1 : i64} : () -> !lz.value
         %10 = call @Nat_dot_add(%arg1, %9) : (!lz.value, !lz.value) -> !lz.value
         lz.return %10 : !lz.value
-      }) {alt0 = @"0", alt1=@"1"} : (i64) -> !lz.value
+      }) {alt0 = @"0", alt1= @"1"} : (i64) -> !lz.value
     lz.return %3 : !lz.value
   }
   func @k_dot_match_1_dot__rarg(%arg0: !lz.value, %arg1: !lz.value, %arg2: !lz.value) -> !lz.value {
@@ -157,19 +158,14 @@ module  {
     lz.return %2 : !lz.value
   }
   func @main_dot__closed_2() -> !lz.value {
-    %0 = "lz.int"() {value = 3 : i64} : () -> !lz.value
-    %1 = call @ackermann(%0, %0) : (!lz.value, !lz.value) -> !lz.value
-    lz.return %1 : !lz.value
-  }
-  func @main_dot__closed_3() -> !lz.value {
-    %0 = call @main_dot__closed_2() : () -> !lz.value
+    %0 = "lz.int"() {value = 42 : i64} : () -> !lz.value
     %1 = call @main_dot__closed_1() : () -> !lz.value
     %2 = "lz.int"() {value = 0 : i64} : () -> !lz.value
     %3 = call @foo(%0, %1, %2) : (!lz.value, !lz.value, !lz.value) -> !lz.value
     lz.return %3 : !lz.value
   }
   func @_lean_main(%arg0: !lz.value, %arg1: !lz.value) -> !lz.value {
-    %0 = call @main_dot__closed_3() : () -> !lz.value
+    %0 = call @main_dot__closed_2() : () -> !lz.value
     %1 = call @IO_dot_println_dot__at_dot_main_dot__spec_1(%0, %arg1) : (!lz.value, !lz.value) -> !lz.value
     lz.return %1 : !lz.value
   }

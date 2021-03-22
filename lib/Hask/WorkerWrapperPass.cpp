@@ -176,6 +176,24 @@ struct ForceOfThunkifyPattern : public mlir::OpRewritePattern<ForceOp> {
   }
 };
 
+
+struct ThunkifyOfForcePattern : public mlir::OpRewritePattern<ThunkifyOp> {
+  ThunkifyOfForcePattern(mlir::MLIRContext *context)
+      : OpRewritePattern<ThunkifyOp>(context, /*benefit=*/1) {}
+
+  mlir::LogicalResult
+  matchAndRewrite(ThunkifyOp thunkify,
+                  mlir::PatternRewriter &rewriter) const override {
+    // HaskFuncOp fn = force->getParentOfType<HaskFuncOp>();
+    ForceOp force = thunkify.getOperand().getDefiningOp<ForceOp>();
+    if (!force) {
+      return failure();
+    }
+    rewriter.replaceOp(thunkify, force.getOperand());
+    return success();
+  }
+};
+
 struct InlineApEagerPattern : public mlir::OpRewritePattern<ApEagerOp> {
   InlineApEagerPattern(mlir::MLIRContext *context)
       : OpRewritePattern<ApEagerOp>(context, /*benefit=*/1) {}
@@ -1141,7 +1159,7 @@ struct WorkerWrapperPass : public Pass {
     mlir::OwningRewritePatternList patterns;
     // force(ap) -> apeager. safe.
     patterns.insert<ForceOfKnownApPattern>(&getContext());
-    // force(thunkify) -> direct val. safe.
+    // force(thunkify(x)) -> x. safe.
     patterns.insert<ForceOfThunkifyPattern>(&getContext());
     // apeager(f, x, y, z) -> inlined. safe.
     patterns.insert<InlineApEagerPattern>(&getContext());
@@ -1168,7 +1186,7 @@ struct WorkerWrapperPass : public Pass {
     //    f: D (case v of {C1 -> v1; C2 -> v2; .. Cn -> vn; }
     // Safe.
     patterns.insert<PeelConstructorsFromCasePattern>(&getContext());
-    // Same as peel constructor from case for ints. safe.
+//     Same as peel constructor from case for ints. safe.
     patterns.insert<PeelConstructorsFromCaseIntPattern>(&getContext());
 
     // f: case (Ci vi) of { C1 w1 -> e1; C2 w2 -> e2 ... Cn wn -> en};
@@ -1190,6 +1208,38 @@ struct WorkerWrapperPass : public Pass {
       llvm::errs() << "\n===\n";
       signalPassFailure();
     } else {
+      llvm::errs() << "===Worker wrapper succeeded===\n";
+      getOperation()->print(llvm::errs());
+      llvm::errs() << "\n===\n";
+    }
+    ::llvm::DebugFlag = false;
+  };
+};
+
+
+struct WrapperWorkerPass : public Pass {
+  WrapperWorkerPass() : Pass(mlir::TypeID::get<WrapperWorkerPass>()){};
+  StringRef getName() const override { return "WrapperWorkerPass"; }
+
+  std::unique_ptr<Pass> clonePass() const override {
+    auto newInst = std::make_unique<WrapperWorkerPass>(
+        *static_cast<const WrapperWorkerPass *>(this));
+    newInst->copyOptionValuesFrom(this);
+    return newInst;
+  }
+
+  void runOnOperation() override {
+    mlir::OwningRewritePatternList patterns;
+    patterns.insert<ThunkifyOfForcePattern>(&getContext());
+
+    ::llvm::DebugFlag = true;
+  if (failed(mlir::applyPatternsAndFoldGreedily(getOperation(),
+                                                  std::move(patterns)))) {
+      llvm::errs() << "\n===Worker wrapper failed===\n";
+      getOperation()->print(llvm::errs());
+      llvm::errs() << "\n===\n";
+      signalPassFailure();
+    } else {
 
       llvm::errs() << "===Worker wrapper succeeded===\n";
       getOperation()->print(llvm::errs());
@@ -1197,18 +1247,30 @@ struct WorkerWrapperPass : public Pass {
     }
     ::llvm::DebugFlag = false;
   };
-}; // namespace standalone
+};
 
 std::unique_ptr<mlir::Pass> createWorkerWrapperPass() {
   return std::make_unique<WorkerWrapperPass>();
 }
 
+std::unique_ptr<mlir::Pass> createWrapperWorkerPass() {
+  return std::make_unique<WrapperWorkerPass>();
+}
+
 void registerWorkerWrapperPass() {
-  ::mlir::registerPass("lz-worker-wrapper", "Perform worker wrapper transform",
+  ::mlir::registerPass("lz-worker-wrapper", "Perform worker wrapper transform to expose computation",
                        []() -> std::unique_ptr<::mlir::Pass> {
                          return createWorkerWrapperPass();
                        });
 }
+
+void registerWrapperWorkerPass() {
+  ::mlir::registerPass("lz-wrapper-worker", "Perform wrapper worker transform to hide computation",
+                       []() -> std::unique_ptr<::mlir::Pass> {
+                         return createWrapperWorkerPass();
+                       });
+}
+
 
 } // namespace standalone
 } // namespace mlir

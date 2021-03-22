@@ -1,3 +1,18 @@
+--  RUN: lean %s 2>&1 | lambdapure-translate --import-lambdapure | hask-opt --lz-interpret=mode=lambdapure | FileCheck %s --check-prefix=CHECK-INTERPRET
+
+
+-- MAKE: 
+--          3
+--   2               2
+-- 1   1        1        1
+
+-- INCREMENT: 
+--           4
+--   3               3
+-- 2   2        2        2
+
+-- CHECK-INTERPRET: 31
+
 set_option trace.compiler.ir.init true
 inductive Tree
 | Nil : Tree
@@ -23,5 +38,7 @@ def sumTree : Tree -> Nat
 def increment : Nat -> Nat
 | x => x + 1
 
+
+
 unsafe def main : List String → IO Unit
-| _ => IO.println (sumTree (mapTree increment (make 5)))
+| _ => IO.println (sumTree (mapTree increment (make 3)))
