@@ -15,7 +15,8 @@ inductive LogEntry where
 
 namespace LogEntry
 protected def fmt : LogEntry → Format
-  | step cls decls => Format.bracket "[" (format cls) "]" ++ decls.foldl (fun fmt decl => fmt ++ Format.line ++ format decl) Format.nil
+  -- | step cls decls => Format.bracket "[" (format cls) "]" ++ decls.foldl (fun fmt decl => fmt ++ Format.line ++ format decl) Format.nil
+  | step cls decls => decls.foldl (fun fmt decl => fmt ++ Format.line ++ format decl) Format.nil
   | message msg    => msg
 
 instance : ToFormat LogEntry := ⟨LogEntry.fmt⟩
