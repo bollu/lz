@@ -1293,7 +1293,7 @@ struct LzInterpretPass : public Pass {
         //     let x_9 : obj := proj[1] x_5;
 
         InterpValue realworld = buildRealWorld();
-        return *I.interpretFunction("_lean_main", {argv, realworld});
+        return *I.interpretFunction("main", {argv, realworld});
       }
     }();
     InterpStats stats = I.getStats();

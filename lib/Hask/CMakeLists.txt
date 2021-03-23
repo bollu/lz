@@ -1,6 +1,7 @@
 add_mlir_dialect_library(MLIRHask
-HaskDialect.cpp
-HaskOps.cpp
+        HaskCanonicalization.cpp
+        HaskDialect.cpp
+        HaskOps.cpp
 WorkerWrapperPass.cpp
 HaskLowering.cpp
 HaskLazify.cpp
