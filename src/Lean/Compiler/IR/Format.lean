@@ -63,13 +63,29 @@ def formatMLIRType : Nat -> Nat -> Format
 
 -- func private @panic(!lz.value, !lz.value, !lz.value) -> !lz.value
 def mlirPreamble : Format := 
-  "func private" ++ "@" ++ (escape "panic") ++ formatMLIRType 2 1 ++ Format.line
+  "func private" ++ "@" ++ (escape "panic") ++ formatMLIRType 3 1 ++ Format.line
   ++ "func private" ++ "@" ++ (escape "Nat.repr") ++ formatMLIRType 1 1 ++ Format.line
   ++ "func private" ++ "@" ++ (escape "String.push") ++ formatMLIRType 2 1 ++ Format.line
   ++ "func private" ++ "@" ++ (escape "IO.print._at.IO.println._spec_1") ++ formatMLIRType 2 1 ++ Format.line
   ++ "func private" ++ "@" ++ (escape "Nat.decEq") ++ formatMLIRType 2 1 ++ Format.line
   ++ "func private" ++ "@" ++ (escape "Nat.add") ++ formatMLIRType 2 1 ++ Format.line
   ++ "func private" ++ "@" ++ (escape "Nat.sub") ++ formatMLIRType 2 1 ++ Format.line
+  ++ "func private" ++ "@" ++ (escape "String.toNat!") ++ formatMLIRType 1 1 ++ Format.line
+  ++ "func private" ++ "@" ++ (escape "UInt32.ofNat") ++ formatMLIRType 1 1 ++ Format.line
+  ++ "func private" ++ "@" ++ (escape "UInt32.decLt") ++ formatMLIRType 2 1 ++ Format.line
+  ++ "func private" ++ "@" ++ (escape "UInt32.add") ++ formatMLIRType 2 1 ++ Format.line
+  ++ "func private" ++ "@" ++ (escape "UInt32.div") ++ formatMLIRType 2 1 ++ Format.line
+  ++ "func private" ++ "@" ++ (escape "Array.empty._closed_1") ++ formatMLIRType 0 1 ++ Format.line
+  ++ "func private" ++ "@" ++ (escape "Array.size") ++ formatMLIRType 2 1 ++ Format.line
+  ++ "func private" ++ "@" ++ (escape "UInt32.toNat") ++ formatMLIRType 1 1 ++ Format.line
+  ++ "func private" ++ "@" ++ (escape "instInhabitedUInt32") ++ formatMLIRType 0 1 ++ Format.line
+  ++ "func private" ++ "@" ++ (escape "Array.get!") ++ formatMLIRType 4 1 ++ Format.line
+  ++ "func private" ++ "@" ++ (escape "Array.swap!") ++ formatMLIRType 4 1 ++ Format.line
+  ++ "func private" ++ "@" ++ (escape "String.instInhabitedString") ++ formatMLIRType 0 1 ++ Format.line
+  ++ "func private" ++ "@" ++ (escape "List.head!._rarg._closed_3") ++ formatMLIRType 0 1 ++ Format.line
+  ++ "func private" ++ "@" ++ (escape "Lean.Syntax.isOfKind") ++ formatMLIRType 2 1 ++ Format.line
+  ++ "func private" ++ "@" ++ (escape "Lean.Syntax.getArg") ++ formatMLIRType 2 1 ++ Format.line
+
 
 private def formatExpr : Expr → Format
   -- v this is a hack, I should instead just give the constructor index.
@@ -217,10 +233,16 @@ partial def formatFnBody (fnBody : FnBody) (indent : Nat := 2) : Format :=
 instance : ToFormat FnBody := ⟨formatFnBody⟩
 instance : ToString FnBody := ⟨fun b => (format b).pretty⟩
 
+def declareIrrelevant : Format := "%irrelevant = " ++ escape ("lz.erasedvalue") ++ "() : () -> !lz.value"
+
 def formatDecl (decl : Decl) (indent : Nat := 2) : Format :=
   match decl with
   | Decl.fdecl f xs ty b _  => 
-  	"func " ++ formatSymbol f ++ "(" ++ formatArray (Array.map formatParamWithType xs) ++ ") -> " ++ format ty ++ " { " ++ Format.nest indent (Format.line ++ formatFnBody b indent) ++ Format.line ++  "}"
+  	"func " ++ 
+	formatSymbol f ++ 
+	"(" ++ formatArray (Array.map formatParamWithType xs) ++ ")"
+	++ "-> " ++ format ty
+	++ " { " ++ Format.nest indent (Format.line ++ declareIrrelevant ++ Format.line ++ formatFnBody b indent) ++ Format.line ++  "}"
   | Decl.extern f xs ty _   => "// extern " ++ format f ++ formatArray (Array.map formatParamWithType  xs) ++ format " : " ++ format ty
 
 instance : ToFormat Decl := ⟨formatDecl⟩
