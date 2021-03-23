@@ -66,10 +66,10 @@ private def formatExpr : Expr → Format
                            ":" ++ formatMLIRType (ys.size) 1
   | Expr.reset n x      => "// ERR: reset[" ++ format n ++ "] " ++ format x
   | Expr.reuse x i u ys => "// ERR: reuse" ++ (if u then "!" else "") ++ " " ++ format x ++ " in " ++ format i ++ formatArray ys
-  | Expr.proj i x       => (escape "lz.projection") ++ "(" ++ "%" ++ format x ++ ")" ++ "{value=" ++ format i ++ "}"
+  | Expr.proj i x       => (escape "lz.projection") ++ "(" ++ "%" ++ format x ++ ")" ++ "{value=" ++ format i ++ "}" ++ ":" ++ formatMLIRType 1 1
   | Expr.uproj i x      => "// ERR: uproj[" ++ format i ++ "] " ++ format x
   | Expr.sproj n o x    => "// ERR: sproj[" ++ format n ++ ", " ++ format o ++ "] " ++ format x
-  | Expr.fap c ys       => "call " ++ "@" ++ (escape (format c)) ++ "(" ++ formatArray ys ++ ")" ++ formatMLIRType (ys.size) 1
+  | Expr.fap c ys       => "call " ++ "@" ++ (escape (format c)) ++ "(" ++ formatArray ys ++ ")" ++ ":" ++ formatMLIRType (ys.size) 1
   | Expr.pap c ys       => (escape "lz.pap") ++ "(" ++  formatArrayHanging ys ++ ")" ++
                            "{value=" ++ "@" ++ format c ++ "}" ++
                            ":" ++ (formatMLIRType ys.size) 1
@@ -185,7 +185,8 @@ partial def formatFnBody (fnBody : FnBody) (indent : Nat := 2) : Format :=
     -- | TODO: consider generating this differently?
     | FnBody.case tid x xType cs => (escape "lz.caseRet") ++ "(%" ++ format x ++ ")" ++
                                     "("  ++ formatArray (Array.map (formatAltRHS loop indent) cs) ++ ")" 
-                                    ++ "{" ++ formatArray (Array.map (formatAltLHS indent) cs)  ++ "}"
+                                    ++ "{" ++ formatArray (Array.map (formatAltLHS indent) cs)  ++ "}" 
+                                    ++ ":" ++ formatMLIRType 1 0
                                    
  
     | FnBody.jmp j ys            => "//ERR:" ++ "jmp " ++ format j ++ formatArray ys
