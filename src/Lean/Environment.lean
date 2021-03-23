@@ -57,6 +57,7 @@ structure Environment where
   constants    : ConstMap
   extensions   : Array EnvExtensionState
   header       : EnvironmentHeader := {}
+  loggedMLIRPreamble : Bool := False
   deriving Inhabited
 
 namespace Environment

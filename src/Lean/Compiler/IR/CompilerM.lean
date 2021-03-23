@@ -36,20 +36,25 @@ def Log.toString (log : Log) : String :=
 structure CompilerState where
   env : Environment
   log : Log := #[]
-  loggedMLIRPreamble : Bool := False
 
 abbrev CompilerM := ReaderT Options (EStateM String CompilerState)
 
+@[inline] def modifyEnv (f : Environment → Environment) : CompilerM Unit :=
+  modify fun s => { s with env := f s.env }
+
+  
 def log (entry : LogEntry) : CompilerM Unit :=
   modify fun s => { s with log := s.log.push entry }
 
 def logPreamble (entry: LogEntry) : CompilerM Unit := do
  let s ← get
- if s.loggedMLIRPreamble
+ if s.env.loggedMLIRPreamble
  then pure ()
  else do
    log entry
-   modify  fun s => { s with loggedMLIRPreamble := True }
+   -- | Find out how to write this better
+   -- modifyEnv (fun env => { env with loggedMLIRPreamble := True })
+   modify  (fun s => { s with env := { s.env with loggedMLIRPreamble := True} })
 
   
 def tracePrefixOptionName := `trace.compiler.ir
@@ -81,8 +86,8 @@ private def logMessageIfAux {α : Type} [ToFormat α] (optName : Name) (a : α) 
 @[inline] def logMessage {α : Type} [ToFormat α] (cls : Name) (a : α) : CompilerM Unit :=
   logMessageIfAux tracePrefixOptionName a
 
-@[inline] def modifyEnv (f : Environment → Environment) : CompilerM Unit :=
-  modify fun s => { s with env := f s.env }
+-- @[inline] def modifyEnv (f : Environment → Environment) : CompilerM Unit :=
+--   modify fun s => { s with env := f s.env }
 
 open Std (HashMap)
 
