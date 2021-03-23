@@ -38,6 +38,26 @@
 
 # Log:  [newest] to [oldest]
 
+
+# March 23: Lean compiler entrypoint
+
+```
+/home/bollu/work/lean4/src$ ag initialize_compiler
+library/compiler/compiler.cpp
+267:void initialize_compiler() {
+```
+
+```
+/home/bollu/work/lean4/src$ vim library/compiler/extern_attribute.cpp 
+/home/bollu/work/lean4/src$ ag "lean_get_extern_attr_data"
+Lean/Compiler/ExternAttr.lean
+75:@[export lean_get_extern_attr_data]
+
+library/compiler/extern_attribute.cpp
+22:extern "C" object* lean_get_extern_attr_data(object* env, object* n);
+25:    return to_optional<extern_attr_data_value>(lean_get_extern_attr_data(env.to_obj_arg(), fn.to_obj_arg()));
+```
+
 # March 19th
 
 MLIR strangeness of the day: Walking over uses of an argument does not give me the first use!

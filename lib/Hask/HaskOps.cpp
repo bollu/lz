@@ -1021,6 +1021,18 @@ void HaskJumpOp::build(mlir::OpBuilder &builder, mlir::OperationState &state, in
   assert(false && "unimplemented");
 }
 
+// === HaskCaseRetOp ===
+// === HaskCaseRetOp ===
+// === HaskCaseRetOp ===
+// === HaskCaseRetOp ===
+// === HaskCaseRetOp ===
+
+ParseResult HaskCaseRetOp::parse(OpAsmParser &parser, OperationState &result) { assert(false && "unimplemented"); };
+void HaskCaseRetOp::print(OpAsmPrinter &p) {
+  p.printGenericOp(*this);
+};
+
+
 /*
 // === THUNK TO PTR OP ===
 // === THUNK TO PTR OP ===

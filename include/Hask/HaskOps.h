@@ -520,6 +520,16 @@ public:
 };
 
 
+// for lambdapure
+class HaskCaseRetOp : public Op<HaskCaseRetOp, OpTrait::OneOperand, OpTrait::ZeroResult, OpTrait::IsTerminator> {
+public:
+  using Op::Op;
+  static StringRef getOperationName() { return "lz.caseRet"; };
+  static ParseResult parse(OpAsmParser &parser, OperationState &result);
+  void print(OpAsmPrinter &p);
+};
+
+
 /*
 class HaskThunkToPtrOp
     : public Op<HaskThunkToPtrOp, OpTrait::OneOperand, OpTrait::OneResult,
