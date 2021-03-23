@@ -76,7 +76,7 @@ private def formatExpr : Expr → Format
                            ":" ++ formatMLIRType (ys.size) 1
   | Expr.reset n x      => "// ERR: reset[" ++ format n ++ "] " ++ format x
   | Expr.reuse x i u ys => "// ERR: reuse" ++ (if u then "!" else "") ++ " " ++ format x ++ " in " ++ format i ++ formatArray ys
-  | Expr.proj i x       => (escape "lz.projection") ++ "(" ++ "%" ++ format x ++ ")" ++ "{value=" ++ format i ++ "}" ++ ":" ++ formatMLIRType 1 1
+  | Expr.proj i x       => (escape "lz.project") ++ "(" ++ "%" ++ format x ++ ")" ++ "{value=" ++ format i ++ "}" ++ ":" ++ formatMLIRType 1 1
   | Expr.uproj i x      => "// ERR: uproj[" ++ format i ++ "] " ++ format x
   | Expr.sproj n o x    => "// ERR: sproj[" ++ format n ++ ", " ++ format o ++ "] " ++ format x
   | Expr.fap c ys       => "call " ++ "@" ++ (escape (format c)) ++ "(" ++ formatArray ys ++ ")" ++ ":" ++ formatMLIRType (ys.size) 1
