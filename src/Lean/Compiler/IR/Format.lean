@@ -20,7 +20,8 @@ private def formatSymbol {a : Type} [ToFormat a] : a -> Format
 
 private def formatArg : Arg → Format
   | Arg.var id     => formatVar id
-  | Arg.irrelevant => "irrelevant"
+  -- | how to get my hands on an irrelevant value?
+  | Arg.irrelevant => "%irrelevant"
 
 instance : ToFormat Arg := ⟨formatArg⟩
 
@@ -68,6 +69,7 @@ def mlirPreamble : Format :=
   ++ "func private" ++ "@" ++ (escape "IO.print._at.IO.println._spec_1") ++ formatMLIRType 2 1 ++ Format.line
   ++ "func private" ++ "@" ++ (escape "Nat.decEq") ++ formatMLIRType 2 1 ++ Format.line
   ++ "func private" ++ "@" ++ (escape "Nat.add") ++ formatMLIRType 2 1 ++ Format.line
+  ++ "func private" ++ "@" ++ (escape "Nat.sub") ++ formatMLIRType 2 1 ++ Format.line
 
 private def formatExpr : Expr → Format
   -- v this is a hack, I should instead just give the constructor index.
@@ -113,10 +115,13 @@ instance : ToFormat IRType := ⟨formatIRType⟩
 instance : ToString IRType := ⟨toString ∘ format⟩
 
 
-private def formatParam : Param → Format
+private def formatParamWithType : Param → Format
   | { x := name, borrow := b, ty := ty } => formatVar name ++ " : " ++ (if b then "@& " else "") ++ format ty
 
-instance : ToFormat Param := ⟨formatParam⟩
+private def formatParamWithoutType : Param -> Format
+  | { x := name, borrow := b, ty := ty } => formatVar name 
+
+instance : ToFormat Param := ⟨formatParamWithType⟩
 
 -- def formatAlt (fmt : FnBody → Format) (indent : Nat) : Alt → Format
 --   | Alt.ctor i b  =>  format i.name --format i.name ++ " →" ++ Format.nest indent (Format.line ++ fmt b)
@@ -180,17 +185,22 @@ def formatFnBodyHead : FnBody → Format
 -- This is what is used by us
 partial def formatFnBody (fnBody : FnBody) (indent : Nat := 2) : Format :=
   let rec loop : FnBody → Format
-    -- | it is fine to call format on variables because vars are literally IDs. They are formatted as `x_id`.
+    -- v it is fine to call format on variables because vars are literally IDs. They are formatted as `x_id`.
     | FnBody.vdecl x ty e b      => "%" ++  (format x) ++ " = " ++ format e  ++ Format.line ++ loop b
-    | FnBody.jdecl j xs v b      => "//ERR:" ++ format j ++ formatParams xs ++ " :=" ++ Format.nest indent (Format.line ++ loop v) ++ ";" ++ Format.line ++ loop b
-    | FnBody.set x i y b         => "//ERR:" ++ "set " ++ format x ++ "[" ++ format i ++ "] := " ++ format y ++ ";" ++ Format.line ++ loop b
-    | FnBody.uset x i y b        => "//ERR:" ++ "uset " ++ format x ++ "[" ++ format i ++ "] := " ++ format y ++ ";" ++ Format.line ++ loop b
-    | FnBody.sset x i o y ty b   => "//ERR:" ++ "sset " ++ format x ++ "[" ++ format i ++ ", " ++ format o ++ "] : " ++ format ty ++ " := " ++ format y ++ ";" ++ Format.line ++ loop b
-    | FnBody.setTag x cidx b     => "//ERR:" ++ "setTag " ++ format x ++ " := " ++ format cidx ++ ";" ++ Format.line ++ loop b
-    | FnBody.inc x n c _ b       => "//ERR:" ++ "inc" ++ (if n != 1 then Format.sbracket (format n) else "") ++ " " ++ format x ++ ";" ++ Format.line ++ loop b
-    | FnBody.dec x n c _ b       => "//ERR:" ++ "dec" ++ (if n != 1 then Format.sbracket (format n) else "") ++ " " ++ format x ++ ";" ++ Format.line ++ loop b
-    | FnBody.del x b             => "//ERR:" ++ "del " ++ format x ++ ";" ++ Format.line ++ loop b
-    | FnBody.mdata d b           => "//ERR:" ++ "mdata " ++ format d ++ ";" ++ Format.line ++ loop b
+    -- v join point
+    | FnBody.jdecl j xs v b      =>  (escape "lz.block") ++ "("  ++ formatArray (Array.map formatParamWithoutType xs) ++  ")"
+      				    ++ "(" -- TODO: add arguments xs ++ Format.line 
+    				    ++ "{" ++ Format.nest indent (Format.line ++  loop v) ++ Format.line
+				    ++ "}, {" ++ Format.nest indent (Format.line ++ loop b) ++ Format.line
+				    ++  "})" ++ ":" ++ (formatMLIRType xs.size 1)
+    | FnBody.set x i y b         => "//ERR: set " --  ++ "set " ++ format x ++ "[" ++ format i ++ "] := " ++ format y ++ ";" ++ Format.line ++ loop b
+    | FnBody.uset x i y b        => "//ERR: uset" -- ++ "uset " ++ format x ++ "[" ++ format i ++ "] := " ++ format y ++ ";" ++ Format.line ++ loop b
+    | FnBody.sset x i o y ty b   => "//ERR: sset"  -- ++ "sset " ++ format x ++ "[" ++ format i ++ ", " ++ format o ++ "] : " ++ format ty ++ " := " ++ format y ++ ";" ++ Format.line ++ loop b
+    | FnBody.setTag x cidx b     => "//ERR: setTag" --  ++ "setTag " ++ format x ++ " := " ++ format cidx ++ ";" ++ Format.line ++ loop b
+    | FnBody.inc x n c _ b       => "//ERR: inc" --  ++ "inc" ++ (if n != 1 then Format.sbracket (format n) else "") ++ " " ++ format x ++ ";" ++ Format.line ++ loop b
+    | FnBody.dec x n c _ b       => "//ERR: dec" --  ++ "dec" ++ (if n != 1 then Format.sbracket (format n) else "") ++ " " ++ format x ++ ";" ++ Format.line ++ loop b
+    | FnBody.del x b             => "//ERR: del" --  ++ "del " ++ format x ++ ";" ++ Format.line ++ loop b
+    | FnBody.mdata d b           => "//ERR: mdata" --  ++ "mdata " ++ format d ++ ";" ++ Format.line ++ loop b
     --  "//ERR:" ++ "case " ++ format x ++ " : " ++ format xType ++ " of" ++ cs.foldl (fun r c => r ++ Format.line ++ formatAlt loop indent c) Format.nil
     -- | TODO: consider generating this differently?
     | FnBody.case tid x xType cs => (escape "lz.caseRet") ++ "(%" ++ format x ++ ")" ++
@@ -199,7 +209,7 @@ partial def formatFnBody (fnBody : FnBody) (indent : Nat := 2) : Format :=
                                     ++ ":" ++ formatMLIRType 1 0
                                    
  
-    | FnBody.jmp j ys            => "//ERR:" ++ "jmp " ++ format j ++ formatArray ys
+    | FnBody.jmp j ys            => "//ERR:jmp" --  ++ "jmp " ++ format j ++ formatArray ys
     | FnBody.ret x               => (escape "lz.return") ++ "(" ++  format x ++ ")" ++ ": (!lz.value) -> ()"
     | FnBody.unreachable         => "bottom"
   loop fnBody
@@ -210,8 +220,8 @@ instance : ToString FnBody := ⟨fun b => (format b).pretty⟩
 def formatDecl (decl : Decl) (indent : Nat := 2) : Format :=
   match decl with
   | Decl.fdecl f xs ty b _  => 
-  	"func " ++ formatSymbol f ++ "(" ++ formatParams xs ++ ") -> " ++ format ty ++ " { " ++ Format.nest indent (Format.line ++ formatFnBody b indent) ++ Format.line ++  "}"
-  | Decl.extern f xs ty _   => "// extern " ++ format f ++ formatParams xs ++ format " : " ++ format ty
+  	"func " ++ formatSymbol f ++ "(" ++ formatArray (Array.map formatParamWithType xs) ++ ") -> " ++ format ty ++ " { " ++ Format.nest indent (Format.line ++ formatFnBody b indent) ++ Format.line ++  "}"
+  | Decl.extern f xs ty _   => "// extern " ++ format f ++ formatArray (Array.map formatParamWithType  xs) ++ format " : " ++ format ty
 
 instance : ToFormat Decl := ⟨formatDecl⟩
 
