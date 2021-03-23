@@ -9,8 +9,6 @@ import Lean.Compiler.ExportAttr
 namespace Lean
 namespace IR
 
-
-
 private def escape  {a : Type} [ToFormat a] : a -> Format
   | a => "\"" ++ format a ++ "\""
 
@@ -34,7 +32,8 @@ inductive arrpos
 
 def formatArray {α : Type} [ToFormat α] : Array α -> Format
   | #[] => ""
-  | args => (args.foldl (fun (ix, r) a => (arrpos.rest, r ++ (if ix == arrpos.first then "" else ", ") ++ format a)) (arrpos.first, Format.nil)).snd
+  | args => (args.foldl (fun (ix, r) a => 
+         (arrpos.rest, r ++ (if ix == arrpos.first then "" else ", ") ++ format a)) (arrpos.first, Format.nil)).snd
 
 -- | format an array that should "hang", so it should start with a comma
 def formatArrayHanging {α : Type} [ToFormat α] : Array α -> Format
@@ -67,10 +66,10 @@ private def formatExpr : Expr → Format
                            ":" ++ formatMLIRType (ys.size) 1
   | Expr.reset n x      => "// ERR: reset[" ++ format n ++ "] " ++ format x
   | Expr.reuse x i u ys => "// ERR: reuse" ++ (if u then "!" else "") ++ " " ++ format x ++ " in " ++ format i ++ formatArray ys
-  | Expr.proj i x       => (escape "lz.projection") ++ "(" ++ format x ++ ")" ++ "{value=" ++ format i ++ "}"
+  | Expr.proj i x       => (escape "lz.projection") ++ "(" ++ "%" ++ format x ++ ")" ++ "{value=" ++ format i ++ "}"
   | Expr.uproj i x      => "// ERR: uproj[" ++ format i ++ "] " ++ format x
   | Expr.sproj n o x    => "// ERR: sproj[" ++ format n ++ ", " ++ format o ++ "] " ++ format x
-  | Expr.fap c ys       => "// ERR: fap " ++ format c ++ formatArrayHanging ys
+  | Expr.fap c ys       => "call " ++ "@" ++ (escape (format c)) ++ "(" ++ formatArray ys ++ ")" ++ formatMLIRType (ys.size) 1
   | Expr.pap c ys       => (escape "lz.pap") ++ "(" ++  formatArrayHanging ys ++ ")" ++
                            "{value=" ++ "@" ++ format c ++ "}" ++
                            ":" ++ (formatMLIRType ys.size) 1
@@ -109,9 +108,22 @@ private def formatParam : Param → Format
 
 instance : ToFormat Param := ⟨formatParam⟩
 
-def formatAlt (fmt : FnBody → Format) (indent : Nat) : Alt → Format
-  | Alt.ctor i b  => format i.name ++ " →" ++ Format.nest indent (Format.line ++ fmt b)
-  | Alt.default b => "default →" ++ Format.nest indent (Format.line ++ fmt b)
+-- def formatAlt (fmt : FnBody → Format) (indent : Nat) : Alt → Format
+--   | Alt.ctor i b  =>  format i.name --format i.name ++ " →" ++ Format.nest indent (Format.line ++ fmt b)
+--   | Alt.default b => format "@default" -- "default →" ++ Format.nest indent (Format.line ++ fmt b)
+
+-- format "{" ++ Format.line ++  Format.nest indent (formatAltRHS loop indent c) ++ Format.line ++  "}"
+def formatAltRHS (fmtBody : FnBody → Format) (indent : Nat) : Alt → Format
+  | Alt.ctor i b  =>  "{" ++ Format.line ++ 
+                      Format.nest indent (Format.line ++ fmtBody b) ++ Format.line ++
+                      "}"
+  | Alt.default b => "{" ++ Format.line ++ 
+                      Format.nest indent (Format.line ++ fmtBody b) ++
+                      "}"
+
+def formatAltLHS (indent : Nat) : Alt → Format
+  | Alt.ctor i b  =>  "alt" ++ (format i.cidx) ++ "=" ++ "@" ++ (escape (format i.cidx)) --format i.name ++ " →" ++ Format.nest indent (Format.line ++ fmt b)
+  | Alt.default b => format "@default" -- "default →" ++ Format.nest indent (Format.line ++ fmt b)
 
 def formatParams (ps : Array Param) : Format :=
   formatArray ps
@@ -134,6 +146,26 @@ def formatFnBodyHead : FnBody → Format
   | FnBody.ret x               => "ret " ++ format x
   | FnBody.unreachable         => "// ERR: " ++  "⊥" ++ Format.nil
 
+-- case format:
+-- %1 = "lz.case"(%0) ( {
+-- ^bb0(%arg1: i64):  // no predecessors
+--   %2 = "lz.caseint"(%arg1) ( {
+--     %c42_i64 = constant 42 : i64
+--     %3 = "lz.construct"(%c42_i64) {dataconstructor = @SimpleInt} : (i64) -> !lz.value
+--     lz.return %3 : !lz.value
+--   },  {
+--     %c1_i64 = constant 1 : i64
+--     %3 = subi %arg1, %c1_i64 : i64
+--     %4 = "lz.construct"(%3) {dataconstructor = @SimpleInt} : (i64) -> !lz.value
+--     %5 = lz.thunkify(%4 :!lz.value)
+--     %f = constant @f : (!lz.thunk<!lz.value>) -> !lz.value
+--     %6 = "lz.ap"(%f, %5) : ((!lz.thunk<!lz.value>) -> !lz.value, !lz.thunk<!lz.value>) -> !lz.thunk<!lz.value>
+--     %7 = "lz.force"(%6) : (!lz.thunk<!lz.value>) -> !lz.value
+--     lz.return %7 : !lz.value
+--   }) {alt0 = 0 : i64, alt1 = @default} : (i64) -> !lz.value
+--   lz.return %2 : !lz.value
+-- }) {alt0 = @SimpleInt, constructorName = @SimpleInt} : (!lz.value) -> !lz.value
+
 
 -- This is what is used by us
 partial def formatFnBody (fnBody : FnBody) (indent : Nat := 2) : Format :=
@@ -149,7 +181,13 @@ partial def formatFnBody (fnBody : FnBody) (indent : Nat := 2) : Format :=
     | FnBody.dec x n c _ b       => "//ERR:" ++ "dec" ++ (if n != 1 then Format.sbracket (format n) else "") ++ " " ++ format x ++ ";" ++ Format.line ++ loop b
     | FnBody.del x b             => "//ERR:" ++ "del " ++ format x ++ ";" ++ Format.line ++ loop b
     | FnBody.mdata d b           => "//ERR:" ++ "mdata " ++ format d ++ ";" ++ Format.line ++ loop b
-    | FnBody.case tid x xType cs => "//ERR:" ++ "case " ++ format x ++ " : " ++ format xType ++ " of" ++ cs.foldl (fun r c => r ++ Format.line ++ formatAlt loop indent c) Format.nil
+    --  "//ERR:" ++ "case " ++ format x ++ " : " ++ format xType ++ " of" ++ cs.foldl (fun r c => r ++ Format.line ++ formatAlt loop indent c) Format.nil
+    -- | TODO: consider generating this differently?
+    | FnBody.case tid x xType cs => (escape "lz.caseRet") ++ "(%" ++ format x ++ ")" ++
+                                    "("  ++ formatArray (Array.map (formatAltRHS loop indent) cs) ++ ")" 
+                                    ++ "{" ++ formatArray (Array.map (formatAltLHS indent) cs)  ++ "}"
+                                   
+ 
     | FnBody.jmp j ys            => "//ERR:" ++ "jmp " ++ format j ++ formatArray ys
     | FnBody.ret x               => (escape "lz.return") ++ "(" ++  format x ++ ")" ++ ": (!lz.value) -> ()"
     | FnBody.unreachable         => "bottom"
