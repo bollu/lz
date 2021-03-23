@@ -46,7 +46,6 @@ private def formatLitVal : LitVal → Format
 
 instance : ToFormat LitVal := ⟨formatLitVal⟩
 
-def mlirPreamble : Format := "// MLIR preamble"
 
 private def formatCtorInfo : CtorInfo → Format
   | { name := name, cidx := cidx, usize := usize, ssize := ssize, .. } => do
@@ -60,6 +59,15 @@ def formatMLIRType : Nat -> Nat -> Format
                format "->" ++ 
                "(" ++ formatArray (mkArray nout "!lz.value") ++ ")"
 
+
+-- func private @panic(!lz.value, !lz.value, !lz.value) -> !lz.value
+def mlirPreamble : Format := 
+  "func private" ++ "@" ++ (escape "panic") ++ formatMLIRType 2 1 ++ Format.line
+  ++ "func private" ++ "@" ++ (escape "Nat.repr") ++ formatMLIRType 1 1 ++ Format.line
+  ++ "func private" ++ "@" ++ (escape "String.push") ++ formatMLIRType 2 1 ++ Format.line
+  ++ "func private" ++ "@" ++ (escape "IO.print._at.IO.println._spec_1") ++ formatMLIRType 2 1 ++ Format.line
+  ++ "func private" ++ "@" ++ (escape "Nat.decEq") ++ formatMLIRType 2 1 ++ Format.line
+  ++ "func private" ++ "@" ++ (escape "Nat.add") ++ formatMLIRType 2 1 ++ Format.line
 
 private def formatExpr : Expr → Format
   -- v this is a hack, I should instead just give the constructor index.
