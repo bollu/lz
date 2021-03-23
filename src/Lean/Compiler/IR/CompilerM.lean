@@ -14,8 +14,6 @@ inductive LogEntry where
   | message (msg : Format)
 
 
-
-
 namespace LogEntry
 protected def fmt : LogEntry → Format
   -- | step cls decls => Format.bracket "[" (format cls) "]" ++ decls.foldl (fun fmt decl => fmt ++ Format.line ++ format decl) Format.nil
@@ -38,12 +36,22 @@ def Log.toString (log : Log) : String :=
 structure CompilerState where
   env : Environment
   log : Log := #[]
+  loggedMLIRPreamble : Bool := False
 
 abbrev CompilerM := ReaderT Options (EStateM String CompilerState)
 
 def log (entry : LogEntry) : CompilerM Unit :=
   modify fun s => { s with log := s.log.push entry }
 
+def logPreamble (entry: LogEntry) : CompilerM Unit := do
+ let s ← get
+ if s.loggedMLIRPreamble
+ then pure ()
+ else do
+   log entry
+   modify  fun s => { s with loggedMLIRPreamble := True }
+
+  
 def tracePrefixOptionName := `trace.compiler.ir
 
 private def isLogEnabledFor (opts : Options) (optName : Name) : Bool :=
@@ -58,6 +66,9 @@ private def logDeclsAux (optName : Name) (cls : Name) (decls : Array Decl) : Com
 
 @[inline] def logDecls (cls : Name) (decl : Array Decl) : CompilerM Unit :=
   logDeclsAux (tracePrefixOptionName ++ cls) cls decl
+
+@[inline] def logDeclsUnconditional (decls : Array Decl) : CompilerM Unit :=
+  log (LogEntry.step "unconditial" decls)
 
 private def logMessageIfAux {α : Type} [ToFormat α] (optName : Name) (a : α) : CompilerM Unit := do
   let opts ← read
