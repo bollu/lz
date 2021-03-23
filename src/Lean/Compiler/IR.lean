@@ -25,6 +25,7 @@ import Lean.Compiler.IR.Sorry
 namespace Lean.IR
 
 private def compileAux (decls : Array Decl) : CompilerM Unit := do
+  log (LogEntry.message mlirPreamble)
   logDecls `init decls
   checkDecls decls
   let decls ← elimDeadBranches decls

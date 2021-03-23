@@ -13,6 +13,9 @@ inductive LogEntry where
   | step (cls : Name) (decls : Array Decl)
   | message (msg : Format)
 
+
+
+
 namespace LogEntry
 protected def fmt : LogEntry → Format
   -- | step cls decls => Format.bracket "[" (format cls) "]" ++ decls.foldl (fun fmt decl => fmt ++ Format.line ++ format decl) Format.nil

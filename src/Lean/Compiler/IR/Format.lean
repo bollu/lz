@@ -9,7 +9,7 @@ import Lean.Compiler.ExportAttr
 namespace Lean
 namespace IR
 
-private def escape  {a : Type} [ToFormat a] : a -> Format
+def escape  {a : Type} [ToFormat a] : a -> Format
   | a => "\"" ++ format a ++ "\""
 
 private def formatVar {a: Type} [ToFormat a] : a -> Format
@@ -46,6 +46,8 @@ private def formatLitVal : LitVal → Format
 
 instance : ToFormat LitVal := ⟨formatLitVal⟩
 
+def mlirPreamble : Format := "// MLIR preamble"
+
 private def formatCtorInfo : CtorInfo → Format
   | { name := name, cidx := cidx, usize := usize, ssize := ssize, .. } => do
     let mut r := f!"{cidx}"; -- what is the monad?
@@ -53,7 +55,7 @@ private def formatCtorInfo : CtorInfo → Format
 
 instance : ToFormat CtorInfo := ⟨formatCtorInfo⟩
 
-private def formatMLIRType : Nat -> Nat -> Format
+def formatMLIRType : Nat -> Nat -> Format
 | nin, nout => "(" ++ formatArray (mkArray nin "!lz.value") ++ ")" ++ 
                format "->" ++ 
                "(" ++ formatArray (mkArray nout "!lz.value") ++ ")"

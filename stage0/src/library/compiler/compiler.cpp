@@ -250,6 +250,7 @@ environment compile(environment const & env, options const & opts, names cs) {
     trace_compiler(name({"compiler", "simp_app_args"}), ds);
     // std::cout << trace_scope.get_string() << "\n";
     /* compile IR. */
+    // std::cerr << "// MLIR PREAMBLE (FOR REAL GUYS)";
     return compile_ir(new_env, opts, ds);
 }
 
