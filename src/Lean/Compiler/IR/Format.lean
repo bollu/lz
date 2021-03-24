@@ -207,12 +207,17 @@ partial def formatFnBody (fnBody : FnBody) (indent : Nat := 2) : Format :=
   let rec loop : FnBody → Format
     -- v it is fine to call format on variables because vars are literally IDs. They are formatted as `x_id`.
     | FnBody.vdecl x ty e b      => "%" ++  (format x) ++ " = " ++ format e  ++ Format.line ++ loop b
-    -- v join point
-    | FnBody.jdecl j xs v b      =>  (escape "lz.block") ++ "("  ++ formatArray (Array.map formatParamWithoutType xs) ++  ")"
+    -- v join point | I'm not sure what the "xs" are. I don't seen to need it?
+    | FnBody.jdecl j xs v b      =>  -- (escape "lz.block") ++ "("  ++ formatArray (Array.map formatParamWithoutType xs) ++  ")"
+                                    escape ("lz.block") ++ "()" 
       				    ++ "(" -- TODO: add arguments xs ++ Format.line 
-    				    ++ "{" ++ Format.nest indent (Format.line ++  loop v) ++ Format.line
-				    ++ "}, {" ++ Format.nest indent (Format.line ++ loop b) ++ Format.line
-				    ++  "})" ++ ":" ++ (formatMLIRType xs.size 1)
+    				    ++ "{" 
+                                    ++ Format.nest indent (Format.line
+                                           ++ "^entry" ++ "(" ++ formatArray (Array.map formatParamWithType xs) ++ ")" ++ ":" ++ Format.line
+                                           ++ loop v)  
+                                    ++ Format.line ++  "}, {" ++ Format.nest indent (Format.line ++ loop b) ++ Format.line
+				    -- ++  "})" ++ ":" ++ (formatMLIRType xs.size 1)
+				    ++  "})" ++ ":" ++ (formatMLIRType 0 0)
     | FnBody.set x i y b         => "//ERR: set " --  ++ "set " ++ format x ++ "[" ++ format i ++ "] := " ++ format y ++ ";" ++ Format.line ++ loop b
     | FnBody.uset x i y b        => "//ERR: uset" -- ++ "uset " ++ format x ++ "[" ++ format i ++ "] := " ++ format y ++ ";" ++ Format.line ++ loop b
     | FnBody.sset x i o y ty b   => "//ERR: sset"  -- ++ "sset " ++ format x ++ "[" ++ format i ++ ", " ++ format o ++ "] : " ++ format ty ++ " := " ++ format y ++ ";" ++ Format.line ++ loop b
@@ -229,7 +234,9 @@ partial def formatFnBody (fnBody : FnBody) (indent : Nat := 2) : Format :=
                                     ++ ":" ++ formatMLIRType 1 0
                                    
  
-    | FnBody.jmp j ys            => "//ERR:jmp" --  ++ "jmp " ++ format j ++ formatArray ys
+    | FnBody.jmp j ys            => (escape "lz.jump") ++ "("  ++ formatArray ys ++ ")"
+                                    ++ "{value=" ++ format j.idx ++ "}"
+                                    ++ ":" ++ formatMLIRType 1 0
     | FnBody.ret x               => (escape "lz.return") ++ "(" ++  format x ++ ")" ++ ": (!lz.value) -> ()"
     | FnBody.unreachable         => "bottom"
   loop fnBody
