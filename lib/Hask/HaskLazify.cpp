@@ -33,7 +33,7 @@ struct LzLazifyPass : public Pass {
         continue;
       }
       // skip the entrypoint.
-      if (fn.getName() == "_lean_main") { continue; }
+      if (fn.getName() == "main") { continue; }
 
       lazifiedFns.insert(fn.getName().str());
 

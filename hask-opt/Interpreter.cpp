@@ -287,9 +287,7 @@ struct Interpreter {
     if (ForceOp force = dyn_cast<ForceOp>(op)) {
       stats.num_force_calls++;
       InterpValue scrutinee = env.lookup(force.getLoc(), force.getScrutinee());
-      assert(scrutinee.type == InterpValueType::ThunkifiedValue ||
-             scrutinee.type == InterpValueType::ClosureTopLevel ||
-             scrutinee.type == InterpValueType::ClosureLambda);
+      
       if (scrutinee.type == InterpValueType::ThunkifiedValue) {
         env.addNew(force.getResult(), scrutinee.thunkifiedValue());
         return;
@@ -299,7 +297,7 @@ struct Interpreter {
                    interpretLambda(scrutinee.closureLambdaLam(),
                                    scrutinee.closureLambdaArguments()));
         return;
-      } else {
+      } else if (scrutinee.type == InterpValueType::ClosureTopLevel) {
         assert(scrutinee.type == InterpValueType::ClosureTopLevel);
         InterpValue scrutineefn = scrutinee.closureTopLevelFn();
         assert(scrutineefn.type == InterpValueType::Ref);
@@ -308,8 +306,15 @@ struct Interpreter {
         env.addNew(force.getResult(),
                    *interpretFunction(scrutineefn.ref(), args));
         return;
+      } else {
+	llvm::errs() << "ERROR: expected scrutinee to be lazy value\n";
+	llvm::errs() << "scrutinee value: |" << scrutinee  << "|\n";
+
+	assert(scrutinee.type == InterpValueType::ThunkifiedValue ||
+	       scrutinee.type == InterpValueType::ClosureTopLevel ||
+	       scrutinee.type == InterpValueType::ClosureLambda);
+	assert(false && "incorrect scrutinee type");
       }
-      assert(false && "unreachable");
     }
     if (CaseOp case_ = dyn_cast<CaseOp>(op)) {
       InterpValue scrutinee = env.lookup(case_.getLoc(), case_.getScrutinee());
