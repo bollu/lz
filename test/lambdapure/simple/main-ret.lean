@@ -1,6 +1,5 @@
---  RUN: lean %s 2>&1 | lambdapure-translate --import-lambdapure | FileCheck %s
---  RUN: lean %s 2>&1 | lambdapure-translate --import-lambdapure | hask-opt | FileCheck %s
---  RUN: lean %s 2>&1 | lambdapure-translate --import-lambdapure | hask-opt  --lz-interpret=mode=lambdapure | FileCheck --check-prefix=CHECK-INTERPRET %s
+--  RUN: lean %s 2>&1 | hask-opt --lz-canonicalize | FileCheck %s
+--  RUN: lean %s 2>&1 | hask-opt --lz-canonicalize  --lz-interpret=mode=lambdapure | FileCheck --check-prefix=CHECK-INTERPRET %s
 
 -- CHECK: func @main
 -- 42 is for argv.
