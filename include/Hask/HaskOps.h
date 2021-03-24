@@ -312,6 +312,7 @@ class HaskConstructOp
 public:
   using Op::Op;
   static StringRef getOperationName() { return "lz.construct"; };
+  // TODO: consider switching to "value" as key? unclear.
   static const char *getDataConstructorAttrKey() { return "dataconstructor"; }
   static const char *getDataTypeAttrKey() { return "datatype"; }
   StringRef getDataConstructorName() {
