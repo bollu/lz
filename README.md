@@ -38,6 +38,11 @@
 
 # Log:  [newest] to [oldest]
 
+# March 24
+
+- Got simple examples to work.
+- TODO: get `render.lean` to work!
+- Next: immutable beans tomorrow.
 
 # March 23: Lean compiler entrypoint
 
