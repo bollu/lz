@@ -1,10 +1,8 @@
---  RUN: lean %s 2>&1 | lambdapure-translate --import-lambdapure | FileCheck %s
---  RUN: lean %s 2>&1 | lambdapure-translate --import-lambdapure | hask-opt | FileCheck %s
---  RUN: lean %s 2>&1 | lambdapure-translate --import-lambdapure | hask-opt  --lz-interpret=mode=lambdapure 
---  RUN: lean %s 2>&1 | lambdapure-translate --import-lambdapure | hask-opt  --lz-interpret=mode=lambdapure | FileCheck --check-prefix=CHECK-INTERPRET %s
+--  RUN: lean %s 2>&1 | hask-opt | FileCheck %s
+--  RUN: lean %s 2>&1 | hask-opt  --lz-canonicalize --lz-lazify --lz-wrapper-worker --lz-interpret=mode=lambdapure | FileCheck --check-prefix=CHECK-INTERPRET %s
 
--- CHECK: func @_lean_main
-
+-- CHECK: func @main
+-- CHECK-INTERPRET: 42
 
 set_option trace.compiler.ir.init true
 

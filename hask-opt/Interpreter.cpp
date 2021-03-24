@@ -21,6 +21,7 @@ InterpValue buildArgv(const Pass::ListOption<std::string> &ss) {
   for(int i = ss.size() - 1; i >= 0; i--) {
     tail = InterpValue::constructor("1", {InterpValue::s(ss[i]), tail});
   }
+  
   return tail;
 }
 
@@ -1104,35 +1105,35 @@ struct Interpreter {
       return {};
     }
 
-    if (funcname == "Nat_dot_repr") {
+    if (funcname == "Nat.repr") {
       return interpretPrimopNatRepr(args);
     }
-    if (funcname == "Nat_dot_decEq") {
+    if (funcname == "Nat.decEq") {
       return InterpretPrimopNatDecEq(args);
     }
-    if (funcname == "Nat_dot_decLt") {
+    if (funcname == "Nat.decLt") {
       return InterpretPrimopNatDecLt(args);
     }
-    if (funcname == "Nat_dot_sub") {
+    if (funcname == "Nat.sub") {
       return InterpretPrimopNatSub(args);
     }
-    if (funcname == "Nat_dot_add") {
+    if (funcname == "Nat.add") {
       return InterpretPrimopNatAdd(args);
     }
-    if (funcname == "Nat_dot_mul") {
+    if (funcname == "Nat.mul") {
       return InterpretPrimopNatMul(args);
     }
-    if (funcname == "String_dot_push") {
+    if (funcname == "String.push") {
       return interpretPrimopStringPush(args);
     }
-    if (funcname == "String_dot_append") {
+    if (funcname == "String.append") {
       return interpretPrimopStringAppend(args);
     }
 
-    if (funcname == "String_dot_toNat_bang_") {
+    if (funcname == "String.toNat!") {
       return interpretPrimopStringToNat(args);
     }
-    if (funcname == "String_dot_instInhabitedString") {
+    if (funcname == "String.instInhabitedString") {
       // comes from | unionfind.lean
       llvm::errs().changeColor(llvm::raw_fd_ostream::GREEN);
       llvm::errs() << "--interpreting primop:|String.instInhabitedString|--\n";
@@ -1141,11 +1142,11 @@ struct Interpreter {
       return {InterpValue::constructor(G_ERASED_VALUE_TAG, {}) };
     }
 
-    if (funcname == "List_dot_head_bang__dot__rarg_dot__closed_3") {
+    if (funcname == "List.head!._rarg._closed_3") {
       // HACK! I have no idea what this does
       // comes from | unionfind.lean
       llvm::errs().changeColor(llvm::raw_fd_ostream::GREEN);
-      llvm::errs() << "--interpreting primop:|List_dot_head_bang__dot__rarg_dot__closed_3|--\n";
+      llvm::errs() << "--interpreting primop:|List.head!._rarg._closed_3|--\n";
       llvm::errs().resetColor();
       // This is a wild guess of what "ought" to happen.
       return {InterpValue::constructor(G_ERASED_VALUE_TAG, {}) };
@@ -1154,22 +1155,22 @@ struct Interpreter {
 
 
     // vvv HACK: is this print v/s println?
-    if (funcname == "IO_dot_print_dot__at_dot_IO_dot_println_dot__spec_1" ||
-        funcname == "IO_dot_println_dot__at_dot_Lean_dot_instEval_dot__spec_1") {
+    if (funcname == "IO.print._at.IO.println._spec_1" ||
+        funcname == "IO.println._at.Lean.instEval._spec_1") {
       return interpretPrimopIOPrintln(args);
     }
 
 
-    if (funcname == "Array_dot_empty_dot__closed_1") {
+    if (funcname == "Array.empty._closed_1") {
       return InterpretPrimopArrayEmpty(args);
     }
-    if (funcname == "Array_dot_push") {
+    if (funcname == "Array.push") {
       return InterpretPrimopArrayPush(args);
     }
-    if (funcname == "Array_dot_get_bang_") {
+    if (funcname == "Array.get!") {
       return InterpretPrimopArrayGet(args);
     }
-    if (funcname == "Array_dot_size") { // unionfind
+    if (funcname == "Array.size") { // unionfind
       return InterpretPrimopArraySize(args);
     }
 

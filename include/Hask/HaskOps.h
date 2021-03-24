@@ -527,6 +527,8 @@ public:
   static StringRef getOperationName() { return "lz.caseRet"; };
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   void print(OpAsmPrinter &p);
+  Value getScrutinee() { return getOperand(); }
+  int numAlts() { return this->getOperation()->getNumRegions(); }
 };
 
 
