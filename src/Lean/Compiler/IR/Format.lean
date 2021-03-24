@@ -85,12 +85,14 @@ def mlirPreamble : Format :=
   ++ "func private" ++ "@" ++ (escape "List.head!._rarg._closed_3") ++ formatMLIRType 0 1 ++ Format.line
   ++ "func private" ++ "@" ++ (escape "Lean.Syntax.isOfKind") ++ formatMLIRType 2 1 ++ Format.line
   ++ "func private" ++ "@" ++ (escape "Lean.Syntax.getArg") ++ formatMLIRType 2 1 ++ Format.line
+  ++ "func private" ++ "@" ++ (escape "String.append") ++ formatMLIRType 2 1 ++ Format.line
+  ++ "func private" ++ "@" ++ (escape "IO.println._at.Lean.instEval._spec_1") ++ formatMLIRType 2 1 ++ Format.line
 
 
 private def formatExpr : Expr → Format
   -- v this is a hack, I should instead just give the constructor index.
   | Expr.ctor i ys      => (escape "lz.construct") ++  "(" ++  formatArray ys ++ ")"  ++
-                           " {value=" ++ "@" ++ escape (format i) ++ "}" ++
+                           " {dataconstructor=" ++ "@" ++ escape (format i) ++ "}" ++
                            ":" ++ formatMLIRType (ys.size) 1
   | Expr.reset n x      => "// ERR: reset[" ++ format n ++ "] " ++ format x
   | Expr.reuse x i u ys => "// ERR: reuse" ++ (if u then "!" else "") ++ " " ++ format x ++ " in " ++ format i ++ formatArray ys
@@ -106,7 +108,9 @@ private def formatExpr : Expr → Format
                            ":" ++ formatMLIRType (1 + ys.size) 1
   | Expr.box _ x        => "// ERR: box " ++ format x
   | Expr.unbox x        => "// ERR: unbox " ++ format x
-  | Expr.lit v          => (escape "lz.int") ++ "(){value=" ++ format v  ++ "}" ++ ": () -> !lz.value"
+  -- | Expr.lit v          => (escape "lz.int") ++ "(){value=" ++ format v  ++ "}" ++ ": () -> !lz.value"
+  | Expr.lit (LitVal.num n) => (escape "lz.int") ++ "(){value=" ++ format n  ++ "}" ++ ": () -> !lz.value"
+  | Expr.lit (LitVal.str s) => (escape "ptr.string") ++ "(){value=" ++ (escape (format s))  ++ "}" ++ ": () -> !lz.value"
   | Expr.isShared x     => "// ERR: isShared " ++ format x
   | Expr.isTaggedPtr x  => "// ERR: isTaggedPtr " ++ format x
 
