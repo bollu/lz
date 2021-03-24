@@ -1,12 +1,11 @@
---  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | FileCheck %s
---  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | hask-opt  | FileCheck %s
---  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | hask-opt  --lz-interpret="mode=lambdapure" | FileCheck %s --check-prefix=CHECK-INTERPRET
+--  lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize | FileCheck %s
+--  RUN: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize  --lz-interpret="mode=lambdapure" | FileCheck %s --check-prefix=CHECK-INTERPRET
 
 -- Testcase to check a join point / jump instruction
 
 -- CHECK: "lz.jump"
 -- CHECK: "lz.block"
--- CHECK: func @_lean_main
+-- CHECK: func @main
 
 set_option trace.compiler.ir.init true
 

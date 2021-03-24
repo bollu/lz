@@ -764,6 +764,12 @@ struct Interpreter {
   };
 
   TerminatorResult interpretTerminator(Operation &op, Env &env) {
+    llvm::errs().changeColor(llvm::raw_fd_ostream::GREEN);
+    llvm::errs() << "--interpreting terminator:--\n";
+    llvm::errs().resetColor();
+    op.print(llvm::errs());
+    llvm::errs() << "\n";
+
     if (auto ret = dyn_cast<mlir::ReturnOp>(op)) {
       return TerminatorResult(env.lookup(ret.getLoc(), ret.getOperand(0)));
     }
@@ -852,7 +858,7 @@ struct Interpreter {
     if (r.getNumArguments() != args.size()) {
       InFlightDiagnostic diag = r.getContext()->getDiagEngine().emit(
           r.getLoc(), DiagnosticSeverity::Error);
-      diag << "incorrect number of arguments. Given: |" << args.size() << "|."
+      diag << "incorrect number of arguments to region. Given: |" << args.size() << "|."
            << "Expected: |" << r.getNumArguments() << "| \n";
       diag.report();
       assert(false && "unable to interpret region");
