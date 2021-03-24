@@ -1,6 +1,6 @@
---  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | FileCheck %s
---  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | hask-opt  | FileCheck %s
---  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | hask-opt  --lz-interpret="mode=lambdapure stdio=2" | FileCheck %s --check-prefix=CHECK-INTERPRET
+--  RUN: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize | FileCheck %s
+--  RUN: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize | hask-opt  | FileCheck %s
+--  RUN: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize | hask-opt  --lz-interpret="mode=lambdapure stdio=2" | FileCheck %s --check-prefix=CHECK-INTERPRET
 
 -- CHECK: func @main
 -- CHECK-INTERPRET: 2  ;  2
