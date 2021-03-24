@@ -80,6 +80,7 @@ def mlirPreamble : Format :=
   ++ "func private" ++ "@" ++ (escape "UInt32.toNat") ++ formatMLIRType 1 1 ++ Format.line
   ++ "func private" ++ "@" ++ (escape "instInhabitedUInt32") ++ formatMLIRType 0 1 ++ Format.line
   ++ "func private" ++ "@" ++ (escape "Array.get!") ++ formatMLIRType 4 1 ++ Format.line
+  ++ "func private" ++ "@" ++ (escape "Array.push") ++ formatMLIRType 3 1 ++ Format.line
   ++ "func private" ++ "@" ++ (escape "Array.swap!") ++ formatMLIRType 4 1 ++ Format.line
   ++ "func private" ++ "@" ++ (escape "String.instInhabitedString") ++ formatMLIRType 0 1 ++ Format.line
   ++ "func private" ++ "@" ++ (escape "List.head!._rarg._closed_3") ++ formatMLIRType 0 1 ++ Format.line
@@ -87,6 +88,7 @@ def mlirPreamble : Format :=
   ++ "func private" ++ "@" ++ (escape "Lean.Syntax.getArg") ++ formatMLIRType 2 1 ++ Format.line
   ++ "func private" ++ "@" ++ (escape "String.append") ++ formatMLIRType 2 1 ++ Format.line
   ++ "func private" ++ "@" ++ (escape "IO.println._at.Lean.instEval._spec_1") ++ formatMLIRType 2 1 ++ Format.line
+  ++ "func private" ++ "@" ++ (escape "instInhabitedNat") ++ formatMLIRType 0 1 ++ Format.line
 
 
 private def formatExpr : Expr → Format
