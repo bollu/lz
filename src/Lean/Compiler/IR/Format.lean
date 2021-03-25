@@ -62,12 +62,15 @@ def formatMLIRType : Nat -> Nat -> Format
 
 
 -- func private @panic(!lz.value, !lz.value, !lz.value) -> !lz.value
-def mlirPreamble : Format := 
+def mlirPreamble1 : Format := 
   "func private" ++ "@" ++ (escape "panic") ++ formatMLIRType 3 1 ++ Format.line
   ++ "func private" ++ "@" ++ (escape "Nat.repr") ++ formatMLIRType 1 1 ++ Format.line
   ++ "func private" ++ "@" ++ (escape "String.push") ++ formatMLIRType 2 1 ++ Format.line
   ++ "func private" ++ "@" ++ (escape "IO.print._at.IO.println._spec_1") ++ formatMLIRType 2 1 ++ Format.line
+  ++ "func private" ++ "@" ++ (escape "Int.decLt") ++ formatMLIRType 2 1 ++ Format.line
+  ++ "func private" ++ "@" ++ (escape "Int.natAbs") ++ formatMLIRType 1 1 ++ Format.line
   ++ "func private" ++ "@" ++ (escape "Nat.decEq") ++ formatMLIRType 2 1 ++ Format.line
+  ++ "func private" ++ "@" ++ (escape "Nat.decLt") ++ formatMLIRType 2 1 ++ Format.line
   ++ "func private" ++ "@" ++ (escape "Nat.add") ++ formatMLIRType 2 1 ++ Format.line
   ++ "func private" ++ "@" ++ (escape "Nat.mul") ++ formatMLIRType 2 1 ++ Format.line
   ++ "func private" ++ "@" ++ (escape "Nat.max") ++ formatMLIRType 2 1 ++ Format.line
@@ -79,6 +82,8 @@ def mlirPreamble : Format :=
   ++ "func private" ++ "@" ++ (escape "UInt32.div") ++ formatMLIRType 2 1 ++ Format.line
   ++ "func private" ++ "@" ++ (escape "Array.empty._closed_1") ++ formatMLIRType 0 1 ++ Format.line
   ++ "func private" ++ "@" ++ (escape "Array.mkArray") ++ formatMLIRType 3 1 ++ Format.line
+  ++ "func private" ++ "@" ++ (escape "Array.set!") ++ formatMLIRType 4 1 ++ Format.line
+  ++ "func private" ++ "@" ++ (escape "Array.get") ++ formatMLIRType 3 1 ++ Format.line
   ++ "func private" ++ "@" ++ (escape "Float.ofScientific") ++ formatMLIRType 3 1 ++ Format.line
   ++ "func private" ++ "@" ++ (escape "Float.ofNat") ++ formatMLIRType 1 1 ++ Format.line
   ++ "func private" ++ "@" ++ (escape "Array.size") ++ formatMLIRType 2 1 ++ Format.line
@@ -95,14 +100,34 @@ def mlirPreamble : Format :=
   ++ "func private" ++ "@" ++ (escape "IO.println._at.Lean.instEval._spec_1") ++ formatMLIRType 2 1 ++ Format.line
   ++ "func private" ++ "@" ++ (escape "instInhabitedNat") ++ formatMLIRType 0 1 ++ Format.line
   ++ "func private" ++ "@" ++ (escape "USize.ofNat") ++ formatMLIRType 1 1 ++ Format.line
+
+def mlirPreambleJunk : Format := 
   -- from render.lean. Where do these come from?
-  ++ "func private" ++ "@" ++ (escape "Lean.instInhabitedParserDescr._closed_1") ++ formatMLIRType 0 1 ++ Format.line
+  "func private" ++ "@" ++ (escape "Lean.instInhabitedParserDescr._closed_1") ++ formatMLIRType 0 1 ++ Format.line
   ++ "func private" ++ "@" ++ (escape "_private.Init.Data.Format.Basic.0.Std.Format.be._closed_") ++ formatMLIRType 0 1 ++ Format.line
   ++ "func private" ++ "@" ++ (escape "_private.Init.Data.Format.Basic.0.Std.Format.be._closed_1") ++ formatMLIRType 0 1 ++ Format.line
   -- from const_fold.lean. Where do these come from?
-   -- TODO: write a pass that collects this stuff and emits it before every function.
+  -- TODO: write a pass that collects this stuff and emits it before every function.
+  -- Notice that every such function takes 0 inputs and produces an output. Unclear what this means.
+  -- It's like a constant function.
   ++ "func private" ++ "@" ++ (escape "Lean.Parser.Syntax.addPrec._closed_11") ++ formatMLIRType 0 1 ++ Format.line
   ++ "func private" ++ "@" ++ (escape "term_*_._closed_3") ++ formatMLIRType 0 1 ++ Format.line
+  ++ "func private" ++ "@" ++ (escape "prec(_)._closed_7") ++ formatMLIRType 0 1 ++ Format.line
+  ++ "func private" ++ "@" ++ (escape "prec(_)._closed_3") ++ formatMLIRType 0 1 ++ Format.line
+  ++ "func private" ++ "@" ++ (escape "term_^_._closed_3") ++ formatMLIRType 0 1 ++ Format.line
+  ++ "func private" ++ "@" ++ (escape "Int.instInhabitedInt._closed_1") ++ formatMLIRType 0 1 ++ Format.line
+  -- From bench/qsort.lean
+  ++ "func private" ++ "@" ++ (escape "Lean.MonadRef.mkInfoFromRefPos._at.myMacro._@.Init.Notation._hyg.109._spec_1") ++ formatMLIRType 2 1 ++ Format.line
+  -- ++ "func private" ++ "@" ++ (escape "term↑__1._closed_3") ++ formatMLIRType 0 1 ++ Format.line
+  -- ++ "func private" ++ "@" ++ (escape "term↑__1._closed_2") ++ formatMLIRType 0 1 ++ Format.line
+  -- ++ "func private" ++ "@" ++ (escape "term↑__1._closed_1") ++ formatMLIRType 0 1 ++ Format.line
+  ++ "func private" ++ "@" ++ (escape "Lean.addMacroScope") ++ formatMLIRType 3 1 ++ Format.line
+  ++ "func private" ++ "@" ++ (escape "Lean.nullKind._closed_2") ++ formatMLIRType 0 1 ++ Format.line
+  ++ "func private" ++ "@" ++ (escape "myMacro._@.Init.Notation._hyg.2191._closed_4") ++ formatMLIRType 0 1 ++ Format.line
+  ++ "func private" ++ "@" ++ (escape "Lean.Name.mkStr") ++ formatMLIRType 2 1 ++ Format.line
+  ++ "func private" ++ "@" ++ (escape "String.utf8ByteSize") ++ formatMLIRType 1 1 ++ Format.line
+
+def mlirPreamble : Format := mlirPreamble1 ++ mlirPreambleJunk
 
 private def formatExpr : Expr → Format
   -- v this is a hack, I should instead just give the constructor index.
