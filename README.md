@@ -39,6 +39,7 @@
 # Log:  [newest] to [oldest]
 
 # March 25
+- Need to fix `lambdapure/simple/jmp.lean` that makes use of default alternative case.
 - `ClosedTermCache` keeps tracks of names.
 
 terms for render.lean
