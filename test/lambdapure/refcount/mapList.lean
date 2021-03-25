@@ -1,4 +1,5 @@
 --  RUN: lean %s 2>&1 | hask-opt --lz-canonicalize  --lz-interpret=mode=lambdapure | FileCheck %s --check-prefix=CHECK-INTERPRET
+--  RUN: lean %s 2>&1 | hask-opt --lz-canonicalize --lz-lambdapure-reference-rewriter  --lz-interpret=mode=lambdapure | FileCheck %s --check-prefix=CHECK-INTERPRET
 
 -- makeList: 
 -- 1 2 3 4 5
