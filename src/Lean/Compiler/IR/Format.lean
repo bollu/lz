@@ -76,6 +76,9 @@ def mlirPreamble : Format :=
   ++ "func private" ++ "@" ++ (escape "UInt32.add") ++ formatMLIRType 2 1 ++ Format.line
   ++ "func private" ++ "@" ++ (escape "UInt32.div") ++ formatMLIRType 2 1 ++ Format.line
   ++ "func private" ++ "@" ++ (escape "Array.empty._closed_1") ++ formatMLIRType 0 1 ++ Format.line
+  ++ "func private" ++ "@" ++ (escape "Array.mkArray") ++ formatMLIRType 3 1 ++ Format.line
+  ++ "func private" ++ "@" ++ (escape "Float.ofScientific") ++ formatMLIRType 3 1 ++ Format.line
+  ++ "func private" ++ "@" ++ (escape "Float.ofNat") ++ formatMLIRType 1 1 ++ Format.line
   ++ "func private" ++ "@" ++ (escape "Array.size") ++ formatMLIRType 2 1 ++ Format.line
   ++ "func private" ++ "@" ++ (escape "UInt32.toNat") ++ formatMLIRType 1 1 ++ Format.line
   ++ "func private" ++ "@" ++ (escape "instInhabitedUInt32") ++ formatMLIRType 0 1 ++ Format.line
@@ -89,6 +92,14 @@ def mlirPreamble : Format :=
   ++ "func private" ++ "@" ++ (escape "String.append") ++ formatMLIRType 2 1 ++ Format.line
   ++ "func private" ++ "@" ++ (escape "IO.println._at.Lean.instEval._spec_1") ++ formatMLIRType 2 1 ++ Format.line
   ++ "func private" ++ "@" ++ (escape "instInhabitedNat") ++ formatMLIRType 0 1 ++ Format.line
+  ++ "func private" ++ "@" ++ (escape "USize.ofNat") ++ formatMLIRType 1 1 ++ Format.line
+  -- from render.lean. Where do these come from?
+  ++ "func private" ++ "@" ++ (escape "Lean.instInhabitedParserDescr._closed_1") ++ formatMLIRType 0 1 ++ Format.line
+  ++ "func private" ++ "@" ++ (escape "_private.Init.Data.Format.Basic.0.Std.Format.be._closed_") ++ formatMLIRType 0 1 ++ Format.line
+  ++ "func private" ++ "@" ++ (escape "_private.Init.Data.Format.Basic.0.Std.Format.be._closed_1") ++ formatMLIRType 0 1 ++ Format.line
+
+
+
 
 
 private def formatExpr : Expr → Format
@@ -100,9 +111,10 @@ private def formatExpr : Expr → Format
   | Expr.reuse x i u ys => "// ERR: reuse" ++ (if u then "!" else "") ++ " " ++ format x ++ " in " ++ format i ++ formatArray ys
   | Expr.proj i x       => (escape "lz.project") ++ "(" ++ "%" ++ format x ++ ")" ++ "{value=" ++ format i ++ "}" ++ ":" ++ formatMLIRType 1 1
   | Expr.uproj i x      => "// ERR: uproj[" ++ format i ++ "] " ++ format x
-  | Expr.sproj n o x    => "// ERR: sproj[" ++ format n ++ ", " ++ format o ++ "] " ++ format x
+  | Expr.sproj ix o x    => (escape "lz.sproj") ++ "(" ++ (formatVar x) ++ ")"
+                           ++ "{ix=" ++ (format ix) ++ ", offset=" ++ (format o) ++"}" ++ ":" ++ formatMLIRType 1 1
   | Expr.fap c ys       => "call " ++ "@" ++ (escape (format c)) ++ "(" ++ formatArray ys ++ ")" ++ ":" ++ formatMLIRType (ys.size) 1
-  | Expr.pap c ys       => (escape "lz.pap") ++ "(" ++  formatArrayHanging ys ++ ")" ++
+  | Expr.pap c ys       => (escape "lz.pap") ++ "(" ++  formatArray ys ++ ")" ++
                            "{value=" ++ "@" ++ format c ++ "}" ++
                            ":" ++ (formatMLIRType ys.size) 1
   | Expr.ap x ys        => let ys2 := (Array.map formatArg ys);
@@ -172,7 +184,11 @@ def formatFnBodyHead : FnBody → Format
   | FnBody.jdecl j xs v b      => "// ERR: " ++ format j ++ formatParams xs ++ " := ..."
   | FnBody.set x i y b         => "// ERR: " ++ "set " ++ format x ++ "[" ++ format i ++ "] := " ++ format y
   | FnBody.uset x i y b        => "// ERR: " ++ "uset " ++ format x ++ "[" ++ format i ++ "] := " ++ format y
-  | FnBody.sset x i o y ty b   => "// ERR: " ++ "sset " ++ format x ++ "[" ++ format i ++ ", " ++ format o ++ "] : " ++ format ty ++ " := " ++ format y
+  /- Store `y : ty` at Position `sizeof(void*)*i + offset` in `x`. `x` must be a Constructor object and `RC(x)` must be 1.
+     `ty` must not be `object`, `tobject`, `irrelevant` nor `Usize`. -/
+  | FnBody.sset x i o y ty b   => (escape "lz.sset")  ++ "(" ++ (formatVar x) ++ "," ++ (formatVar y) ++ ")" ++ 
+                                   "{" ++ "ix=" ++ (format i) ++ ", offset=" ++ (format o) ++ "}" ++ ":" ++ formatMLIRType 2 0
+   
   | FnBody.setTag x cidx b     => "// ERR: " ++ "setTag " ++ format x ++ " := " ++ format cidx
   | FnBody.inc x n c _ b       => "// ERR: " ++ "inc" ++ (if n != 1 then Format.sbracket (format n) else "") ++ " " ++ format x
   | FnBody.dec x n c _ b       => "// ERR: " ++ "dec" ++ (if n != 1 then Format.sbracket (format n) else "") ++ " " ++ format x
@@ -222,10 +238,13 @@ partial def formatFnBody (fnBody : FnBody) (indent : Nat := 2) : Format :=
 				    ++  "})" ++ ":" ++ (formatMLIRType 0 0)
     | FnBody.set x i y b         => "//ERR: set " --  ++ "set " ++ format x ++ "[" ++ format i ++ "] := " ++ format y ++ ";" ++ Format.line ++ loop b
     | FnBody.uset x i y b        => "//ERR: uset" -- ++ "uset " ++ format x ++ "[" ++ format i ++ "] := " ++ format y ++ ";" ++ Format.line ++ loop b
-    | FnBody.sset x i o y ty b   => "//ERR: sset"  -- ++ "sset " ++ format x ++ "[" ++ format i ++ ", " ++ format o ++ "] : " ++ format ty ++ " := " ++ format y ++ ";" ++ Format.line ++ loop b
+    | FnBody.sset x i o y ty b   => (escape "lz.sset")  ++ "(" ++ (formatVar x) ++ "," ++ (formatVar y) ++ ")" ++ 
+                                    "{" ++ "ix=" ++ (format i) ++ ", offset=" ++ (format o) ++ "}" ++ ":" ++ formatMLIRType 2 0
     | FnBody.setTag x cidx b     => "//ERR: setTag" --  ++ "setTag " ++ format x ++ " := " ++ format cidx ++ ";" ++ Format.line ++ loop b
-    | FnBody.inc x n c _ b       => "//ERR: inc" --  ++ "inc" ++ (if n != 1 then Format.sbracket (format n) else "") ++ " " ++ format x ++ ";" ++ Format.line ++ loop b
-    | FnBody.dec x n c _ b       => "//ERR: dec" --  ++ "dec" ++ (if n != 1 then Format.sbracket (format n) else "") ++ " " ++ format x ++ ";" ++ Format.line ++ loop b
+    | FnBody.inc x n c _ b       => "//ERR: inc"
+                                 --  ++ "inc" ++ (if n != 1 then Format.sbracket (format n) else "") ++ " " ++ format x ++ ";" ++ Format.line ++ loop b
+    | FnBody.dec x n c _ b       => "//ERR: dec"
+                                  --  ++ "dec" ++ (if n != 1 then Format.sbracket (format n) else "") ++ " " ++ format x ++ ";" ++ Format.line ++ loop b
     | FnBody.del x b             => "//ERR: del" --  ++ "del " ++ format x ++ ";" ++ Format.line ++ loop b
     | FnBody.mdata d b           => "//ERR: mdata" --  ++ "mdata " ++ format d ++ ";" ++ Format.line ++ loop b
     --  "//ERR:" ++ "case " ++ format x ++ " : " ++ format xType ++ " of" ++ cs.foldl (fun r c => r ++ Format.line ++ formatAlt loop indent c) Format.nil
@@ -238,9 +257,9 @@ partial def formatFnBody (fnBody : FnBody) (indent : Nat := 2) : Format :=
  
     | FnBody.jmp j ys            => (escape "lz.jump") ++ "("  ++ formatArray ys ++ ")"
                                     ++ "{value=" ++ format j.idx ++ "}"
-                                    ++ ":" ++ formatMLIRType 1 0
+                                    ++ ":" ++ (formatMLIRType ys.size 0)
     | FnBody.ret x               => (escape "lz.return") ++ "(" ++  format x ++ ")" ++ ": (!lz.value) -> ()"
-    | FnBody.unreachable         => "bottom"
+    | FnBody.unreachable         => (escape "lz.bottom") ++ "()" ++ ":" ++  formatMLIRType 0 0
   loop fnBody
 
 instance : ToFormat FnBody := ⟨formatFnBody⟩
