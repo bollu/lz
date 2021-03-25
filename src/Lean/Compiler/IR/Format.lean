@@ -69,6 +69,8 @@ def mlirPreamble : Format :=
   ++ "func private" ++ "@" ++ (escape "IO.print._at.IO.println._spec_1") ++ formatMLIRType 2 1 ++ Format.line
   ++ "func private" ++ "@" ++ (escape "Nat.decEq") ++ formatMLIRType 2 1 ++ Format.line
   ++ "func private" ++ "@" ++ (escape "Nat.add") ++ formatMLIRType 2 1 ++ Format.line
+  ++ "func private" ++ "@" ++ (escape "Nat.mul") ++ formatMLIRType 2 1 ++ Format.line
+  ++ "func private" ++ "@" ++ (escape "Nat.max") ++ formatMLIRType 2 1 ++ Format.line
   ++ "func private" ++ "@" ++ (escape "Nat.sub") ++ formatMLIRType 2 1 ++ Format.line
   ++ "func private" ++ "@" ++ (escape "String.toNat!") ++ formatMLIRType 1 1 ++ Format.line
   ++ "func private" ++ "@" ++ (escape "UInt32.ofNat") ++ formatMLIRType 1 1 ++ Format.line
@@ -97,10 +99,10 @@ def mlirPreamble : Format :=
   ++ "func private" ++ "@" ++ (escape "Lean.instInhabitedParserDescr._closed_1") ++ formatMLIRType 0 1 ++ Format.line
   ++ "func private" ++ "@" ++ (escape "_private.Init.Data.Format.Basic.0.Std.Format.be._closed_") ++ formatMLIRType 0 1 ++ Format.line
   ++ "func private" ++ "@" ++ (escape "_private.Init.Data.Format.Basic.0.Std.Format.be._closed_1") ++ formatMLIRType 0 1 ++ Format.line
-
-
-
-
+  -- from const_fold.lean. Where do these come from?
+   -- TODO: write a pass that collects this stuff and emits it before every function.
+  ++ "func private" ++ "@" ++ (escape "Lean.Parser.Syntax.addPrec._closed_11") ++ formatMLIRType 0 1 ++ Format.line
+  ++ "func private" ++ "@" ++ (escape "term_*_._closed_3") ++ formatMLIRType 0 1 ++ Format.line
 
 private def formatExpr : Expr → Format
   -- v this is a hack, I should instead just give the constructor index.
@@ -115,7 +117,7 @@ private def formatExpr : Expr → Format
                            ++ "{ix=" ++ (format ix) ++ ", offset=" ++ (format o) ++"}" ++ ":" ++ formatMLIRType 1 1
   | Expr.fap c ys       => "call " ++ "@" ++ (escape (format c)) ++ "(" ++ formatArray ys ++ ")" ++ ":" ++ formatMLIRType (ys.size) 1
   | Expr.pap c ys       => (escape "lz.pap") ++ "(" ++  formatArray ys ++ ")" ++
-                           "{value=" ++ "@" ++ format c ++ "}" ++
+                           "{value=" ++ "@" ++ escape (format c) ++ "}" ++
                            ":" ++ (formatMLIRType ys.size) 1
   | Expr.ap x ys        => let ys2 := (Array.map formatArg ys);
                            (escape "lz.apEager") ++ "(" ++  formatVar x ++ formatArrayHanging ys2 ++ ")" ++
