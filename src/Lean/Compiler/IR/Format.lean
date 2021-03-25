@@ -157,7 +157,7 @@ def mlirPreambleJunk : Format :=
 -- func private@"ST.Prim.Ref.set"(!lz.value, !lz.value, !lz.value, !lz.value, !lz.value)->(!lz.value)
 -- func private@"stdNext"(!lz.value)->!lz.value
 -- func private@"stdRange"()->!lz.value
--- def mlirPreamble : Format := mlirPreamble1 ++ mlirPreambleJunk
+def mlirPreamble : Format := mlirPreamble1 ++ mlirPreambleJunk
 
 -- f : a -> b -> c -> o
 -- g a =  fun b c => f a b c 
@@ -187,9 +187,8 @@ private def formatExpr : Expr → Format
   | Expr.pap c ys       => (escape "lz.pap") ++ "(" ++  formatArray ys ++ ")" ++
                            "{value=" ++ "@" ++ escape (format c) ++ "}" ++
                            ":" ++ (formatMLIRType ys.size) 1
-  | Expr.ap x ys        => let ys2 := (Array.map formatArg ys);
-                           (escape "lz.apEager") ++ "(" ++  formatVar x ++ formatArrayHanging ys2 ++ ")" ++
-                           ":" ++ formatMLIRType (1 + ys.size) 1
+  | Expr.ap x ys        =>  (escape "lz.papExtend") ++ "(" ++  formatVar x ++ formatArrayHanging (Array.map formatArg ys) ++ ")"
+                           ++ ":" ++ formatMLIRType (1 + ys.size) 1
   | Expr.box _ x        => "// ERR: box " ++ format x
   | Expr.unbox x        => "// ERR: unbox " ++ format x
   -- | Expr.lit v          => (escape "lz.int") ++ "(){value=" ++ format v  ++ "}" ++ ": () -> !lz.value"
@@ -240,9 +239,9 @@ def formatAltRHS (fmtBody : FnBody → Format) (indent : Nat) : Alt → Format
                       Format.nest indent (Format.line ++ fmtBody b) ++
                       "}"
 
-def formatAltLHS (indent : Nat) : Alt → Format
-  | Alt.ctor i b  =>  "alt" ++ (format i.cidx) ++ "=" ++ "@" ++ (escape (format i.cidx)) --format i.name ++ " →" ++ Format.nest indent (Format.line ++ fmt b)
-  | Alt.default b => format "@default" -- "default →" ++ Format.nest indent (Format.line ++ fmt b)
+def formatAltLHS (nalts: Nat) (indent : Nat) : Alt → Format
+| Alt.ctor i b  =>  "alt" ++ (format i.cidx) ++ "=" ++ "@" ++ (escape (format i.cidx)) --format i.name ++ " →" ++ Format.nest indent (Format.line ++ fmt b)
+| Alt.default b => "alt" ++ (format (1 + nalts)) ++ "=" ++  "@default" -- "default →" ++ Format.nest indent (Format.line ++ fmt b)
 
 def formatParams (ps : Array Param) : Format :=
   formatArray ps
@@ -321,7 +320,7 @@ partial def formatFnBody (fnBody : FnBody) (indent : Nat := 2) : Format :=
     -- | TODO: consider generating this differently?
     | FnBody.case tid x xType cs => (escape "lz.caseRet") ++ "(%" ++ format x ++ ")" ++
                                     "("  ++ formatArray (Array.map (formatAltRHS loop indent) cs) ++ ")" 
-                                    ++ "{" ++ formatArray (Array.map (formatAltLHS indent) cs)  ++ "}" 
+                                    ++ "{" ++ formatArray (Array.map (formatAltLHS (cs.size) indent) cs)  ++ "}" 
                                     ++ ":" ++ formatMLIRType 1 0
                                    
  
