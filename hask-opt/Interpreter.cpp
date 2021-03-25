@@ -1036,9 +1036,9 @@ struct Interpreter {
     return {arr};
   };
 
-  Optional<InterpValue> InterpretPrimopArrayGet(ArrayRef<InterpValue> args) {
+  Optional<InterpValue> InterpretPrimopArrayGetBang(ArrayRef<InterpValue> args) {
     llvm::errs().changeColor(llvm::raw_fd_ostream::GREEN);
-    llvm::errs() << "--interpreting primop:|Array.get|--\n";
+    llvm::errs() << "--interpreting primop:|Array.get!|--\n";
     llvm::errs().resetColor();
 
     assert(args.size() == 4);
@@ -1049,6 +1049,23 @@ struct Interpreter {
 
     assert(proof2.type == InterpValueType::Constructor);
     assert(proof2.constructorTag() == G_ERASED_VALUE_TAG);
+
+    assert(arr.type == InterpValueType::MemRef);
+    assert(ix.type == InterpValueType::I64);
+    std::vector<int> ixs = {ix.i()};
+    return arr.load(ixs);
+  };
+
+  // TODO: add link to docs. (irrelevant, array, ix)
+  Optional<InterpValue> InterpretPrimopArrayGet(ArrayRef<InterpValue> args) {
+    llvm::errs().changeColor(llvm::raw_fd_ostream::GREEN);
+    llvm::errs() << "--interpreting primop:|Array.get|--\n";
+    llvm::errs().resetColor();
+    assert(args.size() == 3);
+    InterpValue proof1 = args[0],  arr = args[1], ix = args[2];
+
+    assert(proof1.type == InterpValueType::Constructor);
+    assert(proof1.constructorTag() == G_ERASED_VALUE_TAG);
 
     assert(arr.type == InterpValueType::MemRef);
     assert(ix.type == InterpValueType::I64);
@@ -1179,6 +1196,9 @@ struct Interpreter {
       return InterpretPrimopArrayPush(args);
     }
     if (funcname == "Array.get!") {
+      return InterpretPrimopArrayGetBang(args);
+    }
+    if (funcname == "Array.get") {
       return InterpretPrimopArrayGet(args);
     }
     if (funcname == "Array.size") { // unionfind

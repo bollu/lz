@@ -88,10 +88,13 @@ public:
 
   void runOnOperation() override {
     mlir::OwningRewritePatternList patterns;
+    // TODO: use the MLIR canonicalization hooks, instead of writing a pass.
+    // https://mlir.llvm.org/docs/Canonicalization/
+    const int MAX_ITERATIONS = 100;
     patterns.insert<CanonicalizeCaseRetPattern>(&getContext());
     ::llvm::DebugFlag = true;
     if (failed(mlir::applyPatternsAndFoldGreedily(getOperation(),
-                                                  std::move(patterns)))) {
+                                                  std::move(patterns), MAX_ITERATIONS))) {
       llvm::errs() << "\n===cannonicalization failed===\n";
       getOperation()->print(llvm::errs());
       llvm::errs() << "\n===\n";
