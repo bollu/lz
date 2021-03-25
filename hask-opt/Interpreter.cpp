@@ -41,7 +41,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &o, const InterpStats &s) {
 llvm::raw_ostream &operator<<(llvm::raw_ostream &o, const InterpValue &v) {
   switch (v.type) {
   case InterpValueType::ClosureTopLevel: {
-    o << "closure(";
+    o << "closureTop(";
     o << v.closureTopLevelFn() << ", ";
     for (int i = 0; i < v.closureTopLevelNumArgs(); ++i) {
       o << v.closureArg(i);
@@ -466,13 +466,14 @@ struct Interpreter {
       //  args.push_back(env.lookup(papext.getLoc(), papext->getOperand(i)));
       //}
       InterpValue closure = env.lookup(papext.getLoc(), papext.getFnValue());
+      llvm::errs() << "papext.fn(closure): |" << closure << "|\n";
       assert(closure.type == InterpValueType::ClosureTopLevel &&
 	     "expected PapExtend to be called on closure");
       InterpValue fnRef = closure.closureTopLevelFn();
       assert(fnRef.type == InterpValueType::Ref);
       // damn, I need to know the number of args this function takes.
       FuncOp fn = module.lookupSymbol<FuncOp>(fnRef.ref());
-      std::vector<InterpValue> args(closure.closureLambdaArguments());
+      std::vector<InterpValue> args(closure.closureArgBegin(), closure.closureArgEnd());
       for(int i = 0; i < papext.getNumFnArguments(); ++i) {
 	args.push_back(env.lookup(papext.getLoc(), papext.getFnArgument(i)));
       }
