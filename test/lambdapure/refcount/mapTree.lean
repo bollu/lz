@@ -1,4 +1,4 @@
---  RUN: lean %s 2>&1 | hask-opt --lz-canonicalize  --lz-interpret=mode=lambdapure | FileCheck %s --check-prefix=CHECK-INTERPRET
+--  RUN: lean %s 2>&1 | hask-opt --lz-canonicalize --lz-interpret=mode=lambdapure | FileCheck %s --check-prefix=CHECK-INTERPRET
 
 
 -- MAKE: 
@@ -11,7 +11,9 @@
 --   3               3
 -- 2   2        2        2
 
--- CHECK-INTERPRET: 31
+
+-- 4 + 3*2 + 2*4 = 4 + 6 + 8 = 18
+-- CHECK-INTERPRET: 18
 
 set_option trace.compiler.ir.init true
 inductive Tree
