@@ -75,7 +75,8 @@ end Color
 @[inline] def Float.min (x y : Float) : Float := if x ≤ y then x else y
 @[inline] def Float.abs (x : Float) : Float := if x ≤ 0 then -x else x
 
-def Float.pi : Float := 3.1415926535897932385
+-- def Float.pi : Float := 3.1415926535897932385
+def Float.pi : Float := 3.1415
 def Float.infinity : Float := 1e100 -- fix this
 
 /-- Uniform at random in [0, 1)-/
