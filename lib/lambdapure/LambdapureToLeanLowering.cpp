@@ -8,6 +8,7 @@
 using namespace mlir;
 
 namespace {
+/*
 class IntegerConstOpLowering : public ConversionPattern {
 public:
   IntegerConstOpLowering(MLIRContext *ctxt)
@@ -71,6 +72,7 @@ public:
     return success();
   }
 };
+*/
 } // end anonymous namespace
 
 namespace {
@@ -83,6 +85,7 @@ struct LambdapureToLeanLoweringPass
 } // anonymous namespace
 
 void LambdapureToLeanLoweringPass::runOnOperation() {
+  /*
   ConversionTarget target(getContext());
   target.addLegalDialect<lambdapure::LambdapureDialect>();
   target.addIllegalOp<lambdapure::IntegerConstOp, lambdapure::ConstructorOp,
@@ -95,6 +98,7 @@ void LambdapureToLeanLoweringPass::runOnOperation() {
   if (failed(applyPartialConversion(module, target, std::move(patterns)))) {
     signalPassFailure();
   }
+   */
 }
 std::unique_ptr<Pass> mlir::lambdapure::createLambdapureToLeanLowering() {
   return std::make_unique<LambdapureToLeanLoweringPass>();

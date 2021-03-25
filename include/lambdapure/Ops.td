@@ -4,6 +4,7 @@ include "mlir/IR/OpBase.td"
 include "mlir/IR/BuiltinTypes.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
+/*
 def Lambdapure_Dialect  : Dialect {
   let name = "lambdapure";
   let cppNamespace = "lambdapure";
@@ -186,6 +187,7 @@ def DecOp : Lambdapure_OP<"DecOp",[]>{
   let arguments = (ins lambdapure_ObjectType:$object);
 
 }
+*/
 
 
 #endif // LAMBDAPURE_OPS

@@ -6,6 +6,9 @@
 #include <map>
 #include <set>
 
+#include "Hask/HaskOps.h"
+#include "Hask/HaskDialect.h"
+
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
 
@@ -13,18 +16,6 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 using namespace mlir;
-
-namespace {
-struct ConstructorOpLowering
-    : public OpRewritePattern<lambdapure::ConstructorOp> {
-  using OpRewritePattern<lambdapure::ConstructorOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(lambdapure::ConstructorOp op,
-                                PatternRewriter &rewriter) const final {
-    return success();
-  }
-};
-} // namespace
 
 namespace {
 class DestructiveUpdatePattern
@@ -36,7 +27,7 @@ public:
     for (int i = 0; i < (int)f.getNumArguments(); ++i) {
       auto val = f.getArgument(i);
       auto type = val.getType();
-      if (type.isa<lambdapure::ObjectType>()) {
+      if (type.isa<mlir::standalone::ValueType>()) {
         args.push_back(val);
       }
     }
@@ -49,7 +40,8 @@ public:
   void runOnRegion(std::vector<mlir::Value> candidates, mlir::Region &region) {
     // auto context = region.getContext();
     // auto builder = mlir::OpBuilder(context);
-      for (lambdapure::ConstructorOp op : region.getOps<lambdapure::ConstructorOp>()) {
+      for (standalone::HaskConstructOp op : region.getOps<standalone::HaskConstructOp
+                                                        >()) {
         int const_size = op.getNumOperands();
         for (auto candidate : candidates) {
           if (!checkControlPath(candidate, op)) continue;
@@ -59,7 +51,7 @@ public:
         }
       }
 
-      for(lambdapure::CaseOp op : region.getOps<lambdapure::CaseOp>()) {
+      for(standalone::CaseOp op : region.getOps<standalone::CaseOp>()) {
           for (int i = 0; i < (int)op->getNumRegions(); ++i) {
               std::vector<mlir::Value> new_candidates(candidates);
               auto &case_region = op->getRegion(i);
@@ -98,8 +90,10 @@ public:
     auto builder = mlir::OpBuilder(context);
     auto &block = region.front();
     builder.setInsertionPointToStart(&block);
-    Operation *resetOp = builder.create<lambdapure::ResetOp>(
-        builder.getUnknownLoc(), reuseVal, 2);
+
+//    Operation *resetOp = builder.create<standalone::ResetOp>(
+//        builder.getUnknownLoc(), reuseVal, 2);
+    Operation *resetOp = nullptr;
 
     auto &new_region_1 = resetOp->getRegion(0);
     region.cloneInto(&new_region_1, mapper);
@@ -114,7 +108,7 @@ public:
   int getCandidateSize(mlir::Value candidate, Region &region) {
     int size = -2;
 
-    for(lambdapure::ProjectionOp proj : region.getOps<lambdapure::ProjectionOp>()) {
+    for(standalone::ProjectionOp proj : region.getOps<standalone::ProjectionOp>()) {
         mlir::Value val = proj.getOperand();
         // HACK TODO: create API for this projection.
         int index = proj.getOperation()->getAttrOfType<IntegerAttr>("index").getInt();
@@ -160,7 +154,7 @@ public:
   }
 
   void cleanAfterReuseInsertion(mlir::FuncOp f) {
-    f.walk([&](lambdapure::ConstructorOp op) {
+    f.walk([&](standalone::HaskConstructOp op) {
         if (op->use_empty()) { op->erase(); }
     });
     // f.walk([&](mlir::Operation *op) {
@@ -173,29 +167,34 @@ public:
 
   void insertReuseConstructor(mlir::Region &region) {
     auto builder = mlir::OpBuilder(region.getContext());
-    for (lambdapure::ResetOp op : region.getOps<lambdapure::ResetOp>()) {
+    for (standalone::ResetOp op : region.getOps<standalone::ResetOp>()) {
         mlir::Value reuseVal = op.getOperand();
         // vvv ResetOp should have SingleRegion?
-        mlir::Region &resetRegion = op.getRegion(0);
+        mlir::Region &resetRegion = op->getRegion(0);
 
-        for(lambdapure::ConstructorOp c : resetRegion.getOps<lambdapure::ConstructorOp>()) {
+
+        for(standalone::HaskConstructOp c : resetRegion.getOps<standalone::HaskConstructOp>()) {
             builder.setInsertionPoint(c);
-            const int tag = c->getAttrOfType<IntegerAttr>("tag").getInt();
+            // const int tag = c->getAttrOfType<IntegerAttr>("tag").getInt();
             std::vector<mlir::Value> operands;
             operands.push_back(reuseVal);
-            for(auto operand : c.operands()) {
+            for(auto operand : c->getOperands()) {
                 operands.push_back(operand);
             }
-            lambdapure::ReuseConstructorOp reuse  = 
-                 builder.create<lambdapure::ReuseConstructorOp>( op->getLoc(), tag, operands);
+
+            assert(false && "unknown reuse");
+//          standalone::ReuseConstructorOp reuse  =
+//                 builder.create<lambdapure::ReuseConstructorOp>(op->getLoc(), tag, operands);
+            standalone::ReuseConstructorOp reuse;
             c->replaceAllUsesWith(reuse);
             // TODO HACK: why clear() ?
             operands.clear();
+
         }
 
-        for (lambdapure::CaseOp c : resetRegion.getOps<lambdapure::CaseOp>()) {
-            for (int i = 0; i < (int)c.getNumRegions(); ++i) {
-                insertReuseConstructor(c.getRegion(i));
+        for (standalone::CaseOp c : resetRegion.getOps<standalone::CaseOp>()) {
+            for (int i = 0; i < (int)c->getNumRegions(); ++i) {
+                insertReuseConstructor(c->getRegion(i));
             }
         }
     }

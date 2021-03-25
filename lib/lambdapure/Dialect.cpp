@@ -25,20 +25,24 @@ LambdapureDialect::LambdapureDialect(mlir::MLIRContext *ctxt)
   addTypes<ObjectType>();
 }
 
+
 mlir::Type LambdapureDialect::parseType(mlir::DialectAsmParser &parser) const {
-  if (succeeded(parser.parseOptionalKeyword("Object"))) {
-    return parser.getBuilder().getType<ObjectType>();
-  } else {
-    assert(false && "unknown type");
-  }
+  assert(false);
+//  if (succeeded(parser.parseOptionalKeyword("Object"))) {
+//    return parser.getBuilder().getType<ObjectType>();
+//  } else {
+//    assert(false && "unknown type");
+//  }
 }
 
 void LambdapureDialect::printType(mlir::Type type,
                                   mlir::DialectAsmPrinter &printer) const {
-  assert(type.isa<ObjectType>());
-  printer << "Object";
+  assert(false);
+//  assert(type.isa<ObjectType>());
+//  printer << "Object";
 }
 
+/*
 void IntegerConstOp::build(mlir::OpBuilder &builder,
                            mlir::OperationState &state, int value) {
   state.addAttribute("value", builder.getI64IntegerAttr(value));
@@ -91,6 +95,7 @@ void ReuseConstructorOp::build(mlir::OpBuilder &builder,
 
   state.addTypes(ObjectType::get(builder.getContext()));
 }
+ */
 
 namespace mlir {
 

@@ -441,10 +441,11 @@ struct Interpreter {
     if (DecOp dec = dyn_cast<DecOp>(op)) {
       InterpValue v = env.lookup(dec->getLoc(), dec.getOperand());
       v.refcountDecrement();
-      if (v.refcount_ < -1) {
+      const int MIN_REFCOUNT = -1;
+      if (v.refcount_ < MIN_REFCOUNT) {
         llvm::errs() << "ERROR: reference count dropped below zero: |" << dec << "|\n";
       }
-      assert(v.refcount_ >= -1 && "expected refcount to be non-negative");
+      assert(v.refcount_ >= MIN_REFCOUNT && "expected refcount to be non-negative");
       env.update(dec.getOperand(), v);
       return;
     }

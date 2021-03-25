@@ -68,7 +68,7 @@ public:
       }
 
       // who inserts ResetOp??
-      if (auto op = mlir::dyn_cast<lambdapure::ResetOp>(o)) {
+      if (auto op = mlir::dyn_cast<standalone::ResetOp>(o)) {
         // TODO HACK: doesn't a reset region have exactly 2 regions?!
         // TODO HACK What the fuck is this LOOP?
         for (int i = 0; i < (int)op->getNumRegions(); ++i) {

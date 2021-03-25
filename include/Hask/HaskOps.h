@@ -336,6 +336,26 @@ public:
 };
 
 
+class ResetOp
+    : public Op<ResetOp, OpTrait::OneResult, OpTrait::OneOperand,
+        MemoryEffectOpInterface::Trait> {
+public:
+  using Op::Op;
+  static StringRef getOperationName() { return "lz.reuseconstruct"; };
+  static const char *getDataConstructorAttrKey() { return "dataconstructor"; }
+  static const char *getDataTypeAttrKey() { return "datatype"; }
+  StringRef getDataConstructorName() {
+    return getOperation()->getAttrOfType<FlatSymbolRefAttr>(getDataConstructorAttrKey())
+        .getValue();
+  }
+
+  static ParseResult parse(OpAsmParser &parser, OperationState &result);
+  void print(OpAsmPrinter &p);
+
+  void
+  getEffects(SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+             &effects) {}
+};
 
 class ReuseConstructorOp
     : public Op<ReuseConstructorOp, OpTrait::OneResult, OpTrait::ZeroRegion,
