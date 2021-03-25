@@ -1,3 +1,4 @@
+--  RUN: lean %s -c /tmp/addSub.c && grep "x_2 = lean_nat_sub(x_1, x_1)" /tmp/addSub.c
 --  RUN: lean %s 2>&1 | hask-opt  --lz-canonicalize --lz-interpret=mode=lambdapure | FileCheck %s --check-prefix=CHECK-INTERPRET
 
 -- | Check that the C code generates a subtract of x_1 with itself.
