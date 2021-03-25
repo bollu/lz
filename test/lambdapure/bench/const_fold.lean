@@ -1,10 +1,9 @@
---  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | FileCheck %s
---  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | hask-opt  | FileCheck %s
---  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | hask-opt  --lz-lambdapure-destructive-updates | FileCheck %s
---  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | hask-opt  --lz-lambdapure-destructive-updates --lz-lambdapure-reference-rewriter | FileCheck %s
---  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | hask-opt  --lz-interpret="mode=lambdapure stdio=1" | FileCheck %s --check-prefix=CHECK-INTERPRET-1
---  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | hask-opt  --lz-interpret="mode=lambdapure stdio=2" | FileCheck %s --check-prefix=CHECK-INTERPRET-2
---  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | hask-opt  --lz-interpret="mode=lambdapure stdio=3" | FileCheck %s --check-prefix=CHECK-INTERPRET-3
+--  RUN: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize  | FileCheck %s
+--  RUN: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize --lz-lambdapure-destructive-updates | FileCheck %s
+--  RUN: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize --lz-lambdapure-destructive-updates --lz-lambdapure-reference-rewriter | FileCheck %s
+--  RUN: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize --lz-interpret="mode=lambdapure stdio=1" | FileCheck %s --check-prefix=CHECK-INTERPRET-1
+--  RUN: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize --lz-interpret="mode=lambdapure stdio=2" | FileCheck %s --check-prefix=CHECK-INTERPRET-2
+--  RUN: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize --lz-interpret="mode=lambdapure stdio=3" | FileCheck %s --check-prefix=CHECK-INTERPRET-3
 
 -- CHECK: func @main
 -- CHECK-INTERPRET-1: 2 2
