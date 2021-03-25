@@ -1,4 +1,4 @@
---  RUN: lean %s 2>&1 | lambdapure-translate --import-lambdapure | hask-opt --lz-interpret=mode=lambdapure | FileCheck %s --check-prefix=CHECK-INTERPRET
+--  RUN: lean %s 2>&1 | hask-opt --lz-canonicalize  --lz-interpret=mode=lambdapure | FileCheck %s --check-prefix=CHECK-INTERPRET
 
 
 -- MAKE: 

@@ -1,6 +1,6 @@
--- RUN: lean %s 2>&1 | lambdapure-translate --import-lambdapure | hask-opt --lz-interpret=mode=lambdapure | FileCheck %s --check-prefix=CHECK-INTERPRET 
--- RUN: lean %s 2>&1 | lambdapure-translate --import-lambdapure | hask-opt --lz-lambdapure-reference-rewriter |  hask-opt --lz-interpret=mode=lambdapure | FileCheck %s --check-prefix=CHECK-INTERPRET 
--- RUN: lean %s 2>&1 | lambdapure-translate --import-lambdapure | hask-opt --lz-lambdapure-reference-rewriter --lz-lambdapure-destructive-updates |  hask-opt --lz-interpret=mode=lambdapure | FileCheck %s --check-prefix=CHECK-INTERPRET 
+-- RUN: lean %s 2>&1 |  hask-opt --lz-canonicalize --lz-interpret=mode=lambdapure | FileCheck %s --check-prefix=CHECK-INTERPRET 
+-- RUN: lean %s 2>&1 | hask-opt --lz-canonicalize |  hask-opt --lz-lambdapure-reference-rewriter |  hask-opt --lz-interpret=mode=lambdapure | FileCheck %s --check-prefix=CHECK-INTERPRET 
+-- RUN: lean %s 2>&1 | hask-opt --lz-canonicalize | hask-opt --lz-lambdapure-reference-rewriter --lz-lambdapure-destructive-updates |  hask-opt --lz-interpret=mode=lambdapure | FileCheck %s --check-prefix=CHECK-INTERPRET 
 
 -- sum of first 10 numbers
 -- CHECK-INTERPRET: 55

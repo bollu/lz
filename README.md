@@ -38,11 +38,52 @@
 
 # Log:  [newest] to [oldest]
 
+# March 25
+- `ClosedTermCache` keeps tracks of names.
+
+terms for render.lean
+
+```
+
+func private@"Float.add"(!lz.value, !lz.value)->(!lz.value)
+func private@"Float.div"(!lz.value, !lz.value)->(!lz.value)
+func private@"Nat.decLe"(!lz.value, !lz.value)->(!lz.value)
+func private@"IO.Prim.Handle.putStr"(!lz.value, !lz.value, !lz.value)->(!lz.value)
+func private@"IO.Prim.fopenFlags"(!lz.value, !lz.value)->(!lz.value)
+func private@"IO.Prim.Handle.mk"(!lz.value, !lz.value, !lz.value)->(!lz.value)
+func private@"USize.decLt"(!lz.value, !lz.value)->(!lz.value)
+```
+
+- Move the code gen to be after some simplifications:
+
+```
+private def compileAux (decls : Array Decl) : CompilerM Unit := do
+  log (LogEntry.message "// compileAux")
+  -- logDecls `init decls
+  logPreamble (LogEntry.message mlirPreamble)
+  -- logDeclsUnconditional decls
+  checkDecls decls
+  let decls ← elimDeadBranches decls
+  logDecls `elim_dead_branches decls
+  let decls := decls.map Decl.pushProj
+  logDecls `push_proj decls
+  --vvvvvv DISABLE THIS
+  -- let decls := decls.map Decl.insertResetReuse
+  -- logDecls `reset_reuse decls
+  let decls := decls.map Decl.elimDead
+  logDecls `elim_dead decls
+  let decls := decls.map Decl.simpCase
+  logDecls `simp_case decls
+  let decls := decls.map Decl.normalizeIds
+  logDeclsUnconditional decls <- CODEGEN HERE 
+```
+
 # March 24
 
 - Got simple examples to work.
 - TODO: get `render.lean` to work!
 - Next: immutable beans tomorrow.
+
 
 # March 23: Lean compiler entrypoint
 

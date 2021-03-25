@@ -240,6 +240,33 @@ void PapOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
   state.addTypes(builder.getType<standalone::ValueType>());
 };
 
+  
+// === PAPOP OP ===
+// === PAPOP OP ===
+// === PAPOP OP ===
+// === PAPOP OP ===
+// === PAPOP OP ===
+
+ParseResult PapExtendOp::parse(OpAsmParser &parser, OperationState &result) {
+  assert(false && "unimplemented");
+  return success();
+};
+
+void PapExtendOp::print(OpAsmPrinter &p) {
+  p.printGenericOp(this->getOperation());
+  return;
+};
+
+void PapExtendOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                 std::string fnname, SmallVectorImpl<Value> &params) {
+  assert(false && "unimeplemented");
+  // hack! we need to construct the type properly.
+  // state.addOperands(fnref);
+  // state.addAttribute("value", fnname);
+  state.addAttribute("value", builder.getSymbolRefAttr(fnname));
+  state.addOperands(params);
+  state.addTypes(builder.getType<standalone::ValueType>());
+};
 
 
 // === CASESSA OP ===

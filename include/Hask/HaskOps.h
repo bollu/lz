@@ -396,7 +396,7 @@ class PapOp
 public:
   using Op::Op;
   static StringRef getOperationName() { return "lz.pap"; };
-  std::string getFnName() { return this->getOperation()->getAttrOfType<StringAttr>("value").getValue().str(); }
+  std::string getFnName() { return this->getOperation()->getAttrOfType<FlatSymbolRefAttr>("value").getValue().str(); }
   int getNumFnArguments() {
     return this->getOperation()->getNumOperands() - 1;
   };
@@ -415,8 +415,6 @@ public:
   getEffects(SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
                  &effects) {}
 
-  // NOTE: the return type should be the return type of the *function*. The ApOp
-  // will wrap the fnretty in a ThunkType
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
                     std::string fnName, SmallVectorImpl<Value> &params);
 
@@ -425,6 +423,36 @@ public:
   // static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
   //                   FuncOp fn, SmallVectorImpl<Value> &params);
 
+  static ParseResult parse(OpAsmParser &parser, OperationState &result);
+  void print(OpAsmPrinter &p);
+};
+
+// extend a partial application with more arguments.
+class PapExtendOp
+    : public Op<PapExtendOp, OpTrait::OneResult, MemoryEffectOpInterface::Trait> {
+public:
+  using Op::Op;
+  static StringRef getOperationName() { return "lz.papExtend"; };
+  Value getFnValue() { return this->getOperation()->getOperand(0); }
+  int getNumFnArguments() {
+    return this->getOperation()->getNumOperands() - 1;
+  };
+  Value getFnArgument(int i) {
+    return this->getOperation()->getOperand(i + 1);
+  };
+
+  SmallVector<Value, 4> getFnArguments() {
+    SmallVector<Value, 4> args;
+    for (int i = 0; i < getNumFnArguments(); ++i) {
+      args.push_back(getFnArgument(i));
+    }
+    return args;
+  }
+  void
+  getEffects(SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+                 &effects) {}
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                    std::string fnName, SmallVectorImpl<Value> &params);
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   void print(OpAsmPrinter &p);
 };

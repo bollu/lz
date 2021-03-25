@@ -449,16 +449,47 @@ struct Interpreter {
       return;
     }
 
-    /*
+
     if (PapOp pap = dyn_cast<PapOp>(op)) {
       std::vector<InterpValue> args;
-      for(int i = 0; i < pap->getNumOperands(); ++i) {
+      for(int i = 0; i < (int)pap->getNumOperands(); ++i) {
         args.push_back(env.lookup(pap.getLoc(), pap->getOperand(i)));
       }
-
-      env.addNew(pap.getResult(), InterpValue::closureTopLevel(pap.getFn(), args));
+      InterpValue fnRef = InterpValue::ref(pap.getFnName());
+      env.addNew(pap.getResult(), InterpValue::closureTopLevel(fnRef, args));
+      return;
     }
-     */
+
+    if (PapExtendOp papext = dyn_cast<PapExtendOp>(op)) {
+      // std::vector<InterpValue> args;
+      // for(int i = 1; i < (int)papext->getNumOperands(); ++i) {
+      //  args.push_back(env.lookup(papext.getLoc(), papext->getOperand(i)));
+      //}
+      InterpValue closure = env.lookup(papext.getLoc(), papext.getFnValue());
+      assert(closure.type == InterpValueType::ClosureTopLevel &&
+	     "expected PapExtend to be called on closure");
+      InterpValue fnRef = closure.closureTopLevelFn();
+      assert(fnRef.type == InterpValueType::Ref);
+      // damn, I need to know the number of args this function takes.
+      FuncOp fn = module.lookupSymbol<FuncOp>(fnRef.ref());
+      std::vector<InterpValue> args(closure.closureLambdaArguments());
+      for(int i = 0; i < papext.getNumFnArguments(); ++i) {
+	args.push_back(env.lookup(papext.getLoc(), papext.getFnArgument(i)));
+      }
+      
+      if ((int)fn.getNumArguments() == (int)args.size()) {
+	// we saturate.
+	llvm::Optional<InterpValue> result = interpretFunction(fnRef.ref(), args);
+	assert(result && "expected partial application to have result");
+	env.addNew(papext.getResult(), *result);
+	return;
+      } else {
+	// we do not saturate
+	env.addNew(papext.getResult(), InterpValue::closureTopLevel(fnRef, args));
+	return;
+      }
+      return;
+    }
 
 
     //============= StdOps ========================//
