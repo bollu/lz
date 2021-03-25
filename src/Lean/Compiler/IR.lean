@@ -28,19 +28,21 @@ private def compileAux (decls : Array Decl) : CompilerM Unit := do
   log (LogEntry.message "// compileAux")
   -- logDecls `init decls
   logPreamble (LogEntry.message mlirPreamble)
-  logDeclsUnconditional decls
+  -- logDeclsUnconditional decls
   checkDecls decls
   let decls ← elimDeadBranches decls
   logDecls `elim_dead_branches decls
   let decls := decls.map Decl.pushProj
   logDecls `push_proj decls
-  let decls := decls.map Decl.insertResetReuse
-  logDecls `reset_reuse decls
+  -- let decls := decls.map Decl.insertResetReuse
+  -- logDecls `reset_reuse decls
   let decls := decls.map Decl.elimDead
   logDecls `elim_dead decls
   let decls := decls.map Decl.simpCase
   logDecls `simp_case decls
   let decls := decls.map Decl.normalizeIds
+  logDeclsUnconditional decls
+
   let decls ← inferBorrow decls
   logDecls `borrow decls
   let decls ← explicitBoxing decls
@@ -55,6 +57,7 @@ private def compileAux (decls : Array Decl) : CompilerM Unit := do
   logDecls `result decls
   checkDecls decls
   addDecls decls
+
 
 @[export lean_ir_compile]
 def compile (env : Environment) (opts : Options) (decls : Array Decl) : Log × (Except String Environment) :=
