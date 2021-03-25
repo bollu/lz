@@ -5,7 +5,7 @@ Authors: Leonardo de Moura
 -/
 import Lean.Compiler.IR.Basic
 import Lean.Compiler.ExportAttr
-import Lean.Data.Name
+
 namespace Lean
 namespace IR
 
@@ -127,47 +127,7 @@ def mlirPreambleJunk : Format :=
   ++ "func private" ++ "@" ++ (escape "Lean.Name.mkStr") ++ formatMLIRType 2 1 ++ Format.line
   ++ "func private" ++ "@" ++ (escape "String.utf8ByteSize") ++ formatMLIRType 1 1 ++ Format.line
 
--- | definitions for render.
--- func private@"Float.add"(!lz.value, !lz.value)->(!lz.value)
--- func private@"Float.div"(!lz.value, !lz.value)->(!lz.value)
--- func private@"Nat.decLe"(!lz.value, !lz.value)->(!lz.value)
--- func private@"IO.Prim.Handle.putStr"(!lz.value, !lz.value, !lz.value)->(!lz.value)
--- func private@"IO.Prim.fopenFlags"(!lz.value, !lz.value)->(!lz.value)
--- func private@"IO.Prim.Handle.mk"(!lz.value, !lz.value, !lz.value)->(!lz.value)
--- func private@"USize.decLt"(!lz.value, !lz.value)->(!lz.value)
--- func private@"Array.uget"(!lz.value, !lz.value, !lz.value, !lz.value)->(!lz.value)
--- func private@"IO.wait"(!lz.value, !lz.value, !lz.value)->(!lz.value)
--- func private@"USize.add"(!lz.value, !lz.value)->(!lz.value)
--- func private@"IO.Error.toString"(!lz.value)->(!lz.value)
--- func private@"Task.Priority.default"()->(!lz.value)
--- func private@"IO.asTask"(!lz.value, !lz.value, !lz.value, !lz.value)->(!lz.value)
--- func private@"Float.neg"(!lz.value)->(!lz.value)
--- func private@"Float.sub"(!lz.value, !lz.value)->(!lz.value)
--- func private@"Float.mul"(!lz.value, !lz.value)->(!lz.value)
--- func private@"Float.decLt"(!lz.value, !lz.value)->(!lz.value)
--- func private@"Float.decLe"(!lz.value, !lz.value)->(!lz.value)
--- func private@"Float.sqrt"(!lz.value)->(!lz.value)
--- func private@"Float.pow"(!lz.value, !lz.value)->(!lz.value)
--- func private@"Float.tan"(!lz.value)->(!lz.value)
--- func private@"Float.toUInt8"(!lz.value)->(!lz.value)
--- func private@"UInt8.toNat"(!lz.value)->(!lz.value)
--- func private@"Array.findSomeM?._rarg._closed_1"()->(!lz.value)
--- func private@"IO.stdGenRef"()->(!lz.value)
--- func private@"ST.Prim.Ref.get"(!lz.value, !lz.value, !lz.value, !lz.value)->(!lz.value)
--- func private@"ST.Prim.Ref.set"(!lz.value, !lz.value, !lz.value, !lz.value, !lz.value)->(!lz.value)
--- func private@"stdNext"(!lz.value)->!lz.value
--- func private@"stdRange"()->!lz.value
--- def mlirPreamble : Format := mlirPreamble1 ++ mlirPreambleJunk
-
--- f : a -> b -> c -> o
--- g a =  fun b c => f a b c 
--- (Lambda lifting)
---  /- Full application. -/ | full_ap(f, a, b, c) 
---  | fap (c : FunId) (ys : Array Arg) -> std.call
---  /- Partial application that creates a `pap` value (aka closure in our nonstandard terminology). -/
---  | pap (c : FunId) (ys : Array Arg) -- closure = pap(f, a)
---  /- Application. `x` must be a `pap` value. -/
---  | ap  (x : VarId) (ys : Array Arg) -- d = ap(closure, b, c)
+def mlirPreamble : Format := mlirPreamble1 ++ mlirPreambleJunk
 
 private def formatExpr : Expr → Format
   -- v this is a hack, I should instead just give the constructor index.
@@ -180,10 +140,7 @@ private def formatExpr : Expr → Format
   | Expr.uproj i x      => "// ERR: uproj[" ++ format i ++ "] " ++ format x
   | Expr.sproj ix o x    => (escape "lz.sproj") ++ "(" ++ (formatVar x) ++ ")"
                            ++ "{ix=" ++ (format ix) ++ ", offset=" ++ (format o) ++"}" ++ ":" ++ formatMLIRType 1 1
-                           -- | Hypothesis is wrong. Eg: |@IO.println._at.Lean.instEval._spec_1| is an internal name
-  | Expr.fap c ys       => if False -- Hypothesis: internal names are unsued at runtime(Name.isInternal c)
-                           then (escape "lz.erasedvalue") ++ "()" ++ "{value=" ++ "@" ++ (escape c) ++ "}" ++   ":" ++ formatMLIRType 0 1 
-                           else "call " ++ "@" ++ (escape (format c)) ++ "(" ++ formatArray ys ++ ")" ++ ":" ++ formatMLIRType (ys.size) 1
+  | Expr.fap c ys       => "call " ++ "@" ++ (escape (format c)) ++ "(" ++ formatArray ys ++ ")" ++ ":" ++ formatMLIRType (ys.size) 1
   | Expr.pap c ys       => (escape "lz.pap") ++ "(" ++  formatArray ys ++ ")" ++
                            "{value=" ++ "@" ++ escape (format c) ++ "}" ++
                            ":" ++ (formatMLIRType ys.size) 1
@@ -339,9 +296,7 @@ def declareIrrelevant : Format := "%irrelevant = " ++ escape ("lz.erasedvalue") 
 
 def formatDecl (decl : Decl) (indent : Nat := 2) : Format :=
   match decl with
-  | Decl.fdecl f xs ty b _  =>
-        if False  then "// IrrelevantDecl: " ++ format f
-        else  
+  | Decl.fdecl f xs ty b _  => 
   	"func " ++ 
 	formatSymbol f ++ 
 	"(" ++ formatArray (Array.map formatParamWithType xs) ++ ")"
