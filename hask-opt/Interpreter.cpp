@@ -494,6 +494,7 @@ struct Interpreter {
     }
 
 
+
     //============= StdOps ========================//
     if (mlir::ConstantIntOp cint = mlir::dyn_cast<mlir::ConstantIntOp>(op)) {
       env.addNew(cint.getResult(), InterpValue::i(cint.getValue()));
@@ -858,6 +859,14 @@ struct Interpreter {
       assert(retval && "block operation expects return value.");
       return TerminatorResult(*retval);
     }
+
+    if (ResetOp reset = dyn_cast<ResetOp>(op)) {
+      // TODO HACK: This is **not** the correct semantics, this is just some placeholder shit I wrote.
+      Optional<InterpValue> retval = interpretRegion(reset.getRegion(0), {}, env);
+      assert(retval && "reset operation expects return value.");
+      return TerminatorResult(*retval);
+    }
+
 
     llvm::errs() << "INTERPRETER ERROR: unknown terminator";
     llvm::errs() << "vvvv:unknown terminator:vvvv\n";

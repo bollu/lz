@@ -1060,6 +1060,45 @@ void HaskCaseRetOp::print(OpAsmPrinter &p) {
   p.printGenericOp(*this);
 };
 
+// === REUSE OP ===
+// === REUSE OP ===
+// === REUSE OP ===
+// === REUSE OP ===
+// === REUSE OP ===
+// === REUSE OP ===
+  
+
+  
+ParseResult ReuseConstructorOp::parse(OpAsmParser &parser, OperationState &result) {
+  assert(false && "unimplemented");
+}
+
+void ReuseConstructorOp::print(OpAsmPrinter &p) {
+  p.printGenericOp(this->getOperation());
+}
+
+  
+// === RESET OP ===
+// === RESET OP ===
+// === RESET OP ===
+// === RESET OP ===
+// === RESET OP ===
+
+ParseResult ResetOp::parse(OpAsmParser &parser, OperationState &result) {
+  assert(false && "unimplemented");
+}
+
+void ResetOp::print(OpAsmPrinter &p) {
+  p.printGenericOp(this->getOperation());
+}
+
+void ResetOp::build(mlir::OpBuilder &builder, mlir::OperationState &state, Value v) {
+  state.addOperands(v);
+  state.addRegion();
+  state.addRegion();
+  return;
+}
+
 
 /*
 // === THUNK TO PTR OP ===

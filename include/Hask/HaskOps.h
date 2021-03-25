@@ -337,11 +337,11 @@ public:
 
 
 class ResetOp
-    : public Op<ResetOp, OpTrait::OneResult, OpTrait::OneOperand,
-        MemoryEffectOpInterface::Trait> {
+  : public Op<ResetOp, OpTrait::IsTerminator,  OpTrait::ZeroResult, OpTrait::OneOperand,
+        MemoryEffectOpInterface::Trait, OpTrait::NRegions<2>::Impl> {
 public:
   using Op::Op;
-  static StringRef getOperationName() { return "lz.reuseconstruct"; };
+  static StringRef getOperationName() { return "lz.reset"; };
   static const char *getDataConstructorAttrKey() { return "dataconstructor"; }
   static const char *getDataTypeAttrKey() { return "datatype"; }
   StringRef getDataConstructorName() {
@@ -352,11 +352,14 @@ public:
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   void print(OpAsmPrinter &p);
 
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state, mlir::Value v);
+
   void
   getEffects(SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
              &effects) {}
 };
 
+// vv this is never built? wat?
 class ReuseConstructorOp
     : public Op<ReuseConstructorOp, OpTrait::OneResult, OpTrait::ZeroRegion,
                 MemoryEffectOpInterface::Trait> {
@@ -370,11 +373,6 @@ public:
         .getValue();
   }
 
-  // int getNumOperands() { return this->getOperation()->getNumOperands(); }
-  // Value getOperand(int i) { return this->getOperation()->getOperand(i); }
-  // Operation::operand_range getOperands() {
-  //   return this->getOperation()->getOperands();
-  // }
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   void print(OpAsmPrinter &p);
 

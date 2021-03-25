@@ -25,9 +25,8 @@ public:
     auto f = getFunction();
     std::vector<mlir::Value> args;
     for (int i = 0; i < (int)f.getNumArguments(); ++i) {
-      auto val = f.getArgument(i);
-      auto type = val.getType();
-      if (type.isa<mlir::standalone::ValueType>()) {
+      Value val = f.getArgument(i);
+      if (val.getType().isa<mlir::standalone::ValueType>()) {
         args.push_back(val);
       }
     }
@@ -37,25 +36,30 @@ public:
     cleanAfterReuseInsertion(f);
   }
 
-  void runOnRegion(std::vector<mlir::Value> candidates, mlir::Region &region) {
+  void runOnRegion(const std::vector<mlir::Value> candidates, mlir::Region &region) {
     // auto context = region.getContext();
     // auto builder = mlir::OpBuilder(context);
-      for (standalone::HaskConstructOp op : region.getOps<standalone::HaskConstructOp
-                                                        >()) {
-        int const_size = op.getNumOperands();
+      for (standalone::HaskConstructOp construct :
+                region.getOps<standalone::HaskConstructOp>()) {
         for (auto candidate : candidates) {
-          if (!checkControlPath(candidate, op)) continue;
-            int cand_size = getCandidateSize(candidate, region);
-            if (const_size > cand_size) continue;
-              insertReuse(candidate, region);
+          if (!checkControlPath(candidate, construct))
+            continue;
+          // if no user of candidate is an ancestor of the constructor.
+          // THIS DOES NOT HAPPEN:
+          // ====================
+          // <candidate>
+          // foo(<candidate>) {
+          //    <constructor>
+          // }
+           int cand_size = getCandidateSize(candidate, region);
+           if (construct.getNumOperands() > cand_size) continue;
+          insertReuse(candidate, region);
         }
       }
 
-      for(standalone::CaseOp op : region.getOps<standalone::CaseOp>()) {
-          for (int i = 0; i < (int)op->getNumRegions(); ++i) {
-              std::vector<mlir::Value> new_candidates(candidates);
-              auto &case_region = op->getRegion(i);
-              runOnRegion(new_candidates, case_region);
+      for(standalone::CaseOp c : region.getOps<standalone::CaseOp>()) {
+          for (int i = 0; i < (int)c->getNumRegions(); ++i) {
+              runOnRegion(candidates, c->getRegion(i));
           }
       }
 
@@ -88,13 +92,15 @@ public:
     BlockAndValueMapping mapper;
     auto context = region.getContext();
     auto builder = mlir::OpBuilder(context);
+    assert(region.getBlocks().size() > 0 && "region has no blocks");
     auto &block = region.front();
     builder.setInsertionPointToStart(&block);
 
-//    Operation *resetOp = builder.create<standalone::ResetOp>(
-//        builder.getUnknownLoc(), reuseVal, 2);
-    Operation *resetOp = nullptr;
+    llvm::errs() << __PRETTY_FUNCTION__ << " | creating reuse...\n";
+    standalone::ResetOp resetOp = builder.create<standalone::ResetOp>(builder.getUnknownLoc(), reuseVal);
 
+
+    assert(resetOp->getNumRegions() == 2);
     auto &new_region_1 = resetOp->getRegion(0);
     region.cloneInto(&new_region_1, mapper);
     new_region_1.op_begin()->erase();
@@ -104,17 +110,15 @@ public:
   }
 
   // Guess: return largest index that is projected out from this value
-  // TODO HACKHow does this work cross-module?
+  // TODO HACK: How does this work cross-module?
   int getCandidateSize(mlir::Value candidate, Region &region) {
     int size = -2;
 
     for(standalone::ProjectionOp proj : region.getOps<standalone::ProjectionOp>()) {
         mlir::Value val = proj.getOperand();
         // HACK TODO: create API for this projection.
-        int index = proj.getOperation()->getAttrOfType<IntegerAttr>("index").getInt();
-        if (val == candidate) {
-            size = std::max(size, index);
-        }
+        int index = proj.getIndex();
+        if (val == candidate) { size = std::max(size, index); }
     }
     // for (auto op = region.op_begin(); op != region.op_end(); ++op) {
     //   auto name = op->getName().getStringRef().str();
@@ -133,25 +137,30 @@ public:
 
   void cleanAfterResetInsertion(mlir::Region &region) {
     for (auto op = region.op_begin(); op != region.op_end(); ++op) {
-      auto name = op->getName().getStringRef().str();
-      if (name == "lambdapure.ResetOp") {
+      if (standalone::ResetOp reset = dyn_cast<standalone::ResetOp>(*op)) {
+        //      auto name = op->getName().getStringRef().str();
+        //      if (name == "lambdapure.ResetOp") {
         auto &block = region.front();
         mlir::Operation *last;
         last = &*block.rbegin();
-        auto last_name = last->getName().getStringRef().str();
-        while (last_name != "lambdapure.ResetOp") {
+        //        auto last_name = last->getName().getStringRef().str();
+
+        while (!isa<standalone::ResetOp>(*last)) {
+          //        while (last_name != "lambdapure.ResetOp") {
           last->erase();
           last = &*block.rbegin();
-          last_name = last->getName().getStringRef().str();
+          //          last_name = last->getName().getStringRef().str();
         }
-      } else if (name == "lambdapure.CaseOp") {
+        //      } else if (name == "lambdapure.CaseOp") {
+      }
+      if (standalone::CaseOp c = dyn_cast<standalone::CaseOp>(*op)) {
         for (int i = 0; i < (int)op->getNumRegions(); ++i) {
           auto &case_region = op->getRegion(i);
           cleanAfterResetInsertion(case_region);
         }
-      }
-    }
-  }
+      } // end case check.
+    } // end loop over cleanup region
+  } // end cleanAfterRese
 
   void cleanAfterReuseInsertion(mlir::FuncOp f) {
     f.walk([&](standalone::HaskConstructOp op) {
@@ -233,22 +242,24 @@ public:
     // }
   }
 
+  // if no user of candidate is an ancestor of op, return true.
   bool checkControlPath(mlir::Value candidate, Operation *op) {
+    for (mlir::OpOperand u : candidate.getUsers()) {
+      if (u.getOwner()->isProperAncestor(op)) {
+        return false;
+      }
+    }
+    return true;
+    /*
     for (auto user_it = candidate.user_begin(); user_it != candidate.user_end();
          ++user_it) {
       if (user_it->isProperAncestor(op))
         return false;
     }
     return true;
+     */
   }
 
-  bool isIn(std::vector<mlir::Value> vec, mlir::Value val) {
-    for (auto v : vec) {
-      if (v == val)
-        return true;
-    }
-    return false;
-  }
 };
 
 } // end anonymous namespace
