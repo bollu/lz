@@ -879,9 +879,19 @@ struct Interpreter {
 
     if (ResetOp reset = dyn_cast<ResetOp>(op)) {
       // TODO HACK: This is **not** the correct semantics, this is just some placeholder shit I wrote.
-      Optional<InterpValue> retval = interpretRegion(reset.getRegion(0), {}, env);
-      assert(retval && "reset operation expects return value.");
-      return TerminatorResult(*retval);
+      InterpValue toReset = env.lookup(op.getLoc(), reset.getOperand());
+      
+      if (toReset.refcount_ == 0) {
+        Optional<InterpValue> retval =
+            interpretRegion(reset.getRegion(0), {}, env);
+        assert(retval && "reset operation expects return value.");
+        return TerminatorResult(*retval);
+      } else {
+        Optional<InterpValue> retval =
+            interpretRegion(reset.getRegion(1), {}, env);
+        assert(retval && "reset operation expects return value.");
+        return TerminatorResult(*retval);
+      }
     }
 
 
