@@ -797,7 +797,7 @@ struct Interpreter {
       // TODO: fixup this API.
       InterpValue resetted = env.lookup(reuse.getLoc(), reuse->getOperand(0));
       // TODO: have this assert!
-//      assert(resetted.refcount_ == -1 && "expected resetted value to have no refs!");
+      assert(resetted.refcount_ == 0 && "expected resetted value to have no refs!");
       std::vector<InterpValue> vs;
 
       for (int i = 1; i < (int)reuse.getNumOperands(); ++i) {
@@ -880,7 +880,7 @@ struct Interpreter {
     if (ResetOp reset = dyn_cast<ResetOp>(op)) {
       // TODO HACK: This is **not** the correct semantics, this is just some placeholder shit I wrote.
       InterpValue toReset = env.lookup(op.getLoc(), reset.getOperand());
-      
+
       if (toReset.refcount_ == 0) {
         Optional<InterpValue> retval =
             interpretRegion(reset.getRegion(0), {}, env);
