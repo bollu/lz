@@ -793,6 +793,23 @@ struct Interpreter {
       return;
     }
 
+    if (ReuseConstructorOp reuse = dyn_cast<ReuseConstructorOp>(op)) {
+      // TODO: fixup this API.
+      InterpValue resetted = env.lookup(reuse.getLoc(), reuse->getOperand(0));
+      // TODO: have this assert!
+//      assert(resetted.refcount_ == -1 && "expected resetted value to have no refs!");
+      std::vector<InterpValue> vs;
+
+      for (int i = 1; i < (int)reuse.getNumOperands(); ++i) {
+        vs.push_back(env.lookup(reuse.getLoc(), reuse.getOperand(i)));
+      }
+
+      env.addNew(
+          reuse.getResult(),
+          InterpValue::constructor(reuse.getDataConstructorName().str(), vs));
+      return;
+    }
+
     InterpreterError err(op.getLoc());
     err << "INTERPRETER ERROR: unknown operation:\n|" << op << "|\n";
   };

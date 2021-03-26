@@ -11,7 +11,9 @@
 -- increment: 2 3 4 5 6
 -- value: 2 + 3 + 4 + 5 + 6 = (1 + 2 + 3 + 4 + 5) + 5 = 15 + 5 = 20
 -- CHECK-INTERPRET: 20
+-- CHECK-INTERPRET: num_construct_calls(12)
 -- CHECK-INTERPRET-DESTRUCTIVE: 20
+-- CHECK-INTERPRET-DESTRUCTIVE: num_construct_calls(7)
 
 set_option trace.compiler.ir.init true
 inductive MyList

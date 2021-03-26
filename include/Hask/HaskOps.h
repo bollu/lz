@@ -361,7 +361,7 @@ public:
 
 // vv this is never built? wat?
 class ReuseConstructorOp
-    : public Op<ReuseConstructorOp, OpTrait::OneResult, OpTrait::ZeroRegion,
+    : public Op<ReuseConstructorOp, OpTrait::OneResult, OpTrait::ZeroRegion, OpTrait::VariadicOperands,
                 MemoryEffectOpInterface::Trait> {
 public:
   using Op::Op;
