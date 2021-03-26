@@ -1,15 +1,17 @@
---  RUN: lean %s 2>&1 | hask-opt --lz-canonicalize  --lz-interpret=mode=lambdapure | FileCheck %s --check-prefix=CHECK-INTERPRET
---  RUN: lean %s 2>&1 | hask-opt --lz-canonicalize --lz-lambdapure-reference-rewriter  --lz-lambdapure-destructive-updates
---  RUN: lean %s 2>&1 | hask-opt --lz-canonicalize --lz-lambdapure-reference-rewriter  --lz-lambdapure-destructive-updates --lz-interpret=mode=lambdapure | FileCheck %s --check-prefix=CHECK-INTERPRET
+--  RUN: lean %s 2>&1 | hask-opt --lz-canonicalize --lz-interpret=mode=lambdapure | FileCheck %s --check-prefix=CHECK-INTERPRET
+--  RUN: lean %s 2>&1 | hask-opt --mlir-disable-threading --lz-canonicalize --lz-lambdapure-destructive-updates | FileCheck %s --check-prefix=CHECK-DESTRUCTIVE
+--  RUN: lean %s 2>&1 | hask-opt --mlir-disable-threading --lz-canonicalize --lz-lambdapure-destructive-updates --lz-interpret=mode=lambdapure | FileCheck %s --check-prefix=CHECK-INTERPRET-DESTRUCTIVE
 
--- makeList: 
--- 1 2 3 4 5
 
--- INCREMENT: 
--- 2 3 4 5 6
+-- CHECK-DESTRUCTIVE:  "lz.reset"(%arg1) ( {
+-- CHECK-DESTRUCTIVE: %7 = "lz.reuseconstruct"(%arg1, %5, %6) {dataconstructor = @"1"} : (!lz.value, !lz.value, !lz.value) -> !lz.value
 
--- 1 + 2 + 3 + 4 + 5 + 5 = 15 + 5 = 20
+
+-- makeList:  1 2 3 4 5
+-- increment: 2 3 4 5 6
+-- value: 2 + 3 + 4 + 5 + 6 = (1 + 2 + 3 + 4 + 5) + 5 = 15 + 5 = 20
 -- CHECK-INTERPRET: 20
+-- CHECK-INTERPRET-DESTRUCTIVE: 20
 
 set_option trace.compiler.ir.init true
 inductive MyList

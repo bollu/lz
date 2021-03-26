@@ -27,6 +27,7 @@ using namespace mlir;
 //    replace ConstructOps with  ReuseOps. [this seems very broken to me?]
 // 4. Cleanup after the ReuseOp, by deleting all 'ConstructOp's with zero
 //    users.
+// 5. Every time we enter a `case`,
 
 namespace {
 class DestructiveUpdatePattern
@@ -217,7 +218,6 @@ public:
           operands.push_back(operand);
         }
 
-        assert(false && "found opportunity for reuse");
         // assert(false && "unknown reuse");
         standalone::ReuseConstructorOp reuse =
             builder.create<standalone::ReuseConstructorOp>(
@@ -228,13 +228,14 @@ public:
         // TODO: why not call |c->erase()| right here?
         // TODO: what happens if there are multiple constructors?
       }
+    }
 
-      for (standalone::CaseOp c : resetRegion.getOps<standalone::CaseOp>()) {
-        for (int i = 0; i < (int)c->getNumRegions(); ++i) {
-          insertReuseConstructor(c->getRegion(i));
-        }
+    for (standalone::CaseOp c : region.getOps<standalone::CaseOp>()) {
+      for (int i = 0; i < (int)c->getNumRegions(); ++i) {
+        insertReuseConstructor(c->getRegion(i));
       }
     }
+
     // for (auto op = region.op_begin(); op != region.op_end(); ++op) {
     //   auto name = op->getName().getStringRef().str();
     //   if (name == "lambdapure.ResetOp") {
