@@ -376,6 +376,9 @@ public:
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   void print(OpAsmPrinter &p);
 
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                    StringRef constructorName, ValueRange args);
+
   void
   getEffects(SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
                  &effects) {}

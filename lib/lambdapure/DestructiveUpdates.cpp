@@ -6,8 +6,8 @@
 #include <map>
 #include <set>
 
-#include "Hask/HaskOps.h"
 #include "Hask/HaskDialect.h"
+#include "Hask/HaskOps.h"
 
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
@@ -16,6 +16,17 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 using namespace mlir;
+
+// 0. set candidate = { function args }.
+// 1. Iterate on all constructors.
+//   2. For each constructor, if there is a candidate that can be reset,
+//      insert a ResetOp(....) [this is the function insertReset/ what used to
+//      be called insertReuse]
+// 3. For each ResetOp, check the 0th region (which is the reuse region) ---
+//    leave the other region intact (the fallback region). In the 0th region
+//    replace ConstructOps with  ReuseOps. [this seems very broken to me?]
+// 4. Cleanup after the ReuseOp, by deleting all 'ConstructOp's with zero
+//    users.
 
 namespace {
 class DestructiveUpdatePattern
@@ -30,38 +41,48 @@ public:
         args.push_back(val);
       }
     }
+
     runOnRegion(args, f.getBody());
     cleanAfterResetInsertion(f.getBody());
     insertReuseConstructor(f.getBody());
     cleanAfterReuseInsertion(f);
   }
 
-  void runOnRegion(const std::vector<mlir::Value> candidates, mlir::Region &region) {
-    // auto context = region.getContext();
-    // auto builder = mlir::OpBuilder(context);
-      for (standalone::HaskConstructOp construct :
-                region.getOps<standalone::HaskConstructOp>()) {
-        for (auto candidate : candidates) {
-          if (!checkControlPath(candidate, construct))
-            continue;
-          // if no user of candidate is an ancestor of the constructor.
-          // THIS DOES NOT HAPPEN:
-          // ====================
-          // <candidate>
-          // foo(<candidate>) {
-          //    <constructor>
-          // }
-           int cand_size = getCandidateSize(candidate, region);
-           if (construct.getNumOperands() > cand_size) continue;
-          insertReuse(candidate, region);
-        }
-      }
+  void runOnRegion(const std::vector<mlir::Value> candidates,
+                   mlir::Region &region) {
 
-      for(standalone::CaseOp c : region.getOps<standalone::CaseOp>()) {
-          for (int i = 0; i < (int)c->getNumRegions(); ++i) {
-              runOnRegion(candidates, c->getRegion(i));
-          }
+    for (standalone::HaskConstructOp construct :
+         region.getOps<standalone::HaskConstructOp>()) {
+
+      llvm::errs() << "\nanalyzing constructor: |" << construct << "|\n";
+      for (auto candidate : candidates) {
+        if (!checkControlPath(candidate, construct)) {
+          continue;
+        }
+
+        // if no user of candidate is an ancestor of the constructor.
+        // THIS DOES NOT HAPPEN:
+        // ====================
+        // <candidate>
+        // foo(<candidate>) {
+        //    <constructor>
+        // }
+        int cand_size = getCandidateSize(candidate, region);
+        llvm::errs() << "runOnRegion | candidate: |" << candidate
+                     << " | size: |" << cand_size << "|\n";
+
+        if (construct.getNumOperands() > cand_size) {
+          continue;
+        }
+        insertReset(candidate, region);
       }
+    }
+
+    for (standalone::CaseOp c : region.getOps<standalone::CaseOp>()) {
+      for (int i = 0; i < (int)c->getNumRegions(); ++i) {
+        runOnRegion(candidates, c->getRegion(i));
+      }
+    }
 
     // for (auto op = region.op_begin(); op != region.op_end(); ++op) {
     //   auto name = op->getName().getStringRef().str();
@@ -87,7 +108,7 @@ public:
     // }
   }
 
-  void insertReuse(mlir::Value reuseVal, Region &region) {
+  void insertReset(mlir::Value reuseVal, Region &region) {
 
     BlockAndValueMapping mapper;
     auto context = region.getContext();
@@ -97,8 +118,8 @@ public:
     builder.setInsertionPointToStart(&block);
 
     llvm::errs() << __PRETTY_FUNCTION__ << " | creating reuse...\n";
-    standalone::ResetOp resetOp = builder.create<standalone::ResetOp>(builder.getUnknownLoc(), reuseVal);
-
+    standalone::ResetOp resetOp =
+        builder.create<standalone::ResetOp>(builder.getUnknownLoc(), reuseVal);
 
     assert(resetOp->getNumRegions() == 2);
     auto &new_region_1 = resetOp->getRegion(0);
@@ -114,11 +135,14 @@ public:
   int getCandidateSize(mlir::Value candidate, Region &region) {
     int size = -2;
 
-    for(standalone::ProjectionOp proj : region.getOps<standalone::ProjectionOp>()) {
-        mlir::Value val = proj.getOperand();
-        // HACK TODO: create API for this projection.
-        int index = proj.getIndex();
-        if (val == candidate) { size = std::max(size, index); }
+    for (standalone::ProjectionOp proj :
+         region.getOps<standalone::ProjectionOp>()) {
+      mlir::Value val = proj.getOperand();
+      // HACK TODO: create API for this projection.
+      int index = proj.getIndex();
+      if (val == candidate) {
+        size = std::max(size, index);
+      }
     }
     // for (auto op = region.op_begin(); op != region.op_end(); ++op) {
     //   auto name = op->getName().getStringRef().str();
@@ -159,12 +183,14 @@ public:
           cleanAfterResetInsertion(case_region);
         }
       } // end case check.
-    } // end loop over cleanup region
-  } // end cleanAfterRese
+    }   // end loop over cleanup region
+  }     // end cleanAfterRese
 
   void cleanAfterReuseInsertion(mlir::FuncOp f) {
     f.walk([&](standalone::HaskConstructOp op) {
-        if (op->use_empty()) { op->erase(); }
+      if (op->use_empty()) {
+        op->erase();
+      }
     });
     // f.walk([&](mlir::Operation *op) {
     //   if (op->getName().getStringRef().str() == "lambdapure.ConstructorOp" &&
@@ -177,35 +203,37 @@ public:
   void insertReuseConstructor(mlir::Region &region) {
     auto builder = mlir::OpBuilder(region.getContext());
     for (standalone::ResetOp op : region.getOps<standalone::ResetOp>()) {
-        mlir::Value reuseVal = op.getOperand();
-        // vvv ResetOp should have SingleRegion?
-        mlir::Region &resetRegion = op->getRegion(0);
+      mlir::Value reuseVal = op.getOperand();
+      // vvv ResetOp should have SingleRegion?
+      mlir::Region &resetRegion = op->getRegion(0);
 
-
-        for(standalone::HaskConstructOp c : resetRegion.getOps<standalone::HaskConstructOp>()) {
-            builder.setInsertionPoint(c);
-            // const int tag = c->getAttrOfType<IntegerAttr>("tag").getInt();
-            std::vector<mlir::Value> operands;
-            operands.push_back(reuseVal);
-            for(auto operand : c->getOperands()) {
-                operands.push_back(operand);
-            }
-
-            assert(false && "unknown reuse");
-//          standalone::ReuseConstructorOp reuse  =
-//                 builder.create<lambdapure::ReuseConstructorOp>(op->getLoc(), tag, operands);
-            standalone::ReuseConstructorOp reuse;
-            c->replaceAllUsesWith(reuse);
-            // TODO HACK: why clear() ?
-            operands.clear();
-
+      for (standalone::HaskConstructOp c :
+           resetRegion.getOps<standalone::HaskConstructOp>()) {
+        builder.setInsertionPoint(c);
+        // const int tag = c->getAttrOfType<IntegerAttr>("tag").getInt();
+        std::vector<mlir::Value> operands;
+        operands.push_back(reuseVal);
+        for (auto operand : c->getOperands()) {
+          operands.push_back(operand);
         }
 
-        for (standalone::CaseOp c : resetRegion.getOps<standalone::CaseOp>()) {
-            for (int i = 0; i < (int)c->getNumRegions(); ++i) {
-                insertReuseConstructor(c->getRegion(i));
-            }
+        assert(false && "found opportunity for reuse");
+        // assert(false && "unknown reuse");
+        standalone::ReuseConstructorOp reuse =
+            builder.create<standalone::ReuseConstructorOp>(
+                op->getLoc(), c.getDataConstructorName(), operands);
+        c->replaceAllUsesWith(reuse);
+        // TODO HACK: why clear() ?
+        operands.clear();
+        // TODO: why not call |c->erase()| right here?
+        // TODO: what happens if there are multiple constructors?
+      }
+
+      for (standalone::CaseOp c : resetRegion.getOps<standalone::CaseOp>()) {
+        for (int i = 0; i < (int)c->getNumRegions(); ++i) {
+          insertReuseConstructor(c->getRegion(i));
         }
+      }
     }
     // for (auto op = region.op_begin(); op != region.op_end(); ++op) {
     //   auto name = op->getName().getStringRef().str();
@@ -259,7 +287,6 @@ public:
     return true;
      */
   }
-
 };
 
 } // end anonymous namespace

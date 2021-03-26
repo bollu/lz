@@ -38,6 +38,16 @@
 
 # Log:  [newest] to [oldest]
 
+# March 26
+
+```
+
+analyzing constructor: |
+analyzing constructor: |%%51 =  = ""lzl.zc.ocnonssttrruucctt"("()) { {dataconstructordataconstructor =  = @"@"00""}} :  : (() -> ) -> !!lzlz.value.value|
+```
+
+- Something really funky is going on, either with memory or parallelism!.
+
 # March 25
 - Need to fix `lambdapure/simple/jmp.lean` that makes use of default alternative case.
 - `ClosedTermCache` keeps tracks of names.

@@ -1060,24 +1060,33 @@ void HaskCaseRetOp::print(OpAsmPrinter &p) {
   p.printGenericOp(*this);
 };
 
-// === REUSE OP ===
-// === REUSE OP ===
-// === REUSE OP ===
-// === REUSE OP ===
-// === REUSE OP ===
-// === REUSE OP ===
-  
+// === REUSE CONSTRUCTOR OP ===
+// === REUSE CONSTRUCTOR OP ===
+// === REUSE CONSTRUCTOR OP ===
+// === REUSE CONSTRUCTOR OP ===
+// === REUSE CONSTRUCTOR OP ===
+// === REUSE CONSTRUCTOR OP ===
 
-  
-ParseResult ReuseConstructorOp::parse(OpAsmParser &parser, OperationState &result) {
+ParseResult ReuseConstructorOp::parse(OpAsmParser &parser,
+                                      OperationState &result) {
+
   assert(false && "unimplemented");
+}
+
+void ReuseConstructorOp::build(mlir::OpBuilder &builder,
+                               mlir::OperationState &state,
+                               StringRef constructorName, ValueRange args) {
+  state.addAttribute(
+      ReuseConstructorOp::getDataConstructorAttrKey(),
+      FlatSymbolRefAttr::get(builder.getContext(), constructorName));
+  state.addOperands(args);
+  state.addTypes(ValueType::get(builder.getContext()));
 }
 
 void ReuseConstructorOp::print(OpAsmPrinter &p) {
   p.printGenericOp(this->getOperation());
 }
 
-  
 // === RESET OP ===
 // === RESET OP ===
 // === RESET OP ===
