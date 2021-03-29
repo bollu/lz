@@ -16,7 +16,7 @@ module {
   func @sum(%buffert: !lz.thunk<memref<?xi64>>) -> i64 {
     %buffer = lz.force(%buffert) :  memref<?xi64>
     %c0 = constant 0 : index
-    %N = dim %buffer, %c0 : memref<?xi64>
+    %N = memref.dim %buffer, %c0 : memref<?xi64>
     %sum_0 = constant 0 : i64
     %sum = affine.for %i = 0 to %N step 1
     iter_args(%sum_iter = %sum_0) -> (i64) {
@@ -30,7 +30,7 @@ module {
   // create a sequence [0..upper_bound)
   func @seq(%upper_bound: i64) ->  memref<?xi64> {
     %upper_bound_ix = std.index_cast %upper_bound : i64 to index
-    %buf = alloc(%upper_bound_ix) : memref<?xi64>
+    %buf = memref.alloc(%upper_bound_ix) : memref<?xi64>
     affine.for %i = 0 to %upper_bound_ix step 1 {
       %ival = std.index_cast %i : index to i64
       affine.store %ival, %buf[%i] : memref<?xi64>

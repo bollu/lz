@@ -2,7 +2,7 @@
 // RUN: hask-opt %s  --lz-lower  --lower-affine --convert-scf-to-std --ptr-lower
 func @zip(%xs: memref<?xf64>, %ys: memref<?xf64>) -> memref<?x!lz.value> {
     %N = constant 1024 : index
-    %out = alloc(%N) : memref<?x!lz.value>
+    %out = memref.alloc(%N) : memref<?x!lz.value>
     affine.for %i = 0 to %N step 1 {
       %x = affine.load %xs[%i] : memref<?xf64>
       %y = affine.load %ys[%i] : memref<?xf64>

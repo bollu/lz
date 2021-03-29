@@ -6,7 +6,7 @@ module {
 
   func @main () -> !lz.value {
     %sz = constant 10 : index
-    %buf = alloc(%sz) : memref<?xi64>
+    %buf = memref.alloc(%sz) : memref<?xi64>
     %x = lz.construct(@Memref, %buf : memref<?xi64>)
     return  %x : !lz.value
   }

@@ -6,7 +6,7 @@ module {
 
   func @buf() ->  memref<?xi64> {
     %sz = constant 10 : index
-    %buf = alloc(%sz) : memref<?xi64>
+    %buf = memref.alloc(%sz) : memref<?xi64>
     return %buf : memref<?xi64>
   }
 

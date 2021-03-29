@@ -1,4 +1,4 @@
-// RUN: run-optimized.sh < %s | FileCheck %s
+// RUN: ../../run-optimized.sh < %s | FileCheck %s
 // CHECK: Box(42)
 module {
   func private @printConstructor(%x: !lz.value, %s: !ptr.char) -> ()

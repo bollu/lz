@@ -11,7 +11,7 @@ module {
 
   func @main () {
     %sz = constant 10 : index
-    %buf = alloc(%sz) : memref<?xi64>
+    %buf = memref.alloc(%sz) : memref<?xi64>
     %f = constant @buf : (memref<?xi64>) ->  i64
     %buft = lz.ap(%f: (memref<?xi64>) -> i64, %buf)
     // %outv = lz.force(%buft): i64
