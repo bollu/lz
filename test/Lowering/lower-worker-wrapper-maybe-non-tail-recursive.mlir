@@ -4,6 +4,8 @@
 // RUN: hask-opt %s --lz-worker-wrapper --lz-lower --convert-scf-to-std --ptr-lower | mlir-translate --mlir-to-llvmir
 // RUN: run-optimized.sh < %s | FileCheck %s
 // CHECK: Just(42)
+// XFAIL: *
+// This must fail because we try to use run-optimised.sh
 
 module {
   // f :: Maybe Int# -> Maybe Int#
