@@ -2,6 +2,7 @@
 --  RUN: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize --lz-lambdapure-destructive-updates | FileCheck %s
 --  RUN: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize --lz-lambdapure-destructive-updates --lz-lambdapure-reference-rewriter | FileCheck %s
 --  RUN: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize --lz-interpret=mode=lambdapure | FileCheck %s --check-prefix=CHECK-INTERPRET
+--  RUN: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize  --lz-lower
 
 -- CHECK: func @filter
 -- we only keep elements that are not greater than 5, starting from 0.
