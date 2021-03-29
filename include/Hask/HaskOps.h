@@ -306,6 +306,8 @@ public:
   getEffects(SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
                  &effects) {}
 };
+
+// for lambdapure
 class HaskConstructOp
     : public Op<HaskConstructOp, OpTrait::OneResult, OpTrait::ZeroRegion,
                 MemoryEffectOpInterface::Trait> {
@@ -316,7 +318,8 @@ public:
   static const char *getDataConstructorAttrKey() { return "dataconstructor"; }
   static const char *getDataTypeAttrKey() { return "datatype"; }
   StringRef getDataConstructorName() {
-    return getOperation()->getAttrOfType<FlatSymbolRefAttr>(getDataConstructorAttrKey())
+    return getOperation()
+        ->getAttrOfType<FlatSymbolRefAttr>(getDataConstructorAttrKey())
         .getValue();
   }
 
@@ -335,7 +338,7 @@ public:
                  &effects) {}
 };
 
-
+// for lambdapure
 class ResetOp
   : public Op<ResetOp, OpTrait::IsTerminator,  OpTrait::ZeroResult, OpTrait::OneOperand,
         MemoryEffectOpInterface::Trait, OpTrait::NRegions<2>::Impl> {
@@ -360,6 +363,7 @@ public:
 };
 
 // vv this is never built? wat?
+// for lambdapure
 class ReuseConstructorOp
     : public Op<ReuseConstructorOp, OpTrait::OneResult, OpTrait::ZeroRegion, OpTrait::VariadicOperands,
                 MemoryEffectOpInterface::Trait> {
@@ -384,6 +388,7 @@ public:
                  &effects) {}
 };
 
+// for lambdapure
 class ProjectionOp
     : public Op<ProjectionOp, OpTrait::OneResult, OpTrait::OneOperand, 
                 OpTrait::ZeroRegion,
@@ -412,6 +417,7 @@ public:
                  &effects) {}
 };
 
+// for lambdapure
 class PapOp
     : public Op<PapOp, OpTrait::OneResult, MemoryEffectOpInterface::Trait> {
 public:
@@ -448,6 +454,7 @@ public:
   void print(OpAsmPrinter &p);
 };
 
+// for lambdapure
 // extend a partial application with more arguments.
 class PapExtendOp
     : public Op<PapExtendOp, OpTrait::OneResult, MemoryEffectOpInterface::Trait> {
@@ -478,7 +485,7 @@ public:
   void print(OpAsmPrinter &p);
 };
 
-
+// for lambdapure
 class TagGetOp
     : public Op<TagGetOp, OpTrait::OneOperand, OpTrait::OneResult, OpTrait::ZeroRegion,
                 MemoryEffectOpInterface::Trait> {
@@ -512,8 +519,8 @@ class IntegerConstOp : public Op<IntegerConstOp, OpTrait::ZeroOperands, OpTrait:
 
 };
 
-
-// This makes me sad, because it has a side effect x( 
+// This makes me sad, because it has a side effect x(
+// for lambdapure
 class IncOp : public Op<IncOp, OpTrait::OneOperand, OpTrait::ZeroResult, OpTrait::ZeroRegion> {
   public:
   using Op::Op;
@@ -523,7 +530,8 @@ class IncOp : public Op<IncOp, OpTrait::OneOperand, OpTrait::ZeroResult, OpTrait
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state, mlir::Value v);
 };
 
-// This makes me sad, because it has a side effect x( 
+// This makes me sad, because it has a side effect x(
+// for lambdapure
 class DecOp : public Op<DecOp, OpTrait::OneOperand, OpTrait::ZeroResult, OpTrait::ZeroRegion> {
   public:
   using Op::Op;
@@ -533,7 +541,9 @@ class DecOp : public Op<DecOp, OpTrait::OneOperand, OpTrait::ZeroResult, OpTrait
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state, mlir::Value v);
 };
 
-// Not sure if I should simply remove everything that tries to generate an erased box?
+// for lambdapure
+// Not sure if I should simply remove everything that tries to generate an
+// erased box?
 class ErasedValueOp : public Op<ErasedValueOp, OpTrait::ZeroOperands, OpTrait::OneResult, OpTrait::ZeroRegion> {
   public:
   using Op::Op;
@@ -543,7 +553,9 @@ class ErasedValueOp : public Op<ErasedValueOp, OpTrait::ZeroOperands, OpTrait::O
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state);
 };
 
-// first mirror whatever the fuck the original lowering does. Then find "better encodings".
+// for lambdapure
+// first mirror whatever the fuck the original lowering does. Then find "better
+// encodings".
 class HaskBlockOp : public Op<HaskBlockOp, OpTrait::ZeroOperands, OpTrait::ZeroResult, OpTrait::NRegions<2>::Impl, OpTrait::IsTerminator> {
 public:
   using Op::Op;
@@ -559,7 +571,7 @@ public:
   }
 };
 
-
+// for lambdapure
 class HaskJumpOp : public Op<HaskJumpOp, OpTrait::OneOperand, OpTrait::ZeroResult, OpTrait::IsTerminator> {
 public:
   using Op::Op;
@@ -571,7 +583,8 @@ public:
 
 
 // for lambdapure
-class HaskCaseRetOp : public Op<HaskCaseRetOp, OpTrait::OneOperand, OpTrait::ZeroResult, OpTrait::IsTerminator> {
+class HaskCaseRetOp : public Op<HaskCaseRetOp, OpTrait::OneOperand,
+                                OpTrait::ZeroResult, OpTrait::IsTerminator> {
 public:
   using Op::Op;
   static StringRef getOperationName() { return "lz.caseRet"; };
@@ -581,6 +594,22 @@ public:
   int numAlts() { return this->getOperation()->getNumRegions(); }
 };
 
+// for lambdapure
+class HaskCallOp
+    : public Op<HaskCallOp, OpTrait::VariadicOperands, OpTrait::OneResult> {
+public:
+  using Op::Op;
+  static const char *getFnNameKey() { return "value"; }
+  const StringRef getFnName() {
+    return this->getOperation()
+        ->getAttrOfType<FlatSymbolRefAttr>("value")
+        .getValue();
+  }
+
+  static StringRef getOperationName() { return "lz.call"; };
+  static ParseResult parse(OpAsmParser &parser, OperationState &result);
+  void print(OpAsmPrinter &p);
+};
 
 /*
 class HaskThunkToPtrOp
@@ -598,12 +627,12 @@ public:
 */
 
 // lower lz to LLVM by eliminating all the junk.
-std::unique_ptr<mlir::Pass> createLowerHaskToLLVMPass();
+std::unique_ptr<mlir::Pass>
+createLowerHaskToLLVMPass();
 // canonicalize, eliminating all intermediate waste.
 std::unique_ptr<mlir::Pass> createWorkerWrapperPass();
 std::unique_ptr<mlir::Pass> createWrapperWorkerPass();
 std::unique_ptr<mlir::Pass> createHaskCanonicalizePass();
-
 
 void registerLowerHaskPass();
 void registerHaskCanonicalizePass();

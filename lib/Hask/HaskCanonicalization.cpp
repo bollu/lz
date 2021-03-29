@@ -40,7 +40,8 @@
 namespace mlir {
 namespace standalone {
 
-struct CanonicalizeCaseRetPattern : public mlir::OpRewritePattern<HaskCaseRetOp> {
+struct CanonicalizeCaseRetPattern
+    : public mlir::OpRewritePattern<HaskCaseRetOp> {
   CanonicalizeCaseRetPattern(mlir::MLIRContext *context)
       : OpRewritePattern<HaskCaseRetOp>(context, /*benefit=*/1) {}
 
@@ -51,18 +52,17 @@ struct CanonicalizeCaseRetPattern : public mlir::OpRewritePattern<HaskCaseRetOp>
     SmallVector<mlir::Attribute, 4> lhss;
     SmallVector<mlir::Region *, 4> rhss;
 
-   
-   
     rewriter.setInsertionPoint(caseret);
-    //   static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
+    //   static void build(mlir::OpBuilder &builder, mlir::OperationState
+    //   &state,
     //                Value scrutinee, int numrhss);
-    TagGetOp tag = rewriter.create<mlir::standalone::TagGetOp>(rewriter.getUnknownLoc(), caseret.getScrutinee());
-    CaseOp caseop = rewriter.create<CaseOp>(rewriter.getUnknownLoc(),
-                                            tag,
-					    caseret.numAlts());
+    TagGetOp tag = rewriter.create<mlir::standalone::TagGetOp>(
+        rewriter.getUnknownLoc(), caseret.getScrutinee());
+    CaseOp caseop = rewriter.create<CaseOp>(rewriter.getUnknownLoc(), tag,
+                                            caseret.numAlts());
 
     BlockAndValueMapping mapper;
-    for(int i = 0; i < caseret.numAlts(); ++i) {
+    for (int i = 0; i < caseret.numAlts(); ++i) {
       caseret->getRegion(i).cloneInto(&caseop->getRegion(i), mapper);
     }
 
@@ -72,6 +72,42 @@ struct CanonicalizeCaseRetPattern : public mlir::OpRewritePattern<HaskCaseRetOp>
   }
 };
 
+struct CanonicalizeHaskCallPattern : public mlir::OpRewritePattern<HaskCallOp> {
+  CanonicalizeHaskCallPattern(mlir::MLIRContext *context)
+      : OpRewritePattern<HaskCallOp>(context, /*benefit=*/1) {}
+
+  mlir::LogicalResult
+  matchAndRewrite(HaskCallOp call,
+                  mlir::PatternRewriter &rewriter) const override {
+    rewriter.setInsertionPoint(call);
+    StringRef fnname = call.getFnName();
+    ModuleOp mod = call->getParentOfType<ModuleOp>();
+    ValueType vty = rewriter.getType<ValueType>();
+
+    mlir::SmallVector<mlir::Type, 4> inputTys;
+    for (int i = 0; i < (int)call.getNumOperands(); ++i) {
+      inputTys.push_back(vty);
+    }
+    mlir::SmallVector<mlir::Type, 4> resultTys{vty};
+
+    rewriter.setInsertionPointAfter(call);
+    rewriter.replaceOpWithNewOp<CallOp>(call, fnname, resultTys,
+                                        call->getOperands());
+    // module has the function.
+    if (mod.lookupSymbol<FuncOp>(fnname)) {
+      return success();
+    } else {
+      // create forward declaration.
+
+      mlir::FunctionType fty = rewriter.getFunctionType(inputTys, resultTys);
+      mlir::FuncOp fwdDecl =
+          mlir::FuncOp::create(rewriter.getUnknownLoc(), fnname, fty);
+      fwdDecl.setPrivate();
+      mod.push_back(fwdDecl);
+      return success();
+    }
+  }
+};
 
 class HaskCanonicalizationPass  : public Pass {
 public:
@@ -92,6 +128,7 @@ public:
     // https://mlir.llvm.org/docs/Canonicalization/
     // const int MAX_ITERATIONS = 100;
     patterns.insert<CanonicalizeCaseRetPattern>(&getContext());
+    patterns.insert<CanonicalizeHaskCallPattern>(&getContext());
     ::llvm::DebugFlag = true;
     if (failed(mlir::applyPatternsAndFoldGreedily(getOperation(),
                                                   std::move(patterns)))) {

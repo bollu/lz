@@ -1108,6 +1108,19 @@ void ResetOp::build(mlir::OpBuilder &builder, mlir::OperationState &state, Value
   return;
 }
 
+// === HASK CALL OP ===
+// === HASK CALL OP ===
+// === HASK CALL OP ===
+// === HASK CALL OP ===
+// === HASK CALL OP ===
+
+ParseResult HaskCallOp::parse(OpAsmParser &parser, OperationState &result) {
+  assert(false && "unimplemented");
+}
+
+void HaskCallOp::print(OpAsmPrinter &p) {
+  p.printGenericOp(this->getOperation());
+}
 
 /*
 // === THUNK TO PTR OP ===
