@@ -183,7 +183,9 @@ private def formatExpr : Expr → Format
                            -- | Hypothesis is wrong. Eg: |@IO.println._at.Lean.instEval._spec_1| is an internal name
   | Expr.fap c ys       => if False -- Hypothesis: internal names are unsued at runtime(Name.isInternal c)
                            then (escape "lz.erasedvalue") ++ "()" ++ "{value=" ++ "@" ++ (escape c) ++ "}" ++   ":" ++ formatMLIRType 0 1 
-                           else "call " ++ "@" ++ (escape (format c)) ++ "(" ++ formatArray ys ++ ")" ++ ":" ++ formatMLIRType (ys.size) 1
+                           else (escape "lz.call") ++ "(" ++ formatArray ys ++ ")" 
+                                  ++ "{value=" ++  "@" ++ (escape (format c)) ++ "}"
+                                  ++ ":" ++ formatMLIRType (ys.size) 1
   | Expr.pap c ys       => (escape "lz.pap") ++ "(" ++  formatArray ys ++ ")" ++
                            "{value=" ++ "@" ++ escape (format c) ++ "}" ++
                            ":" ++ (formatMLIRType ys.size) 1
