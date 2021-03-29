@@ -176,7 +176,6 @@ struct ForceOfThunkifyPattern : public mlir::OpRewritePattern<ForceOp> {
   }
 };
 
-
 struct ThunkifyOfForcePattern : public mlir::OpRewritePattern<ThunkifyOp> {
   ThunkifyOfForcePattern(mlir::MLIRContext *context)
       : OpRewritePattern<ThunkifyOp>(context, /*benefit=*/1) {}
@@ -242,7 +241,7 @@ FunctionType mkForcedFnType(FunctionType fty) {
     assert(thunkty);
     forcedTys.push_back(thunkty.getElementType());
   }
-  return FunctionType::get(fty.getContext(),  forcedTys, fty.getResult(0));
+  return FunctionType::get(fty.getContext(), forcedTys, fty.getResult(0));
 }
 
 // ===IN===
@@ -461,8 +460,9 @@ struct OutlineRecursiveApEagerOfConstructorPattern
     SmallVector<Type, 4> clonedFnCallArgTys{
         (constructedArgument.getOperand(0).getType())};
 
-    mlir::FunctionType clonedFnTy = mlir::FunctionType::get(rewriter.getContext(),
-        clonedFnCallArgTys, called.getType().getResult(0));
+    mlir::FunctionType clonedFnTy =
+        mlir::FunctionType::get(rewriter.getContext(), clonedFnCallArgTys,
+                                called.getType().getResult(0));
 
     ConstantOp clonedFnRef = rewriter.create<ConstantOp>(
         ap.getFn().getLoc(), clonedFnTy,
@@ -1156,7 +1156,7 @@ struct WorkerWrapperPass : public Pass {
   }
 
   void runOnOperation() override {
-    mlir::OwningRewritePatternList patterns;
+    mlir::OwningRewritePatternList patterns(&getContext());
     // force(ap) -> apeager. safe.
     patterns.insert<ForceOfKnownApPattern>(&getContext());
     // force(thunkify(x)) -> x. safe.
@@ -1186,7 +1186,7 @@ struct WorkerWrapperPass : public Pass {
     //    f: D (case v of {C1 -> v1; C2 -> v2; .. Cn -> vn; }
     // Safe.
     patterns.insert<PeelConstructorsFromCasePattern>(&getContext());
-//     Same as peel constructor from case for ints. safe.
+    //     Same as peel constructor from case for ints. safe.
     patterns.insert<PeelConstructorsFromCaseIntPattern>(&getContext());
 
     // f: case (Ci vi) of { C1 w1 -> e1; C2 w2 -> e2 ... Cn wn -> en};
@@ -1216,7 +1216,6 @@ struct WorkerWrapperPass : public Pass {
   };
 };
 
-
 struct WrapperWorkerPass : public Pass {
   WrapperWorkerPass() : Pass(mlir::TypeID::get<WrapperWorkerPass>()){};
   StringRef getName() const override { return "WrapperWorkerPass"; }
@@ -1229,11 +1228,11 @@ struct WrapperWorkerPass : public Pass {
   }
 
   void runOnOperation() override {
-    mlir::OwningRewritePatternList patterns;
+    mlir::OwningRewritePatternList patterns(&getContext());
     patterns.insert<ThunkifyOfForcePattern>(&getContext());
 
     ::llvm::DebugFlag = true;
-  if (failed(mlir::applyPatternsAndFoldGreedily(getOperation(),
+    if (failed(mlir::applyPatternsAndFoldGreedily(getOperation(),
                                                   std::move(patterns)))) {
       llvm::errs() << "\n===Worker wrapper failed===\n";
       getOperation()->print(llvm::errs());
@@ -1258,19 +1257,20 @@ std::unique_ptr<mlir::Pass> createWrapperWorkerPass() {
 }
 
 void registerWorkerWrapperPass() {
-  ::mlir::registerPass("lz-worker-wrapper", "Perform worker wrapper transform to expose computation",
+  ::mlir::registerPass("lz-worker-wrapper",
+                       "Perform worker wrapper transform to expose computation",
                        []() -> std::unique_ptr<::mlir::Pass> {
                          return createWorkerWrapperPass();
                        });
 }
 
 void registerWrapperWorkerPass() {
-  ::mlir::registerPass("lz-wrapper-worker", "Perform wrapper worker transform to hide computation",
+  ::mlir::registerPass("lz-wrapper-worker",
+                       "Perform wrapper worker transform to hide computation",
                        []() -> std::unique_ptr<::mlir::Pass> {
                          return createWrapperWorkerPass();
                        });
 }
-
 
 } // namespace standalone
 } // namespace mlir

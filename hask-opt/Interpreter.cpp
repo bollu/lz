@@ -4,9 +4,11 @@
 #include "Hask/HaskOps.h"
 #include "Pointer/PointerOps.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "llvm/Support/Casting.h"
 #include <Pointer/PointerDialect.h>
+
 #include <map>
 
 using namespace mlir;
@@ -18,10 +20,10 @@ const char *G_ERASED_VALUE_TAG = "ERASED-VALUE";
 InterpValue buildArgv(const Pass::ListOption<std::string> &ss) {
   // List.nil -> ... ; List.cons -> ... ;
   InterpValue tail = InterpValue::constructor("0", {});
-  for(int i = ss.size() - 1; i >= 0; i--) {
+  for (int i = ss.size() - 1; i >= 0; i--) {
     tail = InterpValue::constructor("1", {InterpValue::s(ss[i]), tail});
   }
-  
+
   return tail;
 }
 
@@ -287,7 +289,7 @@ struct Interpreter {
     if (ForceOp force = dyn_cast<ForceOp>(op)) {
       stats.num_force_calls++;
       InterpValue scrutinee = env.lookup(force.getLoc(), force.getScrutinee());
-      
+
       if (scrutinee.type == InterpValueType::ThunkifiedValue) {
         env.addNew(force.getResult(), scrutinee.thunkifiedValue());
         return;
@@ -307,13 +309,13 @@ struct Interpreter {
                    *interpretFunction(scrutineefn.ref(), args));
         return;
       } else {
-	llvm::errs() << "ERROR: expected scrutinee to be lazy value\n";
-	llvm::errs() << "scrutinee value: |" << scrutinee  << "|\n";
+        llvm::errs() << "ERROR: expected scrutinee to be lazy value\n";
+        llvm::errs() << "scrutinee value: |" << scrutinee << "|\n";
 
-	assert(scrutinee.type == InterpValueType::ThunkifiedValue ||
-	       scrutinee.type == InterpValueType::ClosureTopLevel ||
-	       scrutinee.type == InterpValueType::ClosureLambda);
-	assert(false && "incorrect scrutinee type");
+        assert(scrutinee.type == InterpValueType::ThunkifiedValue ||
+               scrutinee.type == InterpValueType::ClosureTopLevel ||
+               scrutinee.type == InterpValueType::ClosureLambda);
+        assert(false && "incorrect scrutinee type");
       }
     }
     if (CaseOp case_ = dyn_cast<CaseOp>(op)) {
@@ -343,7 +345,8 @@ struct Interpreter {
         llvm::errs() << "vvvv ERROR CASE vvvvv\n";
         llvm::errs() << case_ << "\n";
         llvm::errs() << "scrutinee: " << scrutinee << "\n";
-        llvm::errs () << "ERROR: no valid case alternative, nor valid default alt\n";
+        llvm::errs()
+            << "ERROR: no valid case alternative, nor valid default alt\n";
         llvm::errs() << "^^^^ ERROR CASE ^^^^\n";
       }
 
@@ -411,7 +414,8 @@ struct Interpreter {
     }
 
     if (TagGetOp tagget = dyn_cast<TagGetOp>(op)) {
-      InterpValue constructor = env.lookup(tagget->getLoc(), tagget.getOperand());
+      InterpValue constructor =
+          env.lookup(tagget->getLoc(), tagget.getOperand());
       std::string tag = constructor.constructorTag();
       // This might fuck up royally, let's see
       env.addNew(tagget.getResult(), InterpValue::constructor(tag, {}));
@@ -421,13 +425,14 @@ struct Interpreter {
     if (ProjectionOp pi = dyn_cast<ProjectionOp>(op)) {
       InterpValue constructor = env.lookup(pi->getLoc(), pi.getOperand());
       int ix = pi.getIndex(); // recall that ix is 0-indexed.
-      env.addNew(pi.getResult(), constructor.constructorArg(ix ));
+      env.addNew(pi.getResult(), constructor.constructorArg(ix));
       return;
     }
 
     if (ErasedValueOp erased = dyn_cast<ErasedValueOp>(op)) {
       // How can this ever run in the first place?
-      env.addNew(erased.getResult(), InterpValue::constructor(G_ERASED_VALUE_TAG, {}));
+      env.addNew(erased.getResult(),
+                 InterpValue::constructor(G_ERASED_VALUE_TAG, {}));
       return;
     }
 
@@ -443,17 +448,18 @@ struct Interpreter {
       v.refcountDecrement();
       const int MIN_REFCOUNT = -1;
       if (v.refcount_ < MIN_REFCOUNT) {
-        llvm::errs() << "ERROR: reference count dropped below zero: |" << dec << "|\n";
+        llvm::errs() << "ERROR: reference count dropped below zero: |" << dec
+                     << "|\n";
       }
-      assert(v.refcount_ >= MIN_REFCOUNT && "expected refcount to be non-negative");
+      assert(v.refcount_ >= MIN_REFCOUNT &&
+             "expected refcount to be non-negative");
       env.update(dec.getOperand(), v);
       return;
     }
 
-
     if (PapOp pap = dyn_cast<PapOp>(op)) {
       std::vector<InterpValue> args;
-      for(int i = 0; i < (int)pap->getNumOperands(); ++i) {
+      for (int i = 0; i < (int)pap->getNumOperands(); ++i) {
         args.push_back(env.lookup(pap.getLoc(), pap->getOperand(i)));
       }
       InterpValue fnRef = InterpValue::ref(pap.getFnName());
@@ -469,31 +475,32 @@ struct Interpreter {
       InterpValue closure = env.lookup(papext.getLoc(), papext.getFnValue());
       llvm::errs() << "papext.fn(closure): |" << closure << "|\n";
       assert(closure.type == InterpValueType::ClosureTopLevel &&
-	     "expected PapExtend to be called on closure");
+             "expected PapExtend to be called on closure");
       InterpValue fnRef = closure.closureTopLevelFn();
       assert(fnRef.type == InterpValueType::Ref);
       // damn, I need to know the number of args this function takes.
       FuncOp fn = module.lookupSymbol<FuncOp>(fnRef.ref());
-      std::vector<InterpValue> args(closure.closureArgBegin(), closure.closureArgEnd());
-      for(int i = 0; i < papext.getNumFnArguments(); ++i) {
-	args.push_back(env.lookup(papext.getLoc(), papext.getFnArgument(i)));
+      std::vector<InterpValue> args(closure.closureArgBegin(),
+                                    closure.closureArgEnd());
+      for (int i = 0; i < papext.getNumFnArguments(); ++i) {
+        args.push_back(env.lookup(papext.getLoc(), papext.getFnArgument(i)));
       }
-      
+
       if ((int)fn.getNumArguments() == (int)args.size()) {
-	// we saturate.
-	llvm::Optional<InterpValue> result = interpretFunction(fnRef.ref(), args);
-	assert(result && "expected partial application to have result");
-	env.addNew(papext.getResult(), *result);
-	return;
+        // we saturate.
+        llvm::Optional<InterpValue> result =
+            interpretFunction(fnRef.ref(), args);
+        assert(result && "expected partial application to have result");
+        env.addNew(papext.getResult(), *result);
+        return;
       } else {
-	// we do not saturate
-	env.addNew(papext.getResult(), InterpValue::closureTopLevel(fnRef, args));
-	return;
+        // we do not saturate
+        env.addNew(papext.getResult(),
+                   InterpValue::closureTopLevel(fnRef, args));
+        return;
       }
       return;
     }
-
-
 
     //============= StdOps ========================//
     if (mlir::ConstantIntOp cint = mlir::dyn_cast<mlir::ConstantIntOp>(op)) {
@@ -575,7 +582,7 @@ struct Interpreter {
       return;
     }
 
-    if (auto allocOp = mlir::dyn_cast<mlir::AllocOp>(op)) {
+    if (auto allocOp = mlir::dyn_cast<memref::AllocOp>(op)) {
       std::vector<int> dims;
       for (Value dimv : allocOp.getDynamicSizes()) {
         dims.push_back(env.lookup(allocOp.getLoc(), dimv).i());
@@ -584,7 +591,7 @@ struct Interpreter {
       return;
     }
 
-    if (auto dimOp = mlir::dyn_cast<mlir::DimOp>(op)) {
+    if (auto dimOp = mlir::dyn_cast<memref::DimOp>(op)) {
       auto v =
           env.lookup(dimOp.memrefOrTensor().getLoc(), dimOp.memrefOrTensor());
     }
@@ -610,7 +617,7 @@ struct Interpreter {
       return;
     }
 
-    if (auto store = dyn_cast<mlir::StoreOp>(op)) {
+    if (auto store = dyn_cast<memref::StoreOp>(op)) {
       std::vector<InterpValue> args;
       InterpValue memref = env.lookup(store.getLoc(), store.memref());
       InterpValue v = env.lookup(store.getLoc(), store.value());
@@ -621,7 +628,7 @@ struct Interpreter {
       return;
     }
 
-    if (auto load = dyn_cast<mlir::LoadOp>(op)) {
+    if (auto load = dyn_cast<memref::LoadOp>(op)) {
       std::vector<InterpValue> args;
       InterpValue memref = env.lookup(load.getLoc(), load.memref());
       InterpValue ix = env.lookup(load.getLoc(), *load.getIndices().begin());
@@ -630,7 +637,7 @@ struct Interpreter {
       return;
     }
 
-    if (auto dim = dyn_cast<mlir::DimOp>(op)) {
+    if (auto dim = dyn_cast<memref::DimOp>(op)) {
       InterpValue ix = env.lookup(dim.getLoc(), dim.index());
       InterpValue memref = env.lookup(dim.getLoc(), dim.memrefOrTensor());
       env.addNew(dim.getResult(), InterpValue::i(memref.sizeOfDim(ix.i())));
@@ -797,7 +804,8 @@ struct Interpreter {
       // TODO: fixup this API.
       InterpValue resetted = env.lookup(reuse.getLoc(), reuse->getOperand(0));
       // TODO: have this assert!
-      assert(resetted.refcount_ == 0 && "expected resetted value to have no refs!");
+      assert(resetted.refcount_ == 0 &&
+             "expected resetted value to have no refs!");
       std::vector<InterpValue> vs;
 
       for (int i = 1; i < (int)reuse.getNumOperands(); ++i) {

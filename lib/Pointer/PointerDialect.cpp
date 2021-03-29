@@ -744,7 +744,7 @@ struct LowerPointerPass : public Pass {
     target.addLegalOp<ModuleOp, ModuleTerminatorOp>();
 
     PtrTypeConverter typeConverter(&getContext());
-    mlir::OwningRewritePatternList patterns;
+    mlir::OwningRewritePatternList patterns(&getContext());
     populateStdToLLVMConversionPatterns(typeConverter, patterns);
 
     // This is wrong. We need to recursively check if function type

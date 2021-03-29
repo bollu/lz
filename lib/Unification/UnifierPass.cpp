@@ -52,7 +52,7 @@ struct UnifierPass : public Pass {
   }
 
   void runOnOperation() override {
-    mlir::OwningRewritePatternList patterns;
+    mlir::OwningRewritePatternList patterns(&getContext());
     //! // force(ap) -> apeager. safe.
     //! patterns.insert<ForceOfKnownApPattern>(&getContext());
     //! // force(thunkify) -> direct val. safe.

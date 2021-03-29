@@ -1,5 +1,6 @@
 #include "Hask/HaskDialect.h"
 #include "Hask/HaskOps.h"
+#include "mlir/IR/Location.h"
 #include "mlir/InitAllTranslations.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Translation.h"
@@ -663,7 +664,7 @@ private:
     // lastLocation.line = curLine;
     // lastLocation.col = curCol;
     lastLocation =
-        mlir::FileLineColLoc::get("UNKNOWN-FILE", curLine, curCol, context);
+        mlir::FileLineColLoc::get(context, "UNKNOWN-FILE", curLine, curCol);
 
     if (lastChar == TokenType::tok_box) {
       TokenType ThisChar = TokenType(lastChar);
@@ -678,8 +679,8 @@ private:
 
       //[a-zA-Z][a-zA-Z0-9_.!]
       while (lastChar == '\'' || lastChar == '.' || lastChar == '!' ||
-             lastChar == '-' || lastChar == '*' ||
-             isalnum(lastChar) || lastChar == '_') {
+             lastChar == '-' || lastChar == '*' || isalnum(lastChar) ||
+             lastChar == '_') {
         // replace apostrophe with _prime, c cant have
         // it in function names
         if (lastChar == '\'') {
@@ -749,7 +750,7 @@ private:
 public:
   Lexer(mlir::MLIRContext *context, llvm::StringRef buffer)
       : context(context),
-        lastLocation(mlir::FileLineColLoc::get("UNKNOWN-FILE", 1, 1, context)),
+        lastLocation(mlir::FileLineColLoc::get(context, "UNKNOWN-FILE", 1, 1)),
         buffer(buffer) {}
 
   TokenType getCurToken() { return curTok; }

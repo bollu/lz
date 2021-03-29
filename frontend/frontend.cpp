@@ -14,6 +14,7 @@
 
 // more MLIR includes...
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Pass/Pass.h"
@@ -2221,7 +2222,7 @@ mlir::Value mlirGenExpr(const Expr *e, mlir::OpBuilder &builder,
       llvm::SmallVector<int64_t, 4> lowerBounds(1, /*Value=*/0);
       llvm::SmallVector<int64_t, 4> upperBounds(1, /*Value=*/5000);
       llvm::SmallVector<int64_t, 4> steps(1, /*Value=*/1);
-      auto alloc = builder.create<mlir::AllocOp>(
+      auto alloc = builder.create<mlir::memref::AllocOp>(
           builder.getUnknownLoc(),
           mlir::MemRefType::get(5000, builder.getI64Type()));
 

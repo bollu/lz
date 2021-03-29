@@ -39,17 +39,18 @@
 #include "Hask/HaskOps.h"
 #include "Interpreter.h"
 #include "Pointer/PointerDialect.h"
+#include "Runtime.h"
 #include "Unification/UnificationDialect.h"
 #include "Unification/UnificationOps.h"
 #include "lambdapure/Dialect.h"
 #include "lambdapure/Passes.h"
-#include "Runtime.h"
 
 #include "LZJIT/LZJIT.h"
 
 // conversion
 // https://github.com/llvm/llvm-project/blob/80d7ac3bc7c04975fd444e9f2806e4db224f2416/mlir/examples/toy/Ch6/toyc.cpp
-#include "mlir/Target/LLVMIR.h"
+// #include "mlir/Target/LLVMIR.h"
+#include "mlir/Target/LLVMIR/Export.h"
 
 // Execution
 #include "llvm/ExecutionEngine/ExecutionEngine.h"

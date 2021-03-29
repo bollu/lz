@@ -24,6 +24,7 @@
 
 // Standard dialect
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -239,7 +240,8 @@ public:
     }
 
     if (FloatType ft = retty.dyn_cast<FloatType>()) {
-      return builder.create<ptr::PtrToFloatOp>(builder.getUnknownLoc(), src, ft);
+      return builder.create<ptr::PtrToFloatOp>(builder.getUnknownLoc(), src,
+                                               ft);
     }
 
     llvm::errs() << "ERROR: unknown type: |" << retty << "|\n";
@@ -259,11 +261,11 @@ public:
     FunctionType fnty = constant.getResult().getType().dyn_cast<FunctionType>();
     assert(fnty && "expected function");
 
-    FunctionType outty = typeConverter->convertType(fnty).dyn_cast<FunctionType>();
-    assert(outty && "was asked to lower a constant op that's not a reference to "
-                   "a function?!");
-
-
+    FunctionType outty =
+        typeConverter->convertType(fnty).dyn_cast<FunctionType>();
+    assert(outty &&
+           "was asked to lower a constant op that's not a reference to "
+           "a function?!");
 
     // Anything whose legality is checked with `isDynamicallyLegal` needs to be
     // `rewrite.erase`d and then `rewriter.create`d. It seems like you can't
@@ -371,7 +373,6 @@ public:
   }
 };
 
-
 bool isI8Ptr(Type ty) {
   auto ptr = ty.dyn_cast<LLVM::LLVMPointerType>();
   if (!ptr) {
@@ -395,7 +396,8 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     auto call = cast<CallOp>(operation);
     SmallVector<Type, 4> resultTypes;
-    if (failed(typeConverter->convertTypes(call.getResultTypes(), resultTypes))) {
+    if (failed(
+            typeConverter->convertTypes(call.getResultTypes(), resultTypes))) {
       return failure();
     }
 
@@ -414,11 +416,13 @@ public:
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> rands,
                   ConversionPatternRewriter &rewriter) const override {
-//    auto call = cast<CallIndirectOp>(op);
-//    typeConverter->convertTypes(call.getResultTypes(), resultTypes);
-    rewriter.replaceOpWithNewOp<CallIndirectOp>(op, rands[0], rands.drop_front(1));
+    //    auto call = cast<CallIndirectOp>(op);
+    //    typeConverter->convertTypes(call.getResultTypes(), resultTypes);
+    rewriter.replaceOpWithNewOp<CallIndirectOp>(op, rands[0],
+                                                rands.drop_front(1));
     llvm::errs() << "=====call indirect parent fn=====\n";
-    op->getParentOfType<FuncOp>().print(llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
+    op->getParentOfType<FuncOp>().print(
+        llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
     llvm::errs() << "\n=====\n";
     return success();
   }
@@ -1054,15 +1058,18 @@ struct HaskReturnOpConversionPattern : public mlir::ConversionPattern {
 
 struct AllocOpLowering : public mlir::ConversionPattern {
   explicit AllocOpLowering(TypeConverter &tc, MLIRContext *context)
-      : ConversionPattern(AllocOp::getOperationName(), 1, tc, context) {}
+      : ConversionPattern(memref::AllocOp::getOperationName(), 1, tc, context) {
+  }
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> rands,
                   ConversionPatternRewriter &rewriter) const override {
     using namespace mlir::LLVM;
-    AllocOp alloc = cast<AllocOp>(op);
+    memref::AllocaOp alloc = cast<memref::AllocaOp>(op);
     rewriter.setInsertionPointAfter(alloc);
+    assert(false && "I don't know what this is supposed to be");
     MemRefType memrefty =
         typeConverter->convertType(alloc.getType()).cast<MemRefType>();
+
     llvm::errs() << "===\n";
     llvm::errs() << "dynamicSizes.size(): " << alloc.getDynamicSizes().size()
                  << "\n";
@@ -1070,51 +1077,52 @@ struct AllocOpLowering : public mlir::ConversionPattern {
                  << "\n";
     llvm::errs() << "rands.size(): " << rands.size() << "\n";
     llvm::errs() << "===\n";
-    rewriter.replaceOpWithNewOp<mlir::AllocOp>(alloc, memrefty, rands);
+    rewriter.replaceOpWithNewOp<memref::AllocaOp>(alloc, memrefty, rands);
     return success();
   }
 };
 
 struct StoreOpLowering : public mlir::ConversionPattern {
   explicit StoreOpLowering(TypeConverter &tc, MLIRContext *context)
-      : ConversionPattern(mlir::StoreOp::getOperationName(), 1, tc, context) {}
+      : ConversionPattern(memref::StoreOp::getOperationName(), 1, tc, context) {
+  }
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> rands,
                   ConversionPatternRewriter &rewriter) const override {
     using namespace mlir::LLVM;
-    mlir::StoreOp store = cast<mlir::StoreOp>(op);
+    memref::StoreOp store = cast<memref::StoreOp>(op);
     rewriter.setInsertionPointAfter(store);
     llvm::errs() << "rands.size()|" << rands.size() << "|\n";
     assert(rands.size() >= 3 &&
            "store needs memref, value to store, and store indeces");
-    rewriter.replaceOpWithNewOp<mlir::StoreOp>(store, rands[0], rands[1],
-                                               rands.drop_front(2));
+    rewriter.replaceOpWithNewOp<memref::StoreOp>(store, rands[0], rands[1],
+                                                 rands.drop_front(2));
     return success();
   }
 };
 
 struct LoadOpLowering : public mlir::ConversionPattern {
   explicit LoadOpLowering(TypeConverter &tc, MLIRContext *context)
-      : ConversionPattern(mlir::LoadOp::getOperationName(), 1, tc, context) {}
+      : ConversionPattern(memref::LoadOp::getOperationName(), 1, tc, context) {}
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> rands,
                   ConversionPatternRewriter &rewriter) const override {
     // assert(false);
     using namespace mlir::LLVM;
-    mlir::LoadOp load = cast<mlir::LoadOp>(op);
+    memref::LoadOp load = cast<memref::LoadOp>(op);
     rewriter.setInsertionPointAfter(load);
     llvm::errs() << "rands.size()|" << rands.size() << "|\n";
-    assert(rands.size() >= 2 &&
-        "oad needs memref and store indeces");
-    rewriter.replaceOpWithNewOp<mlir::LoadOp>(op, rands[0],
-                                               rands.drop_front(1));
+    assert(rands.size() >= 2 && "oad needs memref and store indeces");
+    rewriter.replaceOpWithNewOp<memref::LoadOp>(op, rands[0],
+                                                rands.drop_front(1));
     return success();
   }
 };
 
 struct AffineLoadOpLowering : public mlir::ConversionPattern {
   explicit AffineLoadOpLowering(TypeConverter &tc, MLIRContext *context)
-      : ConversionPattern(mlir::AffineLoadOp::getOperationName(), 1, tc, context) {}
+      : ConversionPattern(mlir::AffineLoadOp::getOperationName(), 1, tc,
+                          context) {}
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> rands,
                   ConversionPatternRewriter &rewriter) const override {
@@ -1123,16 +1131,17 @@ struct AffineLoadOpLowering : public mlir::ConversionPattern {
     mlir::AffineLoadOp load = cast<mlir::AffineLoadOp>(op);
     rewriter.setInsertionPointAfter(load);
     llvm::errs() << "rands.size()|" << rands.size() << "|\n";
-    assert(rands.size() >= 2 &&
-        "oad needs memref and store indeces");
-    rewriter.replaceOpWithNewOp<mlir::AffineLoadOp>(op, load.getAffineMap(), rands);
+    assert(rands.size() >= 2 && "oad needs memref and store indeces");
+    rewriter.replaceOpWithNewOp<mlir::AffineLoadOp>(op, load.getAffineMap(),
+                                                    rands);
     return success();
   }
 };
 
 struct AffineStoreOpLowering : public mlir::ConversionPattern {
   explicit AffineStoreOpLowering(TypeConverter &tc, MLIRContext *context)
-      : ConversionPattern(mlir::AffineStoreOp::getOperationName(), 1, tc, context) {}
+      : ConversionPattern(mlir::AffineStoreOp::getOperationName(), 1, tc,
+                          context) {}
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> rands,
                   ConversionPatternRewriter &rewriter) const override {
@@ -1140,19 +1149,17 @@ struct AffineStoreOpLowering : public mlir::ConversionPattern {
     mlir::AffineStoreOp store = cast<mlir::AffineStoreOp>(op);
     rewriter.setInsertionPointAfter(store);
     assert(rands.size() >= 3 &&
-        "affine store needs memref, value to store, and store indeces");
+           "affine store needs memref, value to store, and store indeces");
     rewriter.replaceOpWithNewOp<mlir::AffineStoreOp>(store, rands[0], rands[1],
-                                               rands.drop_front(2));
+                                                     rands.drop_front(2));
     return success();
   }
 };
 
-
-
-
 struct AffineForOpLowering : public mlir::ConversionPattern {
   explicit AffineForOpLowering(TypeConverter &tc, MLIRContext *context)
-      : ConversionPattern(mlir::AffineForOp::getOperationName(), 1, tc, context) {}
+      : ConversionPattern(mlir::AffineForOp::getOperationName(), 1, tc,
+                          context) {}
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> rands,
                   ConversionPatternRewriter &rewriter) const override {
@@ -1170,35 +1177,33 @@ struct AffineForOpLowering : public mlir::ConversionPattern {
     ValueRange lbOperands = for_.getLowerBoundOperands();
     ValueRange ubOperands = for_.getUpperBoundOperands();
 
-    AffineForOp newForOp = rewriter.create<AffineForOp>(loc,
-                                                 lbOperands, lbMap,
-                                                 ubOperands, ubMap,
-                                                step, for_.getIterOperands());
+    AffineForOp newForOp =
+        rewriter.create<AffineForOp>(loc, lbOperands, lbMap, ubOperands, ubMap,
+                                     step, for_.getIterOperands());
     // https://github.com/llvm/llvm-project/blob/ed23229a64aed5b9d6120d57138d475291ca3667/mlir/lib/Conversion/AffineToStandard/AffineToStandard.cpp#L360
-    // WTF: why is this in the source code? o_O | rewriter.eraseBlock(scfForOp.getBody())
-    rewriter.eraseBlock(newForOp.getBody());;
+    // WTF: why is this in the source code? o_O |
+    // rewriter.eraseBlock(scfForOp.getBody())
+    rewriter.eraseBlock(newForOp.getBody());
+    ;
     rewriter.inlineRegionBefore(for_.region(), newForOp.region(),
                                 newForOp.region().end());
 
-
-
-    for(int i = 0; i < (int)newForOp->getNumOperands(); ++i) {
+    for (int i = 0; i < (int)newForOp->getNumOperands(); ++i) {
       Type t = newForOp.getOperand(i).getType();
       Type tnew = typeConverter->convertType(t);
       newForOp.getOperand(i).setType(tnew);
     }
 
-
-    for(int i = 0; i < (int)newForOp.region().getNumArguments(); ++i) {
+    for (int i = 0; i < (int)newForOp.region().getNumArguments(); ++i) {
       Type t = newForOp.region().getArgument(i).getType();
       Type tnew = typeConverter->convertType(t);
       newForOp.region().getArgument(i).setType(tnew);
     }
 
-    for(int i = 0; i < (int)newForOp->getNumResults(); ++i) {
-      newForOp.getResult(i).setType(typeConverter->convertType(newForOp.getResult(i).getType()));
+    for (int i = 0; i < (int)newForOp->getNumResults(); ++i) {
+      newForOp.getResult(i).setType(
+          typeConverter->convertType(newForOp.getResult(i).getType()));
     }
-
 
     llvm::errs() << "===NEW FOR OP===\n";
     newForOp.print(llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
@@ -1209,9 +1214,6 @@ struct AffineForOpLowering : public mlir::ConversionPattern {
     return success();
   }
 };
-
-
-
 
 bool isTypeLegal(Type t) {
   if (t.isa<HaskType>()) {
@@ -1268,9 +1270,8 @@ struct LowerHaskPass : public Pass {
 
     target.addLegalOp<ModuleOp, ModuleTerminatorOp>();
 
-    target.addDynamicallyLegalOp<ConstantOp>([](ConstantOp op) {
-      return isTypeLegal(op.getType());
-    });
+    target.addDynamicallyLegalOp<ConstantOp>(
+        [](ConstantOp op) { return isTypeLegal(op.getType()); });
 
     // This is wrong. We need to recursively check if function type
     // is legal.
@@ -1301,47 +1302,46 @@ struct LowerHaskPass : public Pass {
       return true;
     });
 
+    /*
+  target.addDynamicallyLegalOp<CallIndirectOp>([](CallIndirectOp call) {
 
-      /*
-    target.addDynamicallyLegalOp<CallIndirectOp>([](CallIndirectOp call) {
+    llvm::errs() << "===Checking callIndirectOp===\n";
+    for (Value arg : call.getOperands()) {
+      llvm::errs() << " - " << arg.getType() << "\n";
+      if (!isTypeLegal(arg.getType())) {
+        return false;
 
-      llvm::errs() << "===Checking callIndirectOp===\n";
-      for (Value arg : call.getOperands()) {
-        llvm::errs() << " - " << arg.getType() << "\n";
-        if (!isTypeLegal(arg.getType())) {
-          return false;
-
-        }
       }
+    }
 
-      for (Type t : call.getResultTypes()) {
-        llvm::errs() << " - " << t << "\n";
+    for (Type t : call.getResultTypes()) {
+      llvm::errs() << " - " << t << "\n";
 
-        if (!isTypeLegal(t)) {
-          return false;
-        }
+      if (!isTypeLegal(t)) {
+        return false;
       }
-      llvm::errs() << "\n===\n";
-      return true;
-    });
-       */
+    }
+    llvm::errs() << "\n===\n";
+    return true;
+  });
+     */
 
-    target.addDynamicallyLegalOp<AllocOp>(
-        [](AllocOp op) { return isTypeLegal(op.getType()); });
+    target.addDynamicallyLegalOp<memref::AllocOp>(
+        [](memref::AllocOp op) { return isTypeLegal(op.getType()); });
 
-    target.addDynamicallyLegalOp<StoreOp>([](mlir::StoreOp store) {
+    target.addDynamicallyLegalOp<memref::StoreOp>([](memref::StoreOp store) {
       return isTypeLegal(store.getMemRefType()) &&
              isTypeLegal(store.getValueToStore().getType());
     });
 
-    target.addDynamicallyLegalOp<LoadOp>([](mlir::LoadOp load) {
+    target.addDynamicallyLegalOp<memref::LoadOp>([](memref::LoadOp load) {
       return isTypeLegal(load.getMemRefType()) &&
-          isTypeLegal(load.getResult().getType());
+             isTypeLegal(load.getResult().getType());
     });
 
     target.addDynamicallyLegalOp<AffineLoadOp>([](mlir::AffineLoadOp load) {
       return isTypeLegal(load.getMemRefType()) &&
-          isTypeLegal(load.getResult().getType());
+             isTypeLegal(load.getResult().getType());
     });
 
     target.addDynamicallyLegalOp<AffineStoreOp>([](mlir::AffineStoreOp op) {
@@ -1353,8 +1353,6 @@ struct LowerHaskPass : public Pass {
 
       return true;
     });
-
-
 
     target.addDynamicallyLegalOp<AffineForOp>([](mlir::AffineForOp op) {
       for (Value arg : op.getOperands()) {
@@ -1370,10 +1368,6 @@ struct LowerHaskPass : public Pass {
       }
       return true;
     });
-
-
-
-
 
     target.addDynamicallyLegalOp<mlir::scf::YieldOp>([](scf::YieldOp yield) {
       for (Type t : yield.getOperandTypes()) {
@@ -1394,9 +1388,8 @@ struct LowerHaskPass : public Pass {
       return true;
     });
 
-
     HaskTypeConverter typeConverter(&getContext());
-    mlir::OwningRewritePatternList patterns;
+    mlir::OwningRewritePatternList patterns(&getContext());
 
     // OK why is it not able to legalize func? x(
     // populateAffineToStdConversionPatterns(patterns, &getContext());
@@ -1413,7 +1406,7 @@ struct LowerHaskPass : public Pass {
     patterns.insert<FuncOpLowering>(typeConverter, &getContext());
     patterns.insert<ReturnOpLowering>(typeConverter, &getContext());
     patterns.insert<CallOpLowering>(typeConverter, &getContext());
-//    patterns.insert<CallIndirectOpLowering>(typeConverter, &getContext());
+    //    patterns.insert<CallIndirectOpLowering>(typeConverter, &getContext());
     patterns.insert<ScfYieldOpLowering>(typeConverter, &getContext());
 
     patterns.insert<ApOpConversionPattern>(typeConverter, &getContext());
@@ -1436,9 +1429,10 @@ struct LowerHaskPass : public Pass {
     // applyPartialConversion | applyFullConversion
 
     if (failed(mlir::applyPartialConversion(getOperation(), target,
-                                         std::move(patterns)))) {
+                                            std::move(patterns)))) {
       llvm::errs() << "===Hask lowering failed at Conversion===\n";
-      getOperation()->print(llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
+      getOperation()->print(llvm::errs(),
+                            mlir::OpPrintingFlags().printGenericOpForm());
       llvm::errs() << "\n===\n";
       signalPassFailure();
     };
