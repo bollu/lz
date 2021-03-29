@@ -1,10 +1,9 @@
----  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | FileCheck %s
----  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | hask-opt  | FileCheck %s
----  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | hask-opt  --lz-lambdapure-destructive-updates | FileCheck %s
----  RUN: lean %s 2>&1 1>/dev/null | lambdapure-translate --import-lambdapure | hask-opt  --lz-lambdapure-destructive-updates --lz-lambdapure-reference-rewriter | FileCheck %s
+---  RUN: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize | FileCheck %s
+---  RUN: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize --lz-interpret="mode=lambdapure stdio='5 5'" | FileCheck %s
 
 --- TODO: this file uses a new kind of projection: `let x_6 : u8 := sproj[3, 0] x_1;`
 --- CHECK: func @main
+-- CHECK-INTERPRET: 2 1
 
 
 /-

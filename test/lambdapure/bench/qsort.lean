@@ -1,6 +1,18 @@
 --  RUN: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize | FileCheck %s
---  RUN: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize  --lz-lambdapure-destructive-updates | FileCheck %s
---  RUN: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize  --lz-lambdapure-destructive-updates --lz-lambdapure-reference-rewriter | FileCheck %s
+--  RUN: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize  --lz-interpret="mode=lambdapure stdio=3" | FileCheck %s --check-prefix=CHECK-INTERPRET
+--  fail: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize  --lz-lambdapure-destructive-updates | FileCheck %s
+--  fail: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize  --lz-lambdapure-destructive-updates --lz-lambdapure-reference-rewriter | FileCheck %s
+
+-- CHECK-INTERPRET: #[]
+-- CHECK-INTERPRET: #[1]
+-- CHECK-INTERPRET: #[2, 1017233273]
+-- CHECK-INTERPRET: #[]
+-- CHECK-INTERPRET: #[1]
+-- CHECK-INTERPRET: #[2, 1017233273]
+-- CHECK-INTERPRET: #[]
+-- CHECK-INTERPRET: #[1]
+-- CHECK-INTERPRET: #[2, 1017233273]
+
 
 -- CHECK: func @main
 -- TODO: needs the parser to be fixed (`let x_1 : obj := "term↑__1";`) Can't parse uparrow (`↑`) right now.
@@ -72,5 +84,5 @@ n.forM $ fun _ =>
 n.forM $ fun i => do
   let xs := mkRandomArray i (UInt32.ofNat i) Array.empty;
   let xs := qsort xs (fun a b => a < b);
-  --IO.println xs;
+  IO.println xs;
   checkSortedAux xs 0

@@ -1,10 +1,18 @@
 --  RUN: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize  | FileCheck %s
---  RUN: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize  --lz-lambdapure-destructive-updates | FileCheck %s
---  RUN: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize --lz-lambdapure-destructive-updates --lz-lambdapure-reference-rewriter | FileCheck %s
+--  RUN: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize  --lz-interpret="mode=lambdapure" | FileCheck %s --check-prefix=CHECK-INTERPRET
 
+
+--  fail: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize  --lz-lambdapure-destructive-updates | FileCheck %s
+--  fail: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize --lz-lambdapure-destructive-updates --lz-lambdapure-reference-rewriter | FileCheck %s
 
 -- ERROR: this has way too many random closed terms. I don't understand where they come from.
 -- CHECK: func @main
+
+-- CHECK-INTERPRET: 1 count: 6
+-- CHECK-INTERPRET: 2 count: 22
+-- CHECK-INTERPRET: 3 count: 90
+-- CHECK-INTERPRET: 4 count: 420
+
 
 set_option trace.compiler.ir.init true
 

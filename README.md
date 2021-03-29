@@ -40,7 +40,6 @@
 # March 29
 
 - Fixup the `run-optimised.sh` code.  
-
 - `affine-loop-fusion` stopped working??
 
 ```
@@ -65,6 +64,63 @@ func @main() -> i64 {
 ```
 
 I don't understand why this is not optimised away. Makes no sense.
+
+#### Why tests in `lambdapure/bench` break now:
+
+```
+********************
+Failed Tests (4):
+  HASK_OPT :: lambdapure/bench/const_fold.lean
+  HASK_OPT :: lambdapure/bench/deriv.lean
+  HASK_OPT :: lambdapure/bench/qsort.lean
+  HASK_OPT :: lambdapure/bench/rbmap_checkpoint.lean
+
+
+Testing Time: 2.38s
+  Passed    : 4
+  Unresolved: 9
+  Failed    : 4
+```
+
+##### `const_fold.lean`:
+```
+<stdin>:163:55: error: duplicate key 'alt3' in dictionary attribute
+    "lz.return"(%x_8): (!lz.value) -> ()}){alt3=@"3", alt3=@default}:(!lz.value)->()
+```
+
+##### `deriv.lean`:
+
+```
+--
+<stdin>:1939:78: error: duplicate key 'alt5' in dictionary attribute
+    "lz.return"(%x_10): (!lz.value) -> ()}){alt0=@"0", alt1=@"1", alt5=@"5", alt5=@default}:(!lz.value)->()
+```
+
+##### `qsort.lean`:  
+```
+--interpreting function:|UInt32.ofNat|--
+<stdin>:16:1: error: incorrect number of arguments to region. Given: |1|.Expected: |0| 
+
+func private@"UInt32.ofNat"(!lz.value)->(!lz.value)
+^
+hask-opt: ../hask-opt/Interpreter.cpp:941: llvm::Optional<InterpValue> Interpreter::interpretRegion(mlir::Region&, llvm::ArrayRef<InterpValue>, Env): Assertion `false && "unable to interpret region"' failed.
+```
+
+##### `rbmap_checkpoint.lean`:
+
+```
+<stdin>:72:12: error: unregistered operation 'lz.sproj' found in dialect ('lz') that does not allow unknown operations
+    %x_6 = "lz.sproj"(%x_1){ix=3, offset=0}:(!lz.value)->(!lz.value)
+           ^
+```
+
+##### `render.lean`
+
+```
+<stdin>:1008:3: error: unregistered operation 'lz.sset' found in dialect ('lz') that does not allow unknown operations
+  "lz.sset"(%x_71,%x_70){ix=7, offset=0}:(!lz.value, !lz.value)->()
+  ^
+```
 
 # March 26
 

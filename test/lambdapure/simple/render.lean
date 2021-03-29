@@ -1,3 +1,5 @@
+--  RUN: lean %s 2>&1 1>/dev/null | hask-opt  --lz-canonicalize 
+--  RUN: lean %s 2>&1 1>/dev/null | hask-opt  --lz-canonicalize --lz-interpret=mode=lambdapure 
 -- Stolen from https://raw.githubusercontent.com/kmill/lean4-raytracer/master/render.lean
 --import render.Algebra
 -- The value of PI is too large -_-
