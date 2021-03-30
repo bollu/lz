@@ -905,30 +905,30 @@ void ProjectionOp::print(OpAsmPrinter &p) {
   return;
 };
 
-// === IntegerConstOp  OP ===
-// === IntegerConstOp  OP ===
-// === IntegerConstOp  OP ===
-// === IntegerConstOp  OP ===
-// === IntegerConstOp  OP ===
+// === HaskIntegerConstOp  OP ===
+// === HaskIntegerConstOp  OP ===
+// === HaskIntegerConstOp  OP ===
+// === HaskIntegerConstOp  OP ===
+// === HaskIntegerConstOp  OP ===
 
-void IntegerConstOp::build(mlir::OpBuilder &builder, mlir::OperationState &state, int i) {
-  state.addAttribute(IntegerConstOp::getValueAttrKey(), builder.getI64IntegerAttr(i));
+void HaskIntegerConstOp::build(mlir::OpBuilder &builder, mlir::OperationState &state, int i) {
+  state.addAttribute(HaskIntegerConstOp::getValueAttrKey(), builder.getI64IntegerAttr(i));
   state.addTypes(builder.getType<ValueType>());
 };
 
-ParseResult IntegerConstOp::parse(OpAsmParser &parser, OperationState &result) {
+ParseResult HaskIntegerConstOp::parse(OpAsmParser &parser, OperationState &result) {
   mlir::OpAsmParser::OperandType in;
   mlir::IntegerAttr i;
   if (parser.parseLParen() || parser.parseAttribute<mlir::IntegerAttr>(i) || parser.parseRParen()) {
     return failure();
   }
-  result.addAttribute(IntegerConstOp::getValueAttrKey(), i);
+  result.addAttribute(HaskIntegerConstOp::getValueAttrKey(), i);
   result.addTypes(parser.getBuilder().getType<ValueType>());
   return success();
 };
 
 
-void IntegerConstOp::print(OpAsmPrinter &p) {
+void HaskIntegerConstOp::print(OpAsmPrinter &p) {
   p.printGenericOp(this->getOperation());
   return;
 };

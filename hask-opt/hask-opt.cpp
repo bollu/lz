@@ -81,6 +81,7 @@ int main(int argc, char **argv) {
   mlir::standalone::registerWorkerWrapperPass();
   mlir::unif::registerUnifierPass();
   mlir::standalone::registerLowerHaskPass();
+  mlir::standalone::registerLowerLeanPass();
   mlir::ptr::registerLowerPointerPass();
   registerLZJITPass();
   registerLZDumpLLVMPass();

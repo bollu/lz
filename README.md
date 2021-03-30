@@ -37,6 +37,23 @@
 
 # Log:  [newest] to [oldest]
 
+
+# March 30
+
+I do need to know the differences between types at the LLVM level.
+So for example, if there is code
+
+```
+%c0 = lz.int(0): () -> !lz.value
+%out = std.call @Nat.decEq(%c0, %c0) : (!lz.value, !lz.value) -> !lz.value
+```
+
+on lowering, I do need the `lz.int(0)` to become an `llvm.i64`. But then
+at the call site `@Nat.decEq`, I don't know what type it should be!
+This is quite untenable.
+
+Will learn how to retain type info from lambdapure -> MLIR
+
 # March 29
 
 - Fixup the `run-optimised.sh` code.  

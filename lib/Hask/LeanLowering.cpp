@@ -58,8 +58,6 @@ namespace standalone {
 
 namespace {
 
-// i64 -> !ptr.void
-
 /*
 FunctionType convertFunctionType(FunctionType fnty, TypeConverter &tc,
                                  OpBuilder &builder) {
@@ -268,8 +266,8 @@ public:
     FunctionType outty =
         typeConverter->convertType(fnty).dyn_cast<FunctionType>();
     assert(outty &&
-           "was asked to lower a constant op that's not a reference to "
-           "a function?!");
+               "was asked to lower a constant op that's not a reference to "
+               "a function?!");
 
     // Anything whose legality is checked with `isDynamicallyLegal` needs to be
     // `rewrite.erase`d and then `rewriter.create`d. It seems like you can't
@@ -377,6 +375,36 @@ public:
   }
 };
 
+class HaskIntegerConstOpLowering  : public ConversionPattern  {
+public:
+  explicit HaskIntegerConstOpLowering(TypeConverter &tc, MLIRContext *context)
+  : ConversionPattern(HaskIntegerConstOp::getOperationName(), 1, tc, context) {}
+  LogicalResult
+  matchAndRewrite(Operation *operation, ArrayRef<Value> rands,
+                  ConversionPatternRewriter &rewriter) const override {
+    HaskIntegerConstOp op = cast<HaskIntegerConstOp>(operation);
+    const int width = 64;
+    rewriter.replaceOpWithNewOp<ConstantIntOp>(operation, op.getValue(), width);
+
+    return success();
+  }
+};
+
+
+//
+//class HaskIntegerConstOpLowering : public ConversionPattern {
+//public:
+//  explicit HaskIntegerConstOpLowering(TypeConverter &tc, MLIRContext *context)
+//  : ConversionPattern(HaskIntegerConstOp::getOperationName(), 1, tc, context) {}
+//
+//  LogicalResult
+//  matchAndRewrite(Operation *operation, ArrayRef<Value> operands,
+//                  ConversionPatternRewriter &rewriter) const override {
+////    HaskIntegerConstOp op = cast<HaskIntegerConstOp>(operation);
+////    const int width = 64;
+////    rewriter.replaceOpWithNewOp<ConstantIntOp>(operation, op.getValue(), width);
+//    return success();
+//};
 
 // I don't understand why I need this.
 class CallOpLowering : public ConversionPattern {
@@ -390,7 +418,7 @@ public:
     auto call = cast<CallOp>(operation);
     SmallVector<Type, 4> resultTypes;
     if (failed(
-            typeConverter->convertTypes(call.getResultTypes(), resultTypes))) {
+        typeConverter->convertTypes(call.getResultTypes(), resultTypes))) {
       return failure();
     }
 
@@ -1239,6 +1267,9 @@ bool isTypeLegal(Type t) {
 //class ErasedValueOpLowering : public OpConversionPattern<ErasedValueOp> {
 struct ErasedValueOpLowering : public mlir::ConversionPattern {
 public:
+
+
+// i64 -> !ptr.void
   static FuncOp getOrCreateLeanBox(PatternRewriter &rewriter, ModuleOp m) {
     const std::string name = "lean_box";
     if (FuncOp fn = m.lookupSymbol<FuncOp>(name)) {
@@ -1291,7 +1322,8 @@ public:
     }
 
     MLIRContext *context = rewriter.getContext();
-    Type argty = ptr::VoidPtrType::get(context);
+    // Type argty = ptr::VoidPtrType::get(context);
+    Type argty = ValueType::get(context);
     Type retty = rewriter.getI64Type();
     FunctionType fnty = rewriter.getFunctionType(argty, retty);
 
@@ -1362,13 +1394,14 @@ public:
   }
 };
 
-struct LowerHaskPass : public Pass {
-  LowerHaskPass() : Pass(mlir::TypeID::get<LowerHaskPass>()){};
-  StringRef getName() const override { return "LowerHaskToLLVM"; }
+
+struct LowerLeanPass : public Pass {
+  LowerLeanPass() : Pass(mlir::TypeID::get<LowerLeanPass>()){};
+  StringRef getName() const override { return "LowerLeanPass"; }
 
   std::unique_ptr<Pass> clonePass() const override {
-    auto newInst = std::make_unique<LowerHaskPass>(
-        *static_cast<const LowerHaskPass *>(this));
+    auto newInst = std::make_unique<LowerLeanPass>(
+        *static_cast<const LowerLeanPass *>(this));
     newInst->copyOptionValuesFrom(this);
     return newInst;
   }
@@ -1510,11 +1543,6 @@ struct LowerHaskPass : public Pass {
     HaskTypeConverter typeConverter(&getContext());
     mlir::OwningRewritePatternList patterns(&getContext());
 
-    // OK why is it not able to legalize func? x(
-    // populateAffineToStdConversionPatterns(patterns, &getContext());
-    // populateLoopToStdConversionPatterns(patterns, &getContext());
-    // populateStdToLLVMConversionPatterns(typeConverter, patterns);
-
     patterns.insert<ForceOpConversionPattern>(typeConverter, &getContext());
     patterns.insert<CaseOpConversionPattern>(typeConverter, &getContext());
     patterns.insert<CaseIntOpConversionPattern>(typeConverter, &getContext());
@@ -1523,6 +1551,7 @@ struct LowerHaskPass : public Pass {
     patterns.insert<ErasedValueOpLowering>(typeConverter, &getContext());
     patterns.insert<TagGetOpLowering>(typeConverter, &getContext());
     patterns.insert<PapExtendOpLowering>(typeConverter, &getContext());
+    patterns.insert<HaskIntegerConstOpLowering>(typeConverter, &getContext());
 
     patterns.insert<ConstantOpLowering>(typeConverter, &getContext());
     patterns.insert<FuncOpLowering>(typeConverter, &getContext());
@@ -1536,7 +1565,6 @@ struct LowerHaskPass : public Pass {
     patterns.insert<HaskReturnOpConversionPattern>(typeConverter,
                                                    &getContext());
 
-    // Memref ops? is this really how I'm supposed to do this?
     patterns.insert<AllocOpLowering>(typeConverter, &getContext());
     patterns.insert<StoreOpLowering>(typeConverter, &getContext());
     patterns.insert<LoadOpLowering>(typeConverter, &getContext());
@@ -1547,8 +1575,6 @@ struct LowerHaskPass : public Pass {
     patterns.insert<AffineForOpLowering>(typeConverter, &getContext());
 
     ::llvm::DebugFlag = true;
-
-    // applyPartialConversion | applyFullConversion
 
     if (failed(mlir::applyPartialConversion(getOperation(), target,
                                             std::move(patterns)))) {
@@ -1572,14 +1598,14 @@ struct LowerHaskPass : public Pass {
 };
 } // end anonymous namespace.
 
-std::unique_ptr<mlir::Pass> createLowerHaskPass() {
-  return std::make_unique<LowerHaskPass>();
+std::unique_ptr<mlir::Pass> createLowerLeanPass() {
+  return std::make_unique<LowerLeanPass>();
 }
 
-void registerLowerHaskPass() {
+void registerLowerLeanPass() {
   ::mlir::registerPass(
-      "lz-lower", "Perform lowering to std+scf+ptr",
-      []() -> std::unique_ptr<::mlir::Pass> { return createLowerHaskPass(); });
+      "lean-lower", "Perform lowering from LEAN-lz to std+scf+ptr",
+      []() -> std::unique_ptr<::mlir::Pass> { return createLowerLeanPass(); });
 }
 
 } // namespace standalone

@@ -500,7 +500,7 @@ public:
                  &effects) {}
 };
 
-class IntegerConstOp : public Op<IntegerConstOp, OpTrait::ZeroOperands, OpTrait::OneResult, OpTrait::ZeroRegion,
+class HaskIntegerConstOp : public Op<HaskIntegerConstOp, OpTrait::ZeroOperands, OpTrait::OneResult, OpTrait::ZeroRegion,
   MemoryEffectOpInterface::Trait> {
   public:
   using Op::Op;
@@ -634,6 +634,7 @@ std::unique_ptr<mlir::Pass> createWorkerWrapperPass();
 std::unique_ptr<mlir::Pass> createWrapperWorkerPass();
 std::unique_ptr<mlir::Pass> createHaskCanonicalizePass();
 
+void registerLowerLeanPass();
 void registerLowerHaskPass();
 void registerHaskCanonicalizePass();
 void registerWorkerWrapperPass();

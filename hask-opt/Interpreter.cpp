@@ -408,7 +408,7 @@ struct Interpreter {
       return;
     }
 
-    if (standalone::IntegerConstOp cst = dyn_cast<IntegerConstOp>(op)) {
+    if (standalone::HaskIntegerConstOp cst = dyn_cast<HaskIntegerConstOp>(op)) {
       env.addNew(cst.getResult(), InterpValue::i(cst.getValue()));
       return;
     }

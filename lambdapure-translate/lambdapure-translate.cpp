@@ -1527,7 +1527,7 @@ private:
   mlir::Value mlirGen(NumberExprAST &expr) {
     // return builder.create<mlir::lambdapure::IntegerConstOp>(loc(),
     // expr.getValue());
-    return builder.create<standalone::IntegerConstOp>(loc(), expr.getValue());
+    return builder.create<standalone::HaskIntegerConstOp>(loc(), expr.getValue());
   }
 
   mlir::Value mlirGenVar(VariableExprAST &expr) {
