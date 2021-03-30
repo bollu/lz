@@ -19,6 +19,15 @@ open Std (HashMap)
 namespace Lean.IR.EmitMLIR
 open ExplicitBoxing (requiresBoxedVersion mkBoxedName isBoxedName)
 
+partial def lookupArgTy (tys: HashMap VarId IRType) (a: Arg) : IRType := 
+  match a with 
+  | Arg.var id => tys.find! id
+  | Arg.irrelevant => IRType.irrelevant
+
+def escape  {a : Type} [ToFormat a] : a -> Format
+  | a => "\"" ++ format a ++ "\""
+
+
 def leanMainFn := "_lean_main"
 
 structure Context where
@@ -331,7 +340,22 @@ def emitJmp (j : JoinPointId) (xs : Array Arg) : M Unit := do
   emit "goto "; emit j; emitLn ";"
 
 def emitLhs (z : VarId) : M Unit := do
-  emit z; emit " = "
+  emit "%"; emit z; emit " = "
+
+-- | emit args with types interleaved
+def emitArgsInterleavedTys (ys: Array Arg) (tys: HashMap VarId IRType) : M Unit :=
+  ys.size.forM fun i => do
+    if i > 0 then emit ", "
+    emitArg ys[i];
+    emit " : ";
+    emit (toCType (lookupArgTy tys ys[i]));
+
+-- | emit only the types of the arguments
+def emitArgsOnlyTys (ys: Array Arg) (tys: HashMap VarId IRType) : M Unit :=
+  ys.size.forM fun i => do
+    if i > 0 then emit ", "
+    emit (toCType (lookupArgTy tys ys[i]));
+
 
 def emitArgs (ys : Array Arg) : M Unit :=
   ys.size.forM fun i => do
@@ -419,15 +443,23 @@ def emitExternCall (f : FunId) (ps : Array Param) (extData : ExternAttrData) (ys
   | some (ExternEntry.foreign _ extFn)  => emitSimpleExternalCall extFn ps ys
   | _ => throw s!"failed to emit extern application '{f}'"
 
-def emitFullApp (z : VarId) (f : FunId) (ys : Array Arg) : M Unit := do
+def emitFullApp (z : VarId) (f : FunId) (ys : Array Arg) (tys: HashMap VarId IRType) : M Unit := do
   emitLhs z
   let decl ← getDecl f
   match decl with
   | Decl.extern _ ps _ extData => emitExternCall f ps extData ys
-  | _ =>
-    emitCName f
+  | _ => do
+    emit "call "
+    emit "@";
+    let cname <-  toCName f
+    emit (escape cname)
     if ys.size > 0 then emit "("; emitArgs ys; emit ")"
-    emitLn ";"
+    emit ":"
+    emit "("; emitArgsOnlyTys ys tys; emit ")"
+    emit "->"
+    emit "(";  emit (toCType (Decl.resultType decl)); emit ")"
+    emit "\n"
+
 
 def emitPartialApp (z : VarId) (f : FunId) (ys : Array Arg) : M Unit := do
   let decl ← getDecl f
@@ -491,21 +523,27 @@ def quoteString (s : String) : String :=
 
 def emitNumLit (t : IRType) (v : Nat) : M Unit := do
   if t.isObj then
-    if v < UInt32.size then
-      emit "lean_unsigned_to_nat("; emit v; emit "u)"
+    if v < UInt32.size then do
+      emit (escape "lz.unsigned_to_nat");
+      emit "(){value="; emit v; emit "}"; 
+      emitLn ": () -> !lz.value" 
+      -- emit "lean_unsigned_to_nat("; emit v; emit "u)"
     else
-      emit "lean_cstr_to_nat(\""; emit v; emit "\")"
+     emitLn "// ERR: lean_cstr_to_nat"
+      -- emit "call @lean_cstr_to_nat(\""; emit v; emit "\")"
   else
-    emit v
+    emit "std.constant"; emit v; emit " : "; emitLn (toCType t);
 
 def emitLit (z : VarId) (t : IRType) (v : LitVal) : M Unit := do
   emitLhs z;
   match v with
-  | LitVal.num v => emitNumLit t v; emitLn ";"
-  | LitVal.str v => emit "lean_mk_string("; emit (quoteString v); emitLn ");"
+  | LitVal.num v => emitNumLit t v
+  | LitVal.str v =>
+     emit "call @lean_mk_string(){value="; emit (quoteString v); emit "}";
+     emitLn ": () -> !ptr.void"
 
 -- | emit expression / Expr
-def emitVDecl (z : VarId) (t : IRType) (v : Expr) : M Unit :=
+def emitVDecl (z : VarId) (t : IRType) (v : Expr)  (tys: HashMap VarId IRType) : M Unit :=
   match v with
   | Expr.ctor c ys      => emitExprCtor z c ys
   | Expr.reset n x      => emitLn "// ERR: Expr.reset" -- emitReset z n x
@@ -513,14 +551,15 @@ def emitVDecl (z : VarId) (t : IRType) (v : Expr) : M Unit :=
   | Expr.proj i x       => emitLn "// ERR: Expr.proj" -- emitProj z i x
   | Expr.uproj i x      => emitLn "// ERR: Expr.uproj" -- emitUProj z i x
   | Expr.sproj n o x    => emitLn "// ERR: Expr.sproj" -- emitSProj z t n o x
-  | Expr.fap c ys       => emitLn "// ERR: Expr.fap" -- emitFullApp z c ys
+  | Expr.fap c ys       => do
+    emitLn "// ERR: Expr.fap"; emitFullApp z c ys tys
   | Expr.pap c ys       => emitLn "// ERR: Expr.pap" -- emitPartialApp z c ys
   | Expr.ap x ys        => emitLn "// ERR: Expr.ap" -- emitApp z x ys
   | Expr.box t x        => emitLn "// ERR: Expr.box" -- emitBox z x t
   | Expr.unbox x        => emitLn "// ERR: Expr.unbox" -- emitUnbox z t x
   | Expr.isShared x     => emitLn "// ERR: Expr.isShared" -- emitIsShared z x
   | Expr.isTaggedPtr x  => emitLn "// ERR: Expr.isTaggedPtr: " -- emitIsTaggedPtr z x
-  | Expr.lit v          => emitLn "// ERR: Expr.lit " -- emitLit z t v
+  | Expr.lit v          => emitLit z t v
 
 def isTailCall (x : VarId) (v : Expr) (b : FnBody) : M Bool := do
   let ctx ← read;
@@ -600,22 +639,20 @@ partial def emitCase (x : VarId) (xType : IRType) (alts : Array Alt) : M Unit :=
       | Alt.default b => emitLn "default: "; emitFnBody b
     emitLn "}"
 
-partial def lookupArgTy (tys: HashMap VarId IRType) (a: Arg) : IRType := 
-  match a with 
-  | Arg.var id => tys.find! id
-  | Arg.irrelevant => IRType.irrelevant
 
 partial def emitBlock (b : FnBody) (tys: HashMap VarId IRType) : M Unit := do
   match b with
   -- TODO: join point
-  | FnBody.jdecl j xs v b      => emitLn "ERR: // fnBody.jdecl" -- emitBlock b
+  | FnBody.jdecl j xs v b      => emitLn "// ERR: fnBody.jdecl" -- emitBlock b
   -- TODO: variable declaration
   | d@(FnBody.vdecl x t v b)   =>
     let ctx ← read
     if isTailCallTo ctx.mainFn d then
+      emitLn "// ERR: fnBody.vdecl (tail)";
       emitTailCall v
     else
-      emitVDecl x t v
+      emitLn "//ERR: fnBody.vdecl (non-tail)";
+      emitVDecl x t v tys
       emitBlock b tys
   | FnBody.inc x n c p b       =>
     emitLn "// ERR: FnBody.inc "
