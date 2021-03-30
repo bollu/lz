@@ -448,7 +448,7 @@ def emitFullApp (z : VarId) (f : FunId) (ys : Array Arg) (tys: HashMap VarId IRT
     emit "@";
     let cname <-  toCName f
     emit (escape cname)
-    if ys.size > 0 then emit "("; emitArgs ys; emit ")"
+    if ys.size > 0 then emit "("; emitArgsInterleavedTys ys tys; emit ")"
     emit ":"
     emit "("; emitArgsOnlyTys ys tys; emit ")"
     emit "->"
@@ -554,7 +554,7 @@ def emitVDecl (z : VarId) (t : IRType) (v : Expr)  (tys: HashMap VarId IRType) :
   | Expr.unbox x        => emitLn "// ERR: Expr.unbox" -- emitUnbox z t x
   | Expr.isShared x     => emitLn "// ERR: Expr.isShared" -- emitIsShared z x
   | Expr.isTaggedPtr x  => emitLn "// ERR: Expr.isTaggedPtr: " -- emitIsTaggedPtr z x
-  | Expr.lit v          => emitLit z t v
+  | Expr.lit v          => do emitLn "//ERR: Expr.lit"; emitLit z t v
 
 def isTailCall (x : VarId) (v : Expr) (b : FnBody) : M Bool := do
   let ctx ← read;
@@ -618,9 +618,9 @@ mutual
 
 partial def emitIf (x : VarId) (xType : IRType) (tag : Nat) (t : FnBody) (e : FnBody) : M Unit := do
   emit "if ("; emitTag x xType; emit " == "; emit tag; emitLn ")";
-  emitFnBody t;
+  emitFnBody t {};
   emitLn "else";
-  emitFnBody e
+  emitFnBody e {};
 
 partial def emitCase (x : VarId) (xType : IRType) (alts : Array Alt) : M Unit :=
   match isIf alts with
@@ -630,8 +630,8 @@ partial def emitCase (x : VarId) (xType : IRType) (alts : Array Alt) : M Unit :=
     let alts := ensureHasDefault alts;
     alts.forM fun alt => do
       match alt with
-      | Alt.ctor c b  => emit "case "; emit c.cidx; emitLn ":"; emitFnBody b
-      | Alt.default b => emitLn "default: "; emitFnBody b
+      | Alt.ctor c b  => emit "case "; emit c.cidx; emitLn ":"; (emitFnBody b {})
+      | Alt.default b => emitLn "default: "; (emitFnBody b {})
     emitLn "}"
 
 
@@ -641,6 +641,7 @@ partial def emitBlock (b : FnBody) (tys: HashMap VarId IRType) : M Unit := do
   | FnBody.jdecl j xs v b      => emitLn "// ERR: fnBody.jdecl" -- emitBlock b
   -- TODO: variable declaration
   | d@(FnBody.vdecl x t v b)   =>
+    let tys  := tys.insert x t
     let ctx ← read
     if isTailCallTo ctx.mainFn d then
       emitLn "// ERR: fnBody.vdecl (tail)";
@@ -648,8 +649,7 @@ partial def emitBlock (b : FnBody) (tys: HashMap VarId IRType) : M Unit := do
     else
       emitLn "//ERR: fnBody.vdecl (non-tail)";
       emitVDecl x t v tys
-      let tys  := tys.insert x t
-      emitBlock b tys
+      emitBlock b (tys.insert x t)
   | FnBody.inc x n c p b       =>
     emitLn "// ERR: FnBody.inc "
     -- unless p do emitInc x n c
@@ -678,7 +678,7 @@ partial def emitBlock (b : FnBody) (tys: HashMap VarId IRType) : M Unit := do
     emitLn "// ERR: FnBody.unreachable" -- emitLn "lean_internal_panic_unreachable();"
 
 partial def emitJPs : FnBody → M Unit
-  | FnBody.jdecl j xs v b => do emit j; emitLn ":"; emitFnBody v; emitJPs b
+  | FnBody.jdecl j xs v b => do emit j; emitLn ":"; emitFnBody v {}; emitJPs b
   | e                     => do unless e.isTerminal do emitJPs e.body
 
 
@@ -700,10 +700,10 @@ partial def insertFnBodyArgTypes : FnBody → M (HashMap VarId IRType)
 
 
 
-partial def emitFnBody (b : FnBody) : M Unit := do
+partial def emitFnBody (b : FnBody) (tys: HashMap VarId IRType): M Unit := do
   emitLn "{"
    
-  let tys <- insertFnBodyArgTypes b
+  -- let tys <- insertFnBodyArgTypes b
   emitBlock b tys
   emitLn "}"
 
@@ -715,7 +715,7 @@ def emitDeclAux (d : Decl) : M Unit := do
   withReader (fun ctx => { ctx with jpMap := jpMap }) do
   unless hasInitAttr env d.name do
     match d with
-    | Decl.fdecl (f := f) (xs := xs) (type := t) (body := b) .. =>
+    | Decl.fdecl (f := f) (xs := xs) (type := t) (body := b) .. => do
       let baseName ← toCName f;
       if xs.size == 0 then -- TODO: what is this doing?
         emit "static "
@@ -741,7 +741,9 @@ def emitDeclAux (d : Decl) : M Unit := do
       --     let x := xs[i]
       --     emit "lean_object* "; emit x.x; emit " = _args["; emit i; emitLn "];"
       -- emitLn "_start:";
-      withReader (fun ctx => { ctx with mainFn := f, mainParams := xs }) (emitFnBody b);
+      -- let tys :=  (xs.foldl (fun m p => (m.insert p.x p.ty)) {});
+      withReader (fun ctx => { ctx with mainFn := f, mainParams := xs })
+                 (emitFnBody b ((xs.foldl (fun m p => (m.insert p.x p.ty)) {})));
     | _ => pure ()
 
 def emitDecl (d : Decl) : M Unit := do
