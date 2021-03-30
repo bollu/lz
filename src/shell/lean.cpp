@@ -185,6 +185,7 @@ static void display_help(std::ostream & out) {
     std::cout << "  --run              call the 'main' definition in a file with the remaining arguments\n";
     std::cout << "  --o=oname -o       create olean file\n";
     std::cout << "  --c=fname -c       name of the C output file\n";
+    std::cout << "  --m=fname -mlir    name of the MLIR output file\n";
     std::cout << "  --stdin            take input from stdin\n";
     std::cout << "  --root=dir         set package root directory from which the module name of the input file is calculated\n"
               << "                     (default: current working directory)\n";
@@ -434,6 +435,7 @@ int main(int argc, char ** argv) {
     optional<std::string> server_in;
     std::string native_output;
     optional<std::string> c_output;
+    optional<std::string> mlir_output;
     optional<std::string> root_dir;
     buffer<string_ref> forwarded_args;
 
@@ -461,6 +463,10 @@ int main(int argc, char ** argv) {
             case 'c':
                 check_optarg("c");
                 c_output = optarg;
+                break;
+            case 'm':
+                check_optarg("m");
+                mlir_output = optarg;
                 break;
             case 's':
                 lean::lthread::set_thread_stack_size(
@@ -636,6 +642,21 @@ int main(int argc, char ** argv) {
             out.close();
         }
 
+        if (mlir_output && ok) {
+            std::ofstream out(*mlir_output);
+            if (out.fail()) {
+                std::cerr << "failed to create '" << *c_output << "'\n";
+                return 1;
+            }
+            time_task _("MLIR code generation", opts);
+            auto s = lean::ir::emit_mlir(env, *main_module_name).data();
+            out << s;
+            out.close();
+            std::cerr << s;
+        }
+
+
+        std::cerr << lean::ir::emit_mlir(env, *main_module_name).data();
         display_cumulative_profiling_times(std::cerr);
 
         return ok ? 0 : 1;

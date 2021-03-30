@@ -13,7 +13,7 @@ import Lean.Compiler.IR.NormIds
 import Lean.Compiler.IR.SimpCase
 import Lean.Compiler.IR.Boxing
 
-namespace Lean.IR.EmitC
+namespace Lean.IR.EmitMLIR
 open ExplicitBoxing (requiresBoxedVersion mkBoxedName isBoxedName)
 
 def leanMainFn := "_lean_main"
@@ -721,11 +721,11 @@ def main : M Unit := do
   emitMainFnIfNeeded
   emitFileFooter
 
-end EmitC
+end EmitMLIR
 
-@[export lean_ir_emit_c]
-def emitC (env : Environment) (modName : Name) : Except String String :=
-  match (EmitC.main { env := env, modName := modName }).run "" with
+@[export lean_ir_emit_mlir]
+def emitMLIR (env : Environment) (modName : Name) : Except String String :=
+  match (EmitMLIR.main { env := env, modName := modName }).run "" with
   | EStateM.Result.ok    _   s => Except.ok s
   | EStateM.Result.error err _ => Except.error err
 

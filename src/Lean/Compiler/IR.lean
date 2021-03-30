@@ -19,6 +19,7 @@ import Lean.Compiler.IR.ExpandResetReuse
 import Lean.Compiler.IR.UnboxResult
 import Lean.Compiler.IR.ElimDeadBranches
 import Lean.Compiler.IR.EmitC
+import Lean.Compiler.IR.EmitMLIR
 import Lean.Compiler.IR.CtorLayout
 import Lean.Compiler.IR.Sorry
 
@@ -27,21 +28,21 @@ namespace Lean.IR
 private def compileAux (decls : Array Decl) : CompilerM Unit := do
   log (LogEntry.message "// compileAux")
   -- logDecls `init decls
-  logPreamble (LogEntry.message mlirPreamble)
+  -- logPreamble (LogEntry.message mlirPreamble)
   -- logDeclsUnconditional decls
   checkDecls decls
   let decls ← elimDeadBranches decls
   logDecls `elim_dead_branches decls
   let decls := decls.map Decl.pushProj
   logDecls `push_proj decls
-  -- let decls := decls.map Decl.insertResetReuse
-  -- logDecls `reset_reuse decls
+  let decls := decls.map Decl.insertResetReuse
+  logDecls `reset_reuse decls
   let decls := decls.map Decl.elimDead
   logDecls `elim_dead decls
   let decls := decls.map Decl.simpCase
   logDecls `simp_case decls
   let decls := decls.map Decl.normalizeIds
-  logDeclsUnconditional decls
+  -- logDeclsUnconditional decls
 
   let decls ← inferBorrow decls
   logDecls `borrow decls
