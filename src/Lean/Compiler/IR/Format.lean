@@ -250,7 +250,7 @@ def formatParams (ps : Array Param) : Format :=
 
 -- | UNUSED BY US
 @[export lean_ir_format_fn_body_head]
-def formatFnBodyHead : FnBody → Format
+def formatFnBodyHead : FnBody → Format -- | UNUSED BY US
   | FnBody.vdecl x ty e b      => "%\"" ++  format x ++ "\"" ++ " = " ++ format e
   | FnBody.jdecl j xs v b      => "// ERR: " ++ format j ++ formatParams xs ++ " := ..."
   | FnBody.set x i y b         => "// ERR: " ++ "set " ++ format x ++ "[" ++ format i ++ "] := " ++ format y

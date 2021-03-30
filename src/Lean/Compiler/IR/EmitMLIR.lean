@@ -12,6 +12,9 @@ import Lean.Compiler.IR.EmitUtil
 import Lean.Compiler.IR.NormIds
 import Lean.Compiler.IR.SimpCase
 import Lean.Compiler.IR.Boxing
+import Lean.Data.KVMap
+
+open Std (HashMap)
 
 namespace Lean.IR.EmitMLIR
 open ExplicitBoxing (requiresBoxedVersion mkBoxedName isBoxedName)
@@ -50,18 +53,18 @@ def argToCString (x : Arg) : String :=
   | _         => "lean_box(0)"
 
 def emitArg (x : Arg) : M Unit :=
-  emit (argToCString x)
+  emit ("%" ++ (argToCString x))
 
 def toCType : IRType → String
-  | IRType.float      => "double"
-  | IRType.uint8      => "uint8_t"
-  | IRType.uint16     => "uint16_t"
-  | IRType.uint32     => "uint32_t"
-  | IRType.uint64     => "uint64_t"
-  | IRType.usize      => "size_t"
-  | IRType.object     => "lean_object*"
-  | IRType.tobject    => "lean_object*"
-  | IRType.irrelevant => "lean_object*"
+  | IRType.float      => "f64"
+  | IRType.uint8      => "i8"
+  | IRType.uint16     => "i16"
+  | IRType.uint32     => "i32"
+  | IRType.uint64     => "i64"
+  | IRType.usize      => "i64" -- TODO: find some better way to encode size.
+  | IRType.object     => "!ptr.void" -- "lean_object*"
+  | IRType.tobject    => "!ptr.void" -- "lean_object*"
+  | IRType.irrelevant => "!ptr.void" -- "lean_object*"
   | IRType.struct _ _ => panic! "not implemented yet"
   | IRType.union _ _  => panic! "not implemented yet"
 
@@ -93,20 +96,27 @@ def emitCInitName (n : Name) : M Unit :=
 def emitFnDeclAux (decl : Decl) (cppBaseName : String) (addExternForConsts : Bool) : M Unit := do
   let ps := decl.params
   let env ← getEnv
-  if ps.isEmpty && addExternForConsts then emit "extern "
-  emit (toCType decl.resultType ++ " " ++ cppBaseName)
-  unless ps.isEmpty do
+  if ps.isEmpty && addExternForConsts
+  then emit "func private "
+  else emit "func " 
+  -- emit (toCType decl.resultType ++ " " ++ cppBaseName)
+  emit ("@" ++ cppBaseName)
+  if ps.isEmpty
+  then 
+    emitLn ("() -> " ++ (toCType decl.resultType))
+  else do
     emit "("
     -- We omit irrelevant parameters for extern constants
     let ps := if isExternC env decl.name then ps.filter (fun p => !p.ty.isIrrelevant) else ps
     if ps.size > closureMaxArgs && isBoxedName decl.name then
-      emit "lean_object**"
+      emit "UNKNOWN_CASE_CLOSURE_MAX_ARGS"
+      -- emit "lean_object**"
     else
       ps.size.forM fun i => do
         if i > 0 then emit ", "
         emit (toCType ps[i].ty)
     emit ")"
-  emitLn ";"
+    emitLn (" -> " ++ (toCType decl.resultType))
 
 def emitFnDecl (decl : Decl) (addExternForConsts : Bool) : M Unit := do
   let cppBaseName ← toCName decl.name
@@ -239,6 +249,13 @@ def declareVar (x : VarId) (t : IRType) : M Unit := do
 def declareParams (ps : Array Param) : M Unit :=
   ps.forM fun p => declareVar p.x p.ty
 
+
+partial def mkVar2TypeInit : HashMap VarId IRType :=  {}
+
+partial def mkVar2TypeFnBody : FnBody -> HashMap VarId IRType
+| e => {}
+
+
 partial def declareVars : FnBody → Bool → M Bool
   | e@(FnBody.vdecl x t _ b), d => do
     let ctx ← read
@@ -334,7 +351,7 @@ def emitCtorSetArgs (z : VarId) (ys : Array Arg) : M Unit :=
   ys.size.forM fun i => do
     emit "lean_ctor_set("; emit z; emit ", "; emit i; emit ", "; emitArg ys[i]; emitLn ");"
 
-def emitCtor (z : VarId) (c : CtorInfo) (ys : Array Arg) : M Unit := do
+def emitExprCtor (z : VarId) (c : CtorInfo) (ys : Array Arg) : M Unit := do
   emitLhs z;
   if c.size == 0 && c.usize == 0 && c.ssize == 0 then do
     emit "lean_box("; emit c.cidx; emitLn ");"
@@ -490,20 +507,20 @@ def emitLit (z : VarId) (t : IRType) (v : LitVal) : M Unit := do
 -- | emit expression / Expr
 def emitVDecl (z : VarId) (t : IRType) (v : Expr) : M Unit :=
   match v with
-  | Expr.ctor c ys      => emitCtor z c ys
-  | Expr.reset n x      => emitReset z n x
-  | Expr.reuse x c u ys => emitReuse z x c u ys
-  | Expr.proj i x       => emitProj z i x
-  | Expr.uproj i x      => emitUProj z i x
-  | Expr.sproj n o x    => emitSProj z t n o x
-  | Expr.fap c ys       => emitFullApp z c ys
-  | Expr.pap c ys       => emitPartialApp z c ys
-  | Expr.ap x ys        => emitApp z x ys
-  | Expr.box t x        => emitBox z x t
-  | Expr.unbox x        => emitUnbox z t x
-  | Expr.isShared x     => emitIsShared z x
-  | Expr.isTaggedPtr x  => emitIsTaggedPtr z x
-  | Expr.lit v          => emitLit z t v
+  | Expr.ctor c ys      => emitExprCtor z c ys
+  | Expr.reset n x      => emitLn "// ERR: Expr.reset" -- emitReset z n x
+  | Expr.reuse x c u ys => emitLn "// ERR: Expr.reuse" --emitReuse z x c u ys
+  | Expr.proj i x       => emitLn "// ERR: Expr.proj" -- emitProj z i x
+  | Expr.uproj i x      => emitLn "// ERR: Expr.uproj" -- emitUProj z i x
+  | Expr.sproj n o x    => emitLn "// ERR: Expr.sproj" -- emitSProj z t n o x
+  | Expr.fap c ys       => emitLn "// ERR: Expr.fap" -- emitFullApp z c ys
+  | Expr.pap c ys       => emitLn "// ERR: Expr.pap" -- emitPartialApp z c ys
+  | Expr.ap x ys        => emitLn "// ERR: Expr.ap" -- emitApp z x ys
+  | Expr.box t x        => emitLn "// ERR: Expr.box" -- emitBox z x t
+  | Expr.unbox x        => emitLn "// ERR: Expr.unbox" -- emitUnbox z t x
+  | Expr.isShared x     => emitLn "// ERR: Expr.isShared" -- emitIsShared z x
+  | Expr.isTaggedPtr x  => emitLn "// ERR: Expr.isTaggedPtr: " -- emitIsTaggedPtr z x
+  | Expr.lit v          => emitLn "// ERR: Expr.lit " -- emitLit z t v
 
 def isTailCall (x : VarId) (v : Expr) (b : FnBody) : M Bool := do
   let ctx ← read;
@@ -583,32 +600,41 @@ partial def emitCase (x : VarId) (xType : IRType) (alts : Array Alt) : M Unit :=
       | Alt.default b => emitLn "default: "; emitFnBody b
     emitLn "}"
 
-partial def emitBlock (b : FnBody) : M Unit := do
+partial def lookupArgTy (tys: HashMap VarId IRType) (a: Arg) : IRType := 
+  match a with 
+  | Arg.var id => tys.find! id
+  | Arg.irrelevant => IRType.irrelevant
+
+partial def emitBlock (b : FnBody) (tys: HashMap VarId IRType) : M Unit := do
   match b with
-  | FnBody.jdecl j xs v b      => emitBlock b
+  -- TODO: join point
+  | FnBody.jdecl j xs v b      => emitLn "ERR: // fnBody.jdecl" -- emitBlock b
+  -- TODO: variable declaration
   | d@(FnBody.vdecl x t v b)   =>
     let ctx ← read
     if isTailCallTo ctx.mainFn d then
       emitTailCall v
     else
       emitVDecl x t v
-      emitBlock b
+      emitBlock b tys
   | FnBody.inc x n c p b       =>
-    unless p do emitInc x n c
-    emitBlock b
+    emitLn "// ERR: FnBody.inc "
+    -- unless p do emitInc x n c
+    emitBlock b tys
   | FnBody.dec x n c p b       =>
-    unless p do emitDec x n c
-    emitBlock b
-  | FnBody.del x b             => emitDel x; emitBlock b
-  | FnBody.setTag x i b        => emitSetTag x i; emitBlock b
-  | FnBody.set x i y b         => emitSet x i y; emitBlock b
-  | FnBody.uset x i y b        => emitUSet x i y; emitBlock b
-  | FnBody.sset x i o y t b    => emitSSet x i o y t; emitBlock b
-  | FnBody.mdata _ b           => emitBlock b
-  | FnBody.ret x               => emit "return "; emitArg x; emitLn ";"
+    emitLn "// ERR: FnBody.dec "
+    -- unless p do emitDec x n c
+    emitBlock b tys
+  | FnBody.del x b             => emitLn "// ERR: FnBody.del"; emitBlock b tys ; -- emitDel x; emitBlock b
+  | FnBody.setTag x i b        => emitLn "// ERR: FnBody.setTag"; emitBlock b tys; -- emitSetTag x i; emitBlock b
+  | FnBody.set x i y b         => emitLn "// ERR: FnBody.set"; emitBlock b  tys; -- emitSet x i y; emitBlock b
+  | FnBody.uset x i y b        => emitLn "// ERR: FnBody.uset"; emitBlock b tys; -- emitUSet x i y; emitBlock b
+  | FnBody.sset x i o y t b    => emitLn "// ERR: FnBody.sset"; emitBlock b tys; -- emitSSet x i o y t; emitBlock b
+  | FnBody.mdata _ b           => emitBlock b tys
+  | FnBody.ret x               => emit "return("; emitArg x; emit "): "; emit "(";  emit (toCType (lookupArgTy tys x)); emitLn ") -> ()";
   | FnBody.case _ x xType alts => emitCase x xType alts
   | FnBody.jmp j xs            => emitJmp j xs
-  | FnBody.unreachable         => emitLn "lean_internal_panic_unreachable();"
+  | FnBody.unreachable         => emitLn "// ERR: FnBody.unreachable" -- emitLn "lean_internal_panic_unreachable();"
 
 partial def emitJPs : FnBody → M Unit
   | FnBody.jdecl j xs v b => do emit j; emitLn ":"; emitFnBody v; emitJPs b
@@ -616,10 +642,11 @@ partial def emitJPs : FnBody → M Unit
 
 partial def emitFnBody (b : FnBody) : M Unit := do
   emitLn "{"
-  let declared ← declareVars b false
-  if declared then emitLn ""
-  emitBlock b
-  emitJPs b
+  -- let declared ← declareVars b false
+  -- if declared then emitLn ""
+  let tys <- mkVar2TypeFnBody b
+  emitBlock b tys
+  -- emitJPs b
   emitLn "}"
 
 end
@@ -632,11 +659,12 @@ def emitDeclAux (d : Decl) : M Unit := do
     match d with
     | Decl.fdecl (f := f) (xs := xs) (type := t) (body := b) .. =>
       let baseName ← toCName f;
-      if xs.size == 0 then
+      if xs.size == 0 then -- TODO: what is this doing?
         emit "static "
-      emit (toCType t); emit " ";
+      emit "func ";
+      -- emit (toCType t); emit " ";
       if xs.size > 0 then
-        emit baseName;
+        emit ("@" ++ baseName);
         emit "(";
         if xs.size > closureMaxArgs && isBoxedName d.name then
           emit "lean_object** _args"
@@ -644,18 +672,18 @@ def emitDeclAux (d : Decl) : M Unit := do
           xs.size.forM fun i => do
             if i > 0 then emit ", "
             let x := xs[i]
-            emit (toCType x.ty); emit " "; emit x.x
+            emit "%"; emit x.x; emit ": "; emit (toCType x.ty)
         emit ")"
-      else
-        emit ("_init_" ++ baseName ++ "()")
-      emitLn " {";
-      if xs.size > closureMaxArgs && isBoxedName d.name then
-        xs.size.forM fun i => do
-          let x := xs[i]
-          emit "lean_object* "; emit x.x; emit " = _args["; emit i; emitLn "];"
-      emitLn "_start:";
+        emit (" -> " ++ (toCType t))
+      else -- [xs.size = 0]
+        emitLn ("@_init_" ++ baseName ++ "()" ++ " -> " ++ (toCType t))
+      -- | Do not have args like this.
+      -- if xs.size > closureMaxArgs && isBoxedName d.name then
+      --   xs.size.forM fun i => do
+      --     let x := xs[i]
+      --     emit "lean_object* "; emit x.x; emit " = _args["; emit i; emitLn "];"
+      -- emitLn "_start:";
       withReader (fun ctx => { ctx with mainFn := f, mainParams := xs }) (emitFnBody b);
-      emitLn "}"
     | _ => pure ()
 
 def emitDecl (d : Decl) : M Unit := do
@@ -714,12 +742,12 @@ def emitInitFn : M Unit := do
   emitLns ["return lean_io_result_mk_ok(lean_box(0));", "}"]
 
 def main : M Unit := do
-  emitFileHeader
+  -- emitFileHeader
   emitFnDecls
   emitFns
-  emitInitFn
-  emitMainFnIfNeeded
-  emitFileFooter
+  -- emitInitFn
+  -- emitMainFnIfNeeded
+  -- emitFileFooter
 
 end EmitMLIR
 
