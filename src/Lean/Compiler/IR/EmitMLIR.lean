@@ -259,11 +259,6 @@ def declareParams (ps : Array Param) : M Unit :=
   ps.forM fun p => declareVar p.x p.ty
 
 
-partial def mkVar2TypeInit : HashMap VarId IRType :=  {}
-
-partial def mkVar2TypeFnBody : FnBody -> HashMap VarId IRType
-| e => {}
-
 
 partial def declareVars : FnBody → Bool → M Bool
   | e@(FnBody.vdecl x t _ b), d => do
@@ -653,6 +648,7 @@ partial def emitBlock (b : FnBody) (tys: HashMap VarId IRType) : M Unit := do
     else
       emitLn "//ERR: fnBody.vdecl (non-tail)";
       emitVDecl x t v tys
+      let tys  := tys.insert x t
       emitBlock b tys
   | FnBody.inc x n c p b       =>
     emitLn "// ERR: FnBody.inc "
@@ -662,28 +658,53 @@ partial def emitBlock (b : FnBody) (tys: HashMap VarId IRType) : M Unit := do
     emitLn "// ERR: FnBody.dec "
     -- unless p do emitDec x n c
     emitBlock b tys
-  | FnBody.del x b             => emitLn "// ERR: FnBody.del"; emitBlock b tys ; -- emitDel x; emitBlock b
-  | FnBody.setTag x i b        => emitLn "// ERR: FnBody.setTag"; emitBlock b tys; -- emitSetTag x i; emitBlock b
-  | FnBody.set x i y b         => emitLn "// ERR: FnBody.set"; emitBlock b  tys; -- emitSet x i y; emitBlock b
-  | FnBody.uset x i y b        => emitLn "// ERR: FnBody.uset"; emitBlock b tys; -- emitUSet x i y; emitBlock b
-  | FnBody.sset x i o y t b    => emitLn "// ERR: FnBody.sset"; emitBlock b tys; -- emitSSet x i o y t; emitBlock b
+  | FnBody.del x b             => 
+    emitLn "// ERR: FnBody.del"; emitBlock b tys ; -- emitDel x; emitBlock b
+  | FnBody.setTag x i b        => 
+    emitLn "// ERR: FnBody.setTag"; emitBlock b tys; -- emitSetTag x i; emitBlock b
+  | FnBody.set x i y b         =>
+    emitLn "// ERR: FnBody.set"; emitBlock b  tys; -- emitSet x i y; emitBlock b
+  | FnBody.uset x i y b        =>
+    emitLn "// ERR: FnBody.uset"; emitBlock b tys; -- emitUSet x i y; emitBlock b
+  | FnBody.sset x i o y t b    =>
+    emitLn "// ERR: FnBody.sset"; emitBlock b tys; -- emitSSet x i o y t; emitBlock b
   | FnBody.mdata _ b           => emitBlock b tys
-  | FnBody.ret x               => emit "return("; emitArg x; emit "): "; emit "(";  emit (toCType (lookupArgTy tys x)); emitLn ") -> ()";
+  | FnBody.ret x               =>
+    emit "return("; emitArg x; emit ")";
+    emit ": (";  emit (toCType (lookupArgTy tys x)); emitLn ") -> ()";
   | FnBody.case _ x xType alts => emitCase x xType alts
   | FnBody.jmp j xs            => emitJmp j xs
-  | FnBody.unreachable         => emitLn "// ERR: FnBody.unreachable" -- emitLn "lean_internal_panic_unreachable();"
+  | FnBody.unreachable         => 
+    emitLn "// ERR: FnBody.unreachable" -- emitLn "lean_internal_panic_unreachable();"
 
 partial def emitJPs : FnBody → M Unit
   | FnBody.jdecl j xs v b => do emit j; emitLn ":"; emitFnBody v; emitJPs b
   | e                     => do unless e.isTerminal do emitJPs e.body
 
+
+-- | function to create a hash map of arguments introduced by this fnBody
+partial def insertFnBodyArgTypes : FnBody → M (HashMap VarId IRType)
+  | e@(FnBody.vdecl x t _ b), d => do
+    -- let ctx ← read
+    -- if isTailCallTo ctx.mainFn e then
+    --   pure d
+    -- else
+    -- declareVar x t; declareVars b true
+    pure {}
+  | FnBody.jdecl j xs _ b,    d => do
+    -- pure {}
+    pure (xs.foldl (fun m p => (m.insert p.x p.ty)) {})
+    -- declareParams xs; declareVars b (d || xs.size > 0)
+  | e,                        d => pure {}
+
+
+
+
 partial def emitFnBody (b : FnBody) : M Unit := do
   emitLn "{"
-  -- let declared ← declareVars b false
-  -- if declared then emitLn ""
-  let tys <- mkVar2TypeFnBody b
+   
+  let tys <- insertFnBodyArgTypes b
   emitBlock b tys
-  -- emitJPs b
   emitLn "}"
 
 end
