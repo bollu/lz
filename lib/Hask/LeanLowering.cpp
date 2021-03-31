@@ -266,8 +266,8 @@ public:
     FunctionType outty =
         typeConverter->convertType(fnty).dyn_cast<FunctionType>();
     assert(outty &&
-               "was asked to lower a constant op that's not a reference to "
-               "a function?!");
+           "was asked to lower a constant op that's not a reference to "
+           "a function?!");
 
     // Anything whose legality is checked with `isDynamicallyLegal` needs to be
     // `rewrite.erase`d and then `rewriter.create`d. It seems like you can't
@@ -375,34 +375,59 @@ public:
   }
 };
 
-class HaskIntegerConstOpLowering  : public ConversionPattern  {
+class HaskIntegerConstOpLowering : public ConversionPattern {
 public:
+  // i64 -> !ptr.void
+  static FuncOp getOrCreateLeanUnsignedToNat(PatternRewriter &rewriter,
+                                             ModuleOp m) {
+    const std::string name = "lean_unsigned_to_nat";
+    if (FuncOp fn = m.lookupSymbol<FuncOp>(name)) {
+      return fn;
+    }
+
+    MLIRContext *context = rewriter.getContext();
+    Type argty = rewriter.getI64Type();
+    Type retty = ptr::VoidPtrType::get(context);
+    FunctionType fnty = rewriter.getFunctionType(argty, retty);
+
+    PatternRewriter::InsertionGuard insertGuard(rewriter);
+    rewriter.setInsertionPointToStart(m.getBody());
+    FuncOp fn = rewriter.create<FuncOp>(m.getLoc(), name, fnty);
+    fn.setPrivate();
+    return fn;
+  }
+
   explicit HaskIntegerConstOpLowering(TypeConverter &tc, MLIRContext *context)
-  : ConversionPattern(HaskIntegerConstOp::getOperationName(), 1, tc, context) {}
+      : ConversionPattern(HaskIntegerConstOp::getOperationName(), 1, tc,
+                          context) {}
   LogicalResult
   matchAndRewrite(Operation *operation, ArrayRef<Value> rands,
                   ConversionPatternRewriter &rewriter) const override {
     HaskIntegerConstOp op = cast<HaskIntegerConstOp>(operation);
+    ModuleOp mod = op->getParentOfType<ModuleOp>();
+    FuncOp fn = getOrCreateLeanUnsignedToNat(rewriter, mod);
     const int width = 64;
-    rewriter.replaceOpWithNewOp<ConstantIntOp>(operation, op.getValue(), width);
-
+    Value i = rewriter.create<ConstantIntOp>(rewriter.getUnknownLoc(),
+                                             op.getValue(), width);
+    rewriter.replaceOpWithNewOp<CallOp>(operation, fn, i);
     return success();
   }
 };
 
-
 //
-//class HaskIntegerConstOpLowering : public ConversionPattern {
-//public:
+// class HaskIntegerConstOpLowering : public ConversionPattern {
+// public:
 //  explicit HaskIntegerConstOpLowering(TypeConverter &tc, MLIRContext *context)
-//  : ConversionPattern(HaskIntegerConstOp::getOperationName(), 1, tc, context) {}
+//  : ConversionPattern(HaskIntegerConstOp::getOperationName(), 1, tc, context)
+//  {}
 //
 //  LogicalResult
 //  matchAndRewrite(Operation *operation, ArrayRef<Value> operands,
 //                  ConversionPatternRewriter &rewriter) const override {
 ////    HaskIntegerConstOp op = cast<HaskIntegerConstOp>(operation);
 ////    const int width = 64;
-////    rewriter.replaceOpWithNewOp<ConstantIntOp>(operation, op.getValue(), width);
+////    rewriter.replaceOpWithNewOp<ConstantIntOp>(operation, op.getValue(),
+///width);
 //    return success();
 //};
 
@@ -418,7 +443,7 @@ public:
     auto call = cast<CallOp>(operation);
     SmallVector<Type, 4> resultTypes;
     if (failed(
-        typeConverter->convertTypes(call.getResultTypes(), resultTypes))) {
+            typeConverter->convertTypes(call.getResultTypes(), resultTypes))) {
       return failure();
     }
 
@@ -1264,12 +1289,10 @@ bool isTypeLegal(Type t) {
 }
 
 // I don't know why, but OpConversionPattern just dies.
-//class ErasedValueOpLowering : public OpConversionPattern<ErasedValueOp> {
+// class ErasedValueOpLowering : public OpConversionPattern<ErasedValueOp> {
 struct ErasedValueOpLowering : public mlir::ConversionPattern {
 public:
-
-
-// i64 -> !ptr.void
+  // i64 -> !ptr.void
   static FuncOp getOrCreateLeanBox(PatternRewriter &rewriter, ModuleOp m) {
     const std::string name = "lean_box";
     if (FuncOp fn = m.lookupSymbol<FuncOp>(name)) {
@@ -1288,10 +1311,8 @@ public:
     return fn;
   }
 
-
   explicit ErasedValueOpLowering(TypeConverter &tc, MLIRContext *context)
-      : ConversionPattern(ErasedValueOp::getOperationName(), 1, tc,
-                          context) {}
+      : ConversionPattern(ErasedValueOp::getOperationName(), 1, tc, context) {}
 
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> rands,
@@ -1305,15 +1326,12 @@ public:
   }
 };
 
-
-
 // I don't know why, but OpConversionPattern just dies.
-//class ErasedValueOpLowering : public OpConversionPattern<ErasedValueOp> {
+// class ErasedValueOpLowering : public OpConversionPattern<ErasedValueOp> {
 struct TagGetOpLowering : public mlir::ConversionPattern {
 public:
   explicit TagGetOpLowering(TypeConverter &tc, MLIRContext *context)
-      : ConversionPattern(TagGetOp::getOperationName(), 1, tc,
-                          context) {}
+      : ConversionPattern(TagGetOp::getOperationName(), 1, tc, context) {}
 
   static FuncOp getOrCreateLeanTag(PatternRewriter &rewriter, ModuleOp m) {
     const std::string name = "lean_obj_tag";
@@ -1334,8 +1352,6 @@ public:
     return fn;
   }
 
-
-
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> rands,
                   ConversionPatternRewriter &rewriter) const override {
@@ -1350,7 +1366,8 @@ public:
 struct PapExtendOpLowering : public mlir::ConversionPattern {
 public:
   // TODO: need variadic arguments?
-  static FuncOp getOrCreateLeanApply(int nargs, PatternRewriter &rewriter, ModuleOp m) {
+  static FuncOp getOrCreateLeanApply(int nargs, PatternRewriter &rewriter,
+                                     ModuleOp m) {
     const std::string name = "lean_apply_" + std::to_string(nargs);
     if (FuncOp fn = m.lookupSymbol<FuncOp>(name)) {
       return fn;
@@ -1359,7 +1376,9 @@ public:
     SmallVector<Type, 4> argtys;
 
     argtys.push_back(ptr::VoidPtrType::get(context)); // argument.
-    for(int i = 0; i < nargs; ++i) { argtys.push_back(ptr::VoidPtrType::get(context)); }
+    for (int i = 0; i < nargs; ++i) {
+      argtys.push_back(ptr::VoidPtrType::get(context));
+    }
 
     Type retty = rewriter.getI64Type();
     FunctionType fnty = rewriter.getFunctionType(argtys, retty);
@@ -1371,10 +1390,8 @@ public:
     return fn;
   }
 
-
-  explicit  PapExtendOpLowering(TypeConverter &tc, MLIRContext *context)
-      : ConversionPattern(PapExtendOp::getOperationName(), 1, tc,
-                          context) {}
+  explicit PapExtendOpLowering(TypeConverter &tc, MLIRContext *context)
+      : ConversionPattern(PapExtendOp::getOperationName(), 1, tc, context) {}
 
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> rands,
@@ -1384,16 +1401,16 @@ public:
     // def emitApp (z : VarId) (f : VarId) (ys : Array Arg) : M Unit :=
     // if ys.size > closureMaxArgs then do
     //  emit "{ lean_object* _aargs[] = {"; emitArgs ys; emitLn "};";
-    // emitLhs z; emit "lean_apply_m("; emit f; emit ", "; emit ys.size; emitLn ", _aargs); }"
-    // else do
-    //   emitLhs z; emit "lean_apply_"; emit ys.size; emit "("; emit f; emit ", "; emitArgs ys; emitLn ");"
+    // emitLhs z; emit "lean_apply_m("; emit f; emit ", "; emit ys.size; emitLn
+    // ", _aargs); }" else do
+    //   emitLhs z; emit "lean_apply_"; emit ys.size; emit "("; emit f; emit ",
+    //   "; emitArgs ys; emitLn ");"
     // TODO: generate lean_apply_m;
     FuncOp f = getOrCreateLeanApply(papext.getNumFnArguments(), rewriter, mod);
     rewriter.replaceOpWithNewOp<mlir::CallOp>(op, f, papext->getOperands());
     return success();
   }
 };
-
 
 struct LowerLeanPass : public Pass {
   LowerLeanPass() : Pass(mlir::TypeID::get<LowerLeanPass>()){};

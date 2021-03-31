@@ -627,8 +627,7 @@ public:
 */
 
 // lower lz to LLVM by eliminating all the junk.
-std::unique_ptr<mlir::Pass>
-createLowerHaskToLLVMPass();
+std::unique_ptr<mlir::Pass> createLowerHaskToLLVMPass();
 // canonicalize, eliminating all intermediate waste.
 std::unique_ptr<mlir::Pass> createWorkerWrapperPass();
 std::unique_ptr<mlir::Pass> createWrapperWorkerPass();
