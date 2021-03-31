@@ -5,4 +5,4 @@
 -- CHECK-INTERPRET: 7
 
 set_option trace.compiler.ir.init true
-def main (xs: List String) : IO Unit := IO.println 7
+def main (xs: List String) : IO Unit := IO.println (7.9)
