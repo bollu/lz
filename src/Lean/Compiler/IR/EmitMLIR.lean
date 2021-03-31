@@ -71,9 +71,9 @@ def toCType : IRType → String
   | IRType.uint32     => "i32"
   | IRType.uint64     => "i64"
   | IRType.usize      => "i64" -- TODO: find some better way to encode size.
-  | IRType.object     => "!ptr.void" -- "lean_object*"
-  | IRType.tobject    => "!ptr.void" -- "lean_object*"
-  | IRType.irrelevant => "!ptr.void" -- "lean_object*"
+  | IRType.object     => "!lz.value" -- "lean_object*"
+  | IRType.tobject    => "!lz.value" -- "lean_object*"
+  | IRType.irrelevant => "!lz.value" -- "lean_object*"
   | IRType.struct _ _ => panic! "not implemented yet"
   | IRType.union _ _  => panic! "not implemented yet"
 
@@ -101,13 +101,14 @@ def toCInitName (n : Name) : M String := do
 
 def emitCInitName (n : Name) : M Unit :=
   toCInitName n >>= emit
-
+ 
+-- called from emitFnDecls -> emitFnDecl
 def emitFnDeclAux (decl : Decl) (cppBaseName : String) (addExternForConsts : Bool) : M Unit := do
   let ps := decl.params
   let env ← getEnv
   if ps.isEmpty && addExternForConsts
   then emit "func private "
-  else emit "func " 
+  else emit "func private " 
   -- emit (toCType decl.resultType ++ " " ++ cppBaseName)
   emit ("@" ++ cppBaseName)
   if ps.isEmpty
@@ -126,7 +127,8 @@ def emitFnDeclAux (decl : Decl) (cppBaseName : String) (addExternForConsts : Boo
         emit (toCType ps[i].ty)
     emit ")"
     emitLn (" -> " ++ (toCType decl.resultType))
-
+ 
+-- called from emitFnDecls -> emitFnDecl
 def emitFnDecl (decl : Decl) (addExternForConsts : Bool) : M Unit := do
   let cppBaseName ← toCName decl.name
   emitFnDeclAux decl cppBaseName addExternForConsts
@@ -464,7 +466,9 @@ def emitFullApp (z : VarId) (f : FunId) (ys : Array Arg) (tys: HashMap VarId IRT
     emit "@";
     let cname <-  toCName f
     emit (escape cname)
-    if ys.size > 0 then emit "("; emitArgs ys; emit ")"
+    emit "("; 
+    if ys.size > 0 then emitArgs ys else emit ""; 
+    emit ")" 
     emit ":"
     emit "("; emitArgsOnlyTys ys tys; emit ")"
     emit "->"
@@ -535,7 +539,7 @@ def quoteString (s : String) : String :=
 def emitNumLit (t : IRType) (v : Nat) : M Unit := do
   if t.isObj then
     if v < UInt32.size then do
-      emit (escape "lz.unsigned_to_nat");
+      emit (escape "lz.int");
       emit "(){value="; emit v; emit "}"; 
       emit ": () ->"; emit "(";  emit (toCType t); emit ")"; emit "\n";
       -- emit "lean_unsigned_to_nat("; emit v; emit "u)"
@@ -552,7 +556,7 @@ def emitLit (z : VarId) (t : IRType) (v : LitVal) : M Unit := do
   | LitVal.num v => emitNumLit t v
   | LitVal.str v =>
      emit "call @lean_mk_string(){value="; emit (quoteString v); emit "}";
-     emitLn ": () -> !ptr.void"
+     emit ": () -> "; emit (toCType t)
 
 -- | emit expression / Expr
 def emitVDecl (z : VarId) (t : IRType) (v : Expr)  (tys: HashMap VarId IRType) : M Unit :=
@@ -719,23 +723,28 @@ partial def insertFnBodyArgTypes : FnBody → M (HashMap VarId IRType)
 
 partial def emitFnBody (b : FnBody) (tys: HashMap VarId IRType): M Unit := do
   emitLn "{"
-   
   -- let tys <- insertFnBodyArgTypes b
   emitBlock b tys
   emitLn "}"
 
 end
-
+  
+-- called from emitFns -> emitDecl -> emitDeclAux
 def emitDeclAux (d : Decl) : M Unit := do
+  let dname <- toCName d.name
+  emitLn ("// ERR: emitDeclAux ("  ++ dname ++ ") | isExtern?" ++ (format (Decl.isExtern d)))
   let env ← getEnv
   let (vMap, jpMap) := mkVarJPMaps d
   withReader (fun ctx => { ctx with jpMap := jpMap }) do
-  unless hasInitAttr env d.name do
+  -- | TODO: what does hasInitAttr guard against?
+  -- unless (hasInitAttr env d.name) do
+  do
     match d with
     | Decl.fdecl (f := f) (xs := xs) (type := t) (body := b) .. => do
+      emitLn ("// ERR: emitDeclAux Decl.fdecl ("  ++ dname ++ ")")
       let baseName ← toCName f;
-      if xs.size == 0 then -- TODO: what is this doing?
-        -- emit "static " -- TODO: understand what this is doing
+      -- if xs.size == 0 then -- TODO: what is this doing?
+      --   emit "static " -- TODO: understand what this is doing
       emit "func ";
       -- emit (toCType t); emit " ";
       if xs.size > 0 then
@@ -761,14 +770,16 @@ def emitDeclAux (d : Decl) : M Unit := do
       -- let tys :=  (xs.foldl (fun m p => (m.insert p.x p.ty)) {});
       withReader (fun ctx => { ctx with mainFn := f, mainParams := xs })
                  (emitFnBody b ((xs.foldl (fun m p => (m.insert p.x p.ty)) {})));
-    | _ => pure ()
+    | _ => emitLn "// ERR: unknwown decl"; pure ()
 
+-- calle from emitFns
 def emitDecl (d : Decl) : M Unit := do
   let d := d.normalizeIds; -- ensure we don't have gaps in the variable indices
   try
     emitDeclAux d
   catch err =>
     throw s!"{err}\ncompiling:\n{d}"
+    panic s!"{err}\ncompiling:\n{d}"
 
 def emitFns : M Unit := do
   let env ← getEnv;
