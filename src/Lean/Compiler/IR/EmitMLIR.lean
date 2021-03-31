@@ -95,9 +95,9 @@ def toCInitName (n : Name) : M String := do
   let env ← getEnv;
   -- TODO: we should support simple export names only
   match getExportNameFor env n with
-  | some (Name.str Name.anonymous s _) => pure $ "_init_" ++ s
+  | some (Name.str Name.anonymous s _) => pure $ s -- pure $ "_init_" ++ s
   | some _                             => throwInvalidExportName n
-  | none                               => pure ("_init_" ++ n.mangle)
+  | none                               => pure $ n.mangle -- pure ("_init_" ++ n.mangle)
 
 def emitCInitName (n : Name) : M Unit :=
   toCInitName n >>= emit
@@ -129,9 +129,9 @@ def emitFnFwdDeclAux (decl : Decl) (cppBaseName : String) (addExternForConsts : 
     emitLn (" -> " ++ (toCType decl.resultType))
  
 -- called from emitFnDecls -> emitFnDecl
--- def emitFnFwdDecl (decl : Decl) (addExternForConsts : Bool) : M Unit := do
---  let cppBaseName ← toCName decl.name
---  emitFnFwdDeclAux decl cppBaseName addExternForConsts
+def emitFnFwdDecl (decl : Decl) (addExternForConsts : Bool) : M Unit := do
+  let cppBaseName ← toCName decl.name
+  emitFnFwdDeclAux decl cppBaseName addExternForConsts
 
 def emitExternDeclAux (decl : Decl) (cNameStr : String) : M Unit := do
   -- let cName := Name.mkSimple cNameStr
@@ -154,7 +154,9 @@ def emitFnFwdDecls : M Unit := do
     | some cName => do
             let cName  <- toCName cName;
             emitExternDeclAux decl cName
-    | none       => pure () --   emitFnFwdDecl decl (!modDecls.contains n)
+    | none       => if modDecls.contains n
+                    then pure ()
+                    else emitFnFwdDecl decl (!modDecls.contains n)
 
 def emitMainFn : M Unit := do
   let d ← getDecl `main
