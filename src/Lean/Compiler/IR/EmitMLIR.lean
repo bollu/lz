@@ -102,15 +102,15 @@ def toCInitName (n : Name) : M String := do
 def emitCInitName (n : Name) : M Unit :=
   toCInitName n >>= emit
  
--- called from emitFnDecls -> emitFnDecl
-def emitFnDeclAux (decl : Decl) (cppBaseName : String) (addExternForConsts : Bool) : M Unit := do
+-- called from emitFnFwdDecls -> emitFnFwdDecl
+def emitFnFwdDeclAux (decl : Decl) (cppBaseName : String) (addExternForConsts : Bool) : M Unit := do
   let ps := decl.params
   let env ← getEnv
-  if ps.isEmpty && addExternForConsts
-  then emit "func private "
-  else emit "func private " 
+  -- if ps.isEmpty && addExternForConsts
+  -- then emit "func private "
+  -- else emit "func private " 
   -- emit (toCType decl.resultType ++ " " ++ cppBaseName)
-  emit ("@" ++ cppBaseName)
+  emit ("func private @" ++ (escape cppBaseName))
   if ps.isEmpty
   then 
     emitLn ("() -> " ++ (toCType decl.resultType))
@@ -129,17 +129,17 @@ def emitFnDeclAux (decl : Decl) (cppBaseName : String) (addExternForConsts : Boo
     emitLn (" -> " ++ (toCType decl.resultType))
  
 -- called from emitFnDecls -> emitFnDecl
-def emitFnDecl (decl : Decl) (addExternForConsts : Bool) : M Unit := do
-  let cppBaseName ← toCName decl.name
-  emitFnDeclAux decl cppBaseName addExternForConsts
+-- def emitFnFwdDecl (decl : Decl) (addExternForConsts : Bool) : M Unit := do
+--  let cppBaseName ← toCName decl.name
+--  emitFnFwdDeclAux decl cppBaseName addExternForConsts
 
 def emitExternDeclAux (decl : Decl) (cNameStr : String) : M Unit := do
-  let cName := Name.mkSimple cNameStr
+  -- let cName := Name.mkSimple cNameStr
   let env ← getEnv
   let extC := isExternC env decl.name
-  emitFnDeclAux decl cNameStr (!extC)
+  emitFnFwdDeclAux decl cNameStr (!extC)
 
-def emitFnDecls : M Unit := do
+def emitFnFwdDecls : M Unit := do
   let env ← getEnv
   let decls := getDecls env
   let modDecls  : NameSet := decls.foldl (fun s d => s.insert d.name) {}
@@ -147,9 +147,14 @@ def emitFnDecls : M Unit := do
   let usedDecls := usedDecls.toList
   usedDecls.forM fun n => do
     let decl ← getDecl n;
+  --   if Decl.isExtern decl 
+  --   then emitExternDeclAux decl cname
+  --   else pure ()
     match getExternNameFor env `c decl.name with
-    | some cName => emitExternDeclAux decl cName
-    | none       => emitFnDecl decl (!modDecls.contains n)
+    | some cName => do
+            let cName  <- toCName cName;
+            emitExternDeclAux decl cName
+    | none       => pure () --   emitFnFwdDecl decl (!modDecls.contains n)
 
 def emitMainFn : M Unit := do
   let d ← getDecl `main
@@ -421,7 +426,8 @@ def toStringArgs (ys : Array Arg) : List String :=
 
 def emitSimpleExternalCall (f : String) (ps : Array Param) (ys : Array Arg)
   (tys: HashMap VarId IRType) (retty: IRType) : M Unit := do
-  emit "call "; emit "@"; emit (escape f);
+  let fname <- toCName f;
+  emit "call "; emit "@"; emit (escape fname)
   emit "("
   -- We must remove irrelevant arguments to extern calls.
   discard <| ys.size.foldM
@@ -445,7 +451,7 @@ def emitExternCall (f : FunId) (ps : Array Param) (extData : ExternAttrData) (ys
   (tys: HashMap VarId IRType) (retty: IRType) : M Unit := do
    match getExternEntryFor extData `c with
   | some (ExternEntry.standard _ extFn) => do
-         -- emitLn "//ERR: ExternEntry.standard"; 
+         emitLn "//ERR: ExternEntry.standard"; 
          emitSimpleExternalCall extFn ps ys tys retty
   | some (ExternEntry.inline _ pat)     => do 
          emitLn "//ERR: ExternEntry.inline"; 
@@ -748,7 +754,7 @@ def emitDeclAux (d : Decl) : M Unit := do
       emit "func ";
       -- emit (toCType t); emit " ";
       if xs.size > 0 then
-        emit ("@" ++ baseName);
+        emit ("@" ++ (escape baseName));
         emit "(";
         if xs.size > closureMaxArgs && isBoxedName d.name then
           emit "lean_object** _args"
@@ -760,7 +766,11 @@ def emitDeclAux (d : Decl) : M Unit := do
         emit ")"
         emit (" -> " ++ (toCType t))
       else -- [xs.size = 0]
-        emitLn ("@_init_" ++ baseName ++ "()" ++ " -> " ++ (toCType t))
+        -- TODO: there is something super funky about this codegen here!
+        -- In particular, I don't understand this __init__ invariant.
+        -- emitLn ("@_init_" ++ baseName ++ "()" ++ " -> " ++ (toCType t))
+        emitLn ("@" ++ baseName ++ "()" ++ " -> " ++ (toCType t))
+
       -- | Do not have args like this.
       -- if xs.size > closureMaxArgs && isBoxedName d.name then
       --   xs.size.forM fun i => do
@@ -831,7 +841,7 @@ def emitInitFn : M Unit := do
 
 def main : M Unit := do
   -- emitFileHeader
-  emitFnDecls
+  emitFnFwdDecls
   emitFns
   -- emitInitFn
   -- emitMainFnIfNeeded
