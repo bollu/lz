@@ -3,6 +3,9 @@
 # compiler flags stolen from `which leanc` and then `cat /path/to/leanc`.
 
 
+lean-include.ll: lean-include.c
+	clang -O0 -S -emit-llvm lean-include.c  -o lean-include.ll -I/home/bollu/work/lean4/build/stage0/include/
+
 lean-shell.o: lean-shell.c
 	gcc -I/home/bollu/work/lean4/build/stage0/include/ -c lean-shell.c  -o lean-shell.o
 
