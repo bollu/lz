@@ -113,6 +113,8 @@ def toCName (n : Name) : M String := do
 def emitCName (n : Name) : M Unit :=
   toCName n >>= emit
 
+
+-- | TODO: fix to be equivalent to C version
 def toCInitName (n : Name) : M String := do
   let env ← getEnv;
   -- TODO: we should support simple export names only
@@ -120,6 +122,7 @@ def toCInitName (n : Name) : M String := do
   | some (Name.str Name.anonymous s _) => pure $ s -- pure $ "_init_" ++ s
   | some _                             => throwInvalidExportName n
   | none                               => pure $ n.mangle -- pure ("_init_" ++ n.mangle)
+
 
 def emitCInitName (n : Name) : M Unit :=
   toCInitName n >>= emit
@@ -132,7 +135,7 @@ def emitFnFwdDeclAux (decl : Decl) (cppBaseName : String) (addExternForConsts : 
   -- then emit "func private "
   -- else emit "func private " 
   -- emit (toCType decl.resultType ++ " " ++ cppBaseName)
-  emit ("func private @" ++ (escape cppBaseName))
+  emit ("func private @" ++ cppBaseName)
   if ps.isEmpty
   then 
     emitLn ("() -> " ++ (toCType decl.resultType))
@@ -155,8 +158,7 @@ def emitFnFwdDecl (decl : Decl) (addExternForConsts : Bool) : M Unit := do
   let cppBaseName ← toCName decl.name
   emitFnFwdDeclAux decl cppBaseName addExternForConsts
 
-def emitExternDeclAux (decl : Decl) (cNameStr : String) : M Unit := do
-  -- let cName := Name.mkSimple cNameStr
+def emitExternFwdDeclAux (decl : Decl) (cNameStr : String) : M Unit := do
   let env ← getEnv
   let extC := isExternC env decl.name
   emitFnFwdDeclAux decl cNameStr (!extC)
@@ -174,8 +176,8 @@ def emitFnFwdDecls : M Unit := do
   --   else pure ()
     match getExternNameFor env `c decl.name with
     | some cName => do
-            let cName  <- toCName cName;
-            emitExternDeclAux decl cName
+            -- let cName  <- toCName cName;
+            emitExternFwdDeclAux decl cName
     | none       => if modDecls.contains n
                     then pure ()
                     else emitFnFwdDecl decl (!modDecls.contains n)
@@ -467,7 +469,8 @@ def toStringArgs (ys : Array Arg) : List String :=
 
 def emitSimpleExternalCall (f : String) (ps : Array Param) (ys : Array Arg)
   (tys: HashMap VarId IRType) (retty: IRType) : M Unit := do
-  let fname <- toCName f;
+  -- let fname <- toCName f; -- added by bollu
+  let fname := f;
   emit "call "; emit "@"; emit (escape fname)
   emit "("
   -- We must remove irrelevant arguments to extern calls.
