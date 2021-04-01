@@ -80,7 +80,7 @@ _start : {
 }
 lean_object *initialize_Init(lean_object *);
 static bool _G_initialized = false;
-lean_object *initialize_lean_custom_entrypoint_hack(lean_object *w) {
+lean_object *init_lean_custom_entrypoint_hack(lean_object *w) {
   lean_object *res;
   if (_G_initialized)
     return lean_io_result_mk_ok(lean_box(0));

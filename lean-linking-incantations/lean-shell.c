@@ -24,7 +24,7 @@ lean_object *_lean_main(lean_object *x_1, lean_object *x_2);
 
 
 lean_object *initialize_Init(lean_object *); // forward declaration
-lean_object *initialize_lean_custom_entrypoint_hack(lean_object*);
+lean_object *init_lean_custom_entrypoint_hack(lean_object*);
 lean_object *main_lean_custom_entrypoint_hack(lean_object *w);
 void lean_initialize_runtime_module();
 
@@ -39,7 +39,7 @@ int main(int argc, char **argv) {
   lean_object *in;
   lean_object *res;
   lean_initialize_runtime_module();
-  res = initialize_lean_custom_entrypoint_hack(lean_io_mk_world());
+  res = init_lean_custom_entrypoint_hack(lean_io_mk_world());
 
   lean_io_mark_end_initialization();
   if (lean_io_result_is_ok(res)) {
