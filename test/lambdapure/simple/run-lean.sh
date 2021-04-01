@@ -3,7 +3,7 @@
 set -e
 set -o xtrace
 
-lean $1 -c exe.c main-print.lean 2>&1 | \
+lean $1 -c exe.c 2>&1 | \
         hask-opt | tee exe.mlir | \
         hask-opt --lean-lower --ptr-lower | \
         mlir-translate --mlir-to-llvmir | tee exe.ll  | llc -filetype=obj -o exe.o
