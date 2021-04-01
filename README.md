@@ -37,6 +37,82 @@
 
 # Log:  [newest] to [oldest]
 
+# April 2
+
+Quick update: I can now roundtrip the simplest of LEAN programs using the LEAN
+runtime. We generate MLIR (`lz`, though not a lot of it because the example has
+no, say, data constructors), lower to `mlir-llvm`, convert to `llvm`, then link
+against the LEAN runtime + [eldritch horrors](https://github.com/bollu/lz/blob/master/lean-linking-incantations/lean-shell.c)
+to produce an executable. 
+
+1. We have a [`lean-linking-incantations/library/library.c/o`](https://github.com/bollu/lz/blob/master/lean-linking-incantations/lib-includes/library.c).
+   This has separate copy of [`include/lean/lean.h`](https://github.com/bollu/lz/blob/master/lean-linking-incantations/lib-includes/lean/lean.h)
+  **which has be un-`static`d** so we still have symbols in the object files.
+  Compare the ORIGINAL [`include/lean/lean.h`](https://github.com/leanprover/lean4/blob/master/stage0/src/include/lean/lean.h#L553-L562)
+  where all declarations are `static`, and thus won't be present in the final `lean-shell.o` we build.
+1. We have a 
+  [`lean_shell.c/o`](https://github.com/bollu/lz/blob/master/lean-linking-incantations/lean-shell.c)
+  that contains the `main()`, along with the LEAN C preamble that does not change across files.
+  This is compiled into a `lean-shell.o`. 
+1. This `lean-shell.o` defines two entrypoints:
+  `main_lean_custom_entrypoint_hack(lean_io_mk_world())`, and
+  `init_lean_custom_entrypoint_hack(lean_io_mk_world())`.
+   `init_...` is used to perform initialisation of constants, 
+   while `main_...` is the entrypoint.
+1. We generate MLIR which that does the "obvious" things; 
+  (1) Defines forward declarations for all the LEAN runtime functions that it uses, 
+  (2) generates a `init_lean_custom....` and dumps all initialization code there, 
+  (3) generates a `main_lean_custom...` and dumps all the runtime code there. 
+1. From this point, we are up and running. 
+   We generate MLIR, convert to `mlir-llvm`,
+   translate our way to `llvm`, use `llc` to generate an object file.
+   We link this object file against the lean runtime plus our wrapper entry
+   point from `lean-shell.o`. This produces an executable that runs :) 
+
+```
+// lz: a4f28b4
+$ /home/bollu/work/lz/test/lambdapure/simple$ cat run-lean.sh
+#!/usr/bin/env bash
+
+set -e
+set -o xtrace
+
+lean $1 -c exe.c 2>&1 | \
+        hask-opt | tee exe.mlir | \
+        hask-opt --lean-lower --ptr-lower | \
+        mlir-translate --mlir-to-llvmir | tee exe.ll  | llc -filetype=obj -o exe.o
+
+c++ -D LEAN_MULTI_THREAD -I/home/bollu/work/lean4/build/stage1/include \
+    exe.o \
+    /home/bollu/work/lz/lean-linking-incantations/lean-shell.o \
+    /home/bollu/work/lz/lean-linking-incantations/lib-includes/library.o  \
+    -no-pie -Wl,--start-group -lleancpp -lInit -lStd -lLean -Wl,--end-group \
+    -L/home/bollu/work/lean4/build/stage1/lib/lean -lgmp -ldl -pthread \
+    -Wno-unused-command-line-argument -o exe.out
+./exe.out
+```
+
+We can run the simplest lean program:
+
+```
+// main-print.lean
+set_option trace.compiler.ir.init true
+def main (xs: List String) : IO Unit := IO.println (7.9)
+```
+
+to produce the output:
+
+```
+/home/bollu/work/lz/test/lambdapure/simple$ ./run-lean.sh main-print.lean 2>/dev/null
+7.900000
+```
+
+So, this is good, since we have a solid foundation of talking to the runtime
+that I can now easily extend. I don't need anything special now, I should be
+able to mechanically translate all of the rest of the LEAN ops into vanilla
+MLIR. The risky part of the process seems to work.
+
+
 # April 1
 
 - I understand the problem. The definitions in `lean/lean.h` are all defined IN THE HEADER FILE,

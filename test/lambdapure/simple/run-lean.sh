@@ -15,3 +15,4 @@ c++ -D LEAN_MULTI_THREAD -I/home/bollu/work/lean4/build/stage1/include \
     -no-pie -Wl,--start-group -lleancpp -lInit -lStd -lLean -Wl,--end-group \
     -L/home/bollu/work/lean4/build/stage1/lib/lean -lgmp -ldl -pthread \
     -Wno-unused-command-line-argument -o exe.out
+./exe.out
