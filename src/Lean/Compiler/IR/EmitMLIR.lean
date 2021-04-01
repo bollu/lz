@@ -13,11 +13,18 @@ import Lean.Compiler.IR.NormIds
 import Lean.Compiler.IR.SimpCase
 import Lean.Compiler.IR.Boxing
 import Lean.Data.KVMap
+import Init.Data.List
 
 open Std (HashMap)
 
 namespace Lean.IR.EmitMLIR
 open ExplicitBoxing (requiresBoxedVersion mkBoxedName isBoxedName)
+
+-- def mkModuleInitializationFunctionName (moduleName : Name) : String :=
+def mkModuleInitializationFunctionNameHACK (moduleName : Name) : String :=
+  "initialize_" ++  "main"
+
+
 
 partial def lookupArgTy (tys: HashMap VarId IRType) (a: Arg) : IRType := 
   match a with 
@@ -47,11 +54,11 @@ structure State where
 -- need more state here to generate GUIDs
 abbrev M := ReaderT Context (EStateM String State)
 
-def gensym : M String := do
+def gensym (s: String) : M String := do
   -- let ix <- modifyGet (fun st => (ix, { st with guid := st.guid + 1}))
   let st <- get
   set ({ st with guid := st.guid + 1})
-  pure ("gensym" ++ toString st.guid)
+  pure ("G" ++ s ++ toString st.guid)
   
 
 def getEnv : M Environment := Context.env <$> read
@@ -199,7 +206,7 @@ def emitMainFn : M Unit := do
     else
       emitLn "lean_initialize_runtime_module();"
     let modName ← getModName
-    emitLn ("res = " ++ mkModuleInitializationFunctionName modName ++ "(lean_io_mk_world());")
+    emitLn ("res = " ++ mkModuleInitializationFunctionNameHACK modName ++ "(lean_io_mk_world());")
     emitLns ["lean_io_mark_end_initialization();",
              "if (lean_io_result_is_ok(res)) {",
              "lean_dec_ref(res);",
@@ -245,6 +252,11 @@ def emitPreamble : M Unit := do
   emit "// Imports:"
   env.imports.forM fun m => emit (" " ++ toString m); emitLn ""
   emitLn "func private @lean_unbox_float(!lz.value) -> f64"
+  emitLn "func private @lean_io_mk_world() -> (!lz.value)"
+  emitLn "func private @lean_dec_ref(!lz.value) -> ()"
+  emitLn "func private @lean_box(i32) -> !lz.value"
+  emitLn "func private @lean_io_result_mk_ok(!lz.value) -> !lz.value"
+
 
 def emitFileHeader : M Unit := do
   let env ← getEnv
@@ -480,13 +492,13 @@ def emitExternCall (f : FunId) (ps : Array Param) (extData : ExternAttrData) (ys
   (tys: HashMap VarId IRType) (retty: IRType) : M Unit := do
    match getExternEntryFor extData `c with
   | some (ExternEntry.standard _ extFn) => do
-         emitLn "//ERR: ExternEntry.standard"; 
+         -- emitLn "//ERR: ExternEntry.standard"; 
          emitSimpleExternalCall extFn ps ys tys retty
   | some (ExternEntry.inline _ pat)     => do 
-         emitLn "//ERR: ExternEntry.inline"; 
+         -- emitLn "//ERR: ExternEntry.inline"; 
          emit (expandExternPattern pat (toStringArgs ys)); emitLn ";"
   | some (ExternEntry.foreign _ extFn)  => do
-         emitLn "//ERR: ExternEntry.foreign"; 
+         -- emitLn "//ERR: ExternEntry.foreign"; 
          emitSimpleExternalCall extFn ps ys tys retty
   | _ => throw s!"failed to emit extern application '{f}'"
 
@@ -832,55 +844,132 @@ def emitFns : M Unit := do
   let decls := getDecls env;
   decls.reverse.forM emitDecl
 
-def emitMarkPersistent (d : Decl) (n : Name) : M Unit := do
+def emitMarkPersistent (d : Decl) (n : String) : M Unit := do
   if d.resultType.isObj then
-    emit "lean_mark_persistent("
-    emitCName n
-    emitLn ");"
+    -- emit "call @lean_mark_persistent("; emitCName n; emitLn ");"
+    emit "call @lean_mark_persistent("; emitCName n; emitLn ");"
 
 def emitDeclInit (d : Decl) : M Unit := do
-  let env ← getEnv
-  let n := d.name
-  if isIOUnitInitFn env n then
-    emit "res = "; emitCName n; emitLn "(lean_io_mk_world());"
-    emitLn "if (lean_io_result_is_error(res)) return res;"
-    emitLn "lean_dec_ref(res);"
-  else if d.params.size == 0 then
-    match getInitFnNameFor? env d.name with
-    | some initFn =>
-      emit "res = "; emitCName initFn; emitLn "(lean_io_mk_world());"
-      emitLn "if (lean_io_result_is_error(res)) return res;"
-      emitCName n; emitLn " = lean_io_result_get_value(res);"
-      emitMarkPersistent d n
-      emitLn "lean_dec_ref(res);"
-    | _ =>
-      emitCName n; emit " = "; emitCInitName n; emitLn "();"; emitMarkPersistent d n
+ let env <- getEnv
+ let n := d.name
+ -- | NOTE: significantly changed from the version in emitC.lean
+ -- | this version skips the isIOUnitInitFn case.
+ if d.params.size == 0 then
+   match getInitFnNameFor? env d.name with
+   | some initFn => do
+     emitLn $ "// ERR: emitDeclInit (" ++ toString n ++ ") | init function"
+     let resName <- gensym "result"
+     let worldName <- gensym "world"
+     emitLn $ "%" ++ worldName ++ " = " ++ "@lean_io_mk_world() : () -> !lz.value"
+     emit ("%" ++ resName ++ " = " ++ "call @"); emitCName initFn; emit "(%worldName)";
+       emit " : (!lz.value) -> "; emit (toCType ∘ Decl.resultType $ d); emitLn "";
+     -- emitLn "if (lean_io_result_is_error(res)) return res;"
+     -- emitCName n; emitLn " = lean_io_result_get_value(res);"
+     let resValueName <- gensym "resultVal"
+     emitLn $ "%" ++ resValueName ++ " = " ++ "std.call @lean_io_get_result_value(" ++ resName ++")"
+     emitLn $ "call @lean_dec_ref(" ++ "%" ++ resName ++ ");"
+     -- TODO: think if I need this | emitMarkPersistent d n
+     
+   | _ =>
+     emitLn $ "// ERR: emitDeclInit(" ++ toString n ++ ") | no init function"
+     let resName <- gensym "result";
+     emit ("%" ++ resName ++ " = " ++ "call @"); emitCInitName n; emit "()";
+       emit ": () -> "; emit (toCType ∘ Decl.resultType $ d); emitLn ""
+   -- TODO: think if I need this | emitMarkPersistent d n
+
+ --  let env ← getEnv
+ --  let n := d.name
+ --  if isIOUnitInitFn env n then
+ --    emit "res = "; emitCName n; emitLn "(lean_io_mk_world());"
+ --    emitLn "if (lean_io_result_is_error(res)) return res;"
+ --    emitLn "lean_dec_ref(res);"
+ --  else if d.params.size == 0 then
+ --    match getInitFnNameFor? env d.name with
+ --    | some initFn =>
+ --      emit "res = "; emitCName initFn; emitLn "(lean_io_mk_world());"
+ --      emitLn "if (lean_io_result_is_error(res)) return res;"
+ --      emitCName n; emitLn " = lean_io_result_get_value(res);"
+ --      emitMarkPersistent d n
+ --      emitLn "lean_dec_ref(res);"
+ --    | _ =>
+ --      emitCName n; emit " = "; emitCInitName n; emitLn "();"; emitMarkPersistent d n
+
+def assertM (s: String) (b: Bool) : M Unit := 
+  if b
+  then pure ()
+  else do panic ("ASSERTION ERROR: " ++ s); pure ()
+
+
+-- def emitInitFn : M Unit := do
+--   let env ← getEnv
+--   let modName ← getModName
+--   env.imports.forM fun imp =>
+--      emitLn ("lean_object* " ++ mkModuleInitializationFunctionName imp.module ++ "(lean_object*);")
+--   emitLns [
+--     "static bool _G_initialized = false;",
+--     "lean_object* " ++ mkModuleInitializationFunctionName modName ++ "(lean_object* w) {",
+--     "lean_object * res;",
+--     "if (_G_initialized) return lean_io_result_mk_ok(lean_box(0));",
+--     "_G_initialized = true;"
+--   ]
+--   env.imports.forM fun imp => emitLns [
+--     "res = " ++ mkModuleInitializationFunctionName imp.module ++ "(lean_io_mk_world());",
+--     "if (lean_io_result_is_error(res)) return res;",
+--     "lean_dec_ref(res);"]
+--   let decls := getDecls env
+--   decls.reverse.forM emitDeclInit
+--   emitLns ["return lean_io_result_mk_ok(lean_box(0));", "}"]
+
+
 
 def emitInitFn : M Unit := do
   let env ← getEnv
   let modName ← getModName
-  env.imports.forM fun imp => emitLn ("lean_object* " ++ mkModuleInitializationFunctionName imp.module ++ "(lean_object*);")
-  emitLns [
-    "static bool _G_initialized = false;",
-    "lean_object* " ++ mkModuleInitializationFunctionName modName ++ "(lean_object* w) {",
-    "lean_object * res;",
-    "if (_G_initialized) return lean_io_result_mk_ok(lean_box(0));",
-    "_G_initialized = true;"
-  ]
-  env.imports.forM fun imp => emitLns [
-    "res = " ++ mkModuleInitializationFunctionName imp.module ++ "(lean_io_mk_world());",
-    "if (lean_io_result_is_error(res)) return res;",
-    "lean_dec_ref(res);"]
+  assertM "expected only one import" (env.imports.toList.length == 1)
+    -- | TODO: figure out what this code is doing. As it is currently written,
+  -- the C code makes no sense to me. It calls the initialization function on itself???
+  -- I guess the difference is between modName and imp.module; I don't understand
+  -- the difference.
+  -- this FORWARD DECLARES the initialization for modules.
+  env.imports.forM fun imp => do
+    emitLn $ "func private @" ++ mkModuleInitializationFunctionName imp.module ++ 
+       "(!lz.value) -> (!lz.value)"
+
+  env.imports.forM fun imp => do
+     -- emitLn $ " //ERR: initialization: (" ++ mkModuleInitializationFunctionName modName ++ ")"
+     -- emit $ "func private @" ++ mkModuleInitializationFunctionName modName;
+     emit $ "func private @" ++ "main_lean_entrypoint";
+     emitLn "(%w :!lz.value) -> !lz.value {"
+     let initResult <- gensym "initResult"
+     let worldname <- gensym "world"
+     emitLn $ "%" ++ worldname ++ " = call @lean_io_mk_world() : () -> (!lz.value)"
+     -- | this CALLS the initialization function for MODULES
+     emitLn $ "//ERR: initializing imp.module(" ++ (mkModuleInitializationFunctionName imp.module) ++ ")"
+     emitLn ("%" ++ initResult  ++ " = " ++
+       "call @" ++ mkModuleInitializationFunctionName imp.module ++ 
+       "(" ++  "%" ++ worldname ++ ")" ++ 
+       " : (!lz.value) -> !lz.value"
+       )
+     emitLn $ "call @lean_dec_ref(%" ++ initResult ++ ") : (!lz.value) -> ()"
+    -- | done initing everyone -- |
+  
+  -- | this CALLS the different DECLARATIONS in the file.
   let decls := getDecls env
   decls.reverse.forM emitDeclInit
-  emitLns ["return lean_io_result_mk_ok(lean_box(0));", "}"]
+    -- emitLns ["return lean_io_result_mk_ok(lean_box(0));", "}"]
+  emitLn "%c0 = constant 0 : i32"
+  emitLn "%box0 = call @lean_box(%c0) : (i32) -> !lz.value"
+  emitLn "%out = call @lean_io_result_mk_ok(%box0) : (!lz.value) -> !lz.value"
+  emitLn "return %out : !lz.value"
+  emitLn "}"
+ 
 
 def main : M Unit := do
   -- emitFileHeader
   emitPreamble
   emitFnFwdDecls
   emitFns
-  -- emitInitFn
+  emitInitFn
   -- emitMainFnIfNeeded
   -- emitFileFooter
 
