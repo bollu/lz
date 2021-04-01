@@ -679,6 +679,7 @@ def emitMarkPersistent (d : Decl) (n : Name) : M Unit := do
 def emitDeclInit (d : Decl) : M Unit := do
   let env ← getEnv
   let n := d.name
+  emitLn $ "// ERR: emitDeclInit: (" ++ n ++ ")"
   if isIOUnitInitFn env n then
     emit "res = "; emitCName n; emitLn "(lean_io_mk_world());"
     emitLn "if (lean_io_result_is_error(res)) return res;"
@@ -697,7 +698,11 @@ def emitDeclInit (d : Decl) : M Unit := do
 def emitInitFn : M Unit := do
   let env ← getEnv
   let modName ← getModName
-  env.imports.forM fun imp => emitLn ("lean_object* " ++ mkModuleInitializationFunctionName imp.module ++ "(lean_object*);")
+  emitLn $ "// ERR: emitInitFn: loop on import, generate fwd decl"
+  env.imports.forM fun imp => do
+    emitLn ("lean_object* " ++ mkModuleInitializationFunctionName imp.module ++ "(lean_object*);")
+
+  emitLn $ "// ERR: emitInitFn: generate _G_initialized"
   emitLns [
     "static bool _G_initialized = false;",
     "lean_object* " ++ mkModuleInitializationFunctionName modName ++ "(lean_object* w) {",
@@ -705,12 +710,16 @@ def emitInitFn : M Unit := do
     "if (_G_initialized) return lean_io_result_mk_ok(lean_box(0));",
     "_G_initialized = true;"
   ]
+
+  emitLn $ "// ERR: emitInitFn: loop on imports, generate call"
   env.imports.forM fun imp => emitLns [
     "res = " ++ mkModuleInitializationFunctionName imp.module ++ "(lean_io_mk_world());",
     "if (lean_io_result_is_error(res)) return res;",
     "lean_dec_ref(res);"]
   let decls := getDecls env
   decls.reverse.forM emitDeclInit
+
+  emitLn $ "// ERR: emitInitFn: generate returns"
   emitLns ["return lean_io_result_mk_ok(lean_box(0));", "}"]
 
 def main : M Unit := do
