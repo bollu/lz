@@ -37,7 +37,13 @@ structure Context where
   mainFn     : FunId := arbitrary
   mainParams : Array Param := #[]
 
-abbrev M := ReaderT Context (EStateM String String)
+
+structure State where
+   out       : String := ""
+   guid      : Nat := 0
+   
+-- need more state here to generate GUIDs
+abbrev M := ReaderT Context (EStateM String State)
 
 def getEnv : M Environment := Context.env <$> read
 def getModName : M Name := Context.modName <$> read
@@ -48,7 +54,7 @@ def getDecl (n : Name) : M Decl := do
   | none   => throw s!"unknown declaration '{n}'"
 
 @[inline] def emit {α : Type} [ToString α] (a : α) : M Unit :=
-  modify fun out => out ++ toString a
+  modify fun st => { st with out := st.out ++ toString a }
 
 @[inline] def emitLn {α : Type} [ToString α] (a : α) : M Unit := do
   emit a; emit "\n"
@@ -292,14 +298,17 @@ def isIf (alts : Array Alt) : Option (Nat × FnBody × FnBody) :=
     | _            => none
 
 def emitInc (x : VarId) (n : Nat) (checkRef : Bool) : M Unit := do
+  emit "call ";
   emit $
     if checkRef then (if n == 1 then "lean_inc" else "lean_inc_n")
     else (if n == 1 then "lean_inc_ref" else "lean_inc_ref_n")
-  emit "("; emit x
+  emit "("; emit "%"; emit x
   if n != 1 then emit ", "; emit n
-  emitLn ");"
+  emitLn ")"
+  emitLn " : !lz.value -> ()"
 
 def emitDec (x : VarId) (n : Nat) (checkRef : Bool) : M Unit := do
+  emit "call "; emit "@";
   emit (if checkRef then "lean_dec" else "lean_dec_ref");
   emit "("; emit x;
   if n != 1 then emit ", "; emit n
@@ -681,11 +690,13 @@ partial def emitBlock (b : FnBody) (tys: HashMap VarId IRType) : M Unit := do
       emitBlock b (tys.insert x t)
   | FnBody.inc x n c p b       =>
     emitLn "// ERR: FnBody.inc "
-    -- unless p do emitInc x n c
+    -- | p = persistent
+    unless p do emitInc x n c
     emitBlock b tys
   | FnBody.dec x n c p b       =>
     emitLn "// ERR: FnBody.dec "
-    -- unless p do emitDec x n c
+    -- | p = persistent
+    unless p do emitDec x n c
     emitBlock b tys
   | FnBody.del x b             => 
     emitLn "// ERR: FnBody.del"; emitBlock b tys ; -- emitDel x; emitBlock b
@@ -853,8 +864,9 @@ end EmitMLIR
 
 @[export lean_ir_emit_mlir]
 def emitMLIR (env : Environment) (modName : Name) : Except String String :=
-  match (EmitMLIR.main { env := env, modName := modName }).run "" with
-  | EStateM.Result.ok    _   s => Except.ok s
+  let initState := { out := "", guid := 0  : EmitMLIR.State };
+  match (EmitMLIR.main { env := env, modName := modName }).run initState with
+  | EStateM.Result.ok    _   s => Except.ok s.out
   | EStateM.Result.error err _ => Except.error err
 
 end Lean.IR
