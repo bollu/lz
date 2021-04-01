@@ -28,6 +28,7 @@ def escape  {a : Type} [ToFormat a] : a -> Format
   | a => "\"" ++ format a ++ "\""
 
 
+
 def leanMainFn := "_lean_main"
 
 structure Context where
@@ -41,9 +42,17 @@ structure Context where
 structure State where
    out       : String := ""
    guid      : Nat := 0
+
    
 -- need more state here to generate GUIDs
 abbrev M := ReaderT Context (EStateM String State)
+
+def gensym : M String := do
+  -- let ix <- modifyGet (fun st => (ix, { st with guid := st.guid + 1}))
+  let st <- get
+  set ({ st with guid := st.guid + 1})
+  pure ("gensym" ++ toString st.guid)
+  
 
 def getEnv : M Environment := Context.env <$> read
 def getModName : M Name := Context.modName <$> read
