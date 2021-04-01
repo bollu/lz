@@ -2,6 +2,7 @@
 // Module: main-print
 // Imports: Init
 #include <stdint.h>
+typedef enum bool { false=0, true=1} bool;
 #if defined(__clang__)
 #pragma clang diagnostic ignored "-Wunused-parameter"
 #pragma clang diagnostic ignored "-Wunused-label"
@@ -68,7 +69,7 @@ _start : {
   return x_4;
 }
 }
-lean_object *_lean_main(lean_object *x_1, lean_object *x_2) {
+lean_object *main_lean_custom_entrypoint_hack(lean_object *x_1, lean_object *x_2) {
 _start : {
   double x_3;
   lean_object *x_4;
@@ -79,7 +80,7 @@ _start : {
 }
 lean_object *initialize_Init(lean_object *);
 static bool _G_initialized = false;
-lean_object *initialize_main_x2dprint(lean_object *w) {
+lean_object *initialize_lean_custom_entrypoint_hack(lean_object *w) {
   lean_object *res;
   if (_G_initialized)
     return lean_io_result_mk_ok(lean_box(0));

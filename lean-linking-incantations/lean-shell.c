@@ -24,7 +24,8 @@ lean_object *_lean_main(lean_object *x_1, lean_object *x_2);
 
 
 lean_object *initialize_Init(lean_object *); // forward declaration
-lean_object *initialize_main_x2dprint(lean_object *w);
+lean_object *initialize_lean_custom_entrypoint_hack(lean_object*);
+lean_object *main_lean_custom_entrypoint_hack(lean_object *w);
 void lean_initialize_runtime_module();
 
 #if defined(WIN32) || defined(_WIN32)
@@ -38,7 +39,8 @@ int main(int argc, char **argv) {
   lean_object *in;
   lean_object *res;
   lean_initialize_runtime_module();
-  res = initialize_main_x2dprint(lean_io_mk_world());
+  res = initialize_lean_custom_entrypoint_hack(lean_io_mk_world());
+
   lean_io_mark_end_initialization();
   if (lean_io_result_is_ok(res)) {
     lean_dec_ref(res);
@@ -53,7 +55,7 @@ int main(int argc, char **argv) {
       lean_ctor_set(n, 1, in);
       in = n;
     }
-    res = _lean_main(in, lean_io_mk_world());
+    res = main_lean_custom_entrypoint_hack(lean_io_mk_world());
   }
   if (lean_io_result_is_ok(res)) {
     int ret = lean_unbox(lean_io_result_get_value(res));
