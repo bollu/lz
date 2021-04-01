@@ -36,7 +36,7 @@ def escape  {a : Type} [ToFormat a] : a -> Format
 
 
 
-def leanMainFn := "_lean_main"
+def leanMainFn := "main_lean_custom_entrypoint_hack"
 
 structure Context where
   env        : Environment
@@ -938,7 +938,8 @@ def emitInitFn : M Unit := do
   env.imports.forM fun imp => do
      -- emitLn $ " //ERR: initialization: (" ++ mkModuleInitializationFunctionName modName ++ ")"
      -- emit $ "func private @" ++ mkModuleInitializationFunctionName modName;
-     emit $ "func private @" ++ "main_lean_entrypoint";
+     -- | name of lean entrypoint
+     emit $ "func private @" ++ "init_lean_custom_entrypoint_hack";
      emitLn "(%w :!lz.value) -> !lz.value {"
      let initResult <- gensym "initResult"
      let worldname <- gensym "world"
