@@ -237,6 +237,15 @@ def hasMainFn : M Bool := do
 def emitMainFnIfNeeded : M Unit := do
   if (← hasMainFn) then emitMainFn
 
+def emitPreamble : M Unit := do
+  let env ← getEnv
+  let modName ← getModName
+  emitLn "// Lean compiler output"
+  emitLn ("// Module: " ++ toString modName)
+  emit "// Imports:"
+  env.imports.forM fun m => emit (" " ++ toString m); emitLn ""
+  emitLn "func private @lean_unbox_float(!lz.value) -> f64"
+
 def emitFileHeader : M Unit := do
   let env ← getEnv
   let modName ← getModName
@@ -531,12 +540,15 @@ def emitBox (z : VarId) (x : VarId) (xType : IRType) : M Unit := do
 def emitUnbox (z : VarId) (t : IRType) (x : VarId) : M Unit := do
   emitLhs z;
   match t with
-  | IRType.usize  => emit "lean_unbox_usize"
-  | IRType.uint32 => emit "lean_unbox_uint32"
-  | IRType.uint64 => emit "lean_unbox_uint64"
-  | IRType.float  => emit "lean_unbox_float"
-  | other         => emit "lean_unbox";
-  emit "("; emit x; emitLn ");"
+  | IRType.usize  => emit "call @lean_unbox_usize"
+  | IRType.uint32 => emit "call @lean_unbox_uint32"
+  | IRType.uint64 => emit "call @lean_unbox_uint64"
+  | IRType.float  => emit "call @lean_unbox_float"
+  | other         => emit "call @lean_unbox";
+  emit "(%"; emit x; emit ") : ";
+  emit "(!lz.value)"; emit " -> ("; emit (toCType t); emit ")";
+  emit "\n"
+  
 
 def emitIsShared (z : VarId) (x : VarId) : M Unit := do
   emitLhs z; emit "!lean_is_exclusive("; emit x; emitLn ");"
@@ -598,7 +610,9 @@ def emitVDecl (z : VarId) (t : IRType) (v : Expr)  (tys: HashMap VarId IRType) :
   | Expr.pap c ys       => emitLn "// ERR: Expr.pap" -- emitPartialApp z c ys
   | Expr.ap x ys        => emitLn "// ERR: Expr.ap" -- emitApp z x ys
   | Expr.box t x        => emitLn "// ERR: Expr.box" -- emitBox z x t
-  | Expr.unbox x        => emitLn "// ERR: Expr.unbox" -- emitUnbox z t x
+  | Expr.unbox x        => do
+    emitLn "// ERR: Expr.unbox"
+    emitUnbox z t x
   | Expr.isShared x     => emitLn "// ERR: Expr.isShared" -- emitIsShared z x
   | Expr.isTaggedPtr x  => emitLn "// ERR: Expr.isTaggedPtr: " -- emitIsTaggedPtr z x
   | Expr.lit v          => do emitLn "//ERR: Expr.lit"; emitLit z t v
@@ -863,6 +877,7 @@ def emitInitFn : M Unit := do
 
 def main : M Unit := do
   -- emitFileHeader
+  emitPreamble
   emitFnFwdDecls
   emitFns
   -- emitInitFn
