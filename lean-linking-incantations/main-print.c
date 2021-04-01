@@ -1,7 +1,12 @@
 // Lean compiler output
 // Module: main-print
 // Imports: Init
+// #include <lean/lean.h>
+#include <stdint.h>
 #include <lean/lean.h>
+
+
+
 #if defined(__clang__)
 #pragma clang diagnostic ignored "-Wunused-parameter"
 #pragma clang diagnostic ignored "-Wunused-label"
@@ -13,6 +18,8 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+
 lean_object *lean_string_push(lean_object *, uint32_t);
 lean_object *l_IO_println___at_main___spec__1(double, lean_object *);
 double lean_float_of_scientific(lean_object *, uint8_t, lean_object *);

@@ -1,7 +1,7 @@
 // Lean compiler output
 // Module: main-print
 // Imports: Init
-#include <lean/lean.h>
+#include <stdint.h>
 #if defined(__clang__)
 #pragma clang diagnostic ignored "-Wunused-parameter"
 #pragma clang diagnostic ignored "-Wunused-label"
@@ -13,6 +13,28 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+    
+typedef struct lean_object lean_object;
+void lean_io_mark_end_initialization();
+lean_object *lean_string_push(lean_object *, uint32_t);
+int lean_io_result_is_ok(lean_object *);
+void lean_dec_ref(lean_object *);
+void lean_init_task_manage(lean_object *);
+void lean_init_task_manager();
+lean_object *lean_unsigned_to_nat(unsigned);
+lean_object *lean_box(int i);
+lean_object *lean_io_result_mk_ok(lean_object *o);
+int lean_unbox(lean_object *o);
+lean_object *lean_io_mk_world();
+bool lean_io_result_is_error(lean_object *);
+void lean_io_result_show_error(lean_object *);
+lean_object *lean_io_result_get_value(lean_object *);
+lean_object *lean_mk_string(char const *s);
+void lean_ctor_set(lean_object *o, unsigned i, lean_object *v);
+lean_object *lean_alloc_ctor(unsigned tag, unsigned num_objs,
+                             unsigned scalar_sz);
+
+
 lean_object *lean_string_push(lean_object *, uint32_t);
 lean_object *l_IO_println___at_main___spec__1(double, lean_object *);
 double lean_float_of_scientific(lean_object *, uint8_t, lean_object *);
