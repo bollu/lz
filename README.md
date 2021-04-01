@@ -37,6 +37,13 @@
 
 # Log:  [newest] to [oldest]
 
+# April 1
+
+- I understand the problem. The definitions in `lean/lean.h` are all defined IN THE HEADER FILE,
+  so I need to recompile this into a shared object which I need to link in. call it `libleanheader` or something.
+  It makes sense why they do this (inlined code for performance). Not sure if it's worth the trouble.
+  Will need to see if LEAN optimises out `Nat.sub(x, x)` or not!
+
 
 # March 30
 
