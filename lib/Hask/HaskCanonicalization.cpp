@@ -109,17 +109,16 @@ struct CanonicalizeHaskCallPattern : public mlir::OpRewritePattern<HaskCallOp> {
   }
 };
 
-class HaskCanonicalizationPass  : public Pass {
+class HaskCanonicalizationPass : public Pass {
 public:
-
-  HaskCanonicalizationPass() : Pass(mlir::TypeID::get<HaskCanonicalizationPass>()){};
+  HaskCanonicalizationPass()
+      : Pass(mlir::TypeID::get<HaskCanonicalizationPass>()){};
   StringRef getName() const override { return "HaskCanonicalizationPass"; }
   std::unique_ptr<Pass> clonePass() const override {
     auto newInst = std::make_unique<HaskCanonicalizationPass>(
         *static_cast<const HaskCanonicalizationPass *>(this));
     newInst->copyOptionValuesFrom(this);
     return newInst;
-
   }
 
   void runOnOperation() override {
@@ -158,5 +157,5 @@ void registerHaskCanonicalizePass() {
                        });
 }
 
-} // end standalone
-} // end mlir
+} // namespace standalone
+} // namespace mlir

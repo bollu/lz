@@ -70,7 +70,7 @@ ParseResult HaskReturnOp::parse(OpAsmParser &parser, OperationState &result) {
 
 void HaskReturnOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
                          Value v) {
-    state.addOperands(v);
+  state.addOperands(v);
   // state.addTypes(v.getType());
 };
 
@@ -230,7 +230,7 @@ void PapOp::print(OpAsmPrinter &p) {
 };
 
 void PapOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                 std::string fnname, SmallVectorImpl<Value> &params) {
+                  std::string fnname, SmallVectorImpl<Value> &params) {
 
   // hack! we need to construct the type properly.
   // state.addOperands(fnref);
@@ -240,7 +240,6 @@ void PapOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
   state.addTypes(builder.getType<standalone::ValueType>());
 };
 
-  
 // === PAPOP OP ===
 // === PAPOP OP ===
 // === PAPOP OP ===
@@ -258,7 +257,7 @@ void PapExtendOp::print(OpAsmPrinter &p) {
 };
 
 void PapExtendOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                 std::string fnname, SmallVectorImpl<Value> &params) {
+                        std::string fnname, SmallVectorImpl<Value> &params) {
   assert(false && "unimeplemented");
   // hack! we need to construct the type properly.
   // state.addOperands(fnref);
@@ -267,7 +266,6 @@ void PapExtendOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
   state.addOperands(params);
   state.addTypes(builder.getType<standalone::ValueType>());
 };
-
 
 // === CASESSA OP ===
 // === CASESSA OP ===
@@ -309,12 +307,11 @@ ParseResult CaseOp::parse(OpAsmParser &parser, OperationState &result) {
 
   assert(altRegions.size() > 0);
 
-  HaskReturnOp retFirst =
-      dyn_cast<HaskReturnOp>(altRegions[0]->getBlocks().front().getTerminator());
+  HaskReturnOp retFirst = dyn_cast<HaskReturnOp>(
+      altRegions[0]->getBlocks().front().getTerminator());
   if (!retFirst) {
-      assert(false && "expected caseop to end in lz.return");
-      return failure();
-
+    assert(false && "expected caseop to end in lz.return");
+    return failure();
   }
   for (int i = 1; i < (int)altRegions.size(); ++i) {
     HaskReturnOp ret =
@@ -373,24 +370,25 @@ void CaseOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
 };
 
 void CaseOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                    Value scrutinee, int numrhss) {
+                   Value scrutinee, int numrhss) {
   // vv TODO HACK: we need to allow arbitrary scrutinee types? x(
   // if(!scrutinee.getType().isa<ValueType>()) {
-  //   llvm::errs() << " |scrutinee: |" << scrutinee << "|\ntype: "<< scrutinee.getType()<< "|\n";
+  //   llvm::errs() << " |scrutinee: |" << scrutinee << "|\ntype: "<<
+  //   scrutinee.getType()<< "|\n";
   // }
 
   // assert(scrutinee.getType().isa<ValueType>());
   state.addOperands(scrutinee);
   // vvv TODO: Check if this is 0 or 1 indexed
-  for(int i = 0; i < numrhss; ++i) {
-    mlir::FlatSymbolRefAttr ixAttr = builder.getSymbolRefAttr(std::to_string(i));
+  for (int i = 0; i < numrhss; ++i) {
+    mlir::FlatSymbolRefAttr ixAttr =
+        builder.getSymbolRefAttr(std::to_string(i));
     state.addAttribute("alt" + std::to_string(i), ixAttr);
     state.addRegion();
   }
   state.addTypes(builder.getType<ValueType>());
   // hack! Say that this case doesn't return anything...
 }
-
 
 // === APEAGEROP OP ===
 // === APEAGEROP OP ===
@@ -860,7 +858,6 @@ void ThunkifyOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
   state.addTypes(builder.getType<ThunkType>(scrutinee.getType()));
 }
 
-
 // === TAG GET  OP ===
 // === TAG GET  OP ===
 // === TAG GET  OP ===
@@ -868,13 +865,13 @@ void ThunkifyOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
 // === TAG GET  OP ===
 
 void TagGetOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                         Value v) {
-    state.addOperands(v);
-    state.addTypes(builder.getI64Type());
+                     Value v) {
+  state.addOperands(v);
+  state.addTypes(builder.getI64Type());
 };
 
 ParseResult TagGetOp::parse(OpAsmParser &parser, OperationState &result) {
-    assert(false && "unimplemented");
+  assert(false && "unimplemented");
 };
 
 void TagGetOp::print(OpAsmPrinter &p) {
@@ -888,17 +885,17 @@ void TagGetOp::print(OpAsmPrinter &p) {
 // === PROJECTION  OP ===
 // === PROJECTION  OP ===
 
-
-void ProjectionOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,int ix, mlir::Value v, mlir::Type retty) {
+void ProjectionOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                         int ix, mlir::Value v, mlir::Type retty) {
   state.addOperands(v);
-  state.addAttribute(ProjectionOp::getIndexAttrKey(), builder.getI64IntegerAttr(ix));
+  state.addAttribute(ProjectionOp::getIndexAttrKey(),
+                     builder.getI64IntegerAttr(ix));
   state.addTypes(retty);
 };
 
 ParseResult ProjectionOp::parse(OpAsmParser &parser, OperationState &result) {
-    assert(false && "unimplemented");
+  assert(false && "unimplemented");
 };
-
 
 void ProjectionOp::print(OpAsmPrinter &p) {
   p.printGenericOp(this->getOperation());
@@ -911,15 +908,19 @@ void ProjectionOp::print(OpAsmPrinter &p) {
 // === HaskIntegerConstOp  OP ===
 // === HaskIntegerConstOp  OP ===
 
-void HaskIntegerConstOp::build(mlir::OpBuilder &builder, mlir::OperationState &state, int i) {
-  state.addAttribute(HaskIntegerConstOp::getValueAttrKey(), builder.getI64IntegerAttr(i));
+void HaskIntegerConstOp::build(mlir::OpBuilder &builder,
+                               mlir::OperationState &state, int i) {
+  state.addAttribute(HaskIntegerConstOp::getValueAttrKey(),
+                     builder.getI64IntegerAttr(i));
   state.addTypes(builder.getType<ValueType>());
 };
 
-ParseResult HaskIntegerConstOp::parse(OpAsmParser &parser, OperationState &result) {
+ParseResult HaskIntegerConstOp::parse(OpAsmParser &parser,
+                                      OperationState &result) {
   mlir::OpAsmParser::OperandType in;
   mlir::IntegerAttr i;
-  if (parser.parseLParen() || parser.parseAttribute<mlir::IntegerAttr>(i) || parser.parseRParen()) {
+  if (parser.parseLParen() || parser.parseAttribute<mlir::IntegerAttr>(i) ||
+      parser.parseRParen()) {
     return failure();
   }
   result.addAttribute(HaskIntegerConstOp::getValueAttrKey(), i);
@@ -927,23 +928,22 @@ ParseResult HaskIntegerConstOp::parse(OpAsmParser &parser, OperationState &resul
   return success();
 };
 
-
 void HaskIntegerConstOp::print(OpAsmPrinter &p) {
   p.printGenericOp(this->getOperation());
   return;
 };
 
-
 // === INC OP ===
 // === INC OP ===
 // === INC OP ===
 // === INC OP ===
 // === INC OP ===
 
-
-void IncOp::build(mlir::OpBuilder &builder, mlir::OperationState &state, Value v) {
+void IncOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                  Value v) {
   // vvv HACK: I have no idea why this is failing.
-  // assert(v.getType().isa<standalone::ValueType>() && "incop input must be lz::Value");
+  // assert(v.getType().isa<standalone::ValueType>() && "incop input must be
+  // lz::Value");
   state.addOperands(v);
 };
 
@@ -952,11 +952,10 @@ ParseResult IncOp::parse(OpAsmParser &parser, OperationState &result) {
   if (parser.parseLParen() || parser.parseOperand(in) || parser.parseRParen()) {
     return failure();
   }
-  parser.resolveOperand(in, parser.getBuilder().getType<ValueType>(), 
-          result.operands);
+  parser.resolveOperand(in, parser.getBuilder().getType<ValueType>(),
+                        result.operands);
   return success();
 };
-
 
 void IncOp::print(OpAsmPrinter &p) {
   p.printGenericOp(this->getOperation());
@@ -969,9 +968,11 @@ void IncOp::print(OpAsmPrinter &p) {
 // === DEC OP ===
 // === DEC OP ===
 
-void DecOp::build(mlir::OpBuilder &builder, mlir::OperationState &state, Value v) {
+void DecOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                  Value v) {
   // vvv HACK: I have no idea why this is failing.
-  // assert(v.getType().isa<standalone::ValueType>() && "decop input must be lz::Value");
+  // assert(v.getType().isa<standalone::ValueType>() && "decop input must be
+  // lz::Value");
   state.addOperands(v);
 };
 
@@ -980,11 +981,10 @@ ParseResult DecOp::parse(OpAsmParser &parser, OperationState &result) {
   if (parser.parseLParen() || parser.parseOperand(in) || parser.parseRParen()) {
     return failure();
   }
-  parser.resolveOperand(in, parser.getBuilder().getType<ValueType>(), 
-          result.operands);
+  parser.resolveOperand(in, parser.getBuilder().getType<ValueType>(),
+                        result.operands);
   return success();
 };
-
 
 void DecOp::print(OpAsmPrinter &p) {
   p.printGenericOp(this->getOperation());
@@ -997,15 +997,14 @@ void DecOp::print(OpAsmPrinter &p) {
 // === ERASED VAUE OP ===
 // === ERASED VAUE OP ===
 
-
-void ErasedValueOp::build(mlir::OpBuilder &builder, mlir::OperationState &state) {
+void ErasedValueOp::build(mlir::OpBuilder &builder,
+                          mlir::OperationState &state) {
   state.addTypes(builder.getType<standalone::ValueType>());
 };
 
 ParseResult ErasedValueOp::parse(OpAsmParser &parser, OperationState &result) {
   return success();
 };
-
 
 void ErasedValueOp::print(OpAsmPrinter &p) {
   p.printGenericOp(this->getOperation());
@@ -1018,13 +1017,13 @@ void ErasedValueOp::print(OpAsmPrinter &p) {
 // === HaskBlockOp OP ===
 // === HaskBlockOp OP ===
 
-
-ParseResult HaskBlockOp::parse(OpAsmParser &parser, OperationState &result) { assert(false && "unimplemented"); };
-void HaskBlockOp::print(OpAsmPrinter &p) {
-  p.printGenericOp(*this);
+ParseResult HaskBlockOp::parse(OpAsmParser &parser, OperationState &result) {
+  assert(false && "unimplemented");
 };
+void HaskBlockOp::print(OpAsmPrinter &p) { p.printGenericOp(*this); };
 
-void HaskBlockOp::build(mlir::OpBuilder &builder, mlir::OperationState &state, int blockIx) {
+void HaskBlockOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                        int blockIx) {
   state.addRegion();
   state.addRegion();
   state.addAttribute("value", builder.getI64IntegerAttr(blockIx));
@@ -1038,11 +1037,12 @@ void HaskBlockOp::build(mlir::OpBuilder &builder, mlir::OperationState &state, i
 // ===  HaskJumpOp ===
 // ===  HaskJumpOp ===
 
-ParseResult HaskJumpOp::parse(OpAsmParser &parser, OperationState &result) { assert(false && "unimplemented"); };
-void HaskJumpOp::print(OpAsmPrinter &p) {
-  p.printGenericOp(*this);
+ParseResult HaskJumpOp::parse(OpAsmParser &parser, OperationState &result) {
+  assert(false && "unimplemented");
 };
-void HaskJumpOp::build(mlir::OpBuilder &builder, mlir::OperationState &state, int blockIx, Value v) {
+void HaskJumpOp::print(OpAsmPrinter &p) { p.printGenericOp(*this); };
+void HaskJumpOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                       int blockIx, Value v) {
   state.addAttribute("value", builder.getI64IntegerAttr(blockIx));
   state.addOperands(v);
   return;
@@ -1055,10 +1055,10 @@ void HaskJumpOp::build(mlir::OpBuilder &builder, mlir::OperationState &state, in
 // === HaskCaseRetOp ===
 // === HaskCaseRetOp ===
 
-ParseResult HaskCaseRetOp::parse(OpAsmParser &parser, OperationState &result) { assert(false && "unimplemented"); };
-void HaskCaseRetOp::print(OpAsmPrinter &p) {
-  p.printGenericOp(*this);
+ParseResult HaskCaseRetOp::parse(OpAsmParser &parser, OperationState &result) {
+  assert(false && "unimplemented");
 };
+void HaskCaseRetOp::print(OpAsmPrinter &p) { p.printGenericOp(*this); };
 
 // === REUSE CONSTRUCTOR OP ===
 // === REUSE CONSTRUCTOR OP ===
@@ -1097,11 +1097,10 @@ ParseResult ResetOp::parse(OpAsmParser &parser, OperationState &result) {
   assert(false && "unimplemented");
 }
 
-void ResetOp::print(OpAsmPrinter &p) {
-  p.printGenericOp(this->getOperation());
-}
+void ResetOp::print(OpAsmPrinter &p) { p.printGenericOp(this->getOperation()); }
 
-void ResetOp::build(mlir::OpBuilder &builder, mlir::OperationState &state, Value v) {
+void ResetOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                    Value v) {
   state.addOperands(v);
   state.addRegion();
   state.addRegion();

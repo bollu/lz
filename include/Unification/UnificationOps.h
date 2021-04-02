@@ -35,8 +35,8 @@ public:
   void print(OpAsmPrinter &p);
 };
 
-class UnifConstructorOp
-    : public Op<UnifConstructorOp, OpTrait::OneResult, OpTrait::VariadicOperands> {
+class UnifConstructorOp : public Op<UnifConstructorOp, OpTrait::OneResult,
+                                    OpTrait::VariadicOperands> {
 public:
   using Op::Op;
   static StringRef getOperationName() { return "unif.constructor"; };

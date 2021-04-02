@@ -14,7 +14,6 @@ void registerLambdapureToLeanLowering();
 void registerReferenceRewriterPattern();
 void registerDestructiveUpdatePattern();
 
-
 } // namespace lambdapure
 } // namespace mlir
 

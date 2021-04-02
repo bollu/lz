@@ -18,7 +18,6 @@
 #include "mlir/IR/Value.h"
 #include "mlir/IR/Verifier.h"
 
-
 // === SCOPE ===
 // === SCOPE ===
 // === SCOPE ===
@@ -104,15 +103,12 @@ public:
 
 }; // class ScopeTable
 
-
-
 // === VARTABLE ===
 // === VARTABLE ===
 // === VARTABLE ===
 // === VARTABLE ===
 // === VARTABLE ===
 // === VARTABLE ===
-
 
 class CppVarTable {
 public:
@@ -200,7 +196,6 @@ private:
 // === TRANSLATOR ===
 // === TRANSLATOR ===
 // === TRANSLATOR ===
-
 
 using namespace mlir;
 namespace {

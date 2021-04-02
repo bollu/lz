@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #ifndef STANDALONE_STANDALONEOPS_H
 #define STANDALONE_STANDALONEOPS_H
 
@@ -212,7 +211,6 @@ public:
   // for lambdapure.
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
                     Value scrutinee, int numrhss);
-
 };
 
 class CaseIntOp
@@ -339,41 +337,44 @@ public:
 };
 
 // for lambdapure
-class ResetOp
-  : public Op<ResetOp, OpTrait::IsTerminator,  OpTrait::ZeroResult, OpTrait::OneOperand,
-        MemoryEffectOpInterface::Trait, OpTrait::NRegions<2>::Impl> {
+class ResetOp : public Op<ResetOp, OpTrait::IsTerminator, OpTrait::ZeroResult,
+                          OpTrait::OneOperand, MemoryEffectOpInterface::Trait,
+                          OpTrait::NRegions<2>::Impl> {
 public:
   using Op::Op;
   static StringRef getOperationName() { return "lz.reset"; };
   static const char *getDataConstructorAttrKey() { return "dataconstructor"; }
   static const char *getDataTypeAttrKey() { return "datatype"; }
   StringRef getDataConstructorName() {
-    return getOperation()->getAttrOfType<FlatSymbolRefAttr>(getDataConstructorAttrKey())
+    return getOperation()
+        ->getAttrOfType<FlatSymbolRefAttr>(getDataConstructorAttrKey())
         .getValue();
   }
 
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   void print(OpAsmPrinter &p);
 
-  static void build(mlir::OpBuilder &builder, mlir::OperationState &state, mlir::Value v);
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                    mlir::Value v);
 
   void
   getEffects(SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
-             &effects) {}
+                 &effects) {}
 };
 
 // vv this is never built? wat?
 // for lambdapure
 class ReuseConstructorOp
-    : public Op<ReuseConstructorOp, OpTrait::OneResult, OpTrait::ZeroRegion, OpTrait::VariadicOperands,
-                MemoryEffectOpInterface::Trait> {
+    : public Op<ReuseConstructorOp, OpTrait::OneResult, OpTrait::ZeroRegion,
+                OpTrait::VariadicOperands, MemoryEffectOpInterface::Trait> {
 public:
   using Op::Op;
   static StringRef getOperationName() { return "lz.reuseconstruct"; };
   static const char *getDataConstructorAttrKey() { return "dataconstructor"; }
   static const char *getDataTypeAttrKey() { return "datatype"; }
   StringRef getDataConstructorName() {
-    return getOperation()->getAttrOfType<FlatSymbolRefAttr>(getDataConstructorAttrKey())
+    return getOperation()
+        ->getAttrOfType<FlatSymbolRefAttr>(getDataConstructorAttrKey())
         .getValue();
   }
 
@@ -390,15 +391,16 @@ public:
 
 // for lambdapure
 class ProjectionOp
-    : public Op<ProjectionOp, OpTrait::OneResult, OpTrait::OneOperand, 
-                OpTrait::ZeroRegion,
-                MemoryEffectOpInterface::Trait> {
+    : public Op<ProjectionOp, OpTrait::OneResult, OpTrait::OneOperand,
+                OpTrait::ZeroRegion, MemoryEffectOpInterface::Trait> {
 public:
   using Op::Op;
   static StringRef getOperationName() { return "lz.project"; };
   static const char *getIndexAttrKey() { return "value"; }
   int getIndex() {
-    return getOperation()->getAttrOfType<IntegerAttr>(getIndexAttrKey()).getInt();
+    return getOperation()
+        ->getAttrOfType<IntegerAttr>(getIndexAttrKey())
+        .getInt();
   }
 
   // int getNumOperands() { return this->getOperation()->getNumOperands(); }
@@ -409,8 +411,8 @@ public:
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   void print(OpAsmPrinter &p);
 
-  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,int index, mlir::Value v,
-  mlir::Type retty);
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                    int index, mlir::Value v, mlir::Type retty);
 
   void
   getEffects(SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
@@ -423,7 +425,12 @@ class PapOp
 public:
   using Op::Op;
   static StringRef getOperationName() { return "lz.pap"; };
-  std::string getFnName() { return this->getOperation()->getAttrOfType<FlatSymbolRefAttr>("value").getValue().str(); }
+  std::string getFnName() {
+    return this->getOperation()
+        ->getAttrOfType<FlatSymbolRefAttr>("value")
+        .getValue()
+        .str();
+  }
   int getNumFnArguments() {
     return this->getOperation()->getNumOperands() - 1;
   };
@@ -446,7 +453,8 @@ public:
                     std::string fnName, SmallVectorImpl<Value> &params);
 
   // static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
-  //                   Value fnref, SmallVectorImpl<Value> &params, Type fnretty);
+  //                   Value fnref, SmallVectorImpl<Value> &params, Type
+  //                   fnretty);
   // static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
   //                   FuncOp fn, SmallVectorImpl<Value> &params);
 
@@ -456,8 +464,8 @@ public:
 
 // for lambdapure
 // extend a partial application with more arguments.
-class PapExtendOp
-    : public Op<PapExtendOp, OpTrait::OneResult, MemoryEffectOpInterface::Trait> {
+class PapExtendOp : public Op<PapExtendOp, OpTrait::OneResult,
+                              MemoryEffectOpInterface::Trait> {
 public:
   using Op::Op;
   static StringRef getOperationName() { return "lz.papExtend"; };
@@ -487,65 +495,74 @@ public:
 
 // for lambdapure
 class TagGetOp
-    : public Op<TagGetOp, OpTrait::OneOperand, OpTrait::OneResult, OpTrait::ZeroRegion,
-                MemoryEffectOpInterface::Trait> {
+    : public Op<TagGetOp, OpTrait::OneOperand, OpTrait::OneResult,
+                OpTrait::ZeroRegion, MemoryEffectOpInterface::Trait> {
 public:
   using Op::Op;
   static StringRef getOperationName() { return "lz.tagget"; };
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   void print(OpAsmPrinter &p);
-  static void build(mlir::OpBuilder &builder, mlir::OperationState &state, Value v);
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                    Value v);
   void
   getEffects(SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
                  &effects) {}
 };
 
-class HaskIntegerConstOp : public Op<HaskIntegerConstOp, OpTrait::ZeroOperands, OpTrait::OneResult, OpTrait::ZeroRegion,
-  MemoryEffectOpInterface::Trait> {
-  public:
+class HaskIntegerConstOp
+    : public Op<HaskIntegerConstOp, OpTrait::ZeroOperands, OpTrait::OneResult,
+                OpTrait::ZeroRegion, MemoryEffectOpInterface::Trait> {
+public:
   using Op::Op;
   static StringRef getOperationName() { return "lz.int"; };
   static const char *getValueAttrKey() { return "value"; }
 
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   void print(OpAsmPrinter &p);
-  static void build(mlir::OpBuilder &builder, mlir::OperationState &state, int i);
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                    int i);
   int getValue() {
-    return this->getOperation()->getAttrOfType<IntegerAttr>(getValueAttrKey()).getInt();
+    return this->getOperation()
+        ->getAttrOfType<IntegerAttr>(getValueAttrKey())
+        .getInt();
   }
   void
   getEffects(SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
                  &effects) {}
-
 };
 
 // This makes me sad, because it has a side effect x(
 // for lambdapure
-class IncOp : public Op<IncOp, OpTrait::OneOperand, OpTrait::ZeroResult, OpTrait::ZeroRegion> {
-  public:
+class IncOp : public Op<IncOp, OpTrait::OneOperand, OpTrait::ZeroResult,
+                        OpTrait::ZeroRegion> {
+public:
   using Op::Op;
   static StringRef getOperationName() { return "lz.inc"; };
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   void print(OpAsmPrinter &p);
-  static void build(mlir::OpBuilder &builder, mlir::OperationState &state, mlir::Value v);
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                    mlir::Value v);
 };
 
 // This makes me sad, because it has a side effect x(
 // for lambdapure
-class DecOp : public Op<DecOp, OpTrait::OneOperand, OpTrait::ZeroResult, OpTrait::ZeroRegion> {
-  public:
+class DecOp : public Op<DecOp, OpTrait::OneOperand, OpTrait::ZeroResult,
+                        OpTrait::ZeroRegion> {
+public:
   using Op::Op;
   static StringRef getOperationName() { return "lz.dec"; };
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   void print(OpAsmPrinter &p);
-  static void build(mlir::OpBuilder &builder, mlir::OperationState &state, mlir::Value v);
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                    mlir::Value v);
 };
 
 // for lambdapure
 // Not sure if I should simply remove everything that tries to generate an
 // erased box?
-class ErasedValueOp : public Op<ErasedValueOp, OpTrait::ZeroOperands, OpTrait::OneResult, OpTrait::ZeroRegion> {
-  public:
+class ErasedValueOp : public Op<ErasedValueOp, OpTrait::ZeroOperands,
+                                OpTrait::OneResult, OpTrait::ZeroRegion> {
+public:
   using Op::Op;
   static StringRef getOperationName() { return "lz.erasedvalue"; };
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
@@ -556,31 +573,32 @@ class ErasedValueOp : public Op<ErasedValueOp, OpTrait::ZeroOperands, OpTrait::O
 // for lambdapure
 // first mirror whatever the fuck the original lowering does. Then find "better
 // encodings".
-class HaskBlockOp : public Op<HaskBlockOp, OpTrait::ZeroOperands, OpTrait::ZeroResult, OpTrait::NRegions<2>::Impl, OpTrait::IsTerminator> {
+class HaskBlockOp
+    : public Op<HaskBlockOp, OpTrait::ZeroOperands, OpTrait::ZeroResult,
+                OpTrait::NRegions<2>::Impl, OpTrait::IsTerminator> {
 public:
   using Op::Op;
   static StringRef getOperationName() { return "lz.block"; };
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   void print(OpAsmPrinter &p);
-  static void build(mlir::OpBuilder &builder, mlir::OperationState &state, int blockIx);
-  mlir::Region &getBlockRegion() {
-    return this->getRegion(0);
-  }
-  mlir::Region &getRestRegion() {
-    return this->getRegion(1);
-  }
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                    int blockIx);
+  mlir::Region &getBlockRegion() { return this->getRegion(0); }
+  mlir::Region &getRestRegion() { return this->getRegion(1); }
 };
 
 // for lambdapure
-class HaskJumpOp : public Op<HaskJumpOp, OpTrait::OneOperand, OpTrait::ZeroResult, OpTrait::IsTerminator> {
+class HaskJumpOp : public Op<HaskJumpOp, OpTrait::OneOperand,
+                             OpTrait::ZeroResult, OpTrait::IsTerminator> {
 public:
   using Op::Op;
   static StringRef getOperationName() { return "lz.jump"; };
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   void print(OpAsmPrinter &p);
-  static void build(mlir::OpBuilder &builder, mlir::OperationState &state, int blockIx, Value v); // ?? what is blockIx? I am actually confused.
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                    int blockIx,
+                    Value v); // ?? what is blockIx? I am actually confused.
 };
-
 
 // for lambdapure
 class HaskCaseRetOp : public Op<HaskCaseRetOp, OpTrait::OneOperand,

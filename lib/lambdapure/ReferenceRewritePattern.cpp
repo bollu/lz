@@ -39,7 +39,8 @@ public:
       MLIRContext *context = o.getContext();
       mlir::OpBuilder builder = mlir::OpBuilder(context);
 
-      if (mlir::standalone::HaskReturnOp op = mlir::dyn_cast<standalone::HaskReturnOp>(o)) {
+      if (mlir::standalone::HaskReturnOp op =
+              mlir::dyn_cast<standalone::HaskReturnOp>(o)) {
         // vv HACK TODO: refactor to use this->context
 
         mlir::Value val = op.getOperand();
@@ -211,7 +212,8 @@ public:
           llvm::errs() << "arg of incorrect type: |" << args[i] << "|\n";
           continue;
         }
-        builder.create<mlir::standalone::DecOp>(builder.getUnknownLoc(), args[i]);
+        builder.create<mlir::standalone::DecOp>(builder.getUnknownLoc(),
+                                                args[i]);
       }
       assert(consumes[i] >= -1);
     }

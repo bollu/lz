@@ -61,7 +61,6 @@ public:
   void print(OpAsmPrinter &p);
 };
 
-
 // %ptr = doubletoptr %i
 class DoubleToPtrOp
     : public Op<DoubleToPtrOp, OpTrait::OneResult, OpTrait::OneOperand> {
@@ -73,7 +72,6 @@ public:
                     Value vint);
   void print(OpAsmPrinter &p);
 };
-
 
 // %ptr = ptrtoint %i
 class PtrToIntOp
@@ -87,7 +85,6 @@ public:
   void print(OpAsmPrinter &p);
 };
 
-
 // %ptr = ptrtofloat %i
 class PtrToFloatOp
     : public Op<PtrToFloatOp, OpTrait::OneResult, OpTrait::OneOperand> {
@@ -100,8 +97,6 @@ public:
   void print(OpAsmPrinter &p);
 };
 
-
-
 // ptr.string "string-I-like"
 class PtrStringOp
     : public Op<PtrStringOp, OpTrait::OneResult, OpTrait::ZeroOperands> {
@@ -109,7 +104,10 @@ public:
   using Op::Op;
   static StringRef getOperationName() { return "ptr.string"; };
   std::string getString() {
-    return this->getOperation()->getAttrOfType<StringAttr>("value").getValue().str();
+    return this->getOperation()
+        ->getAttrOfType<StringAttr>("value")
+        .getValue()
+        .str();
   }
 
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
@@ -147,8 +145,6 @@ public:
   void print(OpAsmPrinter &p);
 };
 
-
-
 // %mr = ptr2memref %vptr : !ptr.void -> memref
 class PtrToMemrefOp
     : public Op<PtrToMemrefOp, OpTrait::OneResult, OpTrait::OneOperand> {
@@ -160,8 +156,8 @@ public:
   void print(OpAsmPrinter &p);
 };
 
-
-class PtrUndefOp : public Op<PtrUndefOp, OpTrait::OneResult, OpTrait::OneTypedResult<Type>::Impl> {
+class PtrUndefOp : public Op<PtrUndefOp, OpTrait::OneResult,
+                             OpTrait::OneTypedResult<Type>::Impl> {
 public:
   using Op::Op;
   static StringRef getOperationName() { return "ptr.undef"; };
@@ -170,7 +166,6 @@ public:
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
                     Type resultty);
 };
-
 
 /*
 class PtrToHaskValueOp

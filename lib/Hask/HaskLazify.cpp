@@ -22,18 +22,19 @@ struct LzLazifyPass : public Pass {
     return newInst;
   }
 
-
   void runOnOperation() override {
     mlir::ModuleOp mod(getOperation());
     mlir::OpBuilder builder(mod);
 
     std::set<std::string> lazifiedFns;
-    for(FuncOp fn : mod.getOps<FuncOp>()) {
+    for (FuncOp fn : mod.getOps<FuncOp>()) {
       if (fn.isDeclaration()) {
         continue;
       }
       // skip the entrypoint.
-      if (fn.getName() == "main") { continue; }
+      if (fn.getName() == "main") {
+        continue;
+      }
 
       lazifiedFns.insert(fn.getName().str());
 
@@ -45,7 +46,8 @@ struct LzLazifyPass : public Pass {
       }
 
       // update the *function type* itself.
-      fn.setType(builder.getFunctionType(lazyArgTys, fn.getType().getResults()));
+      fn.setType(
+          builder.getFunctionType(lazyArgTys, fn.getType().getResults()));
 
       // Step 1: change all arguments from T to !lz.thunk<T>
       // Recall that the function type is stashed separately from the
@@ -53,17 +55,16 @@ struct LzLazifyPass : public Pass {
       // types as well.
       for (int i = 0; i < (int)fn.getNumArguments(); ++i) {
         // Type argTy = fn.getArgument(i).getType();
-        assert (i < (int)lazyArgTys.size());
+        assert(i < (int)lazyArgTys.size());
         fn.getArgument(i).setType(lazyArgTys[i]);
-
 
         // Step 2: at all use sites of argument, insert a.
         // Keep this as a vector because we add new uses (inserting Force(%x))
         // while we iterate on the old ones (y = %x)
 
-        mlir::SmallVector<std::pair<mlir::Operation*, int>, 4> users;
+        mlir::SmallVector<std::pair<mlir::Operation *, int>, 4> users;
 
-        for(mlir::OpOperand &u : fn.getArgument(i).getUses()) {
+        for (mlir::OpOperand &u : fn.getArgument(i).getUses()) {
           users.push_back({u.getOwner(), u.getOperandNumber()});
         }
 
@@ -81,7 +82,7 @@ struct LzLazifyPass : public Pass {
       }
     }
 
-    for(FuncOp fn : mod.getOps<FuncOp>()) {
+    for (FuncOp fn : mod.getOps<FuncOp>()) {
       if (fn.isDeclaration()) {
         continue;
       }
@@ -91,36 +92,40 @@ struct LzLazifyPass : public Pass {
       // unused values to be dropped.
       fn.walk([&](CallOp call) {
         // only chance a call if we lazified the function itself.
-        if (!lazifiedFns.count(call.getCallee().str())) { return WalkResult::advance(); }
+        if (!lazifiedFns.count(call.getCallee().str())) {
+          return WalkResult::advance();
+        }
 
-//        llvm::errs() << "lazifying call: |" << call << "\n"; getchar();
+        //        llvm::errs() << "lazifying call: |" << call << "\n";
+        //        getchar();
 
         erasedCalls.insert(call);
         builder.setInsertionPoint(call);
 
         llvm::SmallVector<Type, 4> lazyCallArgTys;
-        for(int i  = 0; i < (int)call.getCalleeType().getNumInputs(); ++i) {
-          lazyCallArgTys.push_back(ThunkType::get(builder.getContext(),
-              call.getCalleeType().getInput(i)));
+        for (int i = 0; i < (int)call.getCalleeType().getNumInputs(); ++i) {
+          lazyCallArgTys.push_back(ThunkType::get(
+              builder.getContext(), call.getCalleeType().getInput(i)));
         }
-        FunctionType lazyCallType = builder.getFunctionType(lazyCallArgTys, call.getCalleeType().getResults());
-        ConstantOp fnref = builder.create<ConstantOp>(builder.getUnknownLoc(),
-                                                      lazyCallType,
-                                                       builder.getSymbolRefAttr(call.getCallee()));
+        FunctionType lazyCallType = builder.getFunctionType(
+            lazyCallArgTys, call.getCalleeType().getResults());
+        ConstantOp fnref = builder.create<ConstantOp>(
+            builder.getUnknownLoc(), lazyCallType,
+            builder.getSymbolRefAttr(call.getCallee()));
 
-        assert(call.getCalleeType().getNumResults() > 0 && "ap needs at least one result");
+        assert(call.getCalleeType().getNumResults() > 0 &&
+               "ap needs at least one result");
 
         SmallVector<Value, 4> args;
-        for(Value arg : call.getArgOperands()) {
-          args.push_back(builder.create<ThunkifyOp>(builder.getUnknownLoc(), arg));
+        for (Value arg : call.getArgOperands()) {
+          args.push_back(
+              builder.create<ThunkifyOp>(builder.getUnknownLoc(), arg));
         }
 
         // TODO: multiple results?
-        ApOp ap = builder.create<standalone::ApOp>(builder.getUnknownLoc(),
-                                                   fnref,
-                                                   args,
-                                                   call.getCalleeType().getResult(0));
-
+        ApOp ap = builder.create<standalone::ApOp>(
+            builder.getUnknownLoc(), fnref, args,
+            call.getCalleeType().getResult(0));
 
         // TODO: I believe this is strictly less precise than the code below,
         // which places the force RIGHT NEXT TO THE USE!
@@ -140,7 +145,9 @@ struct LzLazifyPass : public Pass {
       }); // end walk for CallOp
 
       // erase all now dead calls;
-      for(CallOp c : erasedCalls) { c.erase(); }
+      for (CallOp c : erasedCalls) {
+        c.erase();
+      }
     } // end loop over all functions
 
     llvm::errs() << "vvvvv:module:vvvvv\n";
@@ -156,7 +163,6 @@ struct LzLazifyPass : public Pass {
       llvm::errs() << "module succeeds verification!";
     }
     llvm::errs() << "\n^^^^^^\n";
-
   }
 };
 
@@ -166,9 +172,7 @@ std::unique_ptr<mlir::Pass> createLzLazifyPass() {
 
 void registerLzLazifyPass() {
   //  mlir::PassPipelineRegistration
-  ::mlir::registerPass("lz-lazify",
-                       "make std lazy using LZ",
-                       []() -> std::unique_ptr<::mlir::Pass> {
-                         return createLzLazifyPass();
-                       });
+  ::mlir::registerPass(
+      "lz-lazify", "make std lazy using LZ",
+      []() -> std::unique_ptr<::mlir::Pass> { return createLzLazifyPass(); });
 }

@@ -3,8 +3,8 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/OpImplementation.h"
-#include "mlir/Pass/PassRegistry.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Pass/PassRegistry.h"
 #include "mlir/Support/LLVM.h"
 
 using namespace llvm;
@@ -25,21 +25,20 @@ LambdapureDialect::LambdapureDialect(mlir::MLIRContext *ctxt)
   addTypes<ObjectType>();
 }
 
-
 mlir::Type LambdapureDialect::parseType(mlir::DialectAsmParser &parser) const {
   assert(false);
-//  if (succeeded(parser.parseOptionalKeyword("Object"))) {
-//    return parser.getBuilder().getType<ObjectType>();
-//  } else {
-//    assert(false && "unknown type");
-//  }
+  //  if (succeeded(parser.parseOptionalKeyword("Object"))) {
+  //    return parser.getBuilder().getType<ObjectType>();
+  //  } else {
+  //    assert(false && "unknown type");
+  //  }
 }
 
 void LambdapureDialect::printType(mlir::Type type,
                                   mlir::DialectAsmPrinter &printer) const {
   assert(false);
-//  assert(type.isa<ObjectType>());
-//  printer << "Object";
+  //  assert(type.isa<ObjectType>());
+  //  printer << "Object";
 }
 
 /*

@@ -58,8 +58,10 @@ ParseResult UnifConstructorOp::parse(OpAsmParser &parser,
   // ")"
   if (failed(parser.parseOptionalRParen())) {
     while (1) {
-     // ","
-      if (failed(parser.parseComma())) { return failure(); }
+      // ","
+      if (failed(parser.parseComma())) {
+        return failure();
+      }
       // <arg>
       OpAsmParser::OperandType arg;
       parser.parseOperand(arg);
@@ -69,7 +71,7 @@ ParseResult UnifConstructorOp::parse(OpAsmParser &parser,
       // ")"?
       if (succeeded(parser.parseOptionalRParen())) {
         break;
-      } 
+      }
     }
   }
   result.addTypes(unif::UnifNodeType::get(parser.getBuilder().getContext()));
@@ -97,7 +99,8 @@ ParseResult UnifVarOp::parse(OpAsmParser &parser, OperationState &result) {
   result.addAttribute(UnifConstructorOp::getConstructorNameKey(), name);
 
   OpAsmParser::OperandType parent;
-  if (parser.parseComma() || parser.parseOperand(parent) || parser.parseRBrace()) {
+  if (parser.parseComma() || parser.parseOperand(parent) ||
+      parser.parseRBrace()) {
   }
   parser.resolveOperand(parent,
                         UnifNodeType::get(parser.getBuilder().getContext()),

@@ -154,14 +154,13 @@ void registerLZJITPass() {
 // === DUMP LLVM ===
 // === DUMP LLVM ===
 
-
 struct LZDumpLLVMPass : public mlir::Pass {
   LZDumpLLVMPass() : Pass(mlir::TypeID::get<LZDumpLLVMPass>()){};
   StringRef getName() const override { return "LZDumpLLVM"; }
 
   std::unique_ptr<Pass> clonePass() const override {
-    auto newInst =
-        std::make_unique<LZDumpLLVMPass>(*static_cast<const LZDumpLLVMPass *>(this));
+    auto newInst = std::make_unique<LZDumpLLVMPass>(
+        *static_cast<const LZDumpLLVMPass *>(this));
     newInst->copyOptionValuesFrom(this);
     return newInst;
   }
@@ -179,7 +178,6 @@ struct LZDumpLLVMPass : public mlir::Pass {
     llvmMod->print(llvm::outs(), AAW);
   };
 };
-
 
 std::unique_ptr<mlir::Pass> createLZDumpLLVMPass() {
   return std::make_unique<LZDumpLLVMPass>();

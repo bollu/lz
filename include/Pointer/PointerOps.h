@@ -24,8 +24,5 @@
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
-namespace ptr {
-
-
-} // namespace grin
+namespace ptr {} // namespace ptr
 } // namespace mlir
