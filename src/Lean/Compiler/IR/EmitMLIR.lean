@@ -31,7 +31,11 @@ def mkModuleInitializationFunctionNameHACK (moduleName : Name) : String :=
 
 partial def lookupArgTy (tys: HashMap VarId IRType) (a: Arg) : IRType := 
   match a with 
-  | Arg.var id => tys.find! id
+  | Arg.var id => 
+    match tys.find? id with
+    | some ty => ty
+    -- TODO: get stack trace? X(
+    | none => panic $ "unable to find type of arg"
   | Arg.irrelevant => IRType.irrelevant
 
 def escape  {a : Type} [ToFormat a] : a -> Format
@@ -94,7 +98,7 @@ def emitLns {α : Type} [ToString α] (as : List α) : M Unit :=
 def argToCString (x : Arg) : String :=
   match x with
   | Arg.var x => toString x
-  | _         => "lean_box(0)"
+  | _         => "irrelevant" --  "lean_box(0)"
 
 def emitArg (x : Arg) : M Unit :=
   emit ("%" ++ (argToCString x))
@@ -195,69 +199,69 @@ def emitFnFwdDecls : M Unit := do
                     then pure ()
                     else emitFnFwdDecl decl (!modDecls.contains n)
 
-def emitMainFn : M Unit := do
-  let d ← getDecl `main
-  match d with
-  | Decl.fdecl (f := f) (xs := xs) (type := t) (body := b) .. => do
-    unless xs.size == 2 || xs.size == 1 do throw "invalid main function, incorrect arity when generating code"
-    let env ← getEnv
-    let usesLeanAPI := usesModuleFrom env `Lean
-    if usesLeanAPI then
-       emitLn "void lean_initialize();"
-    else
-       emitLn "void lean_initialize_runtime_module();";
-    emitLn "
-  #if defined(WIN32) || defined(_WIN32)
-  #include <windows.h>
-  #endif
-
-  int main(int argc, char ** argv) {
-  #if defined(WIN32) || defined(_WIN32)
-  SetErrorMode(SEM_FAILCRITICALERRORS);
-  #endif
-  lean_object* in; lean_object* res;";
-    if usesLeanAPI then
-      emitLn "lean_initialize();"
-    else
-      emitLn "lean_initialize_runtime_module();"
-    let modName ← getModName
-    emitLn ("res = " ++ mkModuleInitializationFunctionNameHACK modName ++ "(lean_io_mk_world());")
-    emitLns ["lean_io_mark_end_initialization();",
-             "if (lean_io_result_is_ok(res)) {",
-             "lean_dec_ref(res);",
-             "lean_init_task_manager();"];
-    if xs.size == 2 then
-      emitLns ["in = lean_box(0);",
-               "int i = argc;",
-               "while (i > 1) {",
-               " lean_object* n;",
-               " i--;",
-               " n = lean_alloc_ctor(1,2,0); lean_ctor_set(n, 0, lean_mk_string(argv[i])); lean_ctor_set(n, 1, in);",
-               " in = n;",
-              "}"]
-      emitLn ("res = " ++ leanMainFn ++ "(in, lean_io_mk_world());")
-    else
-      emitLn ("res = " ++ leanMainFn ++ "(lean_io_mk_world());")
-    emitLn "}"
-    emitLns ["if (lean_io_result_is_ok(res)) {",
-             "  int ret = lean_unbox(lean_io_result_get_value(res));",
-             "  lean_dec_ref(res);",
-             "  return ret;",
-             "} else {",
-             "  lean_io_result_show_error(res);",
-             "  lean_dec_ref(res);",
-             "  return 1;",
-             "}"]
-    emitLn "}"
-  | other => throw "function declaration expected"
-
-def hasMainFn : M Bool := do
-  let env ← getEnv
-  let decls := getDecls env
-  pure $ decls.any (fun d => d.name == `main)
-
-def emitMainFnIfNeeded : M Unit := do
-  if (← hasMainFn) then emitMainFn
+-- def emitMainFn : M Unit := do
+--   let d ← getDecl `main
+--   match d with
+--   | Decl.fdecl (f := f) (xs := xs) (type := t) (body := b) .. => do
+--     unless xs.size == 2 || xs.size == 1 do throw "invalid main function, incorrect arity when generating code"
+--     let env ← getEnv
+--     let usesLeanAPI := usesModuleFrom env `Lean
+--     if usesLeanAPI then
+--        emitLn "void lean_initialize();"
+--     else
+--        emitLn "void lean_initialize_runtime_module();";
+--     emitLn "
+--   #if defined(WIN32) || defined(_WIN32)
+--   #include <windows.h>
+--   #endif
+--  
+--   int main(int argc, char ** argv) {
+--   #if defined(WIN32) || defined(_WIN32)
+--   SetErrorMode(SEM_FAILCRITICALERRORS);
+--   #endif
+--   lean_object* in; lean_object* res;";
+--     if usesLeanAPI then
+--       emitLn "lean_initialize();"
+--     else
+--       emitLn "lean_initialize_runtime_module();"
+--     let modName ← getModName
+--     emitLn ("res = " ++ mkModuleInitializationFunctionNameHACK modName ++ "(lean_io_mk_world());")
+--     emitLns ["lean_io_mark_end_initialization();",
+--              "if (lean_io_result_is_ok(res)) {",
+--              "lean_dec_ref(res);",
+--              "lean_init_task_manager();"];
+--     if xs.size == 2 then
+--       emitLns ["in = lean_box(0);",
+--                "int i = argc;",
+--                "while (i > 1) {",
+--                " lean_object* n;",
+--                " i--;",
+--                " n = lean_alloc_ctor(1,2,0); lean_ctor_set(n, 0, lean_mk_string(argv[i])); lean_ctor_set(n, 1, in);",
+--                " in = n;",
+--               "}"]
+--       emitLn ("res = " ++ leanMainFn ++ "(in, lean_io_mk_world());")
+--     else
+--       emitLn ("res = " ++ leanMainFn ++ "(lean_io_mk_world());")
+--     emitLn "}"
+--     emitLns ["if (lean_io_result_is_ok(res)) {",
+--              "  int ret = lean_unbox(lean_io_result_get_value(res));",
+--              "  lean_dec_ref(res);",
+--              "  return ret;",
+--              "} else {",
+--              "  lean_io_result_show_error(res);",
+--              "  lean_dec_ref(res);",
+--              "  return 1;",
+--              "}"]
+--     emitLn "}"
+--   | other => throw "function declaration expected"
+--  
+-- def hasMainFn : M Bool := do
+--   let env ← getEnv
+--   let decls := getDecls env
+--   pure $ decls.any (fun d => d.name == `main)
+--  
+-- def emitMainFnIfNeeded : M Unit := do
+--   if (← hasMainFn) then emitMainFn
 
 def emitPreamble : M Unit := do
   let env ← getEnv
@@ -435,19 +439,33 @@ def emitCtorScalarSize (usize : Nat) (ssize : Nat) : M Unit := do
   else emit "sizeof(size_t)*"; emit usize; emit " + "; emit ssize
 
 def emitAllocCtor (c : CtorInfo) : M Unit := do
+  -- let idxName := gensym "idx";
+  -- emit $ "%" ++ idxName ++ " = " ++ "constant " ++ c.idx ++ " : i64";
   emit "lean_alloc_ctor("; emit c.cidx; emit ", "; emit c.size; emit ", "
   emitCtorScalarSize c.usize c.ssize; emitLn ");"
 
-def emitCtorSetArgs (z : VarId) (ys : Array Arg) : M Unit :=
+def emitCtorSetArgs (z : VarId) (ys : Array Arg) : M Unit := 
   ys.size.forM fun i => do
     emit "lean_ctor_set("; emit z; emit ", "; emit i; emit ", "; emitArg ys[i]; emitLn ");"
 
-def emitExprCtor (z : VarId) (c : CtorInfo) (ys : Array Arg) : M Unit := do
+-- | TODO: raise to a higher abstraction level. Generate !lz.construct()
+-- instead of the raw calls. 
+-- For now, generate the raw calls to check that can lower correctly?
+def emitExprCtor (z : VarId) (c : CtorInfo) (ys : Array Arg)
+  (tys: HashMap VarId IRType): M Unit := do
   emitLhs z;
-  if c.size == 0 && c.usize == 0 && c.ssize == 0 then do
-    emit "lean_box("; emit c.cidx; emitLn ");"
-  else do
-    emitAllocCtor c; emitCtorSetArgs z ys
+  emit (escape "lz.construct"); 
+  emit "("; emitArgs ys;  emit ")";
+  emit "{value = "; emit c.cidx; emit "}";
+  emit " : ";
+  emit "("; emitArgsOnlyTys ys tys; emit ") -> (!lz.value)";
+  -- if c.size == 0 && c.usize == 0 && c.ssize == 0 then do
+  --   let idxName <- gensym "idx";
+  --   emit $ "%" ++ idxName ++ " = " ++ "constant " ++ (format c.cidx) ++ " : i64";
+  --   emit "call @lean_box("; emit ("%" ++ idxName); emit ");"
+  --   emit " : (i64) -> !lz.value"; emitLn "";
+  -- else do
+  --   emitAllocCtor c; emitCtorSetArgs z ys
 
 def emitReset (z : VarId) (n : Nat) (x : VarId) : M Unit := do
   emit "if (lean_is_exclusive("; emit x; emitLn ")) {";
@@ -661,7 +679,7 @@ def emitLit (z : VarId) (t : IRType) (v : LitVal) : M Unit := do
 -- | emit expression / Expr
 def emitVDecl (z : VarId) (t : IRType) (v : Expr)  (tys: HashMap VarId IRType) : M Unit :=
   match v with
-  | Expr.ctor c ys      => emitExprCtor z c ys
+  | Expr.ctor c ys      => emitExprCtor z c ys tys
   | Expr.reset n x      => panicM "// ERR: Expr.reset" -- emitReset z n x
   | Expr.reuse x c u ys => panicM "// ERR: Expr.reuse" --emitReuse z x c u ys
   | Expr.proj i x       => do
@@ -777,7 +795,7 @@ partial def emitBlock (b : FnBody) (tys: HashMap VarId IRType) : M Unit := do
       emitTailCall v
     else
       emitLn "//ERR: fnBody.vdecl (non-tail)";
-      emitVDecl x t v tys
+      emitVDecl x t v (tys.insert x t)
       emitBlock b (tys.insert x t)
   | FnBody.inc x n c p b       =>
     emitLn "// ERR: FnBody.inc "
@@ -801,10 +819,15 @@ partial def emitBlock (b : FnBody) (tys: HashMap VarId IRType) : M Unit := do
     panicM "// ERR: FnBody.sset"; emitBlock b tys; -- emitSSet x i o y t; emitBlock b
   | FnBody.mdata _ b           => emitBlock b tys
   | FnBody.ret x               =>
+    emitLn "//ERR: FnBody.ret"
     emit "return "; emitArg x;
     emit " : ";  emitLn (toCType (lookupArgTy tys x));
-  | FnBody.case _ x xType alts => emitCase x xType alts
-  | FnBody.jmp j xs            => emitJmp j xs
+  | FnBody.case _ x xType alts => do
+    emitLn "// ERR: FnBody.case"
+    emitCase x xType alts
+  | FnBody.jmp j xs            => do
+      emitLn "// ERR: FnBody.jmp"
+      emitJmp j xs
   | FnBody.unreachable         => 
     emitLn "// ERR: FnBody.unreachable" -- emitLn "lean_internal_panic_unreachable();"
 
