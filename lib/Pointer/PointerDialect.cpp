@@ -356,9 +356,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     Value fn = rands[0];
     rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(
-        rator,
-        getInt8PtrTy(fn.getContext()),
-        fn);
+        rator, getInt8PtrTy(fn.getContext()), fn);
     return success();
   }
 };
@@ -383,7 +381,8 @@ public:
     // MLIRContext *context = rewriter.getContext();
     SmallVector<Type, 4> argtys;
 
-    if (failed (tc.convertType(MemRefType::get({0}, rewriter.getI64Type()), argtys))) {
+    if (failed(tc.convertType(MemRefType::get({0}, rewriter.getI64Type()),
+                              argtys))) {
       assert(false && "unable to convert memref type.");
     };
     Type retty = ptr::VoidPtrType::get(rewriter.getContext());

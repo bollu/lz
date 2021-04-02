@@ -427,7 +427,7 @@ public:
 ////    HaskIntegerConstOp op = cast<HaskIntegerConstOp>(operation);
 ////    const int width = 64;
 ////    rewriter.replaceOpWithNewOp<ConstantIntOp>(operation, op.getValue(),
-///width);
+/// width);
 //    return success();
 //};
 

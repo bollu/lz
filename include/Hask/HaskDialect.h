@@ -234,8 +234,9 @@ struct HaskInlinerInterface : public DialectInlinerInterface {
   /// contains any remapped values from within the 'src' region. This can be
   /// used to examine what values will replace entry arguments into the 'src'
   /// region for example.
-  virtual bool isLegalToInline(Region *dest, Region *src, bool wouldBeCloned,
-                               BlockAndValueMapping &valueMapping) const override {
+  virtual bool
+  isLegalToInline(Region *dest, Region *src, bool wouldBeCloned,
+                  BlockAndValueMapping &valueMapping) const override {
     return true;
   }
 
@@ -246,8 +247,9 @@ struct HaskInlinerInterface : public DialectInlinerInterface {
   /// in-place(i.e. no duplicates would be created). 'valueMapping' contains any
   /// remapped values from within the 'src' region. This can be used to examine
   /// what values may potentially replace the operands to 'op'.
-  virtual bool isLegalToInline(Operation *op, Region *dest, bool wouldBeCloned,
-                               BlockAndValueMapping &valueMapping) const override  {
+  virtual bool
+  isLegalToInline(Operation *op, Region *dest, bool wouldBeCloned,
+                  BlockAndValueMapping &valueMapping) const override {
     return true;
   }
 
@@ -255,7 +257,9 @@ struct HaskInlinerInterface : public DialectInlinerInterface {
   /// return true if the analyzer should recurse within the regions of this
   /// operation when computing legality and cost, false otherwise. The default
   /// implementation returns true.
-  virtual bool shouldAnalyzeRecursively(Operation *op) const override  { return true; }
+  virtual bool shouldAnalyzeRecursively(Operation *op) const override {
+    return true;
+  }
 
   /// This hook is called when a terminator operation has been inlined. The only
   /// terminator that we have in the Toy dialect is the return

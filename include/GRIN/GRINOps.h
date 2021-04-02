@@ -59,7 +59,10 @@ public:
   static StringRef getOperationName() { return "grn.box"; };
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   std::string getDataConstructorName() {
-    return this->getOperation()->getAttrOfType<FlatSymbolRefAttr>("value").getValue().str();
+    return this->getOperation()
+        ->getAttrOfType<FlatSymbolRefAttr>("value")
+        .getValue()
+        .str();
   }
   void print(OpAsmPrinter &p);
 };
@@ -142,7 +145,6 @@ public:
   Value getHeapNode() { return this->getOperand(0); }
   Value getBox() { return this->getOperand(1); }
 };
-
 
 } // namespace grin
 } // namespace mlir

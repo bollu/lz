@@ -377,7 +377,6 @@ public:
   }
 };
 
-
 // I don't understand why I need this.
 class CallOpLowering : public ConversionPattern {
 public:
@@ -1236,7 +1235,7 @@ bool isTypeLegal(Type t) {
 }
 
 // I don't know why, but OpConversionPattern just dies.
-//class ErasedValueOpLowering : public OpConversionPattern<ErasedValueOp> {
+// class ErasedValueOpLowering : public OpConversionPattern<ErasedValueOp> {
 struct ErasedValueOpLowering : public mlir::ConversionPattern {
 public:
   static FuncOp getOrCreateLeanBox(PatternRewriter &rewriter, ModuleOp m) {
@@ -1257,10 +1256,8 @@ public:
     return fn;
   }
 
-
   explicit ErasedValueOpLowering(TypeConverter &tc, MLIRContext *context)
-      : ConversionPattern(ErasedValueOp::getOperationName(), 1, tc,
-                          context) {}
+      : ConversionPattern(ErasedValueOp::getOperationName(), 1, tc, context) {}
 
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> rands,
@@ -1274,15 +1271,12 @@ public:
   }
 };
 
-
-
 // I don't know why, but OpConversionPattern just dies.
-//class ErasedValueOpLowering : public OpConversionPattern<ErasedValueOp> {
+// class ErasedValueOpLowering : public OpConversionPattern<ErasedValueOp> {
 struct TagGetOpLowering : public mlir::ConversionPattern {
 public:
   explicit TagGetOpLowering(TypeConverter &tc, MLIRContext *context)
-      : ConversionPattern(TagGetOp::getOperationName(), 1, tc,
-                          context) {}
+      : ConversionPattern(TagGetOp::getOperationName(), 1, tc, context) {}
 
   static FuncOp getOrCreateLeanTag(PatternRewriter &rewriter, ModuleOp m) {
     const std::string name = "lean_obj_tag";
@@ -1302,8 +1296,6 @@ public:
     return fn;
   }
 
-
-
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> rands,
                   ConversionPatternRewriter &rewriter) const override {
@@ -1318,7 +1310,8 @@ public:
 struct PapExtendOpLowering : public mlir::ConversionPattern {
 public:
   // TODO: need variadic arguments?
-  static FuncOp getOrCreateLeanApply(int nargs, PatternRewriter &rewriter, ModuleOp m) {
+  static FuncOp getOrCreateLeanApply(int nargs, PatternRewriter &rewriter,
+                                     ModuleOp m) {
     const std::string name = "lean_apply_" + std::to_string(nargs);
     if (FuncOp fn = m.lookupSymbol<FuncOp>(name)) {
       return fn;
@@ -1327,7 +1320,9 @@ public:
     SmallVector<Type, 4> argtys;
 
     argtys.push_back(ptr::VoidPtrType::get(context)); // argument.
-    for(int i = 0; i < nargs; ++i) { argtys.push_back(ptr::VoidPtrType::get(context)); }
+    for (int i = 0; i < nargs; ++i) {
+      argtys.push_back(ptr::VoidPtrType::get(context));
+    }
 
     Type retty = rewriter.getI64Type();
     FunctionType fnty = rewriter.getFunctionType(argtys, retty);
@@ -1339,10 +1334,8 @@ public:
     return fn;
   }
 
-
-  explicit  PapExtendOpLowering(TypeConverter &tc, MLIRContext *context)
-      : ConversionPattern(PapExtendOp::getOperationName(), 1, tc,
-                          context) {}
+  explicit PapExtendOpLowering(TypeConverter &tc, MLIRContext *context)
+      : ConversionPattern(PapExtendOp::getOperationName(), 1, tc, context) {}
 
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> rands,
@@ -1352,9 +1345,10 @@ public:
     // def emitApp (z : VarId) (f : VarId) (ys : Array Arg) : M Unit :=
     // if ys.size > closureMaxArgs then do
     //  emit "{ lean_object* _aargs[] = {"; emitArgs ys; emitLn "};";
-    // emitLhs z; emit "lean_apply_m("; emit f; emit ", "; emit ys.size; emitLn ", _aargs); }"
-    // else do
-    //   emitLhs z; emit "lean_apply_"; emit ys.size; emit "("; emit f; emit ", "; emitArgs ys; emitLn ");"
+    // emitLhs z; emit "lean_apply_m("; emit f; emit ", "; emit ys.size; emitLn
+    // ", _aargs); }" else do
+    //   emitLhs z; emit "lean_apply_"; emit ys.size; emit "("; emit f; emit ",
+    //   "; emitArgs ys; emitLn ");"
     // TODO: generate lean_apply_m;
     FuncOp f = getOrCreateLeanApply(papext.getNumFnArguments(), rewriter, mod);
     rewriter.replaceOpWithNewOp<mlir::CallOp>(op, f, papext->getOperands());

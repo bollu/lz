@@ -44,7 +44,8 @@ UnificationDialect &UnifType::getDialect() {
   return static_cast<UnificationDialect &>(Type::getDialect());
 }
 UnificationDialect::UnificationDialect(mlir::MLIRContext *context)
-    : Dialect(getDialectNamespace(), context, TypeID::get<UnificationDialect>()) {
+    : Dialect(getDialectNamespace(), context,
+              TypeID::get<UnificationDialect>()) {
 
   addTypes<UnifNodeType>();
   addOperations<UnifRootOp>();
@@ -54,17 +55,17 @@ UnificationDialect::UnificationDialect(mlir::MLIRContext *context)
 }
 
 mlir::Type UnificationDialect::parseType(mlir::DialectAsmParser &parser) const {
-    if (succeeded(parser.parseOptionalKeyword("node"))) {
-        return parser.getBuilder().getType<UnifNodeType>();
-    }
-    assert(false && "unknown type for unification dialect");
+  if (succeeded(parser.parseOptionalKeyword("node"))) {
+    return parser.getBuilder().getType<UnifNodeType>();
+  }
+  assert(false && "unknown type for unification dialect");
 }
 
-void UnificationDialect::printType(mlir::Type type, mlir::DialectAsmPrinter &p) const {
-    if (type.isa<UnifNodeType>()) {
-        p << "node";
-        return;
-    }
-    assert(false && "unknown type for unification dialect");
+void UnificationDialect::printType(mlir::Type type,
+                                   mlir::DialectAsmPrinter &p) const {
+  if (type.isa<UnifNodeType>()) {
+    p << "node";
+    return;
+  }
+  assert(false && "unknown type for unification dialect");
 }
-

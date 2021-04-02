@@ -31,7 +31,8 @@ public:
   UnificationDialect &getDialect();
 };
 
-class UnifNodeType : public mlir::Type::TypeBase<UnifNodeType, UnifType, TypeStorage> {
+class UnifNodeType
+    : public mlir::Type::TypeBase<UnifNodeType, UnifType, TypeStorage> {
 public:
   using Base::Base;
   static UnifNodeType get(MLIRContext *context) { return Base::get(context); }
