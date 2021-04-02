@@ -20,6 +20,9 @@ open Std (HashMap)
 namespace Lean.IR.EmitMLIR
 open ExplicitBoxing (requiresBoxedVersion mkBoxedName isBoxedName)
 
+
+
+
 -- def mkModuleInitializationFunctionName (moduleName : Name) : String :=
 def mkModuleInitializationFunctionNameHACK (moduleName : Name) : String :=
   "initialize_" ++  "main"
@@ -53,6 +56,16 @@ structure State where
    
 -- need more state here to generate GUIDs
 abbrev M := ReaderT Context (EStateM String State)
+
+def assertM (s: String) (b: Bool) : M Unit := 
+  if b
+  then pure ()
+  else do panic ("ASSERTION ERROR: " ++ s); pure ()
+
+
+def panicM (s: String) : M Unit := do
+  panic ("panic!: " ++ s); pure ()
+
 
 def gensym (s: String) : M String := do
   -- let ix <- modifyGet (fun st => (ix, { st with guid := st.guid + 1}))
@@ -387,13 +400,22 @@ def emitJmp (j : JoinPointId) (xs : Array Arg) : M Unit := do
 def emitLhs (z : VarId) : M Unit := do
   emit "%"; emit z; emit " = "
 
+-- | emit the type of the argument
+def emitArgTy (a: Arg) (tys: HashMap VarId IRType) : M Unit :=  do
+    emit (toCType (lookupArgTy tys a));
+
+-- | emit the tpe of a variable
+def emitVarTy (v: VarId) (tys: HashMap VarId IRType) : M Unit :=  do
+    emit (toCType (lookupArgTy tys (mkVarArg v)));
+
+
 -- | emit args with types interleaved
 def emitArgsInterleavedTys (ys: Array Arg) (tys: HashMap VarId IRType) : M Unit :=
   ys.size.forM fun i => do
     if i > 0 then emit ", "
     emitArg ys[i];
     emit " : ";
-    emit (toCType (lookupArgTy tys ys[i]));
+    emitArgTy ys[i] tys
 
 -- | emit only the types of the arguments
 def emitArgsOnlyTys (ys: Array Arg) (tys: HashMap VarId IRType) : M Unit :=
@@ -446,8 +468,12 @@ def emitReuse (z : VarId) (x : VarId) (c : CtorInfo) (updtHeader : Bool) (ys : A
   emitLn "}";
   emitCtorSetArgs z ys
 
-def emitProj (z : VarId) (i : Nat) (x : VarId) : M Unit := do
-  emitLhs z; emit "lean_ctor_get("; emit x; emit ", "; emit i; emitLn ");"
+def emitProj (z : VarId) (i : Nat) (x : VarId) (tys: HashMap VarId IRType): M Unit := do
+  emitLhs z; emit (escape "lz.proj");
+  emit "("; emit x; emit ")"; 
+  emit "{value="; emit i; emit "}";
+  emit ":"; emit "("; emitVarTy x tys; emit ")"; emit "  -> ";
+  emit "("; emitVarTy z tys; emit ")"; emitLn "";
 
 def emitUProj (z : VarId) (i : Nat) (x : VarId) : M Unit := do
   emitLhs z; emit "lean_ctor_get_usize("; emit x; emit ", "; emit i; emitLn ");"
@@ -526,20 +552,41 @@ def emitFullApp (z : VarId) (f : FunId) (ys : Array Arg) (tys: HashMap VarId IRT
     emit "\n"
 
 
-def emitPartialApp (z : VarId) (f : FunId) (ys : Array Arg) : M Unit := do
+
+--  create a new pap
+def emitPartialApp (z : VarId) (f : FunId)
+  (ys : Array Arg) (tys: HashMap VarId IRType): M Unit := do
   let decl ← getDecl f
   let arity := decl.params.size;
-  emitLhs z; emit "lean_alloc_closure((void*)("; emitCName f; emit "), "; emit arity; emit ", "; emit ys.size; emitLn ");";
-  ys.size.forM fun i => do
-    let y := ys[i]
-    emit "lean_closure_set("; emit z; emit ", "; emit i; emit ", "; emitArg y; emitLn ");"
+  emitLhs z; 
+  emit " = ";
+  emit "lz.pap("; emitArgs ys; emit ") ";
+  emit "{value=@"; emitCName f; emit "} ";
+  emit " : "; emitArgsOnlyTys ys tys; emitLn " -> (!lz.value)";
+  -- emit "lean_alloc_closure((void*)("; emitCName f; emit "), ";
+  -- emit arity; emit ", "; emit ys.size; emitLn ");";
+  -- ys.size.forM fun i => do
+  --   let y := ys[i]
+  --   emit "lean_closure_set("; emit z; emit ", "; emit i; emit ", "; emitArg y; emitLn ");"
 
-def emitApp (z : VarId) (f : VarId) (ys : Array Arg) : M Unit :=
+-- | this is the thing that extends an application
+def emitApp (z : VarId) (f : VarId) (ys : Array Arg) (tys: HashMap VarId IRType): M Unit :=
   if ys.size > closureMaxArgs then do
-    emit "{ lean_object* _aargs[] = {"; emitArgs ys; emitLn "};";
-    emitLhs z; emit "lean_apply_m("; emit f; emit ", "; emit ys.size; emitLn ", _aargs); }"
+    -- emit "{ lean_object* _aargs[] = {"; emitArgs ys; emitLn "};";
+    -- emitLhs z; emit "lean_apply_m("; emit f; emit ", "; emit ys.size; emitLn ", _aargs); }"
+    -- TODO: what is the difference between pap and papm? In particular,
+    -- what are these CLOSURE_MAX_ARGS thing?
+    panicM "// ERR: emitApp : ys.size > closureMaxArgs"
+    emitLhs z; emit " = "; emit (escape "lz.papExtendM");
+    emit "("; emitArgs ys; emit ")";
+    emit ": (";  emitArgsOnlyTys ys tys; emit ") -> !lz.value"
+    emitLn "\n";
   else do
-    emitLhs z; emit "lean_apply_"; emit ys.size; emit "("; emit f; emit ", "; emitArgs ys; emitLn ");"
+    emitLhs z; emit " = "; emit (escape ("lz.papExtend")); 
+    emit ys.size; emit "("; emit f; emit ", "; emitArgs ys; emit ")";
+    emit " : ("; emit "!lz.value ,"; emitArgsOnlyTys ys tys; emit ")";
+    emit "("; emitVarTy z tys; emit ")"; 
+    emitLn "";
 
 def emitBoxFn (xType : IRType) : M Unit :=
   match xType with
@@ -597,7 +644,7 @@ def emitNumLit (t : IRType) (v : Nat) : M Unit := do
       emit ": () ->"; emit "(";  emit (toCType t); emit ")"; emit "\n";
       -- emit "lean_unsigned_to_nat("; emit v; emit "u)"
     else
-     emitLn "// ERR: lean_cstr_to_nat"
+     panicM "// ERR: lean_cstr_to_nat"
       -- emit "call @lean_cstr_to_nat(\""; emit v; emit "\")"
   else
     emit "std.constant "; emit v; emit " : "; emitLn (toCType t);
@@ -615,21 +662,27 @@ def emitLit (z : VarId) (t : IRType) (v : LitVal) : M Unit := do
 def emitVDecl (z : VarId) (t : IRType) (v : Expr)  (tys: HashMap VarId IRType) : M Unit :=
   match v with
   | Expr.ctor c ys      => emitExprCtor z c ys
-  | Expr.reset n x      => emitLn "// ERR: Expr.reset" -- emitReset z n x
-  | Expr.reuse x c u ys => emitLn "// ERR: Expr.reuse" --emitReuse z x c u ys
-  | Expr.proj i x       => emitLn "// ERR: Expr.proj" -- emitProj z i x
-  | Expr.uproj i x      => emitLn "// ERR: Expr.uproj" -- emitUProj z i x
-  | Expr.sproj n o x    => emitLn "// ERR: Expr.sproj" -- emitSProj z t n o x
+  | Expr.reset n x      => panicM "// ERR: Expr.reset" -- emitReset z n x
+  | Expr.reuse x c u ys => panicM "// ERR: Expr.reuse" --emitReuse z x c u ys
+  | Expr.proj i x       => do
+      emitLn "// ERR: Expr.proj"
+      emitProj z i x tys
+  | Expr.uproj i x      => panicM "// ERR: Expr.uproj" -- emitUProj z i x
+  | Expr.sproj n o x    => panicM "// ERR: Expr.sproj" -- emitSProj z t n o x
   | Expr.fap c ys       => do
     emitLn "// ERR: Expr.fap"; emitFullApp z c ys tys
-  | Expr.pap c ys       => emitLn "// ERR: Expr.pap" -- emitPartialApp z c ys
-  | Expr.ap x ys        => emitLn "// ERR: Expr.ap" -- emitApp z x ys
-  | Expr.box t x        => emitLn "// ERR: Expr.box" -- emitBox z x t
+  | Expr.pap c ys       =>  do
+      emitLn "// ERR: Expr.pap"
+      emitPartialApp z c ys tys
+  | Expr.ap x ys        =>  do
+     emitLn "// Err: Expr.ap"; 
+     emitApp z x ys tys
+  | Expr.box t x        => panicM "// ERR: Expr.box" -- emitBox z x t
   | Expr.unbox x        => do
     emitLn "// ERR: Expr.unbox"
     emitUnbox z t x
-  | Expr.isShared x     => emitLn "// ERR: Expr.isShared" -- emitIsShared z x
-  | Expr.isTaggedPtr x  => emitLn "// ERR: Expr.isTaggedPtr: " -- emitIsTaggedPtr z x
+  | Expr.isShared x     => panicM  "// ERR: Expr.isShared" -- emitIsShared z x
+  | Expr.isTaggedPtr x  => panicM "// ERR: Expr.isTaggedPtr: " -- emitIsTaggedPtr z x
   | Expr.lit v          => do emitLn "//ERR: Expr.lit"; emitLit z t v
 
 def isTailCall (x : VarId) (v : Expr) (b : FnBody) : M Bool := do
@@ -737,15 +790,15 @@ partial def emitBlock (b : FnBody) (tys: HashMap VarId IRType) : M Unit := do
     unless p do emitDec x n c
     emitBlock b tys
   | FnBody.del x b             => 
-    emitLn "// ERR: FnBody.del"; emitBlock b tys ; -- emitDel x; emitBlock b
+    panicM "// ERR: FnBody.del"; emitBlock b tys ; -- emitDel x; emitBlock b
   | FnBody.setTag x i b        => 
-    emitLn "// ERR: FnBody.setTag"; emitBlock b tys; -- emitSetTag x i; emitBlock b
+    panicM "// ERR: FnBody.setTag"; emitBlock b tys; -- emitSetTag x i; emitBlock b
   | FnBody.set x i y b         =>
-    emitLn "// ERR: FnBody.set"; emitBlock b  tys; -- emitSet x i y; emitBlock b
+    panicM "// ERR: FnBody.set"; emitBlock b  tys; -- emitSet x i y; emitBlock b
   | FnBody.uset x i y b        =>
-    emitLn "// ERR: FnBody.uset"; emitBlock b tys; -- emitUSet x i y; emitBlock b
+    panicM "// ERR: FnBody.uset"; emitBlock b tys; -- emitUSet x i y; emitBlock b
   | FnBody.sset x i o y t b    =>
-    emitLn "// ERR: FnBody.sset"; emitBlock b tys; -- emitSSet x i o y t; emitBlock b
+    panicM "// ERR: FnBody.sset"; emitBlock b tys; -- emitSSet x i o y t; emitBlock b
   | FnBody.mdata _ b           => emitBlock b tys
   | FnBody.ret x               =>
     emit "return "; emitArg x;
@@ -896,11 +949,6 @@ def emitDeclInit (d : Decl) : M Unit := do
  --      emitLn "lean_dec_ref(res);"
  --    | _ =>
  --      emitCName n; emit " = "; emitCInitName n; emitLn "();"; emitMarkPersistent d n
-
-def assertM (s: String) (b: Bool) : M Unit := 
-  if b
-  then pure ()
-  else do panic ("ASSERTION ERROR: " ++ s); pure ()
 
 
 -- def emitInitFn : M Unit := do
