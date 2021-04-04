@@ -59,6 +59,7 @@ HaskDialect::HaskDialect(mlir::MLIRContext *context)
     , TagGetOp
     , ProjectionOp
     , HaskIntegerConstOp
+    , HaskStringConstOp
     , IncOp
     , DecOp
     , ErasedValueOp

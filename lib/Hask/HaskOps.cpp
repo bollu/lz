@@ -933,6 +933,30 @@ void HaskIntegerConstOp::print(OpAsmPrinter &p) {
   return;
 };
 
+// === HaskStringConstOp  OP ===
+// === HaskStringConstOp  OP ===
+// === HaskStringConstOp  OP ===
+// === HaskStringConstOp  OP ===
+// === HaskStringConstOp  OP ===
+
+ParseResult HaskStringConstOp::parse(OpAsmParser &parser,
+                                     OperationState &result) {
+  mlir::OpAsmParser::OperandType in;
+  mlir::IntegerAttr i;
+  if (parser.parseLParen() || parser.parseAttribute<mlir::IntegerAttr>(i) ||
+      parser.parseRParen()) {
+    return failure();
+  }
+  result.addAttribute(HaskStringConstOp::getValueAttrKey(), i);
+  result.addTypes(parser.getBuilder().getType<ValueType>());
+  return success();
+};
+
+void HaskStringConstOp::print(OpAsmPrinter &p) {
+  p.printGenericOp(this->getOperation());
+  return;
+};
+
 // === INC OP ===
 // === INC OP ===
 // === INC OP ===

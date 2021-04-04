@@ -531,6 +531,27 @@ public:
                  &effects) {}
 };
 
+class HaskStringConstOp
+    : public Op<HaskStringConstOp, OpTrait::ZeroOperands, OpTrait::OneResult,
+                OpTrait::ZeroRegion, MemoryEffectOpInterface::Trait> {
+public:
+  using Op::Op;
+  static StringRef getOperationName() { return "lz.string"; };
+  static const char *getValueAttrKey() { return "value"; }
+
+  static ParseResult parse(OpAsmParser &parser, OperationState &result);
+  void print(OpAsmPrinter &p);
+  std::string getValue() {
+    return this->getOperation()
+        ->getAttrOfType<StringAttr>(getValueAttrKey())
+        .getValue()
+        .str();
+  }
+  void
+  getEffects(SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+                 &effects) {}
+};
+
 // This makes me sad, because it has a side effect x(
 // for lambdapure
 class IncOp : public Op<IncOp, OpTrait::OneOperand, OpTrait::ZeroResult,

@@ -113,6 +113,8 @@ able to mechanically translate all of the rest of the LEAN ops into vanilla
 MLIR. The risky part of the process seems to work.
 
 
+- Teach `LEAN` to work with out-of-order definitions?
+
 # April 1
 
 - I understand the problem. The definitions in `lean/lean.h` are all defined IN THE HEADER FILE,
