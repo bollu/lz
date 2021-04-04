@@ -683,7 +683,7 @@ def emitVDecl (z : VarId) (t : IRType) (v : Expr)  (tys: HashMap VarId IRType) :
   match v with
   | Expr.ctor c ys      => emitExprCtor z c ys tys
   | Expr.reset n x      => panicM "// ERR: Expr.reset" -- emitReset z n x
-  | Expr.reuse x c u ys => panicM "// ERR: Expr.reuse" --emitReuse z x c u ys
+  | Expr.reuse x c u ys => panicM "// ERR: Expr.reuse" -- emitReuse z x c u ys
   | Expr.proj i x       => do
       emitLn "// ERR: Expr.proj"
       emitProj z i x tys
