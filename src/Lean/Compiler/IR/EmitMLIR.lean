@@ -779,7 +779,7 @@ partial def emitIf (x : VarId) (xType : IRType) (tag : Nat) (t : FnBody) (e : Fn
 partial def forMIx_ [Monad m] 
   (f : Nat → α → m Unit) (as : Array α)  (start := 0) (stop := as.size): m Unit := do
   as.foldlM (init := 0) (start := start) (stop := stop) 
-    (fun i v => (f i v) *> pure (i+1)) *> pure ()
+    (fun i v => do let _ <- (f i v); pure (i+1)) *> pure ()
 
 
 
