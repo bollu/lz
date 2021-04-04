@@ -770,19 +770,20 @@ partial def emitIf (x : VarId) (xType : IRType) (tag : Nat) (t : FnBody) (e : Fn
   emitLn "else";
   emitFnBody e {};
 
--- def foldlM {α : Type u} {β : Type v} {m : Type v → Type w} [Monad m]
--- (f : β → α → m β) (init : β) (as : Array α)
--- (start := 0) (stop := as.size) : m β :=
 
--- def forM {α : Type} {m : Type-> Type} [Monad m]
--- (f : α → m Unit) (as : Array α) (start := 0) (stop := as.size) : m Unit := pure  ()
+-- I have no idea why writing `do` notation gives me weird
+-- universe errors. I believe that in LEAN, it is illegal to leave a
+-- monadic value "unconsumed". So if `f, g :: m a`:
+-- it is illegal to write [do f; g]
+-- One MUST write [do let _ <- f; let _ <- g]
+partial def forMIx_ [Monad m] 
+  (f : Nat → α → m Unit) (as : Array α)  (start := 0) (stop := as.size): m Unit := do
+  as.foldlM (init := 0) (start := start) (stop := stop) 
+    (fun i v => (f i v) *> pure (i+1)) *> pure ()
 
--- def forMIx {α : Type u} {m : Type v → Type w} [Monad m] 
---   (f : Nat → α → m PUnit) (as : Array α)  (start := 0) (stop := as.size): m PUnit := do
---   as.foldlM (fun i v => do
---                  f i v
---                  pure (i+1)) 0 start stop
---   pure unit
+
+
+
 
 
 partial def emitCase (x : VarId) (xType : IRType) (alts : Array Alt) 
