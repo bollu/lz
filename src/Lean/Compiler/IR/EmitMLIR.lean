@@ -488,7 +488,7 @@ def emitReuse (z : VarId) (x : VarId) (c : CtorInfo) (updtHeader : Bool) (ys : A
   emitCtorSetArgs z ys
 
 def emitProj (z : VarId) (i : Nat) (x : VarId) (tys: HashMap VarId IRType): M Unit := do
-  emitLhs z; emit (escape "lz.proj");
+  emitLhs z; emit (escape "lz.project");
   emit "("; emit "%"; emit x; emit ")"; 
   emit "{value="; emit i; emit "}";
   emit ":"; emit "("; emitVarTy x tys; emit ")"; emit "  -> ";
