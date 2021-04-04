@@ -578,7 +578,6 @@ def emitPartialApp (z : VarId) (f : FunId)
   let decl ← getDecl f
   let arity := decl.params.size;
   emitLhs z; 
-  emit " = ";
   emit "lz.pap("; emitArgs ys; emit ") ";
   emit "{value=@"; emitCName f; emit "} ";
   emit " : "; emitArgsOnlyTys ys tys; emitLn " -> (!lz.value)";
@@ -596,14 +595,15 @@ def emitApp (z : VarId) (f : VarId) (ys : Array Arg) (tys: HashMap VarId IRType)
     -- TODO: what is the difference between pap and papm? In particular,
     -- what are these CLOSURE_MAX_ARGS thing?
     panicM "// ERR: emitApp : ys.size > closureMaxArgs"
-    emitLhs z; emit " = "; emit (escape "lz.papExtendM");
+    emitLhs z; emit (escape "lz.papExtendM");
     emit "("; emitArgs ys; emit ")";
     emit ": (";  emitArgsOnlyTys ys tys; emit ") -> !lz.value"
     emitLn "\n";
   else do
-    emitLhs z; emit " = "; emit (escape ("lz.papExtend")); 
-    emit ys.size; emit "("; emit f; emit ", "; emitArgs ys; emit ")";
+    emitLhs z; emit (escape ("lz.papExtend")); 
+    emit "("; emit "%"; emit f; emit ", "; emitArgs ys; emit ")";
     emit " : ("; emit "!lz.value ,"; emitArgsOnlyTys ys tys; emit ")";
+    emit " -> ";
     emit "("; emitVarTy z tys; emit ")"; 
     emitLn "";
 
@@ -776,6 +776,7 @@ partial def emitIf (x : VarId) (xType : IRType) (tag : Nat) (t : FnBody) (e : Fn
 -- monadic value "unconsumed". So if `f, g :: m a`:
 -- it is illegal to write [do f; g]
 -- One MUST write [do let _ <- f; let _ <- g]
+-- TODO: upstream this.
 partial def forMIx_ [Monad m] 
   (f : Nat → α → m Unit) (as : Array α)  (start := 0) (stop := as.size): m Unit := do
   as.foldlM (init := 0) (start := start) (stop := stop) 
@@ -790,12 +791,18 @@ partial def emitCase (x : VarId) (xType : IRType) (alts : Array Alt)
         (tys: HashMap VarId IRType): M Unit := do
  emit (escape ("lz.caseRet")); emit "("; emit "%"; emit x; emit ")";
  emit "("; 
- alts.forM fun alt => do
+ forMIx_ (as:= alts) (fun ix alt => do
+    emit (if ix > 0 then ", " else "");
     match alt with 
      |  Alt.ctor info b => emitFnBody b tys
-     |  Alt.default b => emitFnBody b tys
+     |  Alt.default b => emitFnBody b tys)
  emit ")";
- emitLn "";  
+ emitLn "";
+ -- TODO: emit case LHSs
+ -- TODO: emit return type of case. How?
+ emit " : ";
+ emit "("; emit (toCType xType); emit ")"; emit " -> "; emit "(!lz.value)";
+ emitLn "";
  
                       
  -- emitLn $ (escape "lz.caseRet") ++ "(%" ++ format x ++ ")" ++
