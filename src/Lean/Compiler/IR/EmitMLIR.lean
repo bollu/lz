@@ -489,7 +489,7 @@ def emitReuse (z : VarId) (x : VarId) (c : CtorInfo) (updtHeader : Bool) (ys : A
 
 def emitProj (z : VarId) (i : Nat) (x : VarId) (tys: HashMap VarId IRType): M Unit := do
   emitLhs z; emit (escape "lz.proj");
-  emit "("; emit x; emit ")"; 
+  emit "("; emit "%"; emit x; emit ")"; 
   emit "{value="; emit i; emit "}";
   emit ":"; emit "("; emitVarTy x tys; emit ")"; emit "  -> ";
   emit "("; emitVarTy z tys; emit ")"; emitLn "";
@@ -578,9 +578,9 @@ def emitPartialApp (z : VarId) (f : FunId)
   let decl ← getDecl f
   let arity := decl.params.size;
   emitLhs z; 
-  emit "lz.pap("; emitArgs ys; emit ") ";
+  emit (escape "lz.pap"); emit "("; emitArgs ys; emit ") ";
   emit "{value=@"; emitCName f; emit "} ";
-  emit " : "; emitArgsOnlyTys ys tys; emitLn " -> (!lz.value)";
+  emit " : "; emit "("; emitArgsOnlyTys ys tys; emit ")"; emitLn " -> (!lz.value)";
   -- emit "lean_alloc_closure((void*)("; emitCName f; emit "), ";
   -- emit arity; emit ", "; emit ys.size; emitLn ");";
   -- ys.size.forM fun i => do
@@ -673,9 +673,10 @@ def emitLit (z : VarId) (t : IRType) (v : LitVal) : M Unit := do
   emitLhs z;
   match v with
   | LitVal.num v => emitNumLit t v
-  | LitVal.str v =>
-     emit "call @lean_mk_string(){value="; emit (quoteString v); emit "}";
-     emit ": () -> "; emit (toCType t)
+  | LitVal.str v => 
+     emit (escape "lz.string"); emit "()"; emit "{value="; emit (quoteString v); emit "}";
+     emit ": () -> "; emit "("; emit (toCType t); emit ")";
+     emitLn "";
 
 -- | emit expression / Expr
 def emitVDecl (z : VarId) (t : IRType) (v : Expr)  (tys: HashMap VarId IRType) : M Unit :=
@@ -801,7 +802,7 @@ partial def emitCase (x : VarId) (xType : IRType) (alts : Array Alt)
  -- TODO: emit case LHSs
  -- TODO: emit return type of case. How?
  emit " : ";
- emit "("; emit (toCType xType); emit ")"; emit " -> "; emit "(!lz.value)";
+ emit "("; emit (toCType xType); emit ")"; emit " -> "; emit "()";
  emitLn "";
  
                       
@@ -861,7 +862,9 @@ partial def emitBlock (b : FnBody) (tys: HashMap VarId IRType) : M Unit := do
   | FnBody.mdata _ b           => emitBlock b tys
   | FnBody.ret x               =>
     emitLn "//ERR: FnBody.ret"
-    emit "return "; emitArg x;
+   -- emit "return "; emitArg x;
+   -- TODO: switch to generic form of operation
+    emit "lz.return "; emitArg x;
     emit " : ";  emitLn (toCType (lookupArgTy tys x));
   | FnBody.case _ x xType alts => do
     emitLn "// ERR: FnBody.case"
