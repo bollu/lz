@@ -21,6 +21,10 @@ namespace Lean.IR.EmitMLIR
 
 open ExplicitBoxing (requiresBoxedVersion mkBoxedName isBoxedName)
 
+-- | type of owner, is the parent a funcop or a caseop
+inductive OwningBlockType where
+  | funcop | caseop
+
 
 -- def mkModuleInitializationFunctionName (moduleName : Name) : String :=
 def mkModuleInitializationFunctionNameHACK (moduleName : Name) : String :=
@@ -785,10 +789,7 @@ partial def forMIx_ [Monad m]
 
 
 
-
-
-
-partial def emitCase (x : VarId) (xType : IRType) (alts : Array Alt) 
+partial def emitCaseObj (x : VarId) (xType : IRType) (alts : Array Alt) 
         (tys: HashMap VarId IRType): M Unit := do
  emit (escape ("lz.caseRet")); emit "("; emit "%"; emit x; emit ")";
  emit "("; 
@@ -804,6 +805,32 @@ partial def emitCase (x : VarId) (xType : IRType) (alts : Array Alt)
  emit " : ";
  emit "("; emit (toCType xType); emit ")"; emit " -> "; emit "()";
  emitLn "";
+
+partial def emitCaseInt (x : VarId) (xType : IRType) (alts : Array Alt) 
+        (tys: HashMap VarId IRType): M Unit := do
+ emit (escape ("lz.caseIntRet")); emit "("; emit "%"; emit x; emit ")";
+ emit "("; 
+ forMIx_ (as:= alts) (fun ix alt => do
+    emit (if ix > 0 then ", " else "");
+    match alt with 
+     |  Alt.ctor info b => emitFnBody b tys
+     |  Alt.default b => emitFnBody b tys)
+ emit ")";
+ emitLn "";
+ -- TODO: emit case LHSs
+ -- TODO: emit return type of case. How?
+ emit " : ";
+ emit "("; emit (toCType xType); emit ")"; emit " -> "; emit "()";
+ emitLn "";
+ 
+ 
+
+partial def emitCase (x : VarId) (xType : IRType) (alts : Array Alt) 
+        (tys: HashMap VarId IRType): M Unit :=
+  if xType.isObj
+  then emitCaseObj x xType alts tys
+  else emitCaseInt x xType alts tys
+
  
                       
  -- emitLn $ (escape "lz.caseRet") ++ "(%" ++ format x ++ ")" ++
@@ -894,7 +921,6 @@ partial def insertFnBodyArgTypes : FnBody → M (HashMap VarId IRType)
     pure (xs.foldl (fun m p => (m.insert p.x p.ty)) {})
     -- declareParams xs; declareVars b (d || xs.size > 0)
   | e,                        d => pure {}
-
 
 
 
