@@ -188,6 +188,8 @@ public:
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   void print(OpAsmPrinter &p);
   std::string getGlobalName() { return this->getOperation()->getAttrOfType<FlatSymbolRefAttr>("value").getValue().str(); }
+  FlatSymbolRefAttr getGlobalNameAttr() { return this->getOperation()->getAttrOfType<FlatSymbolRefAttr>("value"); }
+
   Type getGlobalType() { return this->getResult().getType(); }
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state, std::string name,
                     Type resultty);

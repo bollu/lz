@@ -663,6 +663,77 @@ public:
   }
 };
 
+struct PtrUseGlobalOpLowering : public ConversionPattern {
+public:
+  explicit PtrUseGlobalOpLowering(TypeConverter &tc, MLIRContext *context)
+      : ConversionPattern(PtrUseGlobalOp::getOperationName(), 1, tc, context) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *rator, ArrayRef<Value> rands,
+                  ConversionPatternRewriter &rewriter) const override {
+    ModuleOp mod = rator->getParentOfType<ModuleOp>();
+    PtrUseGlobalOp useglobal = cast<PtrUseGlobalOp>(rator);
+
+//    Operation *op = mod.lookupSymbol(useglobal.getGlobalName());
+
+//    FuncOp fn = mod.lookupSymbol<FuncOp>(useglobal.getGlobalName());
+//    if (fn) {
+//      if (fn->getNumOperands() != 0) {
+//        llvm::errs() << useglobal << "| refers to function that takes more than zero args";
+//        return failure();
+//      }
+//
+//      rewriter.replaceOpWithNewOp<CallOp>(rator, fn);
+//      return success();
+//    } else {
+//      assert(false && "unable to find function!");
+//    }
+
+    LLVM::GlobalOp llvmGlobal = mod.lookupSymbol<LLVM::GlobalOp>(useglobal.getGlobalName());
+    if (llvmGlobal) { return success(); }
+
+    PtrGlobalOp global = mod.lookupSymbol<PtrGlobalOp>(useglobal.getGlobalName());
+    if (global) {
+      // %0 = llvm.mlir.addressof @const : !llvm.ptr<i32>
+      // %1 = llvm.load %0 : !llvm.ptr<i32>
+      LLVM::AddressOfOp addr =
+          rewriter.create<LLVM::AddressOfOp>(useglobal.getLoc(),
+                                             typeConverter->convertType(useglobal.getGlobalType()),
+                                             useglobal.getGlobalNameAttr());
+      rewriter.replaceOpWithNewOp<LLVM::LoadOp>(rator, addr);
+      return success();
+    }
+
+    llvm::errs() << useglobal << "|" << " unable to find function/global\n";
+//    assert(false && "unable to find global or function with the name.");
+    return failure();
+  }
+};
+
+struct PtrGlobalOpLowering : public ConversionPattern {
+public:
+  explicit PtrGlobalOpLowering(TypeConverter &tc, MLIRContext *context)
+      : ConversionPattern(PtrGlobalOp::getOperationName(), 1, tc, context) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *rator, ArrayRef<Value> rands,
+                  ConversionPatternRewriter &rewriter) const override {
+//    ModuleOp mod = rator->getParentOfType<ModuleOp>();
+    PtrGlobalOp global = cast<PtrGlobalOp>(rator);
+
+    // Type type, bool isConstant, Linkage linkage, StringRef name, Attribute value,
+    const Attribute value;
+    const bool isConstant = false;
+    rewriter.replaceOpWithNewOp<LLVM::GlobalOp>(global,
+                                                typeConverter->convertType(global.getGlobalType()),
+                                                isConstant,
+                                                LLVM::Linkage::Weak,
+                                                global.getGlobalName(), value);
+    return success();
+  }
+};
+
+
 /*
 //
 https://github.com/spcl/open-earth-compiler/blob/master/lib/Conversion/StencilToStandard/ConvertStencilToStandard.cpp#L45
@@ -858,6 +929,10 @@ struct LowerPointerPass : public Pass {
     // vvv yuge hack.
     patterns.insert<PtrUndefOpLowering>(typeConverter, &getContext());
     patterns.insert<Ptr2MemrefOpLowering>(typeConverter, &getContext());
+
+    patterns.insert<PtrUseGlobalOpLowering>(typeConverter, &getContext());
+    patterns.insert<PtrGlobalOpLowering>(typeConverter, &getContext());
+
 
     // &getContext()); patterns.insert<CaseOpConversionPattern>(typeConverter,
     // &getContext());

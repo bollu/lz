@@ -11,6 +11,7 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include <Pointer/PointerDialect.h>
 #include <mlir/Parser.h>
 #include <sstream>
 // Standard dialect
@@ -126,6 +127,23 @@ struct CanonicalizeHaskReturnOpPattern
     }
   }
 };
+
+// Super hack: convert lz.useglobal calls into a real function call
+// if we can find the function in the same module. For whatever reason,
+// the LEAN codegen treats both local functions with 0 args and true
+// extern globals as "globals" which makes NO sense to me.
+struct CanonicalizePtrUseGlobalPattern
+    : public mlir::OpRewritePattern<ptr::PtrUseGlobalOp> {
+  CanonicalizePtrUseGlobalPattern(mlir::MLIRContext *context)
+      : OpRewritePattern<ptr::PtrUseGlobalOp>(context, /*benefit=*/1) {}
+
+  mlir::LogicalResult
+  matchAndRewrite(ptr::PtrUseGlobalOp ptr,
+                  mlir::PatternRewriter &rewriter) const override{
+  return failure();
+  };
+};
+
 
 class HaskCanonicalizationPass : public Pass {
 public:
