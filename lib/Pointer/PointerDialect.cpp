@@ -493,7 +493,18 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     StringAttr str = rator->getAttrOfType<StringAttr>("value");
     mlir::ModuleOp mod = rator->getParentOfType<ModuleOp>();
-    Value v = getOrCreateGlobalString(rator->getLoc(), rewriter, str.getValue(),
+    // create a new name for the string. Otherwise we could have something like:
+    // func @foo {
+    // %x = str "foo"
+   //}
+
+    // which will lower to:
+    // @foo = "foo"
+    // func @foo {...}
+
+    // which is of course illegal.
+    // Jesus fuck MLIR is stupid.
+    Value v = getOrCreateGlobalString(rator->getLoc(), rewriter, "g_str_" + str.getValue().str(),
                                       str, mod);
     rewriter.replaceOp(rator, v);
     return success();

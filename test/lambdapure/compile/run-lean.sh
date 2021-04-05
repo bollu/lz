@@ -4,8 +4,8 @@ set -e
 set -o xtrace
 
 lean $1 -c exe.c 2>&1 | \
-        hask-opt | tee exe.mlir | \
-        hask-opt --lean-lower --ptr-lower | \
+        hask-opt --lz-canonicalize | tee exe.mlir | \
+        hask-opt  --lean-lower --convert-scf-to-std --ptr-lower | \
         mlir-translate --mlir-to-llvmir | tee exe.ll  | llc -filetype=obj -o exe.o
 
 c++ -D LEAN_MULTI_THREAD -I/home/bollu/work/lean4/build/stage1/include \

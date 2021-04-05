@@ -1479,8 +1479,7 @@ public:
     argtys.push_back(rewriter.getI64Type());          // nargs
     argtys.push_back(ptr::VoidPtrType::get(context)); // value
 
-    Type retty = rewriter.getNoneType();
-    FunctionType fnty = rewriter.getFunctionType(argtys, retty);
+    FunctionType fnty = rewriter.getFunctionType(argtys, {});
 
     PatternRewriter::InsertionGuard insertGuard(rewriter);
     rewriter.setInsertionPointToStart(m.getBody());
