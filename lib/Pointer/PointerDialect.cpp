@@ -223,19 +223,23 @@ void PtrToMemrefOp::print(OpAsmPrinter &p) {
 void PtrStringOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
                         const char *str) {
   state.addAttribute("value", builder.getStringAttr(str));
-  state.addTypes(CharPtrType::get(builder.getContext()));
+//  state.addTypes(CharPtrType::get(builder.getContext()));
+  state.addTypes(VoidPtrType::get(builder.getContext()));
+
 };
 
 void PtrStringOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
                         std::string str) {
   state.addAttribute("value", builder.getStringAttr(str));
-  state.addTypes(CharPtrType::get(builder.getContext()));
+//  state.addTypes(CharPtrType::get(builder.getContext()));
+  state.addTypes(VoidPtrType::get(builder.getContext()));
 };
 
 void PtrStringOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
                         llvm::StringRef str) {
   state.addAttribute("value", builder.getStringAttr(str));
-  state.addTypes(CharPtrType::get(builder.getContext()));
+//  state.addTypes(CharPtrType::get(builder.getContext()));
+  state.addTypes(VoidPtrType::get(builder.getContext()));
 };
 
 void PtrStringOp::print(OpAsmPrinter &p) {

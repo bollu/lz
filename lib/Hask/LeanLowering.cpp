@@ -420,6 +420,20 @@ public:
   }
 };
 
+class HaskStringConstOpLowering : public ConversionPattern {
+public:
+
+  explicit HaskStringConstOpLowering(TypeConverter &tc, MLIRContext *context)
+      : ConversionPattern(HaskStringConstOp::getOperationName(), 1, tc,
+                          context) {}
+  LogicalResult
+  matchAndRewrite(Operation *operation, ArrayRef<Value> rands,
+                  ConversionPatternRewriter &rewriter) const override {
+    HaskStringConstOp op = cast<HaskStringConstOp>(operation);
+    rewriter.replaceOpWithNewOp<ptr::PtrStringOp>(op, op.getValue());
+    return success();
+  }
+};
 //
 // class HaskIntegerConstOpLowering : public ConversionPattern {
 // public:
@@ -877,7 +891,7 @@ public:
     }
 
     SmallVector<mlir::Type, 4> argTys;
-    argTys.push_back(ptr::CharPtrType::get(rewriter.getContext()));
+    argTys.push_back(ptr::VoidPtrType::get(rewriter.getContext()));
     for (int i = 0; i < n; ++i) {
       argTys.push_back(ptr::VoidPtrType::get(rewriter.getContext()));
     }
@@ -1493,17 +1507,33 @@ public:
     //     arity; emit ", "; emit ys.size; emitLn ");";
     //   ys.size.forM fun i => do
     //     let y := ys[i]
-    // emit "lean_closure_set("; emit z; emit ", "; emit i; emit ", "; emitArg
-    // y; emitLn ")";
+    // emit "lean_closure_set("; emit z; emit ", "; emit i; emit ", ";
+    //    emitArg y; emitLn ")";
 
     FuncOp alloc = getOrCreateLeanAllocClosure(rewriter, mod);
-    Value name;
-    Value arity;
-    Value nargs;
-    assert(false && "TODO: fill up");
-    rewriter.createOp<mlir::CallOp>(pap->getLoc(), alloc, {name, arity, nargs});
-    for (int i = 0; i < pap.getNumFnArguments(); ++i) {
+    FuncOp calledFn = mod.lookupSymbol<FuncOp>(pap.getFnName());
+    if (!calledFn) {
+      llvm::errs() << "unable to find called function: |" << pap.getFnName() << "|\n";
+      assert(false && "unable to find PAP function");
     }
+
+    rewriter.setInsertionPoint(pap);
+
+    const int width = 64;
+    Value name = rewriter.create<ptr::PtrStringOp>(pap->getLoc(), pap.getFnName());
+    Value arity =  rewriter.create<ConstantIntOp>(pap->getLoc(), calledFn->getNumOperands(), width);
+    Value nargs = rewriter.create<ConstantIntOp>(pap->getLoc(), pap.getNumFnArguments(), width);
+    mlir::SmallVector<Value, 4> allocArgs { name, arity, nargs};
+    CallOp callAlloc = rewriter.create<mlir::CallOp>(pap->getLoc(), alloc, allocArgs);
+    Value closure = callAlloc.getResult(0);
+
+    FuncOp closureSet = this->getOrCreateLeanClosureSet(rewriter, mod);
+    for (int i = 0; i < pap.getNumFnArguments(); ++i) {
+      Value ix = rewriter.create<ConstantIntOp>(pap->getLoc(), i, width);
+      mlir::SmallVector<Value, 4> setArgs = {closure, ix, pap.getFnArgument(i)};
+      rewriter.create<mlir::CallOp>(pap->getLoc(), closureSet, setArgs);
+    }
+    rewriter.replaceOp(pap, closure);
     return success();
   }
 };
@@ -1669,6 +1699,8 @@ struct LowerLeanPass : public Pass {
     patterns.insert<TagGetOpLowering>(typeConverter, &getContext());
     patterns.insert<PapExtendOpLowering>(typeConverter, &getContext());
     patterns.insert<PapOpLowering>(typeConverter, &getContext());
+    patterns.insert<HaskStringConstOpLowering>(typeConverter, &getContext());
+
     patterns.insert<HaskIntegerConstOpLowering>(typeConverter, &getContext());
     patterns.insert<ProjectionOpLowering>(typeConverter, &getContext());
 

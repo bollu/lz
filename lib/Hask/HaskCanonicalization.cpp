@@ -56,9 +56,9 @@ struct CanonicalizeCaseRetPattern
     //   static void build(mlir::OpBuilder &builder, mlir::OperationState
     //   &state,
     //                Value scrutinee, int numrhss);
-    TagGetOp tag = rewriter.create<mlir::standalone::TagGetOp>(
-        rewriter.getUnknownLoc(), caseret.getScrutinee());
-    CaseOp caseop = rewriter.create<CaseOp>(rewriter.getUnknownLoc(), tag,
+    // TagGetOp tag = rewriter.create<mlir::standalone::TagGetOp>(
+    //    rewriter.getUnknownLoc(), caseret.getScrutinee());
+    CaseOp caseop = rewriter.create<CaseOp>(rewriter.getUnknownLoc(), caseret.getScrutinee(),
                                             caseret.numAlts());
 
     BlockAndValueMapping mapper;
