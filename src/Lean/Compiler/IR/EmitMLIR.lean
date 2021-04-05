@@ -278,7 +278,7 @@ def emitPreamble : M Unit := do
   emitLn "func private @lean_unbox_float(!lz.value) -> f64"
   emitLn "func private @lean_io_mk_world() -> (!lz.value)"
   emitLn "func private @lean_dec_ref(!lz.value) -> ()"
-  emitLn "func private @lean_box(i32) -> !lz.value"
+  emitLn "func private @lean_box(i64) -> !lz.value"
   emitLn "func private @lean_io_result_mk_ok(!lz.value) -> !lz.value"
 
 
@@ -1102,8 +1102,8 @@ def emitInitFn : M Unit := do
   let decls := getDecls env
   decls.reverse.forM emitDeclInit
     -- emitLns ["return lean_io_result_mk_ok(lean_box(0));", "}"]
-  emitLn "%c0 = constant 0 : i32"
-  emitLn "%box0 = call @lean_box(%c0) : (i32) -> !lz.value"
+  emitLn "%c0 = constant 0 : i64"
+  emitLn "%box0 = call @lean_box(%c0) : (i64) -> !lz.value"
   emitLn "%out = call @lean_io_result_mk_ok(%box0) : (!lz.value) -> !lz.value"
   emitLn "return %out : !lz.value"
   emitLn "}"
