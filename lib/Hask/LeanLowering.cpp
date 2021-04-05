@@ -881,20 +881,64 @@ public:
   explicit HaskConstructOpLowering(HaskTypeConverter &tc, MLIRContext *context)
       : ConversionPattern(HaskConstructOp::getOperationName(), 1, tc, context),
         tc(tc) {}
+  static FuncOp getOrInsertLeanBox(PatternRewriter &rewriter,
+                                         ModuleOp module) {
+    const std::string name = "lean_box";
+    if (FuncOp fn = module.lookupSymbol<FuncOp>(name)) {
+      return fn;
+    }
 
-  // mkConstructor: !ptr.char x [!ptr.void^n] -> !ptr.void
-  static FuncOp getOrInsertMkConstructor(PatternRewriter &rewriter,
-                                         ModuleOp module, int n) {
-    const std::string name = "mkConstructor" + std::to_string(n);
+    SmallVector<mlir::Type, 4> argTys{rewriter.getI64Type()};
+    mlir::Type retty = ptr::VoidPtrType::get(rewriter.getContext());
+
+    auto fntype = rewriter.getFunctionType(argTys, retty);
+    PatternRewriter::InsertionGuard insertGuard(rewriter);
+    rewriter.setInsertionPointToStart(module.getBody());
+
+    FuncOp fndecl =
+        rewriter.create<FuncOp>(rewriter.getUnknownLoc(), name, fntype);
+
+    fndecl.setPrivate();
+    return fndecl;
+  }
+
+  static FuncOp getOrInsertLeanAllocCtor(PatternRewriter &rewriter,
+                                   ModuleOp module) {
+    const std::string name = "lean_alloc_ctor";
     if (FuncOp fn = module.lookupSymbol<FuncOp>(name)) {
       return fn;
     }
 
     SmallVector<mlir::Type, 4> argTys;
-    argTys.push_back(ptr::VoidPtrType::get(rewriter.getContext()));
-    for (int i = 0; i < n; ++i) {
-      argTys.push_back(ptr::VoidPtrType::get(rewriter.getContext()));
+    argTys.push_back(rewriter.getI64Type()); // idx
+    argTys.push_back(rewriter.getI64Type()); // size/nargs
+    argTys.push_back(rewriter.getI64Type()); // scalar size
+
+    mlir::Type retty = ptr::VoidPtrType::get(rewriter.getContext());
+
+    auto fntype = rewriter.getFunctionType(argTys, retty);
+    PatternRewriter::InsertionGuard insertGuard(rewriter);
+    rewriter.setInsertionPointToStart(module.getBody());
+
+    FuncOp fndecl =
+        rewriter.create<FuncOp>(rewriter.getUnknownLoc(), name, fntype);
+
+    fndecl.setPrivate();
+    return fndecl;
+  }
+
+  static FuncOp getOrInsertLeanCtorSet(PatternRewriter &rewriter,
+                                         ModuleOp module) {
+    const std::string name = "lean_ctor_set";
+    if (FuncOp fn = module.lookupSymbol<FuncOp>(name)) {
+      return fn;
     }
+
+    SmallVector<mlir::Type, 4> argTys;
+    argTys.push_back(ptr::VoidPtrType::get(rewriter.getContext())); // ctor
+    argTys.push_back(rewriter.getI64Type()); // ix
+    argTys.push_back(ptr::VoidPtrType::get(rewriter.getContext())); //val
+
     mlir::Type retty = ptr::VoidPtrType::get(rewriter.getContext());
 
     auto fntype = rewriter.getFunctionType(argTys, retty);
@@ -911,25 +955,39 @@ public:
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
+    const int width = 64;
+    ModuleOp mod = op->getParentOfType<ModuleOp>();
     HaskConstructOp cons = cast<HaskConstructOp>(op);
-    // ModuleOp mod = cons.getParentOfType<ModuleOp>();
+    std::string name = cons.getDataConstructorName().str();
+    assert(std::to_string(atoi(name.c_str())) == name);
 
-    FuncOp fn = getOrInsertMkConstructor(
-        rewriter, op->getParentOfType<ModuleOp>(), cons.getNumOperands());
-
-    Value name = rewriter.create<ptr::PtrStringOp>(
-        cons.getLoc(), cons.getDataConstructorName());
-    SmallVector<Value, 4> args = {name};
-
-    rewriter.setInsertionPointAfter(cons);
-
-    for (int i = 0; i < (int)operands.size(); ++i) {
-      args.insert(args.end(), tc.toVoidPointer(rewriter, operands[i]));
+    if (cons.getNumOperands() == 0) {
+      FuncOp box = getOrInsertLeanBox(rewriter, mod);
+      ConstantIntOp allocIx = rewriter.create<ConstantIntOp>(cons->getLoc(), atoi(name.c_str()), width);
+      mlir::SmallVector<Value, 1> boxArgs{allocIx};
+      CallOp callBox = rewriter.create<CallOp>(cons->getLoc(), box, boxArgs);
+      rewriter.replaceOp(cons, callBox.getResult(0));
+      return success();
     }
 
-    // CallOp call = rewriter.create<CallOp>(cons.getLoc(), fn, args);
-    // rewriter.replaceOp(cons, call.getResult(0));
-    rewriter.replaceOpWithNewOp<CallOp>(cons, fn, args);
+    assert(cons.getNumOperands() > 0);
+    FuncOp alloc = getOrInsertLeanAllocCtor(rewriter, mod);
+    // TODO: fix this mess; just store int indexes.
+
+    ConstantIntOp allocIx = rewriter.create<ConstantIntOp>(cons->getLoc(), atoi(name.c_str()), width);
+    ConstantIntOp allocNumArgs = rewriter.create<ConstantIntOp>(cons->getLoc(), cons.getNumOperands(), width);
+    ConstantIntOp allocSz = rewriter.create<ConstantIntOp>(cons->getLoc(), 4200, width);
+    mlir::SmallVector<Value, 3> allocArgs{allocIx, allocNumArgs, allocSz};
+    CallOp callAlloc = rewriter.create<CallOp>(cons->getLoc(), alloc, allocArgs);
+    Value out = callAlloc.getResult(0);
+
+    FuncOp set = getOrInsertLeanCtorSet(rewriter, mod);
+    for(int i  = 0; i < cons.getNumOperands(); ++i) {
+      ConstantIntOp ix = rewriter.create<ConstantIntOp>(cons->getLoc(), i, width);
+      mlir::SmallVector<Value, 4> setArgs{out, ix};
+      rewriter.create<CallOp>(cons->getLoc(), set, setArgs);
+    }
+    rewriter.replaceOp(cons, out);
     return success();
   }
 };
