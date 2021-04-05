@@ -157,11 +157,12 @@ def emitFnFwdDeclAux (decl : Decl) (cppBaseName : String) (addExternForConsts : 
   -- then emit "func private "
   -- else emit "func private " 
   -- emit (toCType decl.resultType ++ " " ++ cppBaseName)
-  emit ("func private @" ++ cppBaseName)
   if ps.isEmpty
-  then 
-    emitLn ("() -> " ++ (toCType decl.resultType))
+  then do
+    emit (escape "ptr.global"); emit "()"; emit ("{value=@" ++ cppBaseName ++ "}");
+    emit " : "; emit "() -> "; emit (toCType decl.resultType); emitLn "";
   else do
+    emit ("func private @" ++ cppBaseName)
     emit "("
     -- We omit irrelevant parameters for extern constants
     let ps := if isExternC env decl.name then ps.filter (fun p => !p.ty.isIrrelevant) else ps
@@ -556,23 +557,40 @@ def emitExternCall (f : FunId) (ps : Array Param) (extData : ExternAttrData) (ys
 
 
 def emitFullApp (z : VarId) (f : FunId) (ys : Array Arg) (tys: HashMap VarId IRType) : M Unit := do
-  emitLhs z
   let decl ← getDecl f
   match decl with
-  | Decl.extern _ ps _ extData => emitExternCall f ps extData ys tys (Decl.resultType decl)
+  | Decl.extern _ ps _ extData => do
+         emitLhs z;
+         emitExternCall f ps extData ys tys (Decl.resultType decl)
   | _ => do
-    emit "call "
-    emit "@";
-    let cname <-  toCName f
-    emit (escape cname)
-    emit "("; 
-    if ys.size > 0 then emitArgs ys else emit ""; 
-    emit ")" 
-    emit ":"
-    emit "("; emitArgsOnlyTys ys tys; emit ")"
-    emit "->"
-    emit "(";  emit (toCType (Decl.resultType decl)); emit ")"
-    emit "\n"
+    if ys.size == 0
+    then
+      -- let declAddr <- gensym "declAddr";
+      -- -- %0 = llvm.mlir.addressof @const : !llvm.ptr<i32>
+      -- emit ("%" ++ declAddr); emit " = "; emit "llvm.mlir.addressof";
+      -- emit "@";
+      -- let cname <-  toCName f
+      -- emit (escape cname);
+      -- emit " : "; emit "!llvm.ptr<"; emit (toCType (Decl.resultType decl));  emitLn ">"; 
+      -- --   %1 = llvm.load %0 : !llvm.ptr<i32>
+      -- emitLhs z; emit "llvm.load "; emit ("%" ++ declAddr);
+      -- emit " : "; emit "!llvm.ptr<"; emit (toCType (Decl.resultType decl));  emitLn ">"
+      emitLhs z;
+      emit (escape "ptr.useglobal"); emit "()";
+      let cname <- toCName f; 
+      emit "{value=@"; emit (escape cname); emit "}";
+      emit " : () -> ";emit (toCType (Decl.resultType decl));
+    else 
+      emitLhs z
+      emit "call "
+      emit "@";
+      let cname <-  toCName f
+      emit (escape cname)
+      emit "("; emitArgs ys; emit ")" 
+      emit ":"; emit "("; emitArgsOnlyTys ys tys; emit ")"
+      emit "->"
+      emit "(";  emit (toCType (Decl.resultType decl)); emit ")"
+      emit "\n"
 
 
 
