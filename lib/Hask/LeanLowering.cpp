@@ -920,6 +920,59 @@ public:
   }
 };
 
+class ProjectionOpLowering : public ConversionPattern {
+private:
+  HaskTypeConverter &tc;
+
+public:
+  explicit ProjectionOpLowering(HaskTypeConverter &tc, MLIRContext *context)
+      : ConversionPattern(ProjectionOp::getOperationName(), 1, tc, context),
+        tc(tc) {}
+
+  static FuncOp getOrInsertLeanCtorGet(PatternRewriter &rewriter,
+                                       ModuleOp module) {
+
+    const std::string name = "lean_ctor_get";
+    if (FuncOp fn = module.lookupSymbol<FuncOp>(name)) {
+      return fn;
+    }
+
+    SmallVector<mlir::Type, 4> argTys;
+    argTys.push_back(ptr::VoidPtrType::get(rewriter.getContext()));
+    argTys.push_back(IntegerType::get(rewriter.getContext(), 64));
+
+    mlir::Type retty = ptr::VoidPtrType::get(rewriter.getContext());
+    auto fntype = rewriter.getFunctionType(argTys, retty);
+
+    PatternRewriter::InsertionGuard insertGuard(rewriter);
+    rewriter.setInsertionPointToStart(module.getBody());
+
+    FuncOp fndecl =
+        rewriter.create<FuncOp>(rewriter.getUnknownLoc(), name, fntype);
+
+    fndecl.setPrivate();
+    return fndecl;
+  }
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    ProjectionOp proj = cast<ProjectionOp>(op);
+    // ModuleOp mod = cons.getParentOfType<ModuleOp>();
+
+    FuncOp fn =
+        getOrInsertLeanCtorGet(rewriter, op->getParentOfType<ModuleOp>());
+
+    rewriter.setInsertionPoint(proj);
+    Value ix = rewriter.create<ConstantIntOp>(
+        rewriter.getUnknownLoc(), proj.getIndex(), rewriter.getI64Type());
+    SmallVector<Value, 4> args = {proj.getOperand(), ix};
+
+    rewriter.replaceOpWithNewOp<CallOp>(proj, fn, args);
+    return success();
+  }
+};
+
 class ThunkifyOpLowering : public ConversionPattern {
 private:
   HaskTypeConverter &tc;
@@ -1375,6 +1428,86 @@ public:
   }
 };
 
+struct PapOpLowering : public mlir::ConversionPattern {
+public:
+  static FuncOp getOrCreateLeanAllocClosure(PatternRewriter &rewriter,
+                                            ModuleOp m) {
+    const std::string name = "lean_alloc_closure";
+    if (FuncOp fn = m.lookupSymbol<FuncOp>(name)) {
+      return fn;
+    }
+    MLIRContext *context = rewriter.getContext();
+    SmallVector<Type, 4> argtys;
+
+    argtys.push_back(ptr::VoidPtrType::get(context)); // fn.
+    argtys.push_back(rewriter.getI64Type());          // arity of fn
+    argtys.push_back(rewriter.getI64Type());          // nargs
+
+    Type retty = ptr::VoidPtrType::get(context);
+    FunctionType fnty = rewriter.getFunctionType(argtys, retty);
+
+    PatternRewriter::InsertionGuard insertGuard(rewriter);
+    rewriter.setInsertionPointToStart(m.getBody());
+    FuncOp fn = rewriter.create<FuncOp>(m.getLoc(), name, fnty);
+    fn.setPrivate();
+    return fn;
+  }
+  static FuncOp getOrCreateLeanClosureSet(PatternRewriter &rewriter,
+                                          ModuleOp m) {
+    const std::string name = "lean_closure_set";
+    if (FuncOp fn = m.lookupSymbol<FuncOp>(name)) {
+      return fn;
+    }
+    MLIRContext *context = rewriter.getContext();
+    SmallVector<Type, 4> argtys;
+
+    argtys.push_back(ptr::VoidPtrType::get(context)); // closure
+    argtys.push_back(rewriter.getI64Type());          // nargs
+    argtys.push_back(ptr::VoidPtrType::get(context)); // value
+
+    Type retty = rewriter.getNoneType();
+    FunctionType fnty = rewriter.getFunctionType(argtys, retty);
+
+    PatternRewriter::InsertionGuard insertGuard(rewriter);
+    rewriter.setInsertionPointToStart(m.getBody());
+    FuncOp fn = rewriter.create<FuncOp>(m.getLoc(), name, fnty);
+    fn.setPrivate();
+    return fn;
+  }
+
+  explicit PapOpLowering(TypeConverter &tc, MLIRContext *context)
+      : ConversionPattern(PapOp::getOperationName(), 1, tc, context) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> rands,
+                  ConversionPatternRewriter &rewriter) const override {
+    PapOp pap = cast<PapOp>(op);
+    ModuleOp mod = op->getParentOfType<ModuleOp>();
+
+    // def emitPartialApp (z : VarId) (f : FunId) (ys : Array Arg) : M Unit :=
+    // do
+    //   let decl ← getDecl f
+    //   let arity := decl.params.size;
+    //   emitLhs z;
+    //     emit "lean_alloc_closure((void*)("; emitCName f; emit "), "; emit
+    //     arity; emit ", "; emit ys.size; emitLn ");";
+    //   ys.size.forM fun i => do
+    //     let y := ys[i]
+    // emit "lean_closure_set("; emit z; emit ", "; emit i; emit ", "; emitArg
+    // y; emitLn ")";
+
+    FuncOp alloc = getOrCreateLeanAllocClosure(rewriter, mod);
+    Value name;
+    Value arity;
+    Value nargs;
+    assert(false && "TODO: fill up");
+    rewriter.createOp<mlir::CallOp>(pap->getLoc(), alloc, {name, arity, nargs});
+    for (int i = 0; i < pap.getNumFnArguments(); ++i) {
+    }
+    return success();
+  }
+};
+
 struct LowerLeanPass : public Pass {
   LowerLeanPass() : Pass(mlir::TypeID::get<LowerLeanPass>()){};
   StringRef getName() const override { return "LowerLeanPass"; }
@@ -1535,7 +1668,9 @@ struct LowerLeanPass : public Pass {
     patterns.insert<ErasedValueOpLowering>(typeConverter, &getContext());
     patterns.insert<TagGetOpLowering>(typeConverter, &getContext());
     patterns.insert<PapExtendOpLowering>(typeConverter, &getContext());
+    patterns.insert<PapOpLowering>(typeConverter, &getContext());
     patterns.insert<HaskIntegerConstOpLowering>(typeConverter, &getContext());
+    patterns.insert<ProjectionOpLowering>(typeConverter, &getContext());
 
     patterns.insert<ConstantOpLowering>(typeConverter, &getContext());
     patterns.insert<FuncOpLowering>(typeConverter, &getContext());
