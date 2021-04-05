@@ -95,7 +95,7 @@ struct CanonicalizeHaskCallPattern : public mlir::OpRewritePattern<HaskCallOp> {
                                         call->getOperands());
     // module has the function.
     if (mod.lookupSymbol<FuncOp>(fnname)) {
-      return success();
+      return failure();
     } else {
       // create forward declaration.
 
@@ -104,6 +104,24 @@ struct CanonicalizeHaskCallPattern : public mlir::OpRewritePattern<HaskCallOp> {
           mlir::FuncOp::create(rewriter.getUnknownLoc(), fnname, fty);
       fwdDecl.setPrivate();
       mod.push_back(fwdDecl);
+      return success();
+    }
+  }
+};
+
+struct CanonicalizeHaskReturnOpPattern
+    : public mlir::OpRewritePattern<HaskReturnOp> {
+  CanonicalizeHaskReturnOpPattern(mlir::MLIRContext *context)
+      : OpRewritePattern<HaskReturnOp>(context, /*benefit=*/1) {}
+
+  mlir::LogicalResult
+  matchAndRewrite(HaskReturnOp ret,
+                  mlir::PatternRewriter &rewriter) const override {
+    CaseOp retCaseParent = ret.getOperation()->getParentOfType<CaseOp>();
+    if (retCaseParent) {
+      return failure();
+    } else {
+      rewriter.replaceOpWithNewOp<ReturnOp>(ret, ret.getOperand());
       return success();
     }
   }
@@ -127,6 +145,7 @@ public:
     // https://mlir.llvm.org/docs/Canonicalization/
     // const int MAX_ITERATIONS = 100;
     patterns.insert<CanonicalizeCaseRetPattern>(&getContext());
+    patterns.insert<CanonicalizeHaskReturnOpPattern>(&getContext());
     patterns.insert<CanonicalizeHaskCallPattern>(&getContext());
     ::llvm::DebugFlag = true;
     if (failed(mlir::applyPatternsAndFoldGreedily(getOperation(),

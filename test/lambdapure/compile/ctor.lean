@@ -5,22 +5,15 @@
 -- CHECK: func @mkTree
 
 set_option trace.compiler.ir.init true
-inductive Tree
-| Nil
-| Node (l r : Tree) : Tree
-open Tree
+inductive Ctor
+| MkCtor
+open Ctor
 
-instance : Inhabited Tree := ⟨Nil⟩
+instance : Inhabited Ctor := ⟨MkCtor⟩
 
--- def mkTree : Nat -> Tree
--- | 0  => Nil
--- | (x+1) => Node (mkTree (x)) (mkTree (x))
--- 
-def treeToStr: Tree -> String
-| Nil => "nil"
-| Node l r =>  "node" -- "{{" ++ (treeToStr l) ++ " , " ++ (treeToStr r) ++ "}}"
+def ctorToStr: Ctor -> String
+| MkCtor => "ctor"
 
 
 def main (xs: List String) : IO Unit := 
-  IO.println (treeToStr (Nil))
-  -- IO.println (treeToStr (mkTree 3))
+  IO.println (ctorToStr (MkCtor))
