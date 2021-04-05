@@ -167,6 +167,33 @@ public:
                     Type resultty);
 };
 
+
+class PtrGlobalOp : public Op<PtrGlobalOp, OpTrait::ZeroOperands, OpTrait::OneResult> {
+public:
+  using Op::Op;
+  static StringRef getOperationName() { return "ptr.global"; };
+  static ParseResult parse(OpAsmParser &parser, OperationState &result);
+  void print(OpAsmPrinter &p);
+  std::string getGlobalName() { return this->getOperation()->getAttrOfType<FlatSymbolRefAttr>("value").getValue().str(); }
+  Type getGlobalType() { return this->getResult().getType(); }
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state, std::string name,
+                    Type resultty);
+
+};
+
+class PtrUseGlobalOp : public Op<PtrUseGlobalOp, OpTrait::OneResult, OpTrait::ZeroOperands> {
+public:
+  using Op::Op;
+  static StringRef getOperationName() { return "ptr.useglobal"; };
+  static ParseResult parse(OpAsmParser &parser, OperationState &result);
+  void print(OpAsmPrinter &p);
+  std::string getGlobalName() { return this->getOperation()->getAttrOfType<FlatSymbolRefAttr>("value").getValue().str(); }
+  Type getGlobalType() { return this->getResult().getType(); }
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state, std::string name,
+                    Type resultty);
+
+};
+
 /*
 class PtrToHaskValueOp
     : public Op<PtrToHaskValueOp, OpTrait::OneResult, OpTrait::OneOperand> {

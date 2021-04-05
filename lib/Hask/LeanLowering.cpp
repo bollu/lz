@@ -1595,6 +1595,38 @@ public:
   }
 };
 
+class PtrGlobalOpTypeConversion : public ConversionPattern {
+public:
+  explicit PtrGlobalOpTypeConversion(TypeConverter &tc, MLIRContext *context)
+      : ConversionPattern(ptr::PtrGlobalOp::getOperationName(), 1, tc, context) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> rands,
+                  ConversionPatternRewriter &rewriter) const override {
+    assert(false);
+    ptr::PtrGlobalOp global = cast<ptr::PtrGlobalOp>(op);
+    rewriter.replaceOpWithNewOp<ptr::PtrGlobalOp>(op, global.getGlobalName(), typeConverter->convertType(global.getGlobalType())) ;
+    return success();
+  }
+};
+
+class PtrUseGlobalOpTypeConversion : public ConversionPattern {
+public:
+  explicit PtrUseGlobalOpTypeConversion(TypeConverter &tc, MLIRContext *context)
+      : ConversionPattern(ptr::PtrUseGlobalOp::getOperationName(), 1, tc, context) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> rands,
+                  ConversionPatternRewriter &rewriter) const override {
+    assert(false);
+    ptr::PtrUseGlobalOp use = cast<ptr::PtrUseGlobalOp>(op);
+    rewriter.replaceOpWithNewOp<ptr::PtrUseGlobalOp>(op, use.getGlobalName(), typeConverter->convertType(use.getGlobalType())) ;
+    return success();
+  }
+};
+
+
+
 struct LowerLeanPass : public Pass {
   LowerLeanPass() : Pass(mlir::TypeID::get<LowerLeanPass>()){};
   StringRef getName() const override { return "LowerLeanPass"; }
@@ -1740,6 +1772,17 @@ struct LowerLeanPass : public Pass {
       return true;
     });
 
+    target.addDynamicallyLegalOp<ptr::PtrGlobalOp>([](ptr::PtrGlobalOp p) {
+      assert(false);
+      return isTypeLegal(p.getGlobalType());
+    });
+
+
+    target.addDynamicallyLegalOp<ptr::PtrUseGlobalOp>([](ptr::PtrUseGlobalOp p) {
+      return isTypeLegal(p.getGlobalType());
+    });
+
+
     HaskTypeConverter typeConverter(&getContext());
     mlir::OwningRewritePatternList patterns(&getContext());
 
@@ -1782,6 +1825,10 @@ struct LowerLeanPass : public Pass {
     patterns.insert<AffineYieldOpLowering>(typeConverter, &getContext());
 
     patterns.insert<AffineForOpLowering>(typeConverter, &getContext());
+
+
+    patterns.insert<PtrGlobalOpTypeConversion>(typeConverter, &getContext());
+    patterns.insert<PtrUseGlobalOpTypeConversion>(typeConverter, &getContext());
 
     ::llvm::DebugFlag = true;
 

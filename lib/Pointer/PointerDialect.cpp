@@ -60,7 +60,8 @@ PtrDialect::PtrDialect(mlir::MLIRContext *context)
   addOperations<DoubleToPtrOp>();
   addOperations<MemrefToVoidPtrOp>();
   addOperations<PtrToFloatOp>();
-
+  addOperations<PtrGlobalOp>();
+  addOperations<PtrUseGlobalOp>();
   addTypes<VoidPtrType, CharPtrType>();
 
   // clang-format on
@@ -292,6 +293,50 @@ void PtrUndefOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
                        Type retty) {
   state.addTypes(retty);
 }
+
+// === GLOBAL OP ===
+// === GLOBAL OP ===
+// === GLOBAL OP ===
+// === GLOBAL OP ===
+// === GLOBAL OP ===
+
+ParseResult PtrGlobalOp::parse(OpAsmParser &parser, OperationState &result) {
+  assert(false && "unimplemented");
+};
+
+void PtrGlobalOp::print(OpAsmPrinter &p) {
+  p.printGenericOp(this->getOperation());
+};
+
+void PtrGlobalOp::build(mlir::OpBuilder &builder, mlir::OperationState &state, std::string name,
+                  Type resultty) {
+    state.addTypes(resultty);
+    state.addAttribute("value", builder.getSymbolRefAttr(name));
+};
+
+
+// === USEGLOBAL OP ===
+// === USEGLOBAL OP ===
+// === USEGLOBAL OP ===
+// === USEGLOBAL OP ===
+// === USEGLOBAL OP ===
+
+ParseResult PtrUseGlobalOp::parse(OpAsmParser &parser, OperationState &result) {
+  assert(false && "unimplemented");
+};
+
+void PtrUseGlobalOp::print(OpAsmPrinter &p) {
+  p.printGenericOp(this->getOperation());
+};
+
+void PtrUseGlobalOp::build(mlir::OpBuilder &builder, mlir::OperationState &state, std::string name,
+                        Type resultty) {
+  state.addTypes(resultty);
+  state.addAttribute("value", builder.getSymbolRefAttr(name));
+};
+
+
+
 
 /*
 // === PTR TO VALUE ===
