@@ -406,17 +406,17 @@ public:
     HaskIntegerConstOp op = cast<HaskIntegerConstOp>(operation);
     // I don't think this is right! It should stay
 
-    // ModuleOp mod = op->getParentOfType<ModuleOp>();
-    // FuncOp fn = getOrCreateLeanUnsignedToNat(rewriter, mod);
-    // const int width = 64;
-    // Value i = rewriter.create<ConstantIntOp>(rewriter.getUnknownLoc(),
-    //                                          op.getValue(), width);
-    // rewriter.replaceOpWithNewOp<CallOp>(operation, fn, i);
-    // return success ();
+     ModuleOp mod = op->getParentOfType<ModuleOp>();
+     FuncOp fn = getOrCreateLeanUnsignedToNat(rewriter, mod);
+     const int width = 64;
+     Value i = rewriter.create<ConstantIntOp>(rewriter.getUnknownLoc(),
+                                              op.getValue(), width);
+     rewriter.replaceOpWithNewOp<CallOp>(operation, fn, i);
+     return success ();
 
-    const int width = 64;
-    rewriter.replaceOpWithNewOp<ConstantIntOp>(op, op.getValue(), width);
-    return success();
+//    const int width = 64;
+//      rewriter.replaceOpWithNewOp<ConstantIntOp>(op, op.getValue(), width);
+//    return success();
   }
 };
 

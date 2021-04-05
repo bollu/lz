@@ -432,10 +432,10 @@ public:
         .str();
   }
   int getNumFnArguments() {
-    return this->getOperation()->getNumOperands() - 1;
+    return this->getOperation()->getNumOperands();
   };
   Value getFnArgument(int i) {
-    return this->getOperation()->getOperand(i + 1);
+    return this->getOperation()->getOperand(i);
   };
 
   SmallVector<Value, 4> getFnArguments() {
