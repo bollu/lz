@@ -25,7 +25,6 @@ open ExplicitBoxing (requiresBoxedVersion mkBoxedName isBoxedName)
 inductive OwningBlockType where
   | funcop | caseop
 
-
 -- def mkModuleInitializationFunctionName (moduleName : Name) : String :=
 def mkModuleInitializationFunctionNameHACK (moduleName : Name) : String :=
   "initialize_" ++  "main"
@@ -576,10 +575,11 @@ def emitFullApp (z : VarId) (f : FunId) (ys : Array Arg) (tys: HashMap VarId IRT
       -- emitLhs z; emit "llvm.load "; emit ("%" ++ declAddr);
       -- emit " : "; emit "!llvm.ptr<"; emit (toCType (Decl.resultType decl));  emitLn ">"
       emitLhs z;
-      emit (escape "ptr.useglobal"); emit "()";
+      emit (escape "ptr.loadglobal"); emit "()";
       let cname <- toCName f; 
       emit "{value=@"; emit (escape cname); emit "}";
       emit " : () -> ";emit (toCType (Decl.resultType decl));
+      emitLn "";
     else 
       emitLhs z
       emit "call "
@@ -1017,72 +1017,45 @@ def emitMarkPersistent (d : Decl) (n : String) : M Unit := do
     emit "call @lean_mark_persistent("; emitCName n; emitLn ");"
 
 def emitDeclInit (d : Decl) : M Unit := do
- let env <- getEnv
- let n := d.name
- -- | NOTE: significantly changed from the version in emitC.lean
- -- | this version skips the isIOUnitInitFn case.
- if d.params.size == 0 then
-   match getInitFnNameFor? env d.name with
-   | some initFn => do
-     emitLn $ "// ERR: emitDeclInit (" ++ toString n ++ ") | init function"
-     let resName <- gensym "result"
+  let env ← getEnv
+  let n := d.name
+  emitLn $ "// ERR: emitDeclInit: (" ++ n ++ ")"
+  if isIOUnitInitFn env n then
+     let resIOName <- gensym "result"
      let worldName <- gensym "world"
+    -- emit "res = "; emitCName n; emitLn "(lean_io_mk_world());"
      emitLn $ "%" ++ worldName ++ " = " ++ "@lean_io_mk_world() : () -> !lz.value"
-     emit ("%" ++ resName ++ " = " ++ "call @"); emitCName initFn; emit "(%worldName)";
-       emit " : (!lz.value) -> "; emit (toCType ∘ Decl.resultType $ d); emitLn "";
-     -- emitLn "if (lean_io_result_is_error(res)) return res;"
-     -- emitCName n; emitLn " = lean_io_result_get_value(res);"
-     let resValueName <- gensym "resultVal"
-     emitLn $ "%" ++ resValueName ++ " = " ++ "std.call @lean_io_get_result_value(" ++ resName ++")"
-     emitLn $ "call @lean_dec_ref(" ++ "%" ++ resName ++ ");"
-     -- TODO: think if I need this | emitMarkPersistent d n
-     
-   | _ =>
-     emitLn $ "// ERR: emitDeclInit(" ++ toString n ++ ") | no init function"
-     let resName <- gensym "result";
-     emit ("%" ++ resName ++ " = " ++ "call @"); emitCInitName n; emit "()";
-       emit ": () -> "; emit (toCType ∘ Decl.resultType $ d); emitLn ""
-   -- TODO: think if I need this | emitMarkPersistent d n
-
- --  let env ← getEnv
- --  let n := d.name
- --  if isIOUnitInitFn env n then
- --    emit "res = "; emitCName n; emitLn "(lean_io_mk_world());"
- --    emitLn "if (lean_io_result_is_error(res)) return res;"
- --    emitLn "lean_dec_ref(res);"
- --  else if d.params.size == 0 then
- --    match getInitFnNameFor? env d.name with
- --    | some initFn =>
- --      emit "res = "; emitCName initFn; emitLn "(lean_io_mk_world());"
- --      emitLn "if (lean_io_result_is_error(res)) return res;"
- --      emitCName n; emitLn " = lean_io_result_get_value(res);"
- --      emitMarkPersistent d n
- --      emitLn "lean_dec_ref(res);"
- --    | _ =>
- --      emitCName n; emit " = "; emitCInitName n; emitLn "();"; emitMarkPersistent d n
-
-
--- def emitInitFn : M Unit := do
---   let env ← getEnv
---   let modName ← getModName
---   env.imports.forM fun imp =>
---      emitLn ("lean_object* " ++ mkModuleInitializationFunctionName imp.module ++ "(lean_object*);")
---   emitLns [
---     "static bool _G_initialized = false;",
---     "lean_object* " ++ mkModuleInitializationFunctionName modName ++ "(lean_object* w) {",
---     "lean_object * res;",
---     "if (_G_initialized) return lean_io_result_mk_ok(lean_box(0));",
---     "_G_initialized = true;"
---   ]
---   env.imports.forM fun imp => emitLns [
---     "res = " ++ mkModuleInitializationFunctionName imp.module ++ "(lean_io_mk_world());",
---     "if (lean_io_result_is_error(res)) return res;",
---     "lean_dec_ref(res);"]
---   let decls := getDecls env
---   decls.reverse.forM emitDeclInit
---   emitLns ["return lean_io_result_mk_ok(lean_box(0));", "}"]
-
-
+     emit ("%" ++ resIOName ++ " = " ++ "call @"); emitCName n; emit "(%worldName)";
+     emit " : (!lz.value) -> "; emit (toCType ∘ Decl.resultType $ d); emitLn "";
+    -- emitLn "if (lean_io_result_is_error(res)) return res;"
+    -- emitLn "lean_dec_ref(res);"
+  else if d.params.size == 0 then
+    match getInitFnNameFor? env d.name with
+    | some initFn =>
+          -- emit "res = "; emitCName initFn; emitLn "(lean_io_mk_world());"
+          let resIOName <- gensym "result"
+          let worldName <- gensym "world"
+          emitLn $ "%" ++ worldName ++ " = " ++ "@lean_io_mk_world() : () -> !lz.value"
+          emit ("%" ++ resIOName ++ " = " ++ "call @"); emitCName initFn; emit "(%worldName)";
+          emit " : (!lz.value) -> "; emit (toCType ∘ Decl.resultType $ d); emitLn "";
+          -- emitLn "if (lean_io_result_is_error(res)) return res;"
+          -- emitCName n; emitLn " = lean_io_result_get_value(res);"
+          let resValueName <- gensym "resultVal"
+          emitLn $ "%" ++ resValueName ++ " = " ++ "std.call @lean_io_get_result_value(" ++ resIOName ++")"
+          emit $ (escape "ptr.storeglobal"); 
+          emit "(%";  emit resValueName; emit ")";
+          emit "{value=@"; emitCName n; emit "}"
+          emit ": ("; emit (toCType ∘ Decl.resultType $ d); emit ") -> ()"; emitLn "";
+          -- emitMarkPersistent d n
+          -- emitLn "lean_dec_ref(res);"
+     | _ =>
+          -- emitCName n; emit " = "; emitCInitName n; emitLn "();"; emitMarkPersistent d n
+         let resName <- gensym "result";
+         emit ("%" ++ resName ++ " = " ++ "call @"); emitCInitName n; emit "()";
+         emit ": () -> "; emit (toCType ∘ Decl.resultType $ d); emitLn "";
+         emit $ (escape "ptr.storeglobal"); emit "(%";  emit resName ; emit ")";
+         emit "{value=@"; emitCName n; emit "}";
+         emit " : ("; emit (toCType ∘ Decl.resultType $ d); emit  ") -> ()"; emitLn "";
 
 def emitInitFn : M Unit := do
   let env ← getEnv
@@ -1113,9 +1086,9 @@ def emitInitFn : M Unit := do
        "(" ++  "%" ++ worldname ++ ")" ++ 
        " : (!lz.value) -> !lz.value"
        )
+     -- emitLn $ (escape "ptr.storeglobal") ++  "(){value=@" ++ 
      emitLn $ "call @lean_dec_ref(%" ++ initResult ++ ") : (!lz.value) -> ()"
-    -- | done initing everyone -- |
-  
+    -- | done initing everyone -- |  
   -- | this CALLS the different DECLARATIONS in the file.
   let decls := getDecls env
   decls.reverse.forM emitDeclInit
