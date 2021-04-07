@@ -181,10 +181,10 @@ public:
 
 };
 
-class PtrUseGlobalOp : public Op<PtrUseGlobalOp, OpTrait::OneResult, OpTrait::ZeroOperands> {
+class PtrLoadGlobalOp : public Op<PtrLoadGlobalOp, OpTrait::OneResult, OpTrait::ZeroOperands> {
 public:
   using Op::Op;
-  static StringRef getOperationName() { return "ptr.useglobal"; };
+  static StringRef getOperationName() { return "ptr.loadglobal"; };
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   void print(OpAsmPrinter &p);
   std::string getGlobalName() { return this->getOperation()->getAttrOfType<FlatSymbolRefAttr>("value").getValue().str(); }
@@ -196,6 +196,17 @@ public:
 
 };
 
+
+class PtrStoreGlobalOp : public Op<PtrStoreGlobalOp, OpTrait::ZeroResult, OpTrait::OneOperand> {
+public:
+  using Op::Op;
+  static StringRef getOperationName() { return "ptr.storeglobal"; };
+  static ParseResult parse(OpAsmParser &parser, OperationState &result);
+  void print(OpAsmPrinter &p);
+  std::string getGlobalName() { return this->getOperation()->getAttrOfType<FlatSymbolRefAttr>("value").getValue().str(); }
+  FlatSymbolRefAttr getGlobalNameAttr() { return this->getOperation()->getAttrOfType<FlatSymbolRefAttr>("value"); }
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state, Value v, std::string name);
+};
 /*
 class PtrToHaskValueOp
     : public Op<PtrToHaskValueOp, OpTrait::OneResult, OpTrait::OneOperand> {

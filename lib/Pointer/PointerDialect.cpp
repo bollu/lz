@@ -61,7 +61,9 @@ PtrDialect::PtrDialect(mlir::MLIRContext *context)
   addOperations<MemrefToVoidPtrOp>();
   addOperations<PtrToFloatOp>();
   addOperations<PtrGlobalOp>();
-  addOperations<PtrUseGlobalOp>();
+  addOperations<PtrLoadGlobalOp>();
+
+  addOperations<PtrStoreGlobalOp>();
   addTypes<VoidPtrType, CharPtrType>();
 
   // clang-format on
@@ -315,26 +317,45 @@ void PtrGlobalOp::build(mlir::OpBuilder &builder, mlir::OperationState &state, s
 };
 
 
-// === USEGLOBAL OP ===
-// === USEGLOBAL OP ===
-// === USEGLOBAL OP ===
-// === USEGLOBAL OP ===
-// === USEGLOBAL OP ===
+// === LOAD GLOBAL OP ===
+// === LOAD GLOBAL OP ===
+// === LOAD GLOBAL OP ===
+// === LOAD GLOBAL OP ===
+// === LOAD GLOBAL OP ===
 
-ParseResult PtrUseGlobalOp::parse(OpAsmParser &parser, OperationState &result) {
+ParseResult PtrLoadGlobalOp::parse(OpAsmParser &parser, OperationState &result) {
   assert(false && "unimplemented");
 };
 
-void PtrUseGlobalOp::print(OpAsmPrinter &p) {
+void PtrLoadGlobalOp::print(OpAsmPrinter &p) {
   p.printGenericOp(this->getOperation());
 };
 
-void PtrUseGlobalOp::build(mlir::OpBuilder &builder, mlir::OperationState &state, std::string name,
+void PtrLoadGlobalOp::build(mlir::OpBuilder &builder, mlir::OperationState &state, std::string name,
                         Type resultty) {
   state.addTypes(resultty);
   state.addAttribute("value", builder.getSymbolRefAttr(name));
 };
 
+
+// === STORE GLOBAL OP ===
+// === STORE GLOBAL OP ===
+// === STORE GLOBAL OP ===
+// === STORE GLOBAL OP ===
+// === STORE GLOBAL OP ===
+
+ParseResult PtrStoreGlobalOp::parse(OpAsmParser &parser, OperationState &result) {
+  assert(false && "unimplemented");
+};
+
+void PtrStoreGlobalOp::print(OpAsmPrinter &p) {
+  p.printGenericOp(this->getOperation());
+};
+
+void PtrStoreGlobalOp::build(mlir::OpBuilder &builder, mlir::OperationState &state, Value v, std::string name) {
+  state.addOperands(v);
+  state.addAttribute("value", builder.getSymbolRefAttr(name));
+};
 
 
 
@@ -663,50 +684,26 @@ public:
   }
 };
 
-struct PtrUseGlobalOpLowering : public ConversionPattern {
+struct PtrLoadGlobalOpLowering : public ConversionPattern {
 public:
-  explicit PtrUseGlobalOpLowering(TypeConverter &tc, MLIRContext *context)
-      : ConversionPattern(PtrUseGlobalOp::getOperationName(), 1, tc, context) {}
+  explicit PtrLoadGlobalOpLowering(TypeConverter &tc, MLIRContext *context)
+      : ConversionPattern(PtrLoadGlobalOp::getOperationName(), 1, tc, context) {}
 
   LogicalResult
   matchAndRewrite(Operation *rator, ArrayRef<Value> rands,
                   ConversionPatternRewriter &rewriter) const override {
-    ModuleOp mod = rator->getParentOfType<ModuleOp>();
-    PtrUseGlobalOp useglobal = cast<PtrUseGlobalOp>(rator);
-
-//    Operation *op = mod.lookupSymbol(useglobal.getGlobalName());
-
-//    FuncOp fn = mod.lookupSymbol<FuncOp>(useglobal.getGlobalName());
-//    if (fn) {
-//      if (fn->getNumOperands() != 0) {
-//        llvm::errs() << useglobal << "| refers to function that takes more than zero args";
-//        return failure();
-//      }
-//
-//      rewriter.replaceOpWithNewOp<CallOp>(rator, fn);
-//      return success();
-//    } else {
-//      assert(false && "unable to find function!");
-//    }
-
-    LLVM::GlobalOp llvmGlobal = mod.lookupSymbol<LLVM::GlobalOp>(useglobal.getGlobalName());
-    if (llvmGlobal) { return success(); }
-
-    PtrGlobalOp global = mod.lookupSymbol<PtrGlobalOp>(useglobal.getGlobalName());
-    if (global) {
+//    ModuleOp mod = rator->getParentOfType<ModuleOp>();
+    PtrLoadGlobalOp useglobal = cast<PtrLoadGlobalOp>(rator);
+    // LLVM::GlobalOp llvmGlobal = mod.lookupSymbol<LLVM::GlobalOp>(useglobal.getGlobalName());
       // %0 = llvm.mlir.addressof @const : !llvm.ptr<i32>
       // %1 = llvm.load %0 : !llvm.ptr<i32>
+    // TODO: Do I need to create a !llvm.ptr?
       LLVM::AddressOfOp addr =
           rewriter.create<LLVM::AddressOfOp>(useglobal.getLoc(),
                                              typeConverter->convertType(useglobal.getGlobalType()),
                                              useglobal.getGlobalNameAttr());
-      rewriter.replaceOpWithNewOp<LLVM::LoadOp>(rator, addr);
-      return success();
-    }
-
-    llvm::errs() << useglobal << "|" << " unable to find function/global\n";
-//    assert(false && "unable to find global or function with the name.");
-    return failure();
+    rewriter.replaceOpWithNewOp<LLVM::LoadOp>(rator, addr);
+    return success();
   }
 };
 
@@ -732,7 +729,6 @@ public:
     return success();
   }
 };
-
 
 /*
 //
@@ -930,7 +926,7 @@ struct LowerPointerPass : public Pass {
     patterns.insert<PtrUndefOpLowering>(typeConverter, &getContext());
     patterns.insert<Ptr2MemrefOpLowering>(typeConverter, &getContext());
 
-    patterns.insert<PtrUseGlobalOpLowering>(typeConverter, &getContext());
+    patterns.insert<PtrLoadGlobalOpLowering>(typeConverter, &getContext());
     patterns.insert<PtrGlobalOpLowering>(typeConverter, &getContext());
 
 

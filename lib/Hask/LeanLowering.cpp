@@ -1610,17 +1610,17 @@ public:
   }
 };
 
-class PtrUseGlobalOpTypeConversion : public ConversionPattern {
+class PtrLoadGlobalOpTypeConversion : public ConversionPattern {
 public:
-  explicit PtrUseGlobalOpTypeConversion(TypeConverter &tc, MLIRContext *context)
-      : ConversionPattern(ptr::PtrUseGlobalOp::getOperationName(), 1, tc, context) {}
+  explicit PtrLoadGlobalOpTypeConversion(TypeConverter &tc, MLIRContext *context)
+      : ConversionPattern(ptr::PtrLoadGlobalOp::getOperationName(), 1, tc, context) {}
 
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> rands,
                   ConversionPatternRewriter &rewriter) const override {
     assert(false);
-    ptr::PtrUseGlobalOp use = cast<ptr::PtrUseGlobalOp>(op);
-    rewriter.replaceOpWithNewOp<ptr::PtrUseGlobalOp>(op, use.getGlobalName(), typeConverter->convertType(use.getGlobalType())) ;
+    ptr::PtrLoadGlobalOp use = cast<ptr::PtrLoadGlobalOp>(op);
+    rewriter.replaceOpWithNewOp<ptr::PtrLoadGlobalOp>(op, use.getGlobalName(), typeConverter->convertType(use.getGlobalType())) ;
     return success();
   }
 };
@@ -1778,7 +1778,7 @@ struct LowerLeanPass : public Pass {
     });
 
 
-    target.addDynamicallyLegalOp<ptr::PtrUseGlobalOp>([](ptr::PtrUseGlobalOp p) {
+    target.addDynamicallyLegalOp<ptr::PtrLoadGlobalOp>([](ptr::PtrLoadGlobalOp p) {
       return isTypeLegal(p.getGlobalType());
     });
 
@@ -1828,7 +1828,7 @@ struct LowerLeanPass : public Pass {
 
 
     patterns.insert<PtrGlobalOpTypeConversion>(typeConverter, &getContext());
-    patterns.insert<PtrUseGlobalOpTypeConversion>(typeConverter, &getContext());
+    patterns.insert<PtrLoadGlobalOpTypeConversion>(typeConverter, &getContext());
 
     ::llvm::DebugFlag = true;
 
