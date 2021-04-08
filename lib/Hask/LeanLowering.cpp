@@ -985,7 +985,7 @@ public:
     std::string name = cons.getDataConstructorName().str();
     assert(std::to_string(atoi(name.c_str())) == name);
 
-    if (cons.getNumOperands() == 0) {
+    if (operands.size() == 0) {
       FuncOp box = getOrInsertLeanBox(rewriter, mod);
       ConstantIntOp allocIx = rewriter.create<ConstantIntOp>(cons->getLoc(), atoi(name.c_str()), width);
       mlir::SmallVector<Value, 1> boxArgs{allocIx};
@@ -994,21 +994,21 @@ public:
       return success();
     }
 
-    assert(cons.getNumOperands() > 0);
+    assert(operands.size() > 0);
     FuncOp alloc = getOrInsertLeanAllocCtor(rewriter, mod);
     // TODO: fix this mess; just store int indexes.
 
     ConstantIntOp allocIx = rewriter.create<ConstantIntOp>(cons->getLoc(), atoi(name.c_str()), width);
-    ConstantIntOp allocNumArgs = rewriter.create<ConstantIntOp>(cons->getLoc(), cons.getNumOperands(), width);
+    ConstantIntOp allocNumArgs = rewriter.create<ConstantIntOp>(cons->getLoc(), operands.size(), width);
     ConstantIntOp allocSz = rewriter.create<ConstantIntOp>(cons->getLoc(), 4200, width);
     mlir::SmallVector<Value, 3> allocArgs{allocIx, allocNumArgs, allocSz};
     CallOp callAlloc = rewriter.create<CallOp>(cons->getLoc(), alloc, allocArgs);
     Value out = callAlloc.getResult(0);
 
     FuncOp set = getOrInsertLeanCtorSet(rewriter, mod);
-    for(int i  = 0; i < cons.getNumOperands(); ++i) {
+    for(int i  = 0; i < (int)operands.size(); ++i) {
       ConstantIntOp ix = rewriter.create<ConstantIntOp>(cons->getLoc(), i, width);
-      mlir::SmallVector<Value, 4> setArgs{out, ix};
+      mlir::SmallVector<Value, 4> setArgs{out, ix, operands[i]};
       rewriter.create<CallOp>(cons->getLoc(), set, setArgs);
     }
     rewriter.replaceOp(cons, out);

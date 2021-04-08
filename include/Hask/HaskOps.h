@@ -263,6 +263,10 @@ public:
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
                     Value scrutinee, SmallVectorImpl<mlir::Attribute> &lhss,
                     SmallVectorImpl<mlir::Region *> &rhss, mlir::Type retty);
+  // for lambdapure.
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                    Value scrutinee, int numrhss);
+
 };
 
 // LAMBDA OP
@@ -632,6 +636,19 @@ public:
   Value getScrutinee() { return getOperand(); }
   int numAlts() { return this->getOperation()->getNumRegions(); }
 };
+// for lambdapure
+class HaskCaseIntRetOp : public Op<HaskCaseIntRetOp, OpTrait::OneOperand,
+    OpTrait::ZeroResult, OpTrait::IsTerminator> {
+public:
+  using Op::Op;
+  static StringRef getOperationName() { return "lz.caseIntRet"; };
+  static ParseResult parse(OpAsmParser &parser, OperationState &result);
+  void print(OpAsmPrinter &p);
+  Value getScrutinee() { return getOperand(); }
+  int numAlts() { return this->getOperation()->getNumRegions(); }
+};
+
+
 
 // for lambdapure
 class HaskCallOp

@@ -34,8 +34,12 @@
 
 
 
-
 # Log:  [newest] to [oldest]
+
+# April 4
+
+- Measure how much "flattening the IR" by lifting stuff out of case improves cyclomatic complexity
+
 
 # April 2
 

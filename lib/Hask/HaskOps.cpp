@@ -824,6 +824,23 @@ void CaseIntOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
   state.addTypes(retty);
 }
 
+// for lambdapure.
+void CaseIntOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                  Value scrutinee, int numrhss) {
+  // assert(scrutinee.getType().isa<ValueType>());
+  state.addOperands(scrutinee);
+  // vvv TODO: Check if this is 0 or 1 indexed
+  for (int i = 0; i < numrhss; ++i) {
+    mlir::FlatSymbolRefAttr ixAttr =
+        builder.getSymbolRefAttr(std::to_string(i));
+    state.addAttribute("alt" + std::to_string(i), ixAttr);
+    state.addRegion();
+  }
+  state.addTypes(builder.getType<ValueType>());
+  // hack! Say that this case doesn't return anything...
+}
+
+
 // === THUNKIFY OP ===
 // === THUNKIFY OP ===
 // === THUNKIFY OP ===
@@ -1083,6 +1100,18 @@ ParseResult HaskCaseRetOp::parse(OpAsmParser &parser, OperationState &result) {
   assert(false && "unimplemented");
 };
 void HaskCaseRetOp::print(OpAsmPrinter &p) { p.printGenericOp(*this); };
+
+// === HaskCaseIntRetOp ===
+// === HaskCaseIntRetOp ===
+// === HaskCaseIntRetOp ===
+// === HaskCaseIntRetOp ===
+// === HaskCaseIntRetOp ===
+
+ParseResult HaskCaseIntRetOp::parse(OpAsmParser &parser, OperationState &result) {
+  assert(false && "unimplemented");
+};
+void HaskCaseIntRetOp::print(OpAsmPrinter &p) { p.printGenericOp(*this); };
+
 
 // === REUSE CONSTRUCTOR OP ===
 // === REUSE CONSTRUCTOR OP ===

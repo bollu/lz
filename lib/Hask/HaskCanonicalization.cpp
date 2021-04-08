@@ -73,6 +73,34 @@ struct CanonicalizeCaseRetPattern
   }
 };
 
+
+struct CanonicalizeCaseIntRetPattern
+    : public mlir::OpRewritePattern<HaskCaseIntRetOp> {
+  CanonicalizeCaseIntRetPattern(mlir::MLIRContext *context)
+      : OpRewritePattern<HaskCaseIntRetOp>(context, /*benefit=*/1) {}
+
+  mlir::LogicalResult
+  matchAndRewrite(HaskCaseIntRetOp caseret,
+                  mlir::PatternRewriter &rewriter) const override {
+    // TODO: convert caseRet to case.
+    SmallVector<mlir::Attribute, 4> lhss;
+    SmallVector<mlir::Region *, 4> rhss;
+
+    rewriter.setInsertionPoint(caseret);
+    CaseIntOp caseop = rewriter.create<CaseIntOp>(rewriter.getUnknownLoc(), caseret.getScrutinee(),
+                                            caseret.numAlts());
+
+    BlockAndValueMapping mapper;
+    for (int i = 0; i < caseret.numAlts(); ++i) {
+      caseret->getRegion(i).cloneInto(&caseop->getRegion(i), mapper);
+    }
+
+    rewriter.create<HaskReturnOp>(rewriter.getUnknownLoc(), caseop.getResult());
+    rewriter.eraseOp(caseret);
+    return success();
+  }
+};
+
 struct CanonicalizeHaskCallPattern : public mlir::OpRewritePattern<HaskCallOp> {
   CanonicalizeHaskCallPattern(mlir::MLIRContext *context)
       : OpRewritePattern<HaskCallOp>(context, /*benefit=*/1) {}
@@ -118,8 +146,10 @@ struct CanonicalizeHaskReturnOpPattern
   mlir::LogicalResult
   matchAndRewrite(HaskReturnOp ret,
                   mlir::PatternRewriter &rewriter) const override {
-    CaseOp retCaseParent = ret.getOperation()->getParentOfType<CaseOp>();
-    if (retCaseParent) {
+    CaseOp caseParent = ret.getOperation()->getParentOfType<CaseOp>();
+    CaseIntOp caseIntParent = ret.getOperation()->getParentOfType<CaseIntOp>();
+
+    if (caseParent || caseIntParent) {
       return failure();
     } else {
       rewriter.replaceOpWithNewOp<ReturnOp>(ret, ret.getOperand());
@@ -149,6 +179,7 @@ public:
     // https://mlir.llvm.org/docs/Canonicalization/
     // const int MAX_ITERATIONS = 100;
     patterns.insert<CanonicalizeCaseRetPattern>(&getContext());
+    patterns.insert<CanonicalizeCaseIntRetPattern>(&getContext());
     patterns.insert<CanonicalizeHaskReturnOpPattern>(&getContext());
     patterns.insert<CanonicalizeHaskCallPattern>(&getContext());
     ::llvm::DebugFlag = true;
