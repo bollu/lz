@@ -285,6 +285,7 @@ def emitPreamble : M Unit := do
   emitLn "func private @lean_dec_ref(!lz.value) -> ()"
   emitLn "func private @lean_box(i64) -> !lz.value"
   emitLn "func private @lean_io_result_mk_ok(!lz.value) -> !lz.value"
+  emitLn "func private @lean_mark_persistent(!lz.value) -> ()"
 
 
 def emitFileHeader : M Unit := do
@@ -1015,10 +1016,13 @@ def emitFns : M Unit := do
   let decls := getDecls env;
   decls.reverse.forM emitDecl
 
-def emitMarkPersistent (d : Decl) (n : String) : M Unit := do
+-- def emitMarkPersistent (d : Decl) (n : Name) : M Unit := do
+def emitMarkPersistent (d : Decl) (valueName : String) : M Unit := do
   if d.resultType.isObj then
-    -- emit "call @lean_mark_persistent("; emitCName n; emitLn ");"
-    emit "call @lean_mark_persistent("; emitCName n; emitLn ");"
+    -- emit "lean_mark_persistent("; emitCName n; emitLn ");"
+    emit "call @lean_mark_persistent(%"; emit valueName; emitLn ") : (!lz.value) -> ()"
+
+
 
 def emitDeclInit (d : Decl) : M Unit := do
   let env ← getEnv
@@ -1051,6 +1055,7 @@ def emitDeclInit (d : Decl) : M Unit := do
           emit "{value=@"; emitCName n; emit "}"
           emit ": ("; emit (toCType ∘ Decl.resultType $ d); emit ") -> ()"; emitLn "";
           -- emitMarkPersistent d n
+          emitMarkPersistent d resValueName
           -- emitLn "lean_dec_ref(res);"
      | _ =>
           -- emitCName n; emit " = "; emitCInitName n; emitLn "();"; emitMarkPersistent d n
@@ -1060,6 +1065,8 @@ def emitDeclInit (d : Decl) : M Unit := do
          emit $ (escape "ptr.storeglobal"); emit "(%";  emit resName ; emit ")";
          emit "{value=@"; emitCName n; emit "}";
          emit " : ("; emit (toCType ∘ Decl.resultType $ d); emit  ") -> ()"; emitLn "";
+         -- emitMarkPersistent d n
+         emitMarkPersistent d resName
 
 def emitInitFn : M Unit := do
   let env ← getEnv
