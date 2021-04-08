@@ -826,18 +826,16 @@ void CaseIntOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
 
 // for lambdapure.
 void CaseIntOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                  Value scrutinee, int numrhss) {
+                  Value scrutinee, ArrayRef<NamedAttribute> lhss) {
   // assert(scrutinee.getType().isa<ValueType>());
   state.addOperands(scrutinee);
   // vvv TODO: Check if this is 0 or 1 indexed
-  for (int i = 0; i < numrhss; ++i) {
-    mlir::FlatSymbolRefAttr ixAttr =
-        builder.getSymbolRefAttr(std::to_string(i));
-    state.addAttribute("alt" + std::to_string(i), ixAttr);
+  for (int i = 0; i < (int)lhss.size(); ++i) {
+    state.addAttribute("alt" + std::to_string(i), lhss[i].second);
     state.addRegion();
   }
+  // TODO/HACK! I need to fix the return type.
   state.addTypes(builder.getType<ValueType>());
-  // hack! Say that this case doesn't return anything...
 }
 
 

@@ -3,6 +3,8 @@
 set -e
 set -o xtrace
 
+rm $1-exe.out || true
+
 lean $1 -c exe.c 2>&1 | \
         hask-opt --lz-canonicalize | tee exe.mlir | \
         hask-opt  --lean-lower --convert-scf-to-std --ptr-lower | \

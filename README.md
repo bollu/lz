@@ -18,7 +18,13 @@
 - Look for demand analysis testsuite in GHC.
 
 
-
+# Thoughts on lambdapure
+- It's both too high and too low level. `case` of `int` in lambdapure generates
+  as calls to runtime `lean_dec_eq` + a boolean `int` case on return value,
+  while `case` of objects is represented as a real `case.`
+- Initialization machinery is confusing. I still don't understand the
+  invariants around why certain things are initialized the way they are.
+- Quite minimal and pleasant to work with, all said and done.
 
 # Notes on GHC
 

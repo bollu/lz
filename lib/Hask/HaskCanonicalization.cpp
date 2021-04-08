@@ -88,7 +88,7 @@ struct CanonicalizeCaseIntRetPattern
 
     rewriter.setInsertionPoint(caseret);
     CaseIntOp caseop = rewriter.create<CaseIntOp>(rewriter.getUnknownLoc(), caseret.getScrutinee(),
-                                            caseret.numAlts());
+                                            caseret->getAttrs());
 
     BlockAndValueMapping mapper;
     for (int i = 0; i < caseret.numAlts(); ++i) {

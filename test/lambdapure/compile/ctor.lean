@@ -1,6 +1,4 @@
---  RUN: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize | FileCheck %s
---  RUN: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize  --lz-lambdapure-destructive-updates | FileCheck %s
---  RUN: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize  --lz-lambdapure-destructive-updates --lz-lambdapure-reference-rewriter | FileCheck %s
+--  RUN: ./run-lean.sh %s | FileCheck %s --prefix=CHECK-INTERPRET
 
 -- CHECK-INTERPRET: {{{{{{nil , nil}} , {{nil , nil}}}} , {{{{nil , nil}} , {{nil , nil}}}}}}
 -- CHECK: func @mkTree
