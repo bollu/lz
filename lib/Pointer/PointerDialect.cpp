@@ -693,16 +693,43 @@ public:
   matchAndRewrite(Operation *rator, ArrayRef<Value> rands,
                   ConversionPatternRewriter &rewriter) const override {
 //    ModuleOp mod = rator->getParentOfType<ModuleOp>();
-    PtrLoadGlobalOp useglobal = cast<PtrLoadGlobalOp>(rator);
-    // LLVM::GlobalOp llvmGlobal = mod.lookupSymbol<LLVM::GlobalOp>(useglobal.getGlobalName());
+    PtrLoadGlobalOp load = cast<PtrLoadGlobalOp>(rator);
+    // LLVM::GlobalOp llvmGlobal = mod.lookupSymbol<LLVM::GlobalOp>(load.getGlobalName());
       // %0 = llvm.mlir.addressof @const : !llvm.ptr<i32>
       // %1 = llvm.load %0 : !llvm.ptr<i32>
     // TODO: Do I need to create a !llvm.ptr?
+    Type valty = typeConverter->convertType(load.getGlobalType());
+    Type valptrty = LLVM::LLVMPointerType::get(valty);
+
       LLVM::AddressOfOp addr =
-          rewriter.create<LLVM::AddressOfOp>(useglobal.getLoc(),
-                                             typeConverter->convertType(useglobal.getGlobalType()),
-                                             useglobal.getGlobalNameAttr());
+          rewriter.create<LLVM::AddressOfOp>(load.getLoc(),
+          valptrty, load.getGlobalNameAttr());
     rewriter.replaceOpWithNewOp<LLVM::LoadOp>(rator, addr);
+    return success();
+  }
+};
+
+struct PtrStoreGlobalOpLowering : public ConversionPattern {
+public:
+  explicit PtrStoreGlobalOpLowering(TypeConverter &tc, MLIRContext *context)
+      : ConversionPattern(PtrStoreGlobalOp::getOperationName(), 1, tc, context) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *rator, ArrayRef<Value> rands,
+                  ConversionPatternRewriter &rewriter) const override {
+//    ModuleOp mod = rator->getParentOfType<ModuleOp>();
+    PtrStoreGlobalOp store = cast<PtrStoreGlobalOp>(rator);
+    // LLVM::GlobalOp llvmGlobal = mod.lookupSymbol<LLVM::GlobalOp>(useglobal.getGlobalName());
+    // %addr = llvm.mlir.addressof @const : !llvm.ptr<T>
+    // llvm.store %addr, %val : !llvm.ptr<T>, i32
+    Type valty = typeConverter->convertType(store.getOperand().getType());
+    Type valptrty = LLVM::LLVMPointerType::get(valty);
+
+    LLVM::AddressOfOp addr =
+        rewriter.create<LLVM::AddressOfOp>(store.getLoc(),
+                                           valptrty,
+                                           store.getGlobalNameAttr());
+    rewriter.replaceOpWithNewOp<LLVM::StoreOp>(rator, store.getOperand(), addr);
     return success();
   }
 };
@@ -927,6 +954,7 @@ struct LowerPointerPass : public Pass {
     patterns.insert<Ptr2MemrefOpLowering>(typeConverter, &getContext());
 
     patterns.insert<PtrLoadGlobalOpLowering>(typeConverter, &getContext());
+    patterns.insert<PtrStoreGlobalOpLowering>(typeConverter, &getContext());
     patterns.insert<PtrGlobalOpLowering>(typeConverter, &getContext());
 
 
