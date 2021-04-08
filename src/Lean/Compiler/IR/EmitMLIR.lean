@@ -841,8 +841,17 @@ partial def emitCaseInt (x : VarId) (xType : IRType) (alts : Array Alt)
      |  Alt.default b => emitFnBody b tys)
  emit ")";
  emitLn "";
+ emit "{";
+ forMIx_ (as:= alts) (fun ix alt => do
+     emit (if ix > 0 then ", " else "");
+     emit $ "alt" ++ (toString ix) ++ "=";
+     match alt with
+      | Alt.ctor info b => emit info.cidx
+      | Alt.default b => emit "@default"; 
+ )
+ emit "}";
  -- TODO: emit case LHSs
- -- TODO: emit return type of case. How?
+ -- TODO: emit return type of case. How  ?
  emit " : ";
  emit "("; emit (toCType xType); emit ")"; emit " -> "; emit "()";
  emitLn "";
@@ -853,7 +862,7 @@ partial def emitCase (x : VarId) (xType : IRType) (alts : Array Alt)
         (tys: HashMap VarId IRType): M Unit :=
   if xType.isObj
   then emitCaseObj x xType alts tys
-  else emitCaseInt x xType alts tys
+  else emitCaseInt x xType alts tys -- this is encoded as an if-then-else.
 
  
                       
