@@ -467,7 +467,7 @@ def emitExprCtor (z : VarId) (c : CtorInfo) (ys : Array Arg)
   emitLhs z;
   emit (escape "lz.construct"); 
   emit "("; emitArgs ys;  emit ")";
-  emit "{dataconstructor = @"; emit (escape c.cidx); emit "}";
+  emit "{dataconstructor = @"; emit (escape c.cidx); emit  (", size=" ++ (toString c.size) ++ "}");
   emit " : ";
   emit "("; emitArgsOnlyTys ys tys; emit ") -> (!lz.value)";
   -- if c.size == 0 && c.usize == 0 && c.ssize == 0 then do
