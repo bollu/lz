@@ -312,8 +312,8 @@ void PtrGlobalOp::print(OpAsmPrinter &p) {
 
 void PtrGlobalOp::build(mlir::OpBuilder &builder, mlir::OperationState &state, std::string name,
                   Type resultty) {
-    state.addTypes(resultty);
-    state.addAttribute("value", builder.getSymbolRefAttr(name));
+    state.addAttribute(PtrGlobalOp::getGlobalTypeAttrKey(), TypeAttr::get(resultty));
+    state.addAttribute(PtrGlobalOp::getGlobalNameAttrKey(), builder.getSymbolRefAttr(name));
 };
 
 

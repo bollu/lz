@@ -1603,7 +1603,6 @@ public:
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> rands,
                   ConversionPatternRewriter &rewriter) const override {
-    assert(false);
     ptr::PtrGlobalOp global = cast<ptr::PtrGlobalOp>(op);
     rewriter.replaceOpWithNewOp<ptr::PtrGlobalOp>(op, global.getGlobalName(), typeConverter->convertType(global.getGlobalType())) ;
     return success();
@@ -1618,12 +1617,29 @@ public:
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> rands,
                   ConversionPatternRewriter &rewriter) const override {
-    assert(false);
     ptr::PtrLoadGlobalOp use = cast<ptr::PtrLoadGlobalOp>(op);
     rewriter.replaceOpWithNewOp<ptr::PtrLoadGlobalOp>(op, use.getGlobalName(), typeConverter->convertType(use.getGlobalType())) ;
     return success();
   }
 };
+
+
+class PtrStoreGlobalOpTypeConversion : public ConversionPattern {
+public:
+  explicit PtrStoreGlobalOpTypeConversion(TypeConverter &tc, MLIRContext *context)
+      : ConversionPattern(ptr::PtrStoreGlobalOp::getOperationName(), 1, tc, context) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> rands,
+                  ConversionPatternRewriter &rewriter) const override {
+    ptr::PtrStoreGlobalOp store = cast<ptr::PtrStoreGlobalOp>(op);
+    assert(rands.size() == 1 && "store op must have an operand");
+    rewriter.replaceOpWithNewOp<ptr::PtrStoreGlobalOp>(op, rands[0], store.getGlobalName());
+    return success();
+  }
+};
+
+
 
 
 
@@ -1781,6 +1797,9 @@ struct LowerLeanPass : public Pass {
       return isTypeLegal(p.getGlobalType());
     });
 
+    target.addDynamicallyLegalOp<ptr::PtrStoreGlobalOp>([](ptr::PtrStoreGlobalOp p) {
+      return isTypeLegal(p.getOperand().getType());
+    });
 
     HaskTypeConverter typeConverter(&getContext());
     mlir::OwningRewritePatternList patterns(&getContext());
@@ -1828,6 +1847,7 @@ struct LowerLeanPass : public Pass {
 
     patterns.insert<PtrGlobalOpTypeConversion>(typeConverter, &getContext());
     patterns.insert<PtrLoadGlobalOpTypeConversion>(typeConverter, &getContext());
+    patterns.insert<PtrStoreGlobalOpTypeConversion>(typeConverter, &getContext());
 
     ::llvm::DebugFlag = true;
 

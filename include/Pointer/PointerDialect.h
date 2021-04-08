@@ -176,7 +176,7 @@ public:
   void print(OpAsmPrinter &p);
   static const char *getGlobalNameAttrKey() { return "value"; }
   static const char *getGlobalTypeAttrKey() { return "type"; }
-  
+
   Type getGlobalType() { return this->getOperation()->getAttrOfType<TypeAttr>(getGlobalTypeAttrKey()).getValue(); }
   std::string getGlobalName() { return this->getOperation()->getAttrOfType<FlatSymbolRefAttr>(getGlobalNameAttrKey()).getValue().str(); }
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state, std::string name,
