@@ -149,12 +149,9 @@ def emitCInitName (n : Name) : M Unit :=
  
 -- called from emitFnFwdDecls -> emitFnFwdDecl
 def emitFnFwdDeclAux (decl : Decl) (cppBaseName : String) (addExternForConsts : Bool) : M Unit := do
+  emitLn $ "// ERR: emitFnFwdDeclAux (" ++ cppBaseName ++ ")"
   let ps := decl.params
   let env ← getEnv
-  -- if ps.isEmpty && addExternForConsts
-  -- then emit "func private "
-  -- else emit "func private " 
-  -- emit (toCType decl.resultType ++ " " ++ cppBaseName)
   if ps.isEmpty
   then do
     emit (escape "ptr.global"); emit "()"; emit ("{value=@" ++ cppBaseName ++ "}");
@@ -176,6 +173,7 @@ def emitFnFwdDeclAux (decl : Decl) (cppBaseName : String) (addExternForConsts : 
  
 -- called from emitFnDecls -> emitFnDecl
 def emitFnFwdDecl (decl : Decl) (addExternForConsts : Bool) : M Unit := do
+  emitLn "// ERR: emitFnFwdDecl"
   let cppBaseName ← toCName decl.name
   emitFnFwdDeclAux decl cppBaseName addExternForConsts
 
@@ -197,10 +195,17 @@ def emitFnFwdDecls : M Unit := do
   --   else pure ()
     match getExternNameFor env `c decl.name with
     | some cName => do
-            -- let cName  <- toCName cName;
             emitExternFwdDeclAux decl cName
-    | none       => if modDecls.contains n
-                    then pure ()
+   -- THIS IS DELICATE. We need forward declarations for GLOBALS, and not for
+   -- FUNCTIONS. I can't forward declare functions because MLIR has stupid rules
+   -- about redefining symbols (!). 
+   -- So we check if it is a global. If it is, we spit out a forward
+   -- declaration. If not, we do not.
+    | none       => if decl.params.isEmpty -- is a global
+                    then emitFnFwdDecl decl (!modDecls.contains n)
+                    else if modDecls.contains n -- is a function declared in the module
+                    then  pure ()
+                    -- | is a function, NOT declared in the module
                     else emitFnFwdDecl decl (!modDecls.contains n)
 
 -- def emitMainFn : M Unit := do

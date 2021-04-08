@@ -91,6 +91,8 @@ def emitCInitName (n : Name) : M Unit :=
   toCInitName n >>= emit
 
 def emitFnDeclAux (decl : Decl) (cppBaseName : String) (addExternForConsts : Bool) : M Unit := do
+  emitLn $ "// ERR: emitFnDecAuxl (" ++ cppBaseName ++ "| addExternForConsts:" ++ 
+             (toString addExternForConsts) ++ ")"
   let ps := decl.params
   let env ← getEnv
   if ps.isEmpty && addExternForConsts then emit "extern "
@@ -110,15 +112,19 @@ def emitFnDeclAux (decl : Decl) (cppBaseName : String) (addExternForConsts : Boo
 
 def emitFnDecl (decl : Decl) (addExternForConsts : Bool) : M Unit := do
   let cppBaseName ← toCName decl.name
+  emitLn $ "// ERR: emitFnDecl (" ++ cppBaseName ++ "| addExternForConsts:" ++ 
+             (toString addExternForConsts) ++ ")"
   emitFnDeclAux decl cppBaseName addExternForConsts
 
 def emitExternDeclAux (decl : Decl) (cNameStr : String) : M Unit := do
+  emitLn $ "// ERR: emitExternDeclAux (" ++ cNameStr ++ ")"
   let cName := Name.mkSimple cNameStr
   let env ← getEnv
   let extC := isExternC env decl.name
   emitFnDeclAux decl cNameStr (!extC)
 
 def emitFnDecls : M Unit := do
+  emitLn "// ERR: emitFnDecls"
   let env ← getEnv
   let decls := getDecls env
   let modDecls  : NameSet := decls.foldl (fun s d => s.insert d.name) {}
