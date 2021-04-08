@@ -522,27 +522,26 @@ def toStringArgs (ys : Array Arg) : List String :=
   ys.toList.map argToCString
 
 
+-- | ps: description of formal parameters to the function f.
 def emitSimpleExternalCall (f : String) (ps : Array Param) (ys : Array Arg)
   (tys: HashMap VarId IRType) (retty: IRType) : M Unit := do
   -- let fname <- toCName f; -- added by bollu
   let fname := f;
   emit "call "; emit "@"; emit (escape fname)
+  -- We must remove irrelevant arguments to extern calls
+  let pys := (ps.zip ys).filter (fun py => not (py.fst.ty.isIrrelevant))
+  let ys := Array.map Prod.snd pys
+
   emit "("
   -- We must remove irrelevant arguments to extern calls.
-  discard <| ys.size.foldM
-    (fun i (first : Bool) =>
-      if ps[i].ty.isIrrelevant then
-        pure first
-      else do
-        unless first do emit ", "
-        emitArg ys[i]
-        pure false)
-    true
+  pys.size.forM (fun i => do
+         if i > 0 then emit ", ";
+         emitArg ys[i])
   emit ")"
   emit " : ("; emitArgsOnlyTys ys tys; emit ")";
   emit " -> "; emit "(";  emit (toCType retty);  emit ")";
+  emit " // <== ERR: emitSimpleExternalCall";
   emit "\n"
-
   pure ()
 
 
@@ -565,6 +564,7 @@ def emitFullApp (z : VarId) (f : FunId) (ys : Array Arg) (tys: HashMap VarId IRT
   let decl ← getDecl f
   match decl with
   | Decl.extern _ ps _ extData => do
+         emitLn "// ERR: emitFullApp (Decl.extern)"
          emitLhs z;
          emitExternCall f ps extData ys tys (Decl.resultType decl)
   | _ => do
@@ -580,6 +580,7 @@ def emitFullApp (z : VarId) (f : FunId) (ys : Array Arg) (tys: HashMap VarId IRT
       -- --   %1 = llvm.load %0 : !llvm.ptr<i32>
       -- emitLhs z; emit "llvm.load "; emit ("%" ++ declAddr);
       -- emit " : "; emit "!llvm.ptr<"; emit (toCType (Decl.resultType decl));  emitLn ">"
+      emitLn "// ERR: emitFullApp (pointer)"
       emitLhs z;
       emit (escape "ptr.loadglobal"); emit "()";
       let cname <- toCName f; 
@@ -587,6 +588,7 @@ def emitFullApp (z : VarId) (f : FunId) (ys : Array Arg) (tys: HashMap VarId IRT
       emit " : () -> ";emit (toCType (Decl.resultType decl));
       emitLn "";
     else 
+      emitLn "// ERR: emitFullApp (fncall)"
       emitLhs z
       emit "call "
       emit "@";
