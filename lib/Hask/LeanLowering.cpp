@@ -1000,7 +1000,8 @@ public:
 
     ConstantIntOp allocIx = rewriter.create<ConstantIntOp>(cons->getLoc(), atoi(name.c_str()), width);
     ConstantIntOp allocNumArgs = rewriter.create<ConstantIntOp>(cons->getLoc(), operands.size(), width);
-    ConstantIntOp allocSz = rewriter.create<ConstantIntOp>(cons->getLoc(), 4200, width);
+    // TODO: what is size?
+    ConstantIntOp allocSz = rewriter.create<ConstantIntOp>(cons->getLoc(), cons.getSize(), width);
     mlir::SmallVector<Value, 3> allocArgs{allocIx, allocNumArgs, allocSz};
     CallOp callAlloc = rewriter.create<CallOp>(cons->getLoc(), alloc, allocArgs);
     Value out = callAlloc.getResult(0);

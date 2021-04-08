@@ -319,11 +319,13 @@ public:
   // TODO: consider switching to "value" as key? unclear.
   static const char *getDataConstructorAttrKey() { return "dataconstructor"; }
   static const char *getDataTypeAttrKey() { return "datatype"; }
+  static const char *getSizeKey() { return "size"; } // from lambdapure.
   StringRef getDataConstructorName() {
     return getOperation()
         ->getAttrOfType<FlatSymbolRefAttr>(getDataConstructorAttrKey())
         .getValue();
   }
+  int getSize() { return this->getOperation()->getAttrOfType<IntegerAttr>(getSizeKey()).getInt(); }
 
   int getNumOperands() { return this->getOperation()->getNumOperands(); }
   Value getOperand(int i) { return this->getOperation()->getOperand(i); }

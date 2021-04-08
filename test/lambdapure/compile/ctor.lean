@@ -1,7 +1,6 @@
---  RUN: ./run-lean.sh %s | FileCheck %s --prefix=CHECK-INTERPRET
+--  RUN: ./run-lean.sh %s | FileCheck %s --check-prefix=CHECK-INTERPRET
+-- CHECK-INTERPRET: (((nil , nil) , (nil , nil)) , ((nil , nil) , (nil , nil)))
 
--- CHECK-INTERPRET: {{{{{{nil , nil}} , {{nil , nil}}}} , {{{{nil , nil}} , {{nil , nil}}}}}}
--- CHECK: func @mkTree
 
 set_option trace.compiler.ir.init true
 inductive Tree
@@ -17,7 +16,7 @@ def mkTree : Nat -> Tree
 
 def treeToStr: Tree -> String
 | Nil => "nil"
-| Node l r => "{{" ++ (treeToStr l) ++ " , " ++ (treeToStr r) ++ "}}"
+| Node l r => "(" ++ (treeToStr l) ++ " , " ++ (treeToStr r) ++ ")"
 
 
 def main (xs: List String) : IO Unit := 
