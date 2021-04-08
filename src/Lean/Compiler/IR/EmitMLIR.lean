@@ -154,8 +154,9 @@ def emitFnFwdDeclAux (decl : Decl) (cppBaseName : String) (addExternForConsts : 
   let env ← getEnv
   if ps.isEmpty
   then do
-    emit (escape "ptr.global"); emit "()"; emit ("{value=@" ++ cppBaseName ++ "}");
-    emit " : "; emit "() -> "; emit (toCType decl.resultType); emitLn "";
+    emit (escape "ptr.global"); emit "()";
+    emit $ "{value=@" ++ cppBaseName ++ ", type=" ++ (toCType decl.resultType) ++ "}";
+    emitLn $ " : " ++  "() -> ()"; -- emit (toCType decl.resultType); emitLn "";
   else do
     emit ("func private @" ++ cppBaseName)
     emit "("
