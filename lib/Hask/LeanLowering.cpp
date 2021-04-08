@@ -422,7 +422,25 @@ public:
 
 class HaskStringConstOpLowering : public ConversionPattern {
 public:
+  // !ptr.void -> !ptr.void
+  static FuncOp getOrCreateLeanMkString(PatternRewriter &rewriter,
+                                             ModuleOp m) {
+    const std::string name = "lean_mk_string";
+    if (FuncOp fn = m.lookupSymbol<FuncOp>(name)) {
+      return fn;
+    }
 
+    MLIRContext *context = rewriter.getContext();
+    Type argty = ptr::VoidPtrType::get(context);
+    Type retty = ptr::VoidPtrType::get(context);
+    FunctionType fnty = rewriter.getFunctionType(argty, retty);
+
+    PatternRewriter::InsertionGuard insertGuard(rewriter);
+    rewriter.setInsertionPointToStart(m.getBody());
+    FuncOp fn = rewriter.create<FuncOp>(m.getLoc(), name, fnty);
+    fn.setPrivate();
+    return fn;
+  }
   explicit HaskStringConstOpLowering(TypeConverter &tc, MLIRContext *context)
       : ConversionPattern(HaskStringConstOp::getOperationName(), 1, tc,
                           context) {}
@@ -430,7 +448,13 @@ public:
   matchAndRewrite(Operation *operation, ArrayRef<Value> rands,
                   ConversionPatternRewriter &rewriter) const override {
     HaskStringConstOp op = cast<HaskStringConstOp>(operation);
-    rewriter.replaceOpWithNewOp<ptr::PtrStringOp>(op, op.getValue());
+    ModuleOp mod = op->getParentOfType<ModuleOp>();
+
+    FuncOp lean_mk_str = getOrCreateLeanMkString(rewriter, mod);
+    ptr::PtrStringOp str = rewriter.create<ptr::PtrStringOp>(op.getLoc(), op.getValue());
+    llvm::SmallVector<Value, 1> args {str};
+    rewriter.replaceOpWithNewOp<CallOp>(op, lean_mk_str, args);
+    //  LitVal.str v => emit "lean_mk_string("; emit (quoteString v); emitLn ");"
     return success();
   }
 };
