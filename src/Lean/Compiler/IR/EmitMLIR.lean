@@ -135,14 +135,13 @@ def emitCName (n : Name) : M Unit :=
   toCName n >>= emit
 
 
--- | TODO: fix to be equivalent to C version
 def toCInitName (n : Name) : M String := do
   let env ← getEnv;
   -- TODO: we should support simple export names only
   match getExportNameFor env n with
-  | some (Name.str Name.anonymous s _) => pure $ s -- pure $ "_init_" ++ s
+  | some (Name.str Name.anonymous s _) => pure $ "_init_" ++ s
   | some _                             => throwInvalidExportName n
-  | none                               => pure $ n.mangle -- pure ("_init_" ++ n.mangle)
+  | none                               => pure ("_init_" ++ n.mangle)
 
 
 def emitCInitName (n : Name) : M Unit :=
@@ -983,9 +982,8 @@ def emitDeclAux (d : Decl) : M Unit := do
       else -- [xs.size = 0]
         -- TODO: there is something super funky about this codegen here!
         -- In particular, I don't understand this __init__ invariant.
-        -- emitLn ("@_init_" ++ baseName ++ "()" ++ " -> " ++ (toCType t))
-        emitLn ("@" ++ baseName ++ "()" ++ " -> " ++ (toCType t))
-
+        emitLn ("@_init_" ++ baseName ++ "()" ++ " -> " ++ (toCType t))
+        
       -- | Do not have args like this.
       -- if xs.size > closureMaxArgs && isBoxedName d.name then
       --   xs.size.forM fun i => do

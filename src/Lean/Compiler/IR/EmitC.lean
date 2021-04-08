@@ -625,6 +625,8 @@ partial def emitFnBody (b : FnBody) : M Unit := do
 end
 
 def emitDeclAux (d : Decl) : M Unit := do
+  let dname <- toCName d.name
+  emitLn ("// ERR: emitDeclAux ("  ++ dname ++ ") | isExtern?" ++ (format (Decl.isExtern d)))
   let env ← getEnv
   let (vMap, jpMap) := mkVarJPMaps d
   withReader (fun ctx => { ctx with jpMap := jpMap }) do
@@ -681,18 +683,21 @@ def emitDeclInit (d : Decl) : M Unit := do
   let n := d.name
   emitLn $ "// ERR: emitDeclInit: (" ++ n ++ ")"
   if isIOUnitInitFn env n then
+    emitLn $ "//   isIOUnitInitFn = true"
     emit "res = "; emitCName n; emitLn "(lean_io_mk_world());"
     emitLn "if (lean_io_result_is_error(res)) return res;"
     emitLn "lean_dec_ref(res);"
   else if d.params.size == 0 then
     match getInitFnNameFor? env d.name with
     | some initFn =>
+      emitLn $ "//   d.params.size == 0 && some initfn"
       emit "res = "; emitCName initFn; emitLn "(lean_io_mk_world());"
       emitLn "if (lean_io_result_is_error(res)) return res;"
       emitCName n; emitLn " = lean_io_result_get_value(res);"
       emitMarkPersistent d n
       emitLn "lean_dec_ref(res);"
     | _ =>
+      emitLn $ "//   d.param.size == 0 && getInitFnNameFor? env d.name = None"
       emitCName n; emit " = "; emitCInitName n; emitLn "();"; emitMarkPersistent d n
 
 def emitInitFn : M Unit := do
