@@ -1773,7 +1773,6 @@ struct LowerLeanPass : public Pass {
     });
 
     target.addDynamicallyLegalOp<ptr::PtrGlobalOp>([](ptr::PtrGlobalOp p) {
-      assert(false);
       return isTypeLegal(p.getGlobalType());
     });
 

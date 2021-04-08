@@ -168,14 +168,17 @@ public:
 };
 
 
-class PtrGlobalOp : public Op<PtrGlobalOp, OpTrait::ZeroOperands, OpTrait::OneResult> {
+class PtrGlobalOp : public Op<PtrGlobalOp, OpTrait::ZeroOperands, OpTrait::ZeroResult> {
 public:
   using Op::Op;
   static StringRef getOperationName() { return "ptr.global"; };
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   void print(OpAsmPrinter &p);
-  std::string getGlobalName() { return this->getOperation()->getAttrOfType<FlatSymbolRefAttr>("value").getValue().str(); }
-  Type getGlobalType() { return this->getResult().getType(); }
+  static const char *getGlobalNameAttrKey() { return "value"; }
+  static const char *getGlobalTypeAttrKey() { return "type"; }
+  
+  Type getGlobalType() { return this->getOperation()->getAttrOfType<TypeAttr>(getGlobalTypeAttrKey()).getValue(); }
+  std::string getGlobalName() { return this->getOperation()->getAttrOfType<FlatSymbolRefAttr>(getGlobalNameAttrKey()).getValue().str(); }
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state, std::string name,
                     Type resultty);
 
