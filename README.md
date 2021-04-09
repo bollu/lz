@@ -25,6 +25,7 @@
 - Initialization machinery is confusing. I still don't understand the
   invariants around why certain things are initialized the way they are.
 - Quite minimal and pleasant to work with, all said and done.
+- lean4: tooling doesn't work? (emacs `lean-mode` is just dead)
 
 # Notes on GHC
 
