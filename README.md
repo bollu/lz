@@ -31,6 +31,8 @@
   at the lambdapure level. 
 - Can potentially use the objective-c machinery + [LLVM GC](https://llvm.org/docs/GarbageCollection.html) to implement correct
   refcounting.
+- `jmp` encodes nicely in MLIR thanks to nested regions.
+- LEAN4 APIS: foldable/traversable/divisible/decidable?
 
 # Notes on GHC
 
