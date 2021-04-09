@@ -403,15 +403,6 @@ def emitSSet (x : VarId) (n : Nat) (offset : Nat) (y : VarId) (t : IRType) : M U
   | _             => throw "invalid instruction";
   emit "("; emit x; emit ", "; emitOffset n offset; emit ", "; emit y; emitLn ");"
 
-def emitJmp (j : JoinPointId) (xs : Array Arg) : M Unit := do
-  let ps ← getJPParams j
-  unless xs.size == ps.size do throw "invalid goto"
-  xs.size.forM fun i => do
-    let p := ps[i]
-    let x := xs[i]
-    emit p.x; emit " = "; emitArg x; emitLn ";"
-  emit "goto "; emit j; emitLn ";"
-
 def emitLhs (z : VarId) : M Unit := do
   emit "%"; emit z; emit " = "
 
@@ -444,6 +435,21 @@ def emitArgs (ys : Array Arg) : M Unit :=
     if i > 0 then emit ", "
     emitArg ys[i]
 
+
+def emitJmp (j : JoinPointId) (xs : Array Arg)
+  (tys: HashMap VarId IRType) : M Unit := do
+  -- let ps ← getJPParams j
+  -- unless xs.size == ps.size do throw "invalid goto"
+  emit (escape "lz.jump"); emit "(";
+  xs.size.forM fun i => do
+    -- let p := ps[i]
+    let x := xs[i]
+    if i > 0 then emit ", ";
+    emitArg xs[i];
+  emit $ "){value=" ++ (toString j.idx) ++  "}";
+  emit ": ("; emitArgsOnlyTys  xs tys; emit ")"; emitLn " -> ()";
+
+
 def emitCtorScalarSize (usize : Nat) (ssize : Nat) : M Unit := do
   if usize == 0 then emit ssize
   else if ssize == 0 then emit "sizeof(size_t)*"; emit usize
@@ -469,7 +475,7 @@ def emitExprCtor (z : VarId) (c : CtorInfo) (ys : Array Arg)
   emit "("; emitArgs ys;  emit ")";
   emit "{dataconstructor = @"; emit (escape c.cidx); emit  (", size=" ++ (toString c.size) ++ "}");
   emit " : ";
-  emit "("; emitArgsOnlyTys ys tys; emit ") -> (!lz.value)";
+  emit "("; emitArgsOnlyTys ys tys; emitLn ") -> (!lz.value)";
   -- if c.size == 0 && c.usize == 0 && c.ssize == 0 then do
   --   let idxName <- gensym "idx";
   --   emit $ "%" ++ idxName ++ " = " ++ "constant " ++ (format c.cidx) ++ " : i64";
@@ -876,11 +882,29 @@ partial def emitCase (x : VarId) (xType : IRType) (alts : Array Alt)
   --     | Alt.default b => emitLn "default: "; (emitFnBody b {})
   --   emitLn "}"
 
+partial def emitJoinPointDecl (j : JoinPointId) (xs : Array Param) (inblock : FnBody)
+  (rest : FnBody) (tys: HashMap VarId IRType) : M Unit := do
+    emit ((escape "lz.block") ++ "()");
+    emit "({\n";
+    emit "^entry(";  
+    xs.size.forM fun i => do
+      if i > 0 then emit ", "
+      let x := xs[i]
+      emit "%"; emit x.x; emit ": "; emit (toCType x.ty)
+    emit "):\n";
+    let tysInBlock := xs.foldl (fun hashmap p => (hashmap.insert p.x p.ty)) tys
+    emitBlock inblock tysInBlock;
+    emit "}, {\n";
+    emitBlock rest tys;
+    emit "})";
+    emitLn ": () -> ()";
 
 partial def emitBlock (b : FnBody) (tys: HashMap VarId IRType) : M Unit := do
   match b with
   -- TODO: join point
-  | FnBody.jdecl j xs v b      => emitLn "// ERR: fnBody.jdecl" -- emitBlock b
+  | FnBody.jdecl j xs v b      => 
+     emitLn "// ERR: fnBody.jdecl"
+     emitJoinPointDecl j xs v b tys
   -- TODO: variable declaration
   | d@(FnBody.vdecl x t v b)   =>
     let tys  := tys.insert x t
@@ -923,8 +947,8 @@ partial def emitBlock (b : FnBody) (tys: HashMap VarId IRType) : M Unit := do
     emitLn "// ERR: FnBody.case"
     emitCase x xType alts tys
   | FnBody.jmp j xs            => do
-      emitLn "// ERR: FnBody.jmp"
-      emitJmp j xs
+      -- emitLn "// ERR: FnBody.jmp"
+      emitJmp j xs tys
   | FnBody.unreachable         => 
     emitLn "// ERR: FnBody.unreachable" -- emitLn "lean_internal_panic_unreachable();"
 
