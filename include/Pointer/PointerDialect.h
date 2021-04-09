@@ -129,7 +129,7 @@ public:
   static StringRef getOperationName() { return "ptr.fn2voidptr"; };
   // static ParseResult parse(OpAsmParser &parser, OperationState &result);
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                    Value vint);
+                    Value vfn);
   void print(OpAsmPrinter &p);
 };
 
@@ -183,6 +183,23 @@ public:
                     Type resultty);
 
 };
+
+// fn name -> !ptr.void
+class PtrFnPtrOp : public Op<PtrFnPtrOp, OpTrait::ZeroOperands, OpTrait::OneResult> {
+public:
+  using Op::Op;
+  static StringRef getOperationName() { return "ptr.fnptr"; };
+  static ParseResult parse(OpAsmParser &parser, OperationState &result);
+  void print(OpAsmPrinter &p);
+  static const char *getGlobalNameAttrKey() { return "value"; }
+  static const char *getGlobalTypeAttrKey() { return "type"; }
+
+  Type getGlobalType() { return this->getOperation()->getAttrOfType<TypeAttr>(getGlobalTypeAttrKey()).getValue(); }
+  std::string getGlobalName() { return this->getOperation()->getAttrOfType<FlatSymbolRefAttr>(getGlobalNameAttrKey()).getValue().str(); }
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state, std::string name, Type fnty);
+
+};
+
 
 class PtrLoadGlobalOp : public Op<PtrLoadGlobalOp, OpTrait::OneResult, OpTrait::ZeroOperands> {
 public:

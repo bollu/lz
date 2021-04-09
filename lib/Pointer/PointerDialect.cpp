@@ -62,7 +62,7 @@ PtrDialect::PtrDialect(mlir::MLIRContext *context)
   addOperations<PtrToFloatOp>();
   addOperations<PtrGlobalOp>();
   addOperations<PtrLoadGlobalOp>();
-
+  addOperations<PtrFnPtrOp>();
   addOperations<PtrStoreGlobalOp>();
   addTypes<VoidPtrType, CharPtrType>();
 
@@ -314,6 +314,27 @@ void PtrGlobalOp::build(mlir::OpBuilder &builder, mlir::OperationState &state, s
                   Type resultty) {
     state.addAttribute(PtrGlobalOp::getGlobalTypeAttrKey(), TypeAttr::get(resultty));
     state.addAttribute(PtrGlobalOp::getGlobalNameAttrKey(), builder.getSymbolRefAttr(name));
+};
+
+// === FNPTR OP ===
+// === FNPTR OP ===
+// === FNPTR OP ===
+// === FNPTR OP ===
+// === FNPTR OP ===
+
+
+ParseResult PtrFnPtrOp::parse(OpAsmParser &parser, OperationState &result) {
+  assert(false && "unimplemented");
+};
+
+void PtrFnPtrOp::print(OpAsmPrinter &p) {
+  p.printGenericOp(this->getOperation());
+};
+
+void PtrFnPtrOp::build(mlir::OpBuilder &builder, mlir::OperationState &state, std::string name, Type fnty) {
+  state.addAttribute(PtrFnPtrOp::getGlobalNameAttrKey(), builder.getSymbolRefAttr(name));
+  state.addAttribute(PtrFnPtrOp::getGlobalTypeAttrKey(), TypeAttr::get(fnty));
+  state.addTypes(VoidPtrType::get(builder.getContext()));
 };
 
 
@@ -734,6 +755,30 @@ public:
   }
 };
 
+struct PtrFnPtrOpLowering : public ConversionPattern {
+public:
+  explicit PtrFnPtrOpLowering(TypeConverter &tc, MLIRContext *context)
+      : ConversionPattern(PtrFnPtrOp::getOperationName(), 1, tc, context) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *rator, ArrayRef<Value> rands,
+                  ConversionPatternRewriter &rewriter) const override {
+    PtrFnPtrOp ptr = cast<PtrFnPtrOp>(rator);
+
+
+    LLVM::AddressOfOp addr = rewriter.create<LLVM::AddressOfOp>(rator->getLoc(),
+                                                               typeConverter->convertType(ptr.getGlobalType()),
+                                                                ptr.getGlobalName());
+
+    // create an i8*, since our PtrFnPtrOp creates an i8*. AddressOf
+    // gives us like the "real pointer" which we don't care for.
+    rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(rator, getInt8PtrTy(rator->getContext()), addr);
+//    rewriter.replaceOpWithNewOp<ptr::FnToVoidPtrOp>(rator, addr);
+    return success();
+  }
+};
+
+
 struct PtrGlobalOpLowering : public ConversionPattern {
 public:
   explicit PtrGlobalOpLowering(TypeConverter &tc, MLIRContext *context)
@@ -956,6 +1001,7 @@ struct LowerPointerPass : public Pass {
     patterns.insert<PtrLoadGlobalOpLowering>(typeConverter, &getContext());
     patterns.insert<PtrStoreGlobalOpLowering>(typeConverter, &getContext());
     patterns.insert<PtrGlobalOpLowering>(typeConverter, &getContext());
+    patterns.insert<PtrFnPtrOpLowering>(typeConverter, &getContext());
 
 
     // &getContext()); patterns.insert<CaseOpConversionPattern>(typeConverter,

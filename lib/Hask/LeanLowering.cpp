@@ -1602,10 +1602,12 @@ public:
     rewriter.setInsertionPoint(pap);
 
     const int width = 64;
-    Value name = rewriter.create<ptr::PtrStringOp>(pap->getLoc(), pap.getFnName());
+    // vvvv I don't need the name, I need the fucking function pointer!o
+    Value fnptr = rewriter.create<ptr::PtrFnPtrOp>(pap->getLoc(), pap.getFnName(), calledFn.getType());
+//    Value name = rewriter.create<ptr::PtrStringOp>(pap->getLoc(), pap.getFnName());
     Value arity =  rewriter.create<ConstantIntOp>(pap->getLoc(), calledFn.getNumArguments(), width);
     Value nargs = rewriter.create<ConstantIntOp>(pap->getLoc(), pap.getNumFnArguments(), width);
-    mlir::SmallVector<Value, 4> allocArgs { name, arity, nargs};
+    mlir::SmallVector<Value, 4> allocArgs { fnptr, arity, nargs};
     CallOp callAlloc = rewriter.create<mlir::CallOp>(pap->getLoc(), alloc, allocArgs);
     Value closure = callAlloc.getResult(0);
 
@@ -1664,6 +1666,19 @@ public:
   }
 };
 
+class PtrFnPtrOpTypeConversion : public ConversionPattern {
+public:
+  explicit PtrFnPtrOpTypeConversion(TypeConverter &tc, MLIRContext *context)
+      : ConversionPattern(ptr::PtrFnPtrOp::getOperationName(), 1, tc, context) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> rands,
+                  ConversionPatternRewriter &rewriter) const override {
+    ptr::PtrFnPtrOp ptr = cast<ptr::PtrFnPtrOp>(op);
+    rewriter.replaceOpWithNewOp<ptr::PtrFnPtrOp>(op, ptr.getGlobalName(), typeConverter->convertType(ptr.getGlobalType()));
+    return success();
+  }
+};
 
 
 
@@ -1826,6 +1841,11 @@ struct LowerLeanPass : public Pass {
       return isTypeLegal(p.getOperand().getType());
     });
 
+    target.addDynamicallyLegalOp<ptr::PtrFnPtrOp>([](ptr::PtrFnPtrOp p) {
+      return isTypeLegal(p.getGlobalType());
+    });
+
+
     HaskTypeConverter typeConverter(&getContext());
     mlir::OwningRewritePatternList patterns(&getContext());
 
@@ -1872,6 +1892,7 @@ struct LowerLeanPass : public Pass {
     patterns.insert<PtrGlobalOpTypeConversion>(typeConverter, &getContext());
     patterns.insert<PtrLoadGlobalOpTypeConversion>(typeConverter, &getContext());
     patterns.insert<PtrStoreGlobalOpTypeConversion>(typeConverter, &getContext());
+    patterns.insert<PtrFnPtrOpTypeConversion>(typeConverter, &getContext());
 
     ::llvm::DebugFlag = true;
 
