@@ -1603,7 +1603,7 @@ public:
 
     const int width = 64;
     Value name = rewriter.create<ptr::PtrStringOp>(pap->getLoc(), pap.getFnName());
-    Value arity =  rewriter.create<ConstantIntOp>(pap->getLoc(), calledFn->getNumOperands(), width);
+    Value arity =  rewriter.create<ConstantIntOp>(pap->getLoc(), calledFn.getNumArguments(), width);
     Value nargs = rewriter.create<ConstantIntOp>(pap->getLoc(), pap.getNumFnArguments(), width);
     mlir::SmallVector<Value, 4> allocArgs { name, arity, nargs};
     CallOp callAlloc = rewriter.create<mlir::CallOp>(pap->getLoc(), alloc, allocArgs);
