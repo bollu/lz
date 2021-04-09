@@ -560,13 +560,12 @@ def emitExternCall (f : FunId) (ps : Array Param) (extData : ExternAttrData) (ys
   | _ => throw s!"failed to emit extern application '{f}'"
 
 
-def emitFullApp (z : VarId) (f : FunId) (ys : Array Arg) (tys: HashMap VarId IRType) : M Unit := do
+def emitFullApp  (f : FunId) (ys : Array Arg) (tys: HashMap VarId IRType) : M Unit := do
   let decl ← getDecl f
   match decl with
   | Decl.extern _ ps _ extData => do
-         emitLn "// ERR: emitFullApp (Decl.extern)"
-         emitLhs z;
          emitExternCall f ps extData ys tys (Decl.resultType decl)
+         emitLn "// ^^^ ERR: emitFullApp (Decl.extern)"
   | _ => do
     if ys.size == 0
     then
@@ -580,16 +579,14 @@ def emitFullApp (z : VarId) (f : FunId) (ys : Array Arg) (tys: HashMap VarId IRT
       -- --   %1 = llvm.load %0 : !llvm.ptr<i32>
       -- emitLhs z; emit "llvm.load "; emit ("%" ++ declAddr);
       -- emit " : "; emit "!llvm.ptr<"; emit (toCType (Decl.resultType decl));  emitLn ">"
-      emitLn "// ERR: emitFullApp (pointer)"
-      emitLhs z;
+
       emit (escape "ptr.loadglobal"); emit "()";
       let cname <- toCName f; 
       emit "{value=@"; emit (escape cname); emit "}";
       emit " : () -> ";emit (toCType (Decl.resultType decl));
+      emitLn "// <== ERR: emitFullApp (pointer)"
       emitLn "";
     else 
-      emitLn "// ERR: emitFullApp (fncall)"
-      emitLhs z
       emit "call "
       emit "@";
       let cname <-  toCName f
@@ -598,6 +595,7 @@ def emitFullApp (z : VarId) (f : FunId) (ys : Array Arg) (tys: HashMap VarId IRT
       emit ":"; emit "("; emitArgsOnlyTys ys tys; emit ")"
       emit "->"
       emit "(";  emit (toCType (Decl.resultType decl)); emit ")"
+      emitLn "// <== ERR: emitFullApp (fncall)"
       emit "\n"
 
 
@@ -720,7 +718,9 @@ def emitVDecl (z : VarId) (t : IRType) (v : Expr)  (tys: HashMap VarId IRType) :
   | Expr.uproj i x      => panicM "// ERR: Expr.uproj" -- emitUProj z i x
   | Expr.sproj n o x    => panicM "// ERR: Expr.sproj" -- emitSProj z t n o x
   | Expr.fap c ys       => do
-    emitLn "// ERR: Expr.fap"; emitFullApp z c ys tys
+    emitLn "// ERR: Expr.fap";
+    emitLhs z; 
+    emitFullApp c ys tys
   | Expr.pap c ys       =>  do
       emitLn "// ERR: Expr.pap"
       emitPartialApp z c ys tys
@@ -767,30 +767,21 @@ def overwriteParam (ps : Array Param) (ys : Array Arg) : Bool :=
     let p := ps[i]
     (i+1, n).anyI fun j => paramEqArg p ys[j]
 
-def emitTailCall (v : Expr) : M Unit :=
+-- | Heavily modified. Just does a regular call.
+-- | TODO: add an attribute to my call instruction that tracks that 
+-- this must translate into a @llvm.musttail. This ensure that
+-- tail call semantics are preserved, while possibly allowing for better
+-- codegen/LLVM shenanigans.
+def emitTailCall (v : Expr) (tys: HashMap VarId IRType): M Unit :=
   match v with
-  | Expr.fap _ ys => do
-    let ctx ← read
-    let ps := ctx.mainParams
-    unless ps.size == ys.size do throw "invalid tail call"
-    if overwriteParam ps ys then
-      emitLn "{"
-      ps.size.forM fun i => do
-        let p := ps[i]
-        let y := ys[i]
-        unless paramEqArg p y do
-          emit (toCType p.ty); emit " _tmp_"; emit i; emit " = "; emitArg y; emitLn ";"
-      ps.size.forM fun i => do
-        let p := ps[i]
-        let y := ys[i]
-        unless paramEqArg p y do emit p.x; emit " = _tmp_"; emit i; emitLn ";"
-      emitLn "}"
-    else
-      ys.size.forM fun i => do
-        let p := ps[i]
-        let y := ys[i]
-        unless paramEqArg p y do emit p.x; emit " = "; emitArg y; emitLn ";"
-    emitLn "goto _start;"
+  | Expr.fap f ys => do
+     let decl ← getDecl f
+     -- | good old war3 JASS memories...
+     let ret <- gensym "retTailCall"
+     emit ("%" ++ ret ++ " = "); emitFullApp f ys tys
+     emit $ (escape "lz.return")  ++ "(%" ++ ret ++  ")";
+     emit " : ("; emit (toCType decl.resultType); emit ") -> ()"
+     emitLn ""
   | _ => throw "bug at emitTailCall"
 
 mutual
@@ -895,10 +886,10 @@ partial def emitBlock (b : FnBody) (tys: HashMap VarId IRType) : M Unit := do
     let tys  := tys.insert x t
     let ctx ← read
     if isTailCallTo ctx.mainFn d then
-      emitLn "// ERR: fnBody.vdecl (tail)";
-      emitTailCall v
+      emitLn "// ERR: fnBody.vdecl (tail call)";
+      emitTailCall v tys
     else
-      emitLn "//ERR: fnBody.vdecl (non-tail)";
+      emitLn "//ERR: fnBody.vdecl (non-tail) call";
       emitVDecl x t v (tys.insert x t)
       emitBlock b (tys.insert x t)
   | FnBody.inc x n c p b       =>
@@ -945,6 +936,8 @@ partial def emitJPs : FnBody → M Unit
 -- | function to create a hash map of arguments introduced by this fnBody
 partial def insertFnBodyArgTypes : FnBody → M (HashMap VarId IRType)
   | e@(FnBody.vdecl x t _ b), d => do
+    -- TODO: I might not be doing this right, here! May have to follow
+    -- the tail call?
     -- let ctx ← read
     -- if isTailCallTo ctx.mainFn e then
     --   pure d
