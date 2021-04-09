@@ -26,6 +26,11 @@
   invariants around why certain things are initialized the way they are.
 - Quite minimal and pleasant to work with, all said and done.
 - lean4: tooling doesn't work? (emacs `lean-mode` is just dead)
+- Can tell LLVM about tail calls instead of hand rolling a tail call.
+- Can maybe use TBAA to teach LLVM about different object types, instead of erasing all info
+  at the lambdapure level. 
+- Can potentially use the objective-c machinery + [LLVM GC](https://llvm.org/docs/GarbageCollection.html) to implement correct
+  refcounting.
 
 # Notes on GHC
 
