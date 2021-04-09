@@ -610,8 +610,8 @@ public:
   void print(OpAsmPrinter &p);
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
                     int blockIx);
-  mlir::Region &getBlockRegion() { return this->getRegion(0); }
-  mlir::Region &getRestRegion() { return this->getRegion(1); }
+  mlir::Region &getLaterJumpedIntoRegion() { return this->getRegion(0); }
+  mlir::Region &getFirstRegionWithJmp() { return this->getRegion(1); }
 };
 
 // for lambdapure

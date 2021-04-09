@@ -868,7 +868,7 @@ struct Interpreter {
     }
 
     if (auto blockop = dyn_cast<standalone::HaskBlockOp>(op)) {
-      Optional<InterpValue> retval = interpretRegion(blockop.getRestRegion(), {}, env);
+      Optional<InterpValue> retval = interpretRegion(blockop.getFirstRegionWithJmp(), {}, env);
       assert(retval && "block operation expects return value.");
       return TerminatorResult(*retval);
     }
@@ -880,7 +880,7 @@ struct Interpreter {
       standalone::HaskBlockOp parent = jumpop->getParentOfType<standalone::HaskBlockOp>();
       assert(parent && "jumpop must be surrounded by parent.");
       InterpValue arg = env.lookup(jumpop->getLoc(), jumpop.getOperand());
-      Optional<InterpValue> retval = interpretRegion(parent.getBlockRegion(), {arg}, env);
+      Optional<InterpValue> retval = interpretRegion(parent.getLaterJumpedIntoRegion(), {arg}, env);
       assert(retval && "block operation expects return value.");
       return TerminatorResult(*retval);
     }

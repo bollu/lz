@@ -19,6 +19,7 @@
 
 
 # Thoughts on lambdapure
+
 - It's both too high and too low level. `case` of `int` in lambdapure generates
   as calls to runtime `lean_dec_eq` + a boolean `int` case on return value,
   while `case` of objects is represented as a real `case.`
@@ -33,6 +34,14 @@
   refcounting.
 - `jmp` encodes nicely in MLIR thanks to nested regions.
 - LEAN4 APIS: foldable/traversable/divisible/decidable?
+- I saw the bachelor thesis on homological algebra (I wanted the snake lemma recently...). 
+  [How is homology computed? Can we make it faster?](https://pastel.archives-ouvertes.fr/pastel-00605836/document)
+  (sparse linear algebra).
+- Prototype the freeJIT in LEAN, to generate GPU code using free monads from
+  LEAN.  Tensor dialect. 
+- Thunks in LEAN: what do they do and how do they lower?
+- What do we need for MVP? Does just lazification + some optimisation in the LEAN dialect get us there? 
+
 
 # Notes on GHC
 

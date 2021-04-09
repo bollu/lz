@@ -1456,7 +1456,7 @@ private:
     // new scope for this blockAST.
     standalone::HaskBlockOp op =
         builder.create<standalone::HaskBlockOp>(loc(), blockAST.getBlockId());
-    mlir::Region &innerRegion = op.getBlockRegion();
+    mlir::Region &innerRegion = op.getLaterJumpedIntoRegion();
     Block *innerBB = builder.createBlock(&innerRegion, {}, {typeGen(argty)});
     builder.setInsertionPointToEnd(innerBB);
 
@@ -1466,7 +1466,7 @@ private:
     LogicalResult genInner = mlirGen(*blockAST.getInner());
     assert(succeeded(genInner) && "unable to codegen stuff inside a block");
 
-    mlir::Region &restRegion = op.getRestRegion();
+    mlir::Region &restRegion = op.getLaterJumpedIntoRegion();
     Block *restBB = builder.createBlock(&restRegion);
     builder.setInsertionPointToEnd(restBB);
     LogicalResult genAfter = mlirGen(*blockAST.getAfter());

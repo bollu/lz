@@ -1215,6 +1215,61 @@ struct HaskReturnOpConversionPattern : public mlir::ConversionPattern {
   }
 };
 
+class HaskBlockOpLowering : public ConversionPattern {
+private:
+  HaskTypeConverter &tc;
+
+public:
+  explicit HaskBlockOpLowering(HaskTypeConverter &tc, MLIRContext *context)
+      : ConversionPattern(HaskBlockOp::getOperationName(), 1, tc, context),
+        tc(tc) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> rands,
+                  ConversionPatternRewriter &rewriter) const override {
+    HaskBlockOp blkop = cast<HaskBlockOp>(op);
+
+    // block { ^entry(param): do_stuff } { ... jump(params) }
+    rewriter.setInsertionPoint(blkop);
+
+    Block *end = rewriter.splitBlock(blkop->getBlock(), blkop->getIterator());
+    // blk: begin; lz.block {} {};  end;
+    // begin --> fstRegion --jmp-> laterRegion -lz.ret--> end
+    // first replace all jumps in the "rest" region into the "block" region
+
+    // fstRegion --> later
+    blkop.getFirstRegionWithJmp().walk([&](HaskJumpOp jmp) {
+      // TODO: do this in a way that we only recurse into regions upto the
+      //  next blkop.
+      if (jmp->getParentOfType<HaskBlockOp>() != blkop) { return WalkResult::skip(); }
+      rewriter.setInsertionPoint(jmp);
+      rewriter.replaceOpWithNewOp<BranchOp>(jmp, jmp->getOperands(), &blkop.getLaterJumpedIntoRegion().front());
+      return WalkResult::advance();
+    });
+
+    // laterRegion --> end
+    blkop.getLaterJumpedIntoRegion().walk([&](HaskReturnOp ret) {
+      if (ret->getParentOfType<HaskBlockOp>() != blkop) { return WalkResult::skip(); }
+      rewriter.setInsertionPoint(ret);
+      rewriter.replaceOpWithNewOp<BranchOp>(ret, ret->getOperands(),  end);
+      return WalkResult::advance();
+    });
+
+    // begin --> fstRegion
+    rewriter.setInsertionPointAfter(blkop);
+    mlir::SmallVector<mlir::Value, 0> args;
+    rewriter.create<BranchOp>(blkop->getLoc(), args, &blkop.getFirstRegionWithJmp().front());
+
+    // inline fstRegion at (begin ---> fstRegion)
+    rewriter.inlineRegionBefore(blkop.getFirstRegionWithJmp(), end);
+    rewriter.inlineRegionBefore(blkop.getLaterJumpedIntoRegion(), end);
+    rewriter.eraseOp(blkop);
+
+    return success();
+  }
+};
+
+
 struct AllocOpLowering : public mlir::ConversionPattern {
   explicit AllocOpLowering(TypeConverter &tc, MLIRContext *context)
       : ConversionPattern(memref::AllocOp::getOperationName(), 1, tc, context) {
@@ -1862,6 +1917,9 @@ struct LowerLeanPass : public Pass {
     patterns.insert<PapExtendOpLowering>(typeConverter, &getContext());
     patterns.insert<PapOpLowering>(typeConverter, &getContext());
     patterns.insert<HaskStringConstOpLowering>(typeConverter, &getContext());
+    patterns.insert<HaskBlockOpLowering>(typeConverter, &getContext());
+
+
 
     patterns.insert<HaskIntegerConstOpLowering>(typeConverter, &getContext());
     patterns.insert<ProjectionOpLowering>(typeConverter, &getContext());
