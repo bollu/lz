@@ -1231,22 +1231,25 @@ public:
 
     // block { ^entry(param): do_stuff } { ... jump(params) }
     rewriter.setInsertionPoint(blkop);
-
     Block *end = rewriter.splitBlock(blkop->getBlock(), blkop->getIterator());
+
     // blk: begin; lz.block {} {};  end;
     // begin --> fstRegion --jmp-> laterRegion -lz.ret--> end
     // first replace all jumps in the "rest" region into the "block" region
 
     // fstRegion --> later
+
     blkop.getFirstRegionWithJmp().walk([&](HaskJumpOp jmp) {
       // TODO: do this in a way that we only recurse into regions upto the
       //  next blkop.
-      if (jmp->getParentOfType<HaskBlockOp>() != blkop) { return WalkResult::skip(); }
+      // if (jmp->getParentOfType<HaskBlockOp>() != blkop) { return WalkResult::skip(); }
       rewriter.setInsertionPoint(jmp);
-      rewriter.replaceOpWithNewOp<BranchOp>(jmp, jmp->getOperands(), &blkop.getLaterJumpedIntoRegion().front());
+      rewriter.replaceOpWithNewOp<ReturnOp>(jmp, jmp->getOperands());
+      // rewriter.replaceOpWithNewOp<BranchOp>(jmp, jmp->getOperands(), &blkop.getLaterJumpedIntoRegion().front());
       return WalkResult::advance();
     });
 
+    /*
     // laterRegion --> end
     blkop.getLaterJumpedIntoRegion().walk([&](HaskReturnOp ret) {
       if (ret->getParentOfType<HaskBlockOp>() != blkop) { return WalkResult::skip(); }
@@ -1254,9 +1257,10 @@ public:
       rewriter.replaceOpWithNewOp<BranchOp>(ret, ret->getOperands(),  end);
       return WalkResult::advance();
     });
+     */
 
     // begin --> fstRegion
-    rewriter.setInsertionPointAfter(blkop);
+    rewriter.setInsertionPointToEnd(blkop->getBlock());
     mlir::SmallVector<mlir::Value, 0> args;
     rewriter.create<BranchOp>(blkop->getLoc(), args, &blkop.getFirstRegionWithJmp().front());
 
@@ -1268,6 +1272,27 @@ public:
     return success();
   }
 };
+
+
+/*
+class HaskJumpOpLowering : public ConversionPattern {
+private:
+  HaskTypeConverter &tc;
+
+public:
+  explicit HaskJumpOpLowering(HaskTypeConverter &tc, MLIRContext *context)
+      : ConversionPattern(HaskJumpOp::getOperationName(), 1, tc, context),
+        tc(tc) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> rands,
+                  ConversionPatternRewriter &rewriter) const override {
+    HaskJumpOp jmpop = cast<HaskJumpOp>(op);
+    rewriter.replaceOpWithNewOp<BranchOp>()
+    return success();
+  }
+};
+ */
 
 
 struct AllocOpLowering : public mlir::ConversionPattern {
@@ -1735,6 +1760,36 @@ public:
   }
 };
 
+class BranchOpTypeConversion : public ConversionPattern {
+public:
+  explicit BranchOpTypeConversion(TypeConverter &tc, MLIRContext *context)
+      : ConversionPattern(BranchOp::getOperationName(), 1, tc, context) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> rands,
+                  ConversionPatternRewriter &rewriter) const override {
+    BranchOp br = cast<BranchOp>(op);
+    rewriter.replaceOpWithNewOp<BranchOp>(br, br.getDest(), br->getOperands());
+    return success();
+  }
+};
+
+class ReturnOpTypeConversion : public ConversionPattern {
+public:
+  explicit ReturnOpTypeConversion(TypeConverter &tc, MLIRContext *context)
+      : ConversionPattern(ReturnOp::getOperationName(), 1, tc, context) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> rands,
+                  ConversionPatternRewriter &rewriter) const override {
+    ReturnOp ret = cast<ReturnOp>(op);
+    rewriter.replaceOpWithNewOp<ReturnOp>(ret, ret->getOperands());
+    return success();
+  }
+};
+
+
+
 
 
 
@@ -1900,6 +1955,22 @@ struct LowerLeanPass : public Pass {
       return isTypeLegal(p.getGlobalType());
     });
 
+    target.addDynamicallyLegalOp<BranchOp>([](BranchOp br) {
+      for(int i = 0; i < (int)br->getNumOperands(); ++i) {
+        if (!isTypeLegal(br.getOperand(i).getType())) { return false; }
+      }
+      return true;
+    });
+
+    target.addDynamicallyLegalOp<ReturnOp>([](ReturnOp ret) {
+      for(int i = 0; i < (int)ret->getNumOperands(); ++i) {
+        if (!isTypeLegal(ret.getOperand(i).getType())) { return false; }
+      }
+      return true;
+    });
+
+
+
 
     HaskTypeConverter typeConverter(&getContext());
     mlir::OwningRewritePatternList patterns(&getContext());
@@ -1946,6 +2017,8 @@ struct LowerLeanPass : public Pass {
 
     patterns.insert<AffineForOpLowering>(typeConverter, &getContext());
 
+    patterns.insert<BranchOpTypeConversion>(typeConverter, &getContext());
+    patterns.insert<ReturnOpTypeConversion>(typeConverter, &getContext());
 
     patterns.insert<PtrGlobalOpTypeConversion>(typeConverter, &getContext());
     patterns.insert<PtrLoadGlobalOpTypeConversion>(typeConverter, &getContext());
