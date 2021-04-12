@@ -34,13 +34,14 @@
   refcounting.
 - `jmp` encodes nicely in MLIR thanks to nested regions.
 - LEAN4 APIS: foldable/traversable/divisible/decidable?
-- I saw the bachelor thesis on homological algebra (I wanted the snake lemma recently...). 
+- I saw the [bachelor thesis on snake lemma](https://pp.ipd.kit.edu/thesis.php?id=313) (I wanted the snake lemma recently...). 
   [How is homology computed? Can we make it faster?](https://pastel.archives-ouvertes.fr/pastel-00605836/document)
   (sparse linear algebra).
 - Prototype the freeJIT in LEAN, to generate GPU code using free monads from
   LEAN.  Tensor dialect. 
 - Thunks in LEAN: what do they do and how do they lower?
 - What do we need for MVP? Does just lazification + some optimisation in the LEAN dialect get us there? 
+- `Jump` breaks any and all structured control flow. Better way to lower this?
 
 
 # Notes on GHC
@@ -58,6 +59,16 @@
 
 
 # Log:  [newest] to [oldest]
+
+# April 12
+
+Try and use passes:
+```
+  --mlir-pretty-debuginfo                               - Print pretty debug info in MLIR output
+  --mlir-print-debug-counter                            - Print out debug counter information after all counters have been accumulated
+  --mlir-print-debuginfo                                - Print debug info in MLIR output
+```
+
 
 # April 4
 
