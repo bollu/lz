@@ -925,7 +925,7 @@ partial def emitBlock (b : FnBody) (tys: HashMap VarId IRType) : M Unit := do
     emitLn "// ERR: FnBody.dec "
     -- | p = persistent
     unless p do emitDec x n c
-    emitBlock b tys
+    emitBlock  b tys
   | FnBody.del x b             => 
     panicM "// ERR: FnBody.del"; emitBlock b tys ; -- emitDel x; emitBlock b
   | FnBody.setTag x i b        => 
