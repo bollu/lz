@@ -1,47 +1,15 @@
 # Core-MLIR
 
 # Priority queue
-- Finish implementing refcounting [track increment and decrement in interpreter].
-- Check if eliminating overhead of LEAN runtime is possible: (1) compile a program using `lean` to c++,
-  (2) generate the LLVM from the program and the LEAN runtime, (3) `llvm-link` everything to make it one big
-  module, (4) run `opt -O3`. 
+- get `render.lean` working!
 - Finish implementing arrays.
-- Show that our (C++/LLVM) backend is as efficient or more efficient than the LEAN code generator.
-- Implement support for LEAN ops in LLVM backend.
 - Make LEAN lazy.
 - Composition of `head . sort` to be lazy.
 - [Real number representations](representation:https://github.com/bollu/fractions/blob/master/potts-phd-exact-real-using-mobius.pdf )
 - Standard data structures examples of how purity without laziness pays a
   log(n) cost to simulate memory using a BST; Laziness allows us to regain the
   right bounds (Okasaki).
-- Nixpkgs --- laziness necessary for program semantics. 
-- Look for demand analysis testsuite in GHC.
 
-
-# Thoughts on lambdapure
-
-- It's both too high and too low level. `case` of `int` in lambdapure generates
-  as calls to runtime `lean_dec_eq` + a boolean `int` case on return value,
-  while `case` of objects is represented as a real `case.`
-- Initialization machinery is confusing. I still don't understand the
-  invariants around why certain things are initialized the way they are.
-- Quite minimal and pleasant to work with, all said and done.
-- lean4: tooling doesn't work? (emacs `lean-mode` is just dead)
-- Can tell LLVM about tail calls instead of hand rolling a tail call.
-- Can maybe use TBAA to teach LLVM about different object types, instead of erasing all info
-  at the lambdapure level. 
-- Can potentially use the objective-c machinery + [LLVM GC](https://llvm.org/docs/GarbageCollection.html) to implement correct
-  refcounting.
-- `jmp` encodes nicely in MLIR thanks to nested regions.
-- LEAN4 APIS: foldable/traversable/divisible/decidable?
-- I saw the [bachelor thesis on snake lemma](https://pp.ipd.kit.edu/thesis.php?id=313) (I wanted the snake lemma recently...). 
-  [How is homology computed? Can we make it faster?](https://pastel.archives-ouvertes.fr/pastel-00605836/document)
-  (sparse linear algebra).
-- Prototype the freeJIT in LEAN, to generate GPU code using free monads from
-  LEAN.  Tensor dialect. 
-- Thunks in LEAN: what do they do and how do they lower?
-- What do we need for MVP? Does just lazification + some optimisation in the LEAN dialect get us there? 
-- `Jump` breaks any and all structured control flow. Better way to lower this?
 
 
 # Notes on GHC
@@ -69,6 +37,201 @@ Try and use passes:
   --mlir-print-debuginfo                                - Print debug info in MLIR output
 ```
 
+
+# May 3
+
+- Lean has a `#if defined(LEAN_LLVM)`. What for? How do I make it better? `:)`.
+
+- Who calls the type checker? Start at `shell/lean.cpp`. No leads
+- Look for `infer_type`. Find it in `library/compiler/lcnf.cpp`. Now find users of `to_lcnf` (lambda-core-normal-form)?
+
+```
+/home/bollu/work/lean4/src$ ag "to_lcnf"
+library/compiler/compiler.cpp
+202:    ds = apply(to_lcnf, env, ds);
+```
+
+```
+library/compiler/compiler.cpp
+162 environment compile(environment const & env, options const & opts, names cs) {
+202    ds = apply(to_lcnf, env, ds);
+203    ds = apply(find_jp, env, ds);
+```
+
+
+and `compile` is called at:
+
+
+```
+library/compiler/compiler.cpp
+extern "C" object * lean_compile_decl(object * env, object * opts, object * decl) {
+    return catch_kernel_exceptions<environment>([&]() {
+            return compile(environment(env), options(opts, true), get_decl_names_for_code_gen(declaration(decl, true)));
+        });
+}
+```
+
+I am completely unsure as to how this relates to the actual `shell`?
+
+It's also in the header:
+
+```
+library/compiler/compiler.h
+environment compile(environment const & env, options const & opts, names cs);
+inline environment compile(environment const & env, options const & opts, name const & c) {
+    return compile(env, opts, names(c));
+}
+```
+
+so maybe shell calls it?
+
+```
+shell/lean.cpp
+
+contents = read_file(mod_fn);
+main_module_name = module_name_of_file(mod_fn, root_dir, /* optional */ !olean_fn && !c_output);
+
+if (!main_module_name)
+    main_module_name = name("_stdin");
+pair_ref<environment, object_ref> r = run_new_frontend(contents, opts, mod_fn, *main_module_name);
+
+if (run && ok) {
+    uint32 ret = ir::run_main(env, opts, argc - optind, argv + optind);
+    // environment_free_regions(std::move(env));
+    return ret;
+}
+```
+
+- `run_new_frontent` calls into `Lean/Elab/Frontend.lean`, the entrypoint for frontend related shenanigans.
+
+```
+shell/lean.cpp
+326:extern "C" object * lean_run_frontend(object * input, object * opts, object * filename, object * main_module_name, object * w);
+329:        lean_run_frontend(mk_string(input), opts.to_obj_arg(), mk_string(file_name), main_module_name.to_obj_arg(), io_mk_world()));
+
+Lean/Elab/Frontend.lean
+91:@[export lean_run_frontend]
+```
+
+Righto, so shell calls `lean_run_frontend` which somehow magically calls `compile`. Let's see the exports!
+
+
+```
+/home/bollu/work/lean4$ ag "lean_compile_decl"
+...
+stage0/src/Lean/Environment.lean
+132:@[extern "lean_compile_decl"]
+
+src/Lean/Environment.lean
+133:@[extern "lean_compile_decl"]
+
+src/library/compiler/compiler.cpp
+261:extern "C" object * lean_compile_decl(object * env, object * opts, object * decl) {
+
+stage0/src/library/compiler/compiler.cpp
+262:extern "C" object * lean_compile_decl(object * env, object * opts, object * decl) {
+
+```
+
+Look at what this `lean_compile_decl` looks like in `src/Lean/Environment.lean`:
+
+```
+src/lean/Environment.lean
+namespace Environment
+
+/- Type check given declaration and add it to the environment -/
+@[extern "lean_add_decl"]
+constant addDecl (env : Environment) (decl : @& Declaration) : Except KernelException Environment
+
+/- Compile the given declaration, it assumes the declaration has already been added to the environment using `addDecl`. -/
+@[extern "lean_compile_decl"]
+constant compileDecl (env : Environment) (opt : @& Options) (decl : @& Declaration) : Except KernelException Environment
+```
+
+Great, now let's go see who calls compileDecl.
+
+```
+/home/bollu/work/lean4/src$ ag "compileDecl" --type-add "lean:*.lean" -t lean
+Lean/Environment.lean
+134:constant compileDecl (env : Environment) (opt : @& Options) (decl : @& Declaration) : Except KernelException Environment
+138:  compileDecl env opt decl
+
+Lean/MonadEnv.lean
+133:def compileDecl [Monad m] [MonadEnv m] [MonadError m] [MonadOptions m] (decl : Declaration) : m Unit := do
+134:  match (← getEnv).compileDecl (← getOptions) decl with
+142:  compileDecl decl
+
+Lean/Elab/Declaration.lean
+86:        compileDecl decl
+
+Lean/Elab/BuiltinNotation.lean
+101:  compileDecl decl
+
+Lean/Elab/PreDefinition/Basic.lean
+113:      compileDecl decl
+134:    compileDecl decl
+
+Lean/Elab/Binders.lean
+71:    compileDecl decl
+
+Lean/Meta/Match/Match.lean
+600:      compileDecl decl
+
+Lean/Meta/Closure.lean
+364:    compileDecl decl
+```
+
+So it seems like the users are in `Lean/Elab` (sensible) and `Lean/Meta` (unsure what this is).
+
+Here's what `Lean/Meta/Basic.lean` says:
+
+```
+src/Lean/Meta/Basic.lean
+/-
+This module provides four (mutually dependent) goodies that are needed for building the elaborator and tactic frameworks.
+1- Weak head normal form computation with support for metavariables and transparency modes.
+2- Definitionally equality checking with support for metavariables (aka unification modulo definitional equality).
+3- Type inference.
+4- Type class resolution.
+
+They are packed into the MetaM monad.
+-/
+```
+
+
+# Thoughts on lambdapure
+
+- One massive quality of life improvement would be if lambdapure printed in MLIR syntax.
+  That way, it's unambiguous about semantics! and can potentially eventually round-trip
+  through the compiler!
+- It's both too high and too low level. `case` of `int` in lambdapure generates
+  as calls to runtime `lean_dec_eq` + a boolean `int` case on return value,
+  while `case` of objects is represented as a real `case.`
+- Initialization machinery is confusing. I still don't understand the
+  invariants around why certain things are initialized the way they are.
+- Quite minimal and pleasant to work with, all said and done.
+- lean4: tooling doesn't work? (emacs `lean-mode` is just dead)
+- Can tell LLVM about tail calls instead of hand rolling a tail call.
+- Can maybe use TBAA to teach LLVM about different object types, instead of erasing all info
+  at the lambdapure level. 
+- Can potentially use the objective-c machinery + [LLVM GC](https://llvm.org/docs/GarbageCollection.html) to implement correct
+  refcounting.
+- `jmp` encodes nicely in MLIR thanks to nested regions.
+- LEAN4 APIS: foldable/traversable/divisible/decidable?
+- I saw the [bachelor thesis on snake lemma](https://pp.ipd.kit.edu/thesis.php?id=313) (I wanted the snake lemma recently...). 
+  [How is homology computed? Can we make it faster?](https://pastel.archives-ouvertes.fr/pastel-00605836/document)
+  (sparse linear algebra).
+- Prototype the freeJIT in LEAN, to generate GPU code using free monads from
+  LEAN.  Tensor dialect. 
+- Thunks in LEAN: what do they do and how do they lower?
+- What do we need for MVP? Does just lazification + some optimisation in the LEAN dialect get us there? 
+- `Jump` breaks any and all structured control flow. Better way to lower this?
+- TODO from Leo: Try to lower mutual recursion in a way that gets optimised.
+- Try to encode many many args in the mutual recursion.
+- Which optimisation to do at LEAN level?
+- Can we leverage proofs at the LEAN level?
+- Interactive compliation: write tactics to prove properties about code.
+- Killer app for this infrastructure, using this framework?
 
 # April 4
 
@@ -320,6 +483,11 @@ private def compileAux (decls : Array Decl) : CompilerM Unit := do
 
 
 # March 23: Lean compiler entrypoint
+
+```
+src/shell/lean.cpp
+int main() { ...
+```
 
 ```
 /home/bollu/work/lean4/src$ ag initialize_compiler
