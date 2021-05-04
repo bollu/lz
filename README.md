@@ -11,7 +11,6 @@
   right bounds (Okasaki).
 
 
-
 # Notes on GHC
 
 - smallest size is `32` bit word. Can't pack stuff!
@@ -24,19 +23,177 @@
 - [GHC grin has benchmark suite](https://github.com/grin-compiler/ghc-grin/tree/master/ghc-grin-benchmark/boquist-grin-bench)
 - [`fast-math` haskell library has some RULES limitations](https://github.com/liyang/fast-math/)
 
+# Thoughts on lambdapure
+
+- One massive quality of life improvement would be if lambdapure printed in MLIR syntax.
+  That way, it's unambiguous about semantics! and can potentially eventually round-trip
+  through the compiler!
+- It's both too high and too low level. `case` of `int` in lambdapure generates
+  as calls to runtime `lean_dec_eq` + a boolean `int` case on return value,
+  while `case` of objects is represented as a real `case.`
+- Initialization machinery is confusing. I still don't understand the
+  invariants around why certain things are initialized the way they are.
+- Quite minimal and pleasant to work with, all said and done.
+- lean4: tooling doesn't work? (emacs `lean-mode` is just dead)
+- Can tell LLVM about tail calls instead of hand rolling a tail call.
+- Can maybe use TBAA to teach LLVM about different object types, instead of erasing all info
+  at the lambdapure level. 
+- Can potentially use the objective-c machinery + [LLVM GC](https://llvm.org/docs/GarbageCollection.html) to implement correct
+  refcounting.
+- `jmp` encodes nicely in MLIR thanks to nested regions.
+- LEAN4 APIS: foldable/traversable/divisible/decidable?
+- I saw the [bachelor thesis on snake lemma](https://pp.ipd.kit.edu/thesis.php?id=313) (I wanted the snake lemma recently...). 
+  [How is homology computed? Can we make it faster?](https://pastel.archives-ouvertes.fr/pastel-00605836/document)
+  (sparse linear algebra).
+- Prototype the freeJIT in LEAN, to generate GPU code using free monads from
+  LEAN.  Tensor dialect. 
+- Thunks in LEAN: what do they do and how do they lower?
+- What do we need for MVP? Does just lazification + some optimisation in the LEAN dialect get us there? 
+- `Jump` breaks any and all structured control flow. Better way to lower this?
+- TODO from Leo: Try to lower mutual recursion in a way that gets optimised.
+- Try to encode many many args in the mutual recursion.
+- Which optimisation to do at LEAN level?
+- Can we leverage proofs at the LEAN level?
+- Interactive compliation: write tactics to prove properties about code.
+- Killer app for this infrastructure, using this framework?
 
 
 # Log:  [newest] to [oldest]
 
-# April 12
 
-Try and use passes:
-```
-  --mlir-pretty-debuginfo                               - Print pretty debug info in MLIR output
-  --mlir-print-debug-counter                            - Print out debug counter information after all counters have been accumulated
-  --mlir-print-debuginfo                                - Print debug info in MLIR output
+# May 4
+
+- Experimenting with LLVM, [trying to understand what example of mutual recursion is useful](https://gist.github.com/bollu/1da616fb3cd13501f1fdb3c44d4370be#file-main-o3-ll-L97-L109).
+- Pinged Leo asking for a file that shows off the example he had in mind, so I don't solve a problem
+  that's orthogonal to what the LEAN folks have.
+- It's a little unclear to me what to work on next. I *think* in terms of
+  completing the paper, it would be useful to either have an example where (1) we
+  do something non-trivial to LEAN IR by lowering carefully, or (2) embed a DSL
+  into Lean for things like `affine.for`. The latter is annoying due to LEANisms.
+  I had tried generating combinators on the LEAN level. So a program like this:
+
+```lean
+inductive Vec : Type
+| VecNum (l: Nat) (i: Nat): Vec
+| VecAdd (v: Vec) (w: Vec) : Vec
+| VecSum (v: Vec): Vec
+open Vec
+
+-- | consume all values so the optimiser doesn't remove everything.
+def runvec : Vec -> IO Unit
+| VecNum _ _ => IO.print "vecnum"
+| VecAdd x y => runvec x *> runvec y
+| VecSum v => runvec v
+
+def vecnum (l: Nat) (i: Nat): Vec := (VecNum l i)
+def vecadd (v: Vec) (w: Vec): Vec := (VecAdd v w)
+def vecsum (v: Vec) : Vec := (VecSum v)
+
+def main (xs: List String) : IO Unit := do
+  runvec (vecsum (vecadd (vecnum 10 41) (vecnum 10 1)))
 ```
 
+This generates lambdapure where all the "computation" of building these
+combinators happens in the init functions, and main simply prints the _already
+computed_ initialized data. This is a problem, since the "building the
+combinators" (which LEAN decides to precompute) is in fact that real
+(description of) the computation! For reference, the lambdapure is:
+
+```
+def main._closed_1 : obj :=
+  let x_1 : obj := 10;
+  let x_2 : obj := 41;
+  let x_3 : obj := ctor_0[Vec.VecNum] x_1 x_2;
+  ret x_3
+def main._closed_2 : obj :=
+  let x_1 : obj := 10;
+  let x_2 : obj := 1;
+  let x_3 : obj := ctor_0[Vec.VecNum] x_1 x_2;
+  ret x_3
+def main._closed_3 : obj :=
+  let x_1 : obj := main._closed_1;
+  let x_2 : obj := main._closed_2;
+  let x_3 : obj := ctor_1[Vec.VecAdd] x_1 x_2;
+  ret x_3
+def main._closed_4 : obj :=
+  let x_1 : obj := main._closed_3;
+  let x_2 : obj := ctor_2[Vec.VecSum] x_1;
+  ret x_2
+def main (x_1 : obj) (x_2 : obj) : obj :=
+  let x_3 : obj := main._closed_4;
+  let x_4 : obj := runvec x_3 x_2;
+  ret x_4// Lean compiler output
+```
+
+which on lowering naively, becomes something like:
+
+
+```cpp
+lean_object* _lean_main(lean_object* x_1, lean_object* x_2) {
+_start:
+{
+lean_object* x_3; lean_object* x_4;
+x_3 = l_main___closed__4;
+x_4 = l_runvec(x_3, x_2);
+return x_4;
+}
+}
+```
+
+
+So the interesting part of "build the combinator" (which for us, is the real
+description of the computation itself) is relegated to initialization. 
+
+I asked Leo if there
+an easy way to generate the code differently, where LEAN emits actual calls for
+the combinators. He replied tersely, saying that
+
+> you can disable the extraction of closed terms using the option.
+
+```
+set_option compiler.extract_closed false
+```
+
+This comment was perfect; If I enable the option, I generate the following MLIR:
+
+```llvm
+  func @main_lean_custom_entrypoint_hack(%arg0: !lz.value, %arg1: !lz.value) -> !lz.value {
+    %0 = "lz.int"() {value = 10 : i64} : () -> !lz.value
+    %1 = "lz.int"() {value = 41 : i64} : () -> !lz.value
+    %2 = "lz.construct"(%0, %1) {dataconstructor = @"0", name = "Vec.VecNum", size = 2 : i64} : (!lz.value, !lz.value) -> !lz.value
+    %3 = "lz.int"() {value = 1 : i64} : () -> !lz.value
+    %4 = "lz.construct"(%0, %3) {dataconstructor = @"0", name = "Vec.VecNum", size = 2 : i64} : (!lz.value, !lz.value) -> !lz.value
+    %5 = "lz.construct"(%2, %4) {dataconstructor = @"1", name = "Vec.VecAdd", size = 2 : i64} : (!lz.value, !lz.value) -> !lz.value
+    %6 = "lz.construct"(%5) {dataconstructor = @"2", name = "Vec.VecSum", size = 1 : i64} : (!lz.value) -> !lz.value
+    %7 = call @l_runvec(%6, %arg1) : (!lz.value, !lz.value) -> !lz.value
+    lz.return %7 : !lz.value
+  }
+```
+
+where we can clearly see that the data structure representing the computation is built, followed up by a call to `l_runvec.`
+This is IR that I can optimize!
+
+
+Also, I've been reading through the LEAN sources. It seems their parsing framework is very extensible. In particular,
+[`src/Parser/Basic.lean](https://github.com/leanprover/lean4/blob/master/src/Lean/Parser/Basic.lean#L34-L41) says:
+
+
+> * flexibility: Lean's grammar is complex and includes indentation and other whitespace sensitivity. It should be
+>   possible to introduce such custom "tweaks" locally without having to adjust the fundamental parsing approach.
+> * extensibility: Lean's grammar can be extended on the fly within a Lean file, and with Lean 4 we want to extend this
+>   to cover embedding domain-specific languages that may look nothing like Lean, down to using a separate set of tokens.
+
+
+> Given these constraints, we decided to implement a combinatoric, non-monadic,
+> lexer-less, memoizing recursive-descent parser. Using combinators instead of
+> some more formal and introspectible grammar representation ensures ultimate
+> flexibility as well as efficient extensibility: there is (almost) no
+> pre-processing necessary when extending the grammar with a new parser.
+
+
+Their `do`-notation as well as all function call related features such as implicit arguments are implemented
+directly in the elaborator. I almost wonder if it's possible to embed generic MLIR into LEAN directly, since the MLIR
+grammar is quite straightforward.
 
 # May 3
 
@@ -198,40 +355,16 @@ They are packed into the MetaM monad.
 -/
 ```
 
+# April 12
 
-# Thoughts on lambdapure
+Try and use passes:
+```
+  --mlir-pretty-debuginfo                               - Print pretty debug info in MLIR output
+  --mlir-print-debug-counter                            - Print out debug counter information after all counters have been accumulated
+  --mlir-print-debuginfo                                - Print debug info in MLIR output
+```
 
-- One massive quality of life improvement would be if lambdapure printed in MLIR syntax.
-  That way, it's unambiguous about semantics! and can potentially eventually round-trip
-  through the compiler!
-- It's both too high and too low level. `case` of `int` in lambdapure generates
-  as calls to runtime `lean_dec_eq` + a boolean `int` case on return value,
-  while `case` of objects is represented as a real `case.`
-- Initialization machinery is confusing. I still don't understand the
-  invariants around why certain things are initialized the way they are.
-- Quite minimal and pleasant to work with, all said and done.
-- lean4: tooling doesn't work? (emacs `lean-mode` is just dead)
-- Can tell LLVM about tail calls instead of hand rolling a tail call.
-- Can maybe use TBAA to teach LLVM about different object types, instead of erasing all info
-  at the lambdapure level. 
-- Can potentially use the objective-c machinery + [LLVM GC](https://llvm.org/docs/GarbageCollection.html) to implement correct
-  refcounting.
-- `jmp` encodes nicely in MLIR thanks to nested regions.
-- LEAN4 APIS: foldable/traversable/divisible/decidable?
-- I saw the [bachelor thesis on snake lemma](https://pp.ipd.kit.edu/thesis.php?id=313) (I wanted the snake lemma recently...). 
-  [How is homology computed? Can we make it faster?](https://pastel.archives-ouvertes.fr/pastel-00605836/document)
-  (sparse linear algebra).
-- Prototype the freeJIT in LEAN, to generate GPU code using free monads from
-  LEAN.  Tensor dialect. 
-- Thunks in LEAN: what do they do and how do they lower?
-- What do we need for MVP? Does just lazification + some optimisation in the LEAN dialect get us there? 
-- `Jump` breaks any and all structured control flow. Better way to lower this?
-- TODO from Leo: Try to lower mutual recursion in a way that gets optimised.
-- Try to encode many many args in the mutual recursion.
-- Which optimisation to do at LEAN level?
-- Can we leverage proofs at the LEAN level?
-- Interactive compliation: write tactics to prove properties about code.
-- Killer app for this infrastructure, using this framework?
+
 
 # April 4
 
