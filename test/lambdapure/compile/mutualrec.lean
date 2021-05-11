@@ -8,21 +8,21 @@
 -- CHECK-INTERPRET: 0
 
 
-// TODO: why is a join point created?
-// func @l_even(%arg0: !lz.value) -> !lz.value {
-//   %0 = call @l_odd(%arg0) : (!lz.value) -> !lz.value
-//   lz.return %0 : !lz.value
-// }
-// func @l_odd(%arg0: !lz.value) -> !lz.value {
-//   %0 = call @l_even(%arg0) : (!lz.value) -> !lz.value
-//   lz.return %0 : !lz.value
-// }
+-- TODO: why is a join point created?
+-- func @l_even(%arg0: !lz.value) -> !lz.value {
+--   %0 = call @l_odd(%arg0) : (!lz.value) -> !lz.value
+--   lz.return %0 : !lz.value
+-- }
+-- func @l_odd(%arg0: !lz.value) -> !lz.value {
+--   %0 = call @l_even(%arg0) : (!lz.value) -> !lz.value
+--   lz.return %0 : !lz.value
+-- }
 
 set_option trace.compiler.ir.init true
 
 mutual 
-  partial def even (a : Nat) : Nat := odd a
-  partial def odd (a : Nat) : Nat := even a
+  partial def even (a : Nat) : Nat := if a == 0 then 1 else odd (a - 1)
+  partial def odd (a : Nat) : Nat := if a == 0 then 0 else even (a - 1)
 end
 
 -- | This example is not so interesting because dead code elimination gets rid of the work.
