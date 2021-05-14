@@ -2,16 +2,19 @@ import Lean.Parser
 
 -- set_option trace.Elab.command true
 
+structure SSAVal where
+  name: String
+
 structure Inst where
     name: String
 
 structure Op where
     name : String
-    args: List String
+    args: List SSAVal
     ty : String
 
 structure Binding where
-    lhs: String
+    lhs: SSAVal
     Op: Op
 
 structure MLIRModule where 
@@ -27,9 +30,13 @@ macro_rules
 | `(module $name [ $inst ]) => `(MLIRModule.mk $name [$inst])
 
 -- | I can't use the syntax '=' for whatever reason in the binding.
-syntax "%" term ":=" term : term
+syntax "%" term : term
 macro_rules
-| `(% $a := $b) => `(Binding.mk $a $b)
+| `(% $a) => `(SSAVal.mk $a)
+
+syntax term ":=" term : term
+macro_rules
+| `($a := $b) => `(Binding.mk $a $b)
 
 syntax term "(" sepBy(term, ", ") ")" ":" term : term
 macro_rules
@@ -43,5 +50,6 @@ macro_rules
 -- 
 -- -- #check module "foo" [ "bar" ]
 #check "foo"("1", "2", "3"): "i64"
--- #check %"x" := "foo"
+#check %"x"
+#check (%"x") := "foo"(%"y", %"z") : "i64"
 
