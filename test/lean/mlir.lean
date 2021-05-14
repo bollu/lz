@@ -43,9 +43,9 @@ syntax "%" term : term
 macro_rules
 | `(% $a) => `(SSAVal.mk $a)
 
-syntax (name := bindingkv) term ":=" term : term
+syntax (name := bindingkv) term "=" term : term
 macro_rules (kind := bindingkv)
-| `($a := $b) => `(Binding.mk $a $b)
+| `($a = $b) => `(Binding.mk $a $b)
 
 
 syntax (name := attrkv) term ":=" term : term
@@ -72,7 +72,7 @@ syntax  "call" term "(" sepBy(term, ", ") ")" ":" term : term
 -- -- #check module "foo" [ "bar" ]
 #check "foo"(%"1", %"2", %"3") {} : "i64"
 #check "key" := "value"
-#check (%"x") := "foo"(%"y", %"z") {"key" := "value"}: "i64"
+#check (%"x") = "foo"(%"y", %"z") {"key" := "value"}: "i64"
 -- #check ("key" :- "value")
 -- #check (%"x") := "foo"(%"y", %"z") { [@ "key" XX "value" @] } : "i64"
 -- #check (%"x") := "foo"(%"y", %"z") {"key" :- "value"}: "i64"
