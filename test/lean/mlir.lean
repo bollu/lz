@@ -1,4 +1,6 @@
 import Lean.Parser
+import Lean.Parser.Extra
+
 open Lean
 
 -- Take a look at choiceMacroRules.lean, CommandExtOverlap.lean, tacticExtOverlap.lean 
@@ -16,11 +18,23 @@ structure Attribute where
     key: String
     value: String
 
+
+-- | Bug with MLIR type system: does not have a notion of unit v/s void.
+inductive MLIRType
+| MLIRTypeInt : Int -> MLIRType
+| MLIRTypeFn : MLIRType -> MLIRType -> MLIRType
+| MLIRTypeUnit : MLIRType 
+open MLIRType
+
+
 structure Op where
     name : String
     args: List SSAVal
     attributes: List Attribute
-    ty : String
+    ty : MLIRType
+
+
+
 
 structure Binding where
     lhs: SSAVal
@@ -29,6 +43,7 @@ structure Binding where
 structure MLIRModule where 
     name: String
     regions: List Binding
+
 
 declare_syntax_cat mlircat
 
@@ -68,11 +83,16 @@ macro_rules
 syntax  "call" term "(" sepBy(term, ", ") ")" ":" term : term
 
 
+syntax "i"num : term
+macro_rules 
+| `(i $x) => `(MLIRTypeInt $x)
+
 -- 
 -- -- #check module "foo" [ "bar" ]
-#check "foo"(%"1", %"2", %"3") {} : "i64"
+-- | TODO: figure out how to get 'i64' working.
+#check "foo"(%"1", %"2", %"3") {} : i 64
 -- #check (("key" = "value") :: Attribute)
-#check (%"x") = "foo"(%"y", %"z") {"key" = "value"}: "i64"
+#check (%"x") = "foo"(%"y", %"z") {"key" = "value"} : i 64
 -- #check ("key" :- "value")
 -- #check (%"x") := "foo"(%"y", %"z") { [@ "key" XX "value" @] } : "i64"
 -- #check (%"x") := "foo"(%"y", %"z") {"key" :- "value"}: "i64"
