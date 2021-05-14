@@ -5,9 +5,14 @@ import Lean.Parser
 structure Inst where
     name: String
 
+structure Op where
+    name : String
+    args: List String
+    ty : String
+
 structure Binding where
     lhs: String
-    rhs: String
+    Op: Op
 
 structure MLIRModule where 
     name: String
@@ -21,12 +26,22 @@ syntax "@module" term "{" term "}" : term
 macro_rules
 | `(module $name [ $inst ]) => `(MLIRModule.mk $name [$inst])
 
-
-syntax "BINDING" term "EQUAL" term : term
-
+-- | I can't use the syntax '=' for whatever reason in the binding.
+syntax "%" term ":=" term : term
 macro_rules
-| `(BINDING $a EQUAL $b) => `(Binding.mk)
+| `(% $a := $b) => `(Binding.mk $a $b)
+
+syntax term "(" sepBy(term, ", ") ")" ":" term : term
+macro_rules
+| `($a ( $args,* ): $b) => `(Op.mk $a [ $args,*] $b)
+
+syntax "[[[" sepBy(term, ", ") "]]]" : term
+macro_rules
+  | `([[[ $elems,* ]]]) => `([ $elems,* ])
+
+
 -- 
 -- -- #check module "foo" [ "bar" ]
--- #check BINDING "0" "foo"
+#check "foo"("1", "2", "3"): "i64"
+-- #check %"x" := "foo"
 
