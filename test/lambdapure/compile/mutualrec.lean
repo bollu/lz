@@ -1,11 +1,17 @@
 --  RUN: ./run-lean.sh %s | FileCheck %s --check-prefix=CHECK-INTERPRET
 
---  run: lean %s 2>&1 1>/dev/null | hask-opt  --lz-canonicalize --lz-interpret=mode=lambdapure | FileCheck %s --check-prefix=CHECK-INTERPRET
+--- CHECK-INTERPRET: 1
+--- CHECK-INTERPRET: 0
+--- CHECK-INTERPRET: 1
+--- CHECK-INTERPRET: 0
 
--- CHECK-INTERPRET: 1
--- CHECK-INTERPRET: 0
--- CHECK-INTERPRET: 1
--- CHECK-INTERPRET: 0
+-- RUN: lean %s 2>&1 | hask-opt  --lz-canonicalize  --lean-lower --convert-scf-to-std --ptr-lower | mlir-translate --mlir-to-llvmir |  opt -O3 -S | FileCheck %s --check-prefix=CHECK-LLVM
+
+-- | todo: make this a better regex based match.
+-- CHECK-LLVM: define i8* @l_even(i8* %0) local_unnamed_addr !dbg !3 {
+-- CHECK-LLVM: tailrecurse
+-- CHECK-LLVM: l_odd.exit
+-- CHECK-LLVM: }
 
 
 -- TODO: why is a join point created?
