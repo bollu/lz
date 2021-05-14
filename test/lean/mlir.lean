@@ -43,22 +43,15 @@ syntax "%" term : term
 macro_rules
 | `(% $a) => `(SSAVal.mk $a)
 
-syntax term ":=" term : term
-macro_rules
+syntax (name := bindingkv) term ":=" term : term
+macro_rules (kind := bindingkv)
 | `($a := $b) => `(Binding.mk $a $b)
 
 
-
-
-syntax (name := myintro) "intros" sepBy(ident, ",") : tactic
-macro_rules (kind := myintro)
-| `(tactic| intros $x,*) => `([ $x,* ]) -- pure $ Syntax.node `Lean.Parser.Tactic.intros #[mkAtom "intros", mkNullNode x]
-
-
--- declare_syntax_cat attrstx
--- syntax (name := attributekv) term "===" term : attrstx
--- macro_rules (kind := attributekv)
--- | `(attrstx| $a === $b) => `($a) -- `(Attribute.mk $a $b)
+declare_syntax_cat attributestx
+syntax (name := attributekv) "[@" term "XX" term "@]": attributestx
+macro_rules (kind := attributekv)
+| `(attributestx| [@ $a XX $b @]) => `(Attribute.mk $a $b)
 
 
 syntax term ":-" term : term
@@ -69,7 +62,7 @@ syntax term "(" sepBy(term, ", ") ")" ("{" sepBy(term, ",") "}")? ":" term : ter
 
 
 macro_rules
--- | `($a ( $args,* ) {} : $b) => `(Op.mk $a [ $args,*] [] $b)
+-- -- | `($a ( $args,* ) {} : $b) => `(Op.mk $a [ $args,*] [] $b)
 | `($a ( $args,* ) { $attrs,* } : $b) => `(Op.mk $a [ $args,*] [ $attrs,* ] $b)
 | `($a ( $args,* ) : $b) => `(Op.mk $a [ $args,*] [] $b)
 
@@ -84,7 +77,9 @@ syntax  "call" term "(" sepBy(term, ", ") ")" ":" term : term
 -- 
 -- -- #check module "foo" [ "bar" ]
 #check "foo"(%"1", %"2", %"3") {}: "i64"
+#check "foo"(%"1", %"2", %"3") { [@ "key" XX "value" @] }: "i64"
 #check %"x"
 #check (%"x") := "foo"(%"y", %"z") {"key" :- "value"}: "i64"
-#check (%"x") := "foo"(%"y", %"z") : "i64"
+-- #check (%"x") := "foo"(%"y", %"z") {"key" :- "value"}: "i64"
+-- #check (%"x") := "foo"(%"y", %"z") : "i64"
 
