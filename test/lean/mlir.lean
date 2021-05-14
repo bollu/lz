@@ -1,4 +1,8 @@
 import Lean.Parser
+open Lean
+
+-- Take a look at choiceMacroRules.lean, CommandExtOverlap.lean, tacticExtOverlap.lean 
+-- for the macro_rules [kind] syntax.
 
 -- set_option trace.Elab.command true
 
@@ -43,6 +47,20 @@ syntax term ":=" term : term
 macro_rules
 | `($a := $b) => `(Binding.mk $a $b)
 
+
+
+
+syntax (name := myintro) "intros" sepBy(ident, ",") : tactic
+macro_rules (kind := myintro)
+| `(tactic| intros $x,*) => `([ $x,* ]) -- pure $ Syntax.node `Lean.Parser.Tactic.intros #[mkAtom "intros", mkNullNode x]
+
+
+-- declare_syntax_cat attrstx
+-- syntax (name := attributekv) term "===" term : attrstx
+-- macro_rules (kind := attributekv)
+-- | `(attrstx| $a === $b) => `($a) -- `(Attribute.mk $a $b)
+
+
 syntax term ":-" term : term
 macro_rules
 | `($a :- $b) => `(Attribute.mk $a $b)
@@ -69,3 +87,4 @@ syntax  "call" term "(" sepBy(term, ", ") ")" ":" term : term
 #check %"x"
 #check (%"x") := "foo"(%"y", %"z") {"key" :- "value"}: "i64"
 #check (%"x") := "foo"(%"y", %"z") : "i64"
+
