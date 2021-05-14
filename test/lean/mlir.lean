@@ -48,14 +48,8 @@ macro_rules (kind := bindingkv)
 | `($a := $b) => `(Binding.mk $a $b)
 
 
-declare_syntax_cat attributestx
-syntax (name := attributekv) "[@" term "XX" term "@]": attributestx
-macro_rules (kind := attributekv)
-| `(attributestx| [@ $a XX $b @]) => `(Attribute.mk $a $b)
-
-
-syntax term ":-" term : term
-macro_rules
+syntax (name := attrkv) term ":-" term : term
+macro_rules (kind := attrkv)
 | `($a :- $b) => `(Attribute.mk $a $b)
 
 syntax term "(" sepBy(term, ", ") ")" ("{" sepBy(term, ",") "}")? ":" term : term
@@ -76,10 +70,10 @@ syntax  "call" term "(" sepBy(term, ", ") ")" ":" term : term
 
 -- 
 -- -- #check module "foo" [ "bar" ]
-#check "foo"(%"1", %"2", %"3") {}: "i64"
-#check "foo"(%"1", %"2", %"3") { [@ "key" XX "value" @] }: "i64"
-#check %"x"
+#check "foo"(%"1", %"2", %"3") {} : "i64"
 #check (%"x") := "foo"(%"y", %"z") {"key" :- "value"}: "i64"
+-- #check ("key" :- "value")
+-- #check (%"x") := "foo"(%"y", %"z") { [@ "key" XX "value" @] } : "i64"
 -- #check (%"x") := "foo"(%"y", %"z") {"key" :- "value"}: "i64"
 -- #check (%"x") := "foo"(%"y", %"z") : "i64"
 
