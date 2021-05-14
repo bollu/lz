@@ -8,9 +8,14 @@ structure SSAVal where
 structure Inst where
     name: String
 
+structure Attribute where
+    key: String
+    value: String
+
 structure Op where
     name : String
     args: List SSAVal
+    attributes: List Attribute
     ty : String
 
 structure Binding where
@@ -38,18 +43,29 @@ syntax term ":=" term : term
 macro_rules
 | `($a := $b) => `(Binding.mk $a $b)
 
-syntax term "(" sepBy(term, ", ") ")" ":" term : term
+syntax term ":-" term : term
 macro_rules
-| `($a ( $args,* ): $b) => `(Op.mk $a [ $args,*] $b)
+| `($a :- $b) => `(Attribute.mk $a $b)
+
+syntax term "(" sepBy(term, ", ") ")" ("{" sepBy(term, ",") "}")? ":" term : term
+
+
+macro_rules
+-- | `($a ( $args,* ) {} : $b) => `(Op.mk $a [ $args,*] [] $b)
+| `($a ( $args,* ) { $attrs,* } : $b) => `(Op.mk $a [ $args,*] [ $attrs,* ] $b)
+| `($a ( $args,* ) : $b) => `(Op.mk $a [ $args,*] [] $b)
 
 syntax "[[[" sepBy(term, ", ") "]]]" : term
 macro_rules
   | `([[[ $elems,* ]]]) => `([ $elems,* ])
 
 
+syntax  "call" term "(" sepBy(term, ", ") ")" ":" term : term
+
+
 -- 
 -- -- #check module "foo" [ "bar" ]
-#check "foo"("1", "2", "3"): "i64"
+#check "foo"(%"1", %"2", %"3") {}: "i64"
 #check %"x"
+#check (%"x") := "foo"(%"y", %"z") {"key" :- "value"}: "i64"
 #check (%"x") := "foo"(%"y", %"z") : "i64"
-
