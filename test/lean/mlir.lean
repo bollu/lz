@@ -35,10 +35,16 @@ structure Op where
 
 
 
-
 structure Binding where
     lhs: SSAVal
     Op: Op
+
+structure BasicBlock where
+  name: String
+  args: List SSAVal
+  ops : List Binding
+
+
 
 structure MLIRModule where 
     name: String
@@ -54,13 +60,20 @@ macro_rules
 | `(module $name [ $inst ]) => `(MLIRModule.mk $name [$inst])
 
 -- | I can't use the syntax '=' for whatever reason in the binding.
-syntax "%" term : term
-macro_rules
-| `(% $a) => `(SSAVal.mk $a)
+-- syntax "%" term : term
+prefix:300 "%" => SSAVal.mk
 
-syntax (name := bindingkv) term "=" term : term
-macro_rules (kind := bindingkv)
-| `($a = $b) => `(Binding.mk $a $b)
+-- macro_rules
+-- | `(% $a) => `(SSAVal.mk $a)
+
+
+-- syntax (name := bindingkv) term:30 "=" term:40 : term
+
+-- macro_rules (kind := bindingkv)
+-- | `($a = $b) => `(Binding.mk $a $b)
+
+
+infix:50 "=:="  => Binding.mk
 
 
 syntax (name := attrkv) term "=" term : term
@@ -90,11 +103,17 @@ macro_rules
 -- 
 -- -- #check module "foo" [ "bar" ]
 -- | TODO: figure out how to get 'i64' working.
-#check "foo"(%"1", %"2", %"3") {} : i 64
--- #check (("key" = "value") :: Attribute)
-#check (%"x") = "foo"(%"y", %"z") {"key" = "value"} : i 64
--- #check ("key" :- "value")
--- #check (%"x") := "foo"(%"y", %"z") { [@ "key" XX "value" @] } : "i64"
--- #check (%"x") := "foo"(%"y", %"z") {"key" :- "value"}: "i64"
--- #check (%"x") := "foo"(%"y", %"z") : "i64"
+#check %"x" =:= "foo"(%"y", %"z") {"key" = "value", "key2" = "value2"} : i 64
 
+-- #check "foo"(%"1", %"2", %"3") {} : i 64
+-- -- #check (("key" = "value") :: Attribute)
+-- #check (%"x") = "foo"(%"y", %"z") {"key" = "value", "key2" = "value2"} : i 64
+
+
+-- -- # TODO: find a way to separate elements by newlines.
+-- syntax "^" term ("(" sepBy(term, ",") ")")? ":" sepBy(term, ";"): term
+-- macro_rules
+-- | `(^ $bbname : $ops  ) => `(BasicBlock.mk $bbname [] [ $ops ] )
+
+-- -- #check   ^"entry":  ((%"x") =  "foo"() : i 64); ((%"y") =  "bar"() : i 64)
+-- #check   ^"entry":  ((%"x") =  "foo"() : i 64)
