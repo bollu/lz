@@ -5,7 +5,7 @@
 -- The value of PI is too large -_-
 
 
-set_option trace.compiler.ir.init true
+-- set_option trace.compiler.ir.init true
 
 
 structure Vec3 (α : Type _) :=

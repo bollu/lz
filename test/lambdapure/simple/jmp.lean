@@ -87,4 +87,3 @@ unsafe def main (xs: List String) : IO Unit := do
   IO.println (toString (toNat (eval (Add (Foo 1) (Val 2)))));
   IO.println (toString (toNat (eval (Add (Val 1) (Foo 2)))));
   IO.println (toString (toNat (eval (Add (Foo 1) (Foo 2)))));
-
