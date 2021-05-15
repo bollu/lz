@@ -60,25 +60,18 @@ macro_rules
 | `(module $name [ $inst ]) => `(MLIRModule.mk $name [$inst])
 
 -- | I can't use the syntax '=' for whatever reason in the binding.
--- syntax "%" term : term
 prefix:300 "%" => SSAVal.mk
-
--- macro_rules
--- | `(% $a) => `(SSAVal.mk $a)
-
-
--- syntax (name := bindingkv) term:30 "=" term:40 : term
-
--- macro_rules (kind := bindingkv)
--- | `($a = $b) => `(Binding.mk $a $b)
+-- syntax:300 "%" term : term
+-- macro_rules | `(% $a) => `(SSAVal.mk $a)
 
 
-infix:50 "=:="  => Binding.mk
+syntax:30 (name := bindingkv) term "=:=" term : term
+macro_rules (kind := bindingkv) | `($a =:= $b) => `(Binding.mk $a $b)
 
+-- infix:50 "=:="  => Binding.mk
 
 syntax (name := attrkv) term "=" term : term
-macro_rules (kind := attrkv)
-| `($a = $b) => `(Attribute.mk $a $b)
+macro_rules (kind := attrkv) | `($a = $b) => `(Attribute.mk $a $b)
 
 syntax term "(" sepBy(term, ", ") ")" ("{" sepBy(term, ",") "}")? ":" term : term
 
