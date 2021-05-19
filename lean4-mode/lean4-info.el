@@ -16,6 +16,7 @@
 
 (require 'lean4-syntax)
 (require 'lsp-protocol)
+(require 'magit-section)
 
 ;; Lean Info Mode (for "*lean4-info*" buffer)
 ;; Automode List
@@ -43,7 +44,8 @@
   (unless (get-buffer buffer)
     (with-current-buffer (get-buffer-create buffer)
       (buffer-disable-undo)
-      (lean4-info-mode))))
+      (magit-section-mode)
+      (set-syntax-table lean4-syntax-table))))
 
 (defun lean4-toggle-info-buffer (buffer)
   (-if-let (window (get-buffer-window buffer))
@@ -60,64 +62,77 @@
    (eq (current-buffer) (window-buffer))))
 
 (lsp-interface
- (lean:PlainGoal (:rendered) nil))
+ (lean:PlainGoal (:goals) nil)
+ (lean:Diagnostic (:range :fullRange :message) (:code :relatedInformation :severity :source :tags)))
 
-(defconst lean4-show-goal-buffer-name "*Lean Goal*")
+(defconst lean4-info-buffer-name "*Lean Goal*")
 
-(defun lean4-show-goal--handler ()
-  (let ((deactivate-mark)) ; keep transient mark
-    (when (lean4-info-buffer-active lean4-show-goal-buffer-name)
-      (lsp-request-async
-       "$/lean/plainGoal"
-       (lsp--text-document-position-params)
-       (-lambda ((goal &as &lean:PlainGoal? :rendered))
-         (when goal
-           (let ((rerendered (lsp--render-string rendered "markdown")))
-             (lean4-with-info-output-to-buffer
-              lean4-show-goal-buffer-name
-              (insert rerendered)
-              (when lean4-highlight-inaccessible-names
-                (goto-char 0)
-                (while (re-search-forward "\\(\\sw+\\)✝\\([¹²³⁴-⁹⁰]*\\)" nil t)
-                  (replace-match
-                   (propertize (s-concat (match-string-no-properties 1) (match-string-no-properties 2))
-                               'font-lock-face 'font-lock-comment-face)
-                   'fixedcase 'literal)))))))
-       :error-handler #'ignore
-       :mode 'tick
-       :cancel-token :plain-goal))))
+(defvar lean4-goals nil)
 
-(defun lean4-toggle-show-goal ()
-  "Show goal at the current point."
+(lsp-defun lean4-diagnostic-full-end-line ((&lean:Diagnostic :full-range (&Range :end (&Position :line))))
+  line)
+
+(defun lean4-info-buffer-redisplay ()
+  (when (lean4-info-buffer-active lean4-info-buffer-name)
+    (-let* ((deactivate-mark) ; keep transient mark
+            (pos (apply #'lsp-make-position (lsp--cur-position)))
+            (line (lsp--cur-line))
+            (errors (lsp--get-buffer-diagnostics))
+            ;(errors (-sort (-on (lambda (it) (not (lsp--position-compare it))) (lambda (it) (lsp:range-end (lsp:lean-diagnostic-full-range it)))) errors))
+            (errors (-sort (-on #'< #'lean4-diagnostic-full-end-line) errors))
+            ((errors-above selected-errors)
+             (--split-with (< (lean4-diagnostic-full-end-line it) line) errors)))
+      (lean4-with-info-output-to-buffer
+       lean4-info-buffer-name
+       (when lean4-goals
+         (magit-insert-section (magit-section)
+           (magit-insert-heading "Goals:")
+           (magit-insert-section-body
+             (if (> (length lean4-goals) 0)
+                 (seq-doseq (g lean4-goals)
+                   (magit-insert-section (magit-section)
+                     (insert (lsp--fontlock-with-mode g 'lean4-info-mode) "\n\n")))
+               (insert "goals accomplished\n\n")))))
+       (when selected-errors
+         (magit-insert-section (magit-section)
+           (magit-insert-heading "Messages:")
+           (magit-insert-section-body
+             (dolist (e selected-errors)
+               (-let (((&Diagnostic :message :range (&Range :start (&Position :line :character))) e))
+                 (magit-insert-section (magit-section)
+                   (magit-insert-heading (format "%d:%d: " (1+ (lsp-translate-line line)) (lsp-translate-column character)))
+                   (magit-insert-section-body
+                     (insert message "\n"))))))))
+       (when errors-above
+         (magit-insert-section (magit-section)
+           (insert (format "(%d more messages above...)\n" (length errors-above)))))
+       (when lean4-highlight-inaccessible-names
+         (goto-char 0)
+         (while (re-search-forward "\\(\\sw+\\)✝\\([¹²³⁴-⁹⁰]*\\)" nil t)
+           (replace-match
+            (propertize (s-concat (match-string-no-properties 1) (match-string-no-properties 2))
+                        'font-lock-face 'font-lock-comment-face)
+            'fixedcase 'literal)))))))
+
+(defun lean4-info-buffer-refresh ()
+  (when (lean4-info-buffer-active lean4-info-buffer-name)
+    (lsp-request-async
+     "$/lean/plainGoal"
+     (lsp--text-document-position-params)
+     (-lambda ((goal &as &lean:PlainGoal? :goals))
+       (setq lean4-goals goals)
+       (lean4-info-buffer-redisplay))
+     :error-handler #'ignore
+     :mode 'tick
+     :cancel-token :plain-goal)
+    ;; may lead to flickering
+    ;(lean4-info-buffer-redisplay)
+    ))
+
+(defun lean4-toggle-info ()
+  "Show infos at the current point."
   (interactive)
-  (lean4-toggle-info-buffer lean4-show-goal-buffer-name)
-  (lean4-show-goal--handler))
-
-(defconst lean4-next-error-buffer-name "*Lean Next Error*")
-
-(defun lean4-next-error--handler ()
-  (when (lean4-info-buffer-active lean4-next-error-buffer-name)
-    (let ((deactivate-mark) ; keep transient mark
-          (errors (or
-                   ;; prefer error of current position, if any
-                   (flycheck-overlay-errors-at (point))
-                   ;; try errors in current line next
-                   (sort (flycheck-overlay-errors-in (line-beginning-position) (line-end-position))
-                         #'flycheck-error-<)
-                   ;; fall back to next error position
-                   (-if-let* ((pos (flycheck-next-error-pos 1)))
-                       (flycheck-overlay-errors-at pos)))))
-      (lean4-with-info-output-to-buffer lean4-next-error-buffer-name
-       (dolist (e errors)
-         (princ (format "%d:%d: " (flycheck-error-line e) (flycheck-error-column e)))
-         (princ (flycheck-error-message e))
-         (princ "\n\n"))
-       (when flycheck-current-errors
-         (princ (format "(%d more messages above...)" (length flycheck-current-errors))))))))
-
-(defun lean4-toggle-next-error ()
-  (interactive)
-  (lean4-toggle-info-buffer lean4-next-error-buffer-name)
-  (lean4-next-error--handler))
+  (lean4-toggle-info-buffer lean4-info-buffer-name)
+  (lean4-info-buffer-refresh))
 
 (provide 'lean4-info)
