@@ -1,3 +1,7 @@
+.PHONY: all
+
+all: library.ll library.o
+
 library.ll: 
 	clang -I. -fPIC -c  library.c  -S -emit-llvm -o library.ll
 
