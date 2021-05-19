@@ -643,14 +643,15 @@ def emitApp (z : VarId) (f : VarId) (ys : Array Arg) (tys: HashMap VarId IRType)
 
 def emitBoxFn (xType : IRType) : M Unit :=
   match xType with
-  | IRType.usize  => emit "lean_box_usize"
-  | IRType.uint32 => emit "lean_box_uint32"
-  | IRType.uint64 => emit "lean_box_uint64"
-  | IRType.float  => emit "lean_box_float"
-  | other         => emit "lean_box"
+  | IRType.usize  => emit "call @lean_box_usize"
+  | IRType.uint32 => emit "call @lean_box_uint32"
+  | IRType.uint64 => emit "call @lean_box_uint64"
+  | IRType.float  => emit "call @lean_box_float"
+  | other         => emit "call @lean_box"
 
 def emitBox (z : VarId) (x : VarId) (xType : IRType) : M Unit := do
-  emitLhs z; emitBoxFn xType; emit "("; emit x; emitLn ");"
+  emitLhs z; emitBoxFn xType; emit "(%"; emit x; emitLn ") : ";
+  emit "("; emit "i32"; emit ") -> (!lz.value)"; emit "\n"
 
 def emitUnbox (z : VarId) (t : IRType) (x : VarId) : M Unit := do
   emitLhs z;
@@ -733,8 +734,11 @@ def emitVDecl (z : VarId) (t : IRType) (v : Expr)  (tys: HashMap VarId IRType) :
   | Expr.ap x ys        =>  do
      emitLn "// Err: Expr.ap"; 
      emitApp z x ys tys
-  | Expr.box t x        => panicM "// ERR: Expr.box" -- emitBox z x t
-  | Expr.unbox x        => do
+  | Expr.box t x        => do
+    emitLn "// ERR: Expr.box"
+    emitBox z x t
+  |
+   Expr.unbox x        => do
     emitLn "// ERR: Expr.unbox"
     emitUnbox z t x
   | Expr.isShared x     => panicM  "// ERR: Expr.isShared" -- emitIsShared z x
@@ -947,7 +951,7 @@ partial def emitBlock (b : FnBody) (tys: HashMap VarId IRType) : M Unit := do
     emitLn "// ERR: FnBody.case"
     emitCase x xType alts tys
   | FnBody.jmp j xs            => do
-      -- emitLn "// ERR: FnBody.jmp"
+      emitLn "// ERR: FnBody.jmp"
       emitJmp j xs tys
   | FnBody.unreachable         => 
     emitLn "// ERR: FnBody.unreachable" -- emitLn "lean_internal_panic_unreachable();"
