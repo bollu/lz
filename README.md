@@ -111,6 +111,51 @@ kernel/type_checker.cpp
 ```
 
 
+I now remember my mental model that I had forgotten:
+Join points are awkward since we can `jmp` from anywhere, including a `case`. So LEAN can generate
+code that looks like:
+
+```llvm
+joinpoint {
+  // stuff that runs after a jmp
+}, {
+ // stuff that runs first
+
+ %out = case x of 
+   [@Foo -> {
+        ...
+        jmp
+   }]
+   [@Bar -> {
+        ...
+        return 42 (?)
+   }]
+}
+```
+
+This makes CFG generation SUPER awkward, since we generally generate a `case`
+as a ladder of `if-then-else` [due to the lack of `mlir.llvm.switch` in MLIR].
+So now, we need to generate the equivalent of:
+
+
+```cpp
+out = undef;
+if (x.tag == FOO) {
+  goto jp; // joinpoint
+} else if (x.tag == BAR) {
+  ...
+  out = 42
+}
+
+
+jp:
+ ...
+```
+
+I'm now double-checking that my mental model indeed matches reality, because
+this seems very convoluted.
+
+
 # May 4
 
 - Experimenting with LLVM, [trying to understand what example of mutual recursion is useful](https://gist.github.com/bollu/1da616fb3cd13501f1fdb3c44d4370be#file-main-o3-ll-L97-L109).

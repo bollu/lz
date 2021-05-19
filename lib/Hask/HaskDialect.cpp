@@ -64,6 +64,7 @@ HaskDialect::HaskDialect(mlir::MLIRContext *context)
     , DecOp
     , ErasedValueOp
     , HaskJoinPointOp
+    , HaskJumpOp
     , HaskCaseRetOp
     , HaskCaseIntRetOp
     , ReuseConstructorOp
