@@ -605,7 +605,7 @@ class HaskJoinPointOp
                 OpTrait::NRegions<2>::Impl, OpTrait::IsTerminator> {
 public:
   using Op::Op;
-  static StringRef getOperationName() { return "lz.block"; };
+  static StringRef getOperationName() { return "lz.joinpoint"; };
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   void print(OpAsmPrinter &p);
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
