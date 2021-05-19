@@ -61,6 +61,56 @@
 # Log:  [newest] to [oldest]
 
 
+# May 19th
+
+```
+src/shell/lean
+add_executable(lean lean.cpp)
+```
+
+which calls `run_new_frontend`. This gets a `pair_ref<environment, object_ref>`.,
+which is then passed to `cout << lean::ir::emit_c(env, *main_module_name).data();`
+So the call to the type checker must happen somewhere in the fronend after elaboration.
+Where? Also, there is a `src/Lean/Meta/{Basic.lean,InferType.lean}` that seems to contain
+everything needed to implement NbE / type checking / inference. So I don't really understand
+where the LEAN kernel interfaces. I found a part of the link by looking for `is_def_eq` as
+it is part of the public facing API of the type checker:
+
+```
+Lean/Environment.lean
+namespace Kernel
+/- Kernel API -/
+
+/--
+  Kernel isDefEq predicate. We use it mainly for debugging purposes.
+  Recall that the Kernel type checker does not support metavariables.
+  When implementing automation, consider using the `MetaM` methods. -/
+@[extern "lean_kernel_is_def_eq"]
+constant isDefEq (env : Environment) (lctx : LocalContext) (a b : Expr) : Bool
+
+/--
+  Kernel WHNF function. We use it mainly for debugging purposes.
+  Recall that the Kernel type checker does not support metavariables.
+  When implementing automation, consider using the `MetaM` methods. -/
+@[extern "lean_kernel_whnf"]
+constant whnf (env : Environment) (lctx : LocalContext) (a : Expr) : Expr
+
+end Kernel
+```
+Grepping for uses of `lean_kernel_` gave me just this:
+
+```
+/home/bollu/work/lean4/src$ ag "lean_kernel_"
+Lean/Environment.lean
+689:@[extern "lean_kernel_is_def_eq"]
+696:@[extern "lean_kernel_whnf"]
+
+kernel/type_checker.cpp
+1019:extern "C" uint8 lean_kernel_is_def_eq(lean_object * env, lean_object * lctx, lean_object * a, lean_object * b) {
+1023:extern "C" lean_object * lean_kernel_whnf(lean_object * env, lean_object * lctx, lean_object * a) {
+```
+
+
 # May 4
 
 - Experimenting with LLVM, [trying to understand what example of mutual recursion is useful](https://gist.github.com/bollu/1da616fb3cd13501f1fdb3c44d4370be#file-main-o3-ll-L97-L109).
