@@ -193,6 +193,50 @@ The problem with the code above is that I can't assume that the correct way to
 codegen a `case` is to (1) produce a switch-case (2) set "output" variable to
 value (3) merge control flow back into landingpad BB.
 
+```llvm
+// after converting `caseRet` into `case:
+"lz.joinpoint"() ( {
+^bb0(%arg1: !lz.value):  // no predecessors
+  %3 = "lz.case"(%2) ( {
+    %4 = "ptr.loadglobal"() {value = @l_Expr_eval___closed__1} : () -> !lz.value
+    lz.return %4 : !lz.value
+  },  {
+    %4 = "ptr.loadglobal"() {value = @l_Expr_eval___closed__1} : () -> !lz.value
+    lz.return %4 : !lz.value
+  },  {
+    %4 = "ptr.loadglobal"() {value = @l_Expr_eval___closed__2} : () -> !lz.value
+    lz.return %4 : !lz.value
+  }) {alt0 = @"0", alt1 = @"1", alt2 = @"2"} : (!lz.value) -> !lz.value
+  lz.return %3 : !lz.value
+},  {
+  %3 = "lz.case"(%1) ( {
+    %4 = "lz.construct"() {dataconstructor = @"0", size = 0 : i64} : () -> !lz.value
+    // vvv case is supposed to end with a `ret`, not a `jump`.
+    "lz.jump"(%4) {value = 8 : i64} : (!lz.value) -> () // <- DOES NOT MAKE SENSE
+  },  {
+    %4 = "lz.construct"() {dataconstructor = @"0", size = 0 : i64} : () -> !lz.value
+    // vvv case is supposed to end with a `ret`, not a `jump`.
+    "lz.jump"(%4) {value = 8 : i64} : (!lz.value) -> () // <- DOES NOT MAKE SENSE
+  },  {
+    %4 = "lz.case"(%2) ( {
+      %5 = "ptr.loadglobal"() {value = @l_Expr_eval___closed__3} : () -> !lz.value
+      lz.return %5 : !lz.value
+    },  {
+      %5 = "ptr.loadglobal"() {value = @l_Expr_eval___closed__3} : () -> !lz.value
+      lz.return %5 : !lz.value
+    },  {
+      %5 = "ptr.loadglobal"() {value = @l_Expr_eval___closed__2} : () -> !lz.value
+      lz.return %5 : !lz.value
+    }) {alt0 = @"0", alt1 = @"1", alt2 = @"2"} : (!lz.value) -> !lz.value
+    lz.return %4 : !lz.value
+  }) {alt0 = @"0", alt1 = @"1", alt2 = @"2"} : (!lz.value) -> !lz.value
+  lz.return %3 : !lz.value
+}) : () -> ()
+```
+
+See that the above does not make sense. I need to either change a `jump` into
+an instruction that generates into a `call` or something. However, then I don't
+understand how to deal with local variables/scoping.
 
 
 # May 4
