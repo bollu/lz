@@ -867,7 +867,7 @@ struct Interpreter {
       return TerminatorResult(br.dest());
     }
 
-    if (auto blockop = dyn_cast<standalone::HaskBlockOp>(op)) {
+    if (auto blockop = dyn_cast<standalone::HaskJoinPointOp>(op)) {
       Optional<InterpValue> retval = interpretRegion(blockop.getFirstRegionWithJmp(), {}, env);
       assert(retval && "block operation expects return value.");
       return TerminatorResult(*retval);
@@ -877,7 +877,7 @@ struct Interpreter {
     // something that regions help make precise!
     // vvv TODO: need to figure out what we do with blockIx
     if (auto jumpop = dyn_cast<standalone::HaskJumpOp>(op)) {
-      standalone::HaskBlockOp parent = jumpop->getParentOfType<standalone::HaskBlockOp>();
+      standalone::HaskJoinPointOp parent = jumpop->getParentOfType<standalone::HaskJoinPointOp>();
       assert(parent && "jumpop must be surrounded by parent.");
       InterpValue arg = env.lookup(jumpop->getLoc(), jumpop.getOperand());
       Optional<InterpValue> retval = interpretRegion(parent.getLaterJumpedIntoRegion(), {arg}, env);

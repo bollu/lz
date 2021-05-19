@@ -600,8 +600,8 @@ public:
 // for lambdapure
 // first mirror whatever the fuck the original lowering does. Then find "better
 // encodings".
-class HaskBlockOp
-    : public Op<HaskBlockOp, OpTrait::ZeroOperands, OpTrait::ZeroResult,
+class HaskJoinPointOp
+    : public Op<HaskJoinPointOp, OpTrait::ZeroOperands, OpTrait::ZeroResult,
                 OpTrait::NRegions<2>::Impl, OpTrait::IsTerminator> {
 public:
   using Op::Op;

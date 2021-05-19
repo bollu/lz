@@ -1050,18 +1050,18 @@ void ErasedValueOp::print(OpAsmPrinter &p) {
   return;
 };
 
-// === HaskBlockOp OP ===
-// === HaskBlockOp OP ===
-// === HaskBlockOp OP ===
-// === HaskBlockOp OP ===
-// === HaskBlockOp OP ===
+// === HaskJoinPointOp OP ===
+// === HaskJoinPointOp OP ===
+// === HaskJoinPointOp OP ===
+// === HaskJoinPointOp OP ===
+// === HaskJoinPointOp OP ===
 
-ParseResult HaskBlockOp::parse(OpAsmParser &parser, OperationState &result) {
+ParseResult HaskJoinPointOp::parse(OpAsmParser &parser, OperationState &result) {
   assert(false && "unimplemented");
 };
-void HaskBlockOp::print(OpAsmPrinter &p) { p.printGenericOp(*this); };
+void HaskJoinPointOp::print(OpAsmPrinter &p) { p.printGenericOp(*this); };
 
-void HaskBlockOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
+void HaskJoinPointOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
                         int blockIx) {
   state.addRegion();
   state.addRegion();

@@ -1215,19 +1215,19 @@ struct HaskReturnOpConversionPattern : public mlir::ConversionPattern {
   }
 };
 
-class HaskBlockOpLowering : public ConversionPattern {
+class HaskJoinPointOpLowering : public ConversionPattern {
 private:
   HaskTypeConverter &tc;
 
 public:
-  explicit HaskBlockOpLowering(HaskTypeConverter &tc, MLIRContext *context)
-      : ConversionPattern(HaskBlockOp::getOperationName(), 1, tc, context),
+  explicit HaskJoinPointOpLowering(HaskTypeConverter &tc, MLIRContext *context)
+      : ConversionPattern(HaskJoinPointOp::getOperationName(), 1, tc, context),
         tc(tc) {}
 
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> rands,
                   ConversionPatternRewriter &rewriter) const override {
-    HaskBlockOp blkop = cast<HaskBlockOp>(op);
+    HaskJoinPointOp blkop = cast<HaskJoinPointOp>(op);
 
     // block { ^entry(param): do_stuff } { ... jump(params) }
     rewriter.setInsertionPoint(blkop);
@@ -1242,7 +1242,7 @@ public:
     blkop.getFirstRegionWithJmp().walk([&](HaskJumpOp jmp) {
       // TODO: do this in a way that we only recurse into regions upto the
       //  next blkop.
-      // if (jmp->getParentOfType<HaskBlockOp>() != blkop) { return WalkResult::skip(); }
+      // if (jmp->getParentOfType<HaskJoinPointOp>() != blkop) { return WalkResult::skip(); }
       rewriter.setInsertionPoint(jmp);
       rewriter.replaceOpWithNewOp<ReturnOp>(jmp, jmp->getOperands());
       // rewriter.replaceOpWithNewOp<BranchOp>(jmp, jmp->getOperands(), &blkop.getLaterJumpedIntoRegion().front());
@@ -1252,7 +1252,7 @@ public:
     /*
     // laterRegion --> end
     blkop.getLaterJumpedIntoRegion().walk([&](HaskReturnOp ret) {
-      if (ret->getParentOfType<HaskBlockOp>() != blkop) { return WalkResult::skip(); }
+      if (ret->getParentOfType<HaskJoinPointOp>() != blkop) { return WalkResult::skip(); }
       rewriter.setInsertionPoint(ret);
       rewriter.replaceOpWithNewOp<BranchOp>(ret, ret->getOperands(),  end);
       return WalkResult::advance();
@@ -1988,7 +1988,7 @@ struct LowerLeanPass : public Pass {
     patterns.insert<PapExtendOpLowering>(typeConverter, &getContext());
     patterns.insert<PapOpLowering>(typeConverter, &getContext());
     patterns.insert<HaskStringConstOpLowering>(typeConverter, &getContext());
-    patterns.insert<HaskBlockOpLowering>(typeConverter, &getContext());
+    patterns.insert<HaskJoinPointOpLowering>(typeConverter, &getContext());
 
 
 

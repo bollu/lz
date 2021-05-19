@@ -1454,8 +1454,8 @@ private:
     std::tie(var, argty) = blockAST.getArg();
 
     // new scope for this blockAST.
-    standalone::HaskBlockOp op =
-        builder.create<standalone::HaskBlockOp>(loc(), blockAST.getBlockId());
+    standalone::HaskJoinPointOp op =
+        builder.create<standalone::HaskJoinPointOp>(loc(), blockAST.getBlockId());
     mlir::Region &innerRegion = op.getLaterJumpedIntoRegion();
     Block *innerBB = builder.createBlock(&innerRegion, {}, {typeGen(argty)});
     builder.setInsertionPointToEnd(innerBB);
