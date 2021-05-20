@@ -28,6 +28,45 @@ inductive Expr
 namespace Expr
 open Nat
 
+def eval : Expr -> Expr
+ | Add _ (Val _) => Val 0
+ | Add (Val _) e => Val 1
+ |  x            => Val 2
+
+
+-- def eval (e: Expr) -> Expr
+-- case e of
+--   Add x y -> 
+--      case y of
+--         Val -> Val 0
+--         _ -> case x of
+--                 Val -> Val 1
+--                 Foo _ -> Val 2 -- repeated case
+--                 Add _ _ -> Val 2 -- repeated case
+--    _ -> Val 2 -- repeated case
+--   Foo _ -> Val 2 -- REPEAT
+--   Val _ -> Val 2 -- REPEAT
+--  
+
+--  | Add e (Val b) => Val 0
+--  | Add (Val b) e => Val 1
+--  |  x            => Val 2
+-- 
+
+def toNat : Expr -> Nat
+ | Val v => v
+ | _ => 420
+ 	
+end Expr
+open Expr
+-- | Check output to be 0, 1, 2
+
+unsafe def main (xs: List String) : IO Unit := do
+  IO.println (toString (toNat (eval (Add (Foo 1) (Val 2)))));
+  IO.println (toString (toNat (eval (Add (Val 1) (Foo 2)))));
+  IO.println (toString (toNat (eval (Add (Foo 1) (Foo 2)))));
+
+
 -- def Expr.eval (arg : obj) : obj :=
 -- | case arg : obj of
 -- | Expr.Add → // arg = Add ...
@@ -68,25 +107,3 @@ open Nat
 -- | Expr.Val → // Val 
 -- | | let cl1 : obj := Expr.eval._closed_1; // 2
 -- | | ret cl1
-
-
-
-def eval : Expr -> Expr
- | Add e (Val b) => Val 0
- | Add (Val b) e => Val 1
- |  x            => Val 2
-
-
-def toNat : Expr -> Nat
- | Val v => v
- | _ => 420
- 	
-end Expr
-open Expr
--- | Check output to be 0, 1, 2
-
-unsafe def main (xs: List String) : IO Unit := do
-  IO.println (toString (toNat (eval (Add (Foo 1) (Val 2)))));
-  IO.println (toString (toNat (eval (Add (Val 1) (Foo 2)))));
-  IO.println (toString (toNat (eval (Add (Foo 1) (Foo 2)))));
-
