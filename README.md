@@ -236,7 +236,39 @@ value (3) merge control flow back into landingpad BB.
 
 See that the above does not make sense. I need to either change a `jump` into
 an instruction that generates into a `call` or something. However, then I don't
-understand how to deal with local variables/scoping.
+understand how to deal with local variables/scoping. For example,
+this is generated from `./test/lambdapure/bench/const_fold.lean`, the first
+`joinpoint` use:
+
+```
+%1 = "lz.project"(%arg1) {value = 0 : i64} : (!lz.value) -> !lz.value
+%2 = "lz.project"(%arg1) {value = 1 : i64} : (!lz.value) -> !lz.value
+"lz.joinpoint"() ( {
+^bb0(%arg6: !lz.value):  // no predecessors
+  // vvvvUSE of %2 inside the joinpoint BB. vvvv
+  "lz.caseRet"(%2) ( { 
+    %3 = "lz.papExtend"(%arg5, %arg0, %arg1) : (!lz.value, !lz.value, !lz.value) -> !lz.value
+    lz.return %3 : !lz.value
+  },  {
+    %3 = "lz.project"(%2) {value = 0 : i64} : (!lz.value) -> !lz.value
+    %4 = "lz.papExtend"(%arg3, %0, %1, %3) : (!lz.value, !lz.value, !lz.value, !lz.value) -> !lz.value
+    lz.return %4 : !lz.value
+  },  {
+    %3 = "lz.papExtend"(%arg5, %arg0, %arg1) : (!lz.value, !lz.value, !lz.value) -> !lz.value
+    lz.return %3 : !lz.value
+  },  {
+    %3 = "lz.papExtend"(%arg5, %arg0, %arg1) : (!lz.value, !lz.value, !lz.value) -> !lz.value
+    lz.return %3 : !lz.value
+  }) : (!lz.value) -> ()
+},  {
+  ...
+}
+```
+
+I think the simplest way to proceed is to assume that case does not need to return a value,
+and simply generate code as nested cases. This makes me somewhat disgruntled, since we 
+essentially lose all SSA niceness. We are like, encoding the continuation-style directly
+using nested regions or whatever?
 
 
 # May 4
