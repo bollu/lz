@@ -60,9 +60,13 @@ macro_rules
 | `(module $name [ $inst ]) => `(MLIRModule.mk $name [$inst])
 
 -- | I can't use the syntax '=' for whatever reason in the binding.
-prefix:300 "%" => SSAVal.mk
+-- prefix:300 "%" => SSAVal.mk
+
+
+syntax "%" term:300 : term
+-- TODO: what is the difference between the above and 
 -- syntax:300 "%" term : term
--- macro_rules | `(% $a) => `(SSAVal.mk $a)
+macro_rules | `(% $a) => `(SSAVal.mk $a)
 
 
 syntax:30 (name := bindingkv) term "=:=" term : term

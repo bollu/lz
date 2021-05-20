@@ -60,6 +60,111 @@
 
 # Log:  [newest] to [oldest]
 
+# May 20th, list of jumps:
+
+
+- occruences of `mkJmp` in `src/`:
+```
+Lean/Compiler/IR/Basic.lean
+288:@[export lean_ir_mk_jmp] def mkJmp (j : JoinPointId) (ys : Array Arg) : FnBody := FnBody.jmp j ys
+
+Lean/Elab/Do.lean
+302:def mkJmp (ref : Syntax) (rs : NameSet) (val : Syntax) (mkJPBody : Syntax → MacroM Code) : StateRefT (Array JPDecl) TermElabM Code := do
+325:  | rs, Code.«return» ref val      => mkJmp ref rs val (fun y => pure $ Code.«return» ref y)
+330:      mkJmp ref rs y (fun yFresh => do pure $ Code.action (← `(Pure.pure $yFresh)))
+978:def mkJmp (ref : Syntax) (j : Name) (args : Array Syntax) : Syntax :=
+987:  | Code.jmp ref j args     => pure $ mkJmp ref j args
+/home/bollu/work/lean4/src$ ag "lean_ir_mk_jmp"
+Lean/Compiler/IR/Basic.lean
+288:@[export lean_ir_mk_jmp] def mkJmp (j : JoinPointId) (ys : Array Arg) : FnBody := FnBody.jmp j ys
+
+library/compiler/ir.cpp
+39:extern "C" object * lean_ir_mk_jmp(object * j, object * ys);
+87:    return fn_body(lean_ir_mk_jmp(j.to_obj_arg(), to_array(ys)));
+```
+
+- occruences of `jmp` in `src/`
+```
+Lean/Compiler/IR/OldFormatMLIR.lean:--   | FnBody.jmp j ys            => "jmp " ++ format j ++ formatArray ys
+Lean/Compiler/IR/OldFormatMLIR.lean:--     | FnBody.jmp j ys            => (escape "lz.jump") ++ "("  ++ formatArray ys ++ ")"
+Lean/Compiler/IR/ResetReuse.lean:       then it must also live in `b` since `j` is reachable from `b` with a `jmp`.
+Lean/Compiler/IR/ResetReuse.lean:           since `instr` is not a `FnBody.jmp` (it is not a terminal) nor it is a `FnBody.jdecl`. -/
+Lean/Compiler/IR/RC.lean:  | b@(FnBody.jmp j xs), ctx =>
+Lean/Compiler/IR/EmitC.lean:  | FnBody.jmp j xs            => emitJmp j xs
+Lean/Compiler/IR/Checker.lean:  | FnBody.jmp j ys         => checkJP j *> checkArgs ys
+Lean/Compiler/IR/FreeVars.lean:  | FnBody.jmp j ys         => collectJP j >> collectArgs ys
+Lean/Compiler/IR/FreeVars.lean:  | FnBody.jmp j ys         => collectJP j >> collectArgs ys
+Lean/Compiler/IR/FreeVars.lean:  | FnBody.jmp j ys         => visitJP w j || visitArgs w ys
+Lean/Compiler/IR/NormIds.lean:  | FnBody.jmp j ys        => return FnBody.jmp (← normJP j) (← normArgs ys)
+Lean/Compiler/IR/NormIds.lean:  | FnBody.jmp j ys              => FnBody.jmp j (mapArgs f ys)
+Lean/Compiler/IR/Boxing.lean:  | FnBody.jmp j ys          => do
+Lean/Compiler/IR/Boxing.lean:    castArgsIfNeeded ys ps fun ys => pure $ FnBody.jmp j ys
+Lean/Compiler/IR/Format.lean:  | FnBody.jmp j ys            => "jmp " ++ format j ++ formatArray ys
+Lean/Compiler/IR/Format.lean:    | FnBody.jmp j ys            => "jmp " ++ format j ++ formatArray ys
+Lean/Compiler/IR/LiveVars.lean:   jmp block_1 x
+Lean/Compiler/IR/LiveVars.lean:  | FnBody.jmp j ys         => visitArgs w ys <||> do
+Lean/Compiler/IR/LiveVars.lean:   `FnBody.jmp j ys` and `j` is not local. -/
+Lean/Compiler/IR/LiveVars.lean:  | FnBody.jmp j xs,         m => collectJP m j ∘ collectArgs xs
+Lean/Compiler/IR/EmitMLIR.lean:  | FnBody.jmp j xs            => do
+Lean/Compiler/IR/EmitMLIR.lean:      emitLn "// ERR: FnBody.jmp"
+Lean/Compiler/IR/Basic.lean:  | jmp (j : JoinPointId) (ys : Array Arg)
+Lean/Compiler/IR/Basic.lean:@[export lean_ir_mk_jmp] def mkJmp (j : JoinPointId) (ys : Array Arg) : FnBody := FnBody.jmp j ys
+Lean/Compiler/IR/Basic.lean:  | FnBody.jmp _ _       => true
+Lean/Compiler/IR/Basic.lean:  | ρ, FnBody.jmp j₁ ys₁,             FnBody.jmp j₂ ys₂             => j₁ == j₂ && aeqv ρ ys₁ ys₂
+Lean/Compiler/IR/ElimDeadBranches.lean:  | FnBody.jmp j xs => do
+Lean/Compiler/IR/Borrow.lean:  | FnBody.jmp j ys      => do
+library/compiler/ir.cpp:extern "C" object * lean_ir_mk_jmp(object * j, object * ys);
+library/compiler/ir.cpp:fn_body mk_jmp(jp_id const & j, buffer<arg> const & ys) {
+library/compiler/ir.cpp:    return fn_body(lean_ir_mk_jmp(j.to_obj_arg(), to_array(ys)));
+library/compiler/ir.cpp:    static bool is_jmp(expr const & e) {
+library/compiler/ir.cpp:        return is_llnf_jmp(get_app_fn(e));
+library/compiler/ir.cpp:    ir::fn_body visit_jmp(expr const & e) {
+library/compiler/ir.cpp:        return ir::mk_jmp(to_jp_id(jp), ir_args);
+library/compiler/ir.cpp:        } else if (is_jmp(e)) {
+library/compiler/ir.cpp:            return visit_jmp(e);
+library/compiler/llnf.cpp:static expr * g_jmp         = nullptr;
+library/compiler/llnf.cpp:/* The `_jmp` instruction is a "jump" to a join point. */
+library/compiler/llnf.cpp:expr mk_llnf_jmp() { return *g_jmp; }
+library/compiler/llnf.cpp:bool is_llnf_jmp(expr const & e) { return e == *g_jmp; }
+library/compiler/llnf.cpp:        is_llnf_jmp(e)     ||
+library/compiler/llnf.cpp:                return mk_app(mk_app(mk_llnf_jmp(), fn), args);
+library/compiler/llnf.cpp:    g_jmp       = new expr(mk_constant("_jmp"));
+library/compiler/llnf.cpp:    mark_persistent(g_jmp->raw());
+library/compiler/llnf.cpp:    delete g_jmp;
+library/compiler/cse.cpp:    expr replace_target(expr const & e, expr const & target, expr const & jmp) {
+library/compiler/cse.cpp:                    return some_expr(jmp);
+library/compiler/cse.cpp:        buffer<pair<expr, expr>> target_jmp_pairs;
+library/compiler/cse.cpp:                expr jmp         = mk_app(new_fvar, unit_mk);
+library/compiler/cse.cpp:                            target_jmp_pairs.emplace_back(target, jmp);
+library/compiler/cse.cpp:                body = replace_target(body, target, jmp);
+library/compiler/cse.cpp:        if (is_let && !target_jmp_pairs.empty()) {
+library/compiler/cse.cpp:                    for (pair<expr, expr> const & p : target_jmp_pairs) {
+library/compiler/llnf.h:bool is_llnf_jmp(expr const & e);
+library/compiler/ir_interpreter.cpp:jp_id const & fn_body_jmp_jp(fn_body const & b) { lean_assert(fn_body_tag(b) == fn_body_kind::Jmp); return cnstr_get_ref_t<jp_id>(b, 0); }
+library/compiler/ir_interpreter.cpp:array_ref<arg> const & fn_body_jmp_args(fn_body const & b) { lean_assert(fn_body_tag(b) == fn_body_kind::Jmp); return cnstr_get_ref_t<array_ref<arg>>(b, 1); }
+library/compiler/ir_interpreter.cpp:                    fn_body const & jp = *m_jp_stack[get_frame().m_jp_bp + fn_body_jmp_jp(b).get_small_value()];
+library/compiler/ir_interpreter.cpp:                    lean_assert(fn_body_jdecl_params(jp).size() == fn_body_jmp_args(b).size());
+library/compiler/ir_interpreter.cpp:                        var(param_var(fn_body_jdecl_params(jp)[i])) = eval_arg(fn_body_jmp_args(b)[i]);
+Lean/Elab/Do.lean:  - `jmp`       a goto to a join-point
+Lean/Elab/Do.lean:  - For every `jmp ref j as` in `C`, there is a `joinpoint j ps b k` and `jmp ref j as` is in `k`, and
+Lean/Elab/Do.lean:  | jmp          (ref : Syntax) (jpName : Name) (args : Array Syntax)
+Lean/Elab/Do.lean:    | Code.jmp _ j xs             => m!"jmp {j.simpMacroScopes} {xs.toList}"
+Lean/Elab/Do.lean:    | Code.jmp _ _ _          => false
+Lean/Elab/Do.lean:/- Convert `action _ e` instructions in `c` into `let y ← e; jmp _ jp (xs y)`. -/
+Lean/Elab/Do.lean:      let jmpArgs := xs.map $ mkIdentFrom ref
+Lean/Elab/Do.lean:      let jmpArgs := jmpArgs.push y
+Lean/Elab/Do.lean:      pure $ Code.jmp ref jp jmpArgs
+Lean/Elab/Do.lean:    return Code.jmp ref jp #[unit]
+Lean/Elab/Do.lean:    return Code.jmp ref jp (xs.map $ mkIdentFrom ref)
+Lean/Elab/Do.lean:  pure $ Code.jmp ref jp args
+Lean/Elab/Do.lean:  | rs, c@(Code.jmp _ _ _)         => pure c
+Lean/Elab/Do.lean:jmp jp x
+Lean/Elab/Do.lean:jmp jp x
+Lean/Elab/Do.lean:jmp jp y x
+Lean/Elab/Do.lean:   and replace the `return _ y` with `jmp us y`
+Lean/Elab/Do.lean:   and replace the `break` with `jmp us`.
+Lean/Elab/Do.lean:  | Code.jmp ref j args     => pure $ mkJmp ref j args
+```
 
 # May 19th
 
