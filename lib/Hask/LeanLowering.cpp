@@ -1791,139 +1791,122 @@ public:
                                       MLIRContext *context)
       : ConversionPattern(HaskCaseIntRetOp::getOperationName(), 1, tc, context) {}
 
-  // return the order in which we should generate case alts.
-  static std::vector<int> getAltGenerationOrder(HaskCaseIntRetOp caseop) {
-    std::vector<int> ixs;
-    llvm::Optional<int> defaultix = caseop.getDefaultAltIndex();
-    for (int i = 0; i < caseop.getNumAlts(); ++i) {
-      if (defaultix && *defaultix == i) {
-        continue;
-      }
-      ixs.push_back(i);
-    }
-    if (defaultix) {
-      ixs.push_back(*defaultix);
-    }
-    return ixs;
-  }
 
-  // fill the region `out` with the ith RHS of the caseop.
-  void genCaseAltRHS(Region *out, HaskCaseIntRetOp caseop, Value scrutinee, int i,
-                     ConversionPatternRewriter &rewriter) const {
-    assert(out->args_empty());
-    assert(out->getBlocks().size() == 1);
-    llvm::SmallVector<Value, 4> rhsVals;
 
-    assert(caseop.getAltRHS(i).getNumArguments() <= 1);
+   // fill the region `out` with the ith RHS of the caseop.
+   void genCaseAltRHS(Region *out, CaseIntOp caseop, int i,
+                      ConversionPatternRewriter &rewriter) const {
+     assert(out->args_empty());
+     assert(out->getBlocks().size() == 1);
+     llvm::SmallVector<Value, 4> rhsVals;
 
-    if (caseop.getAltRHS(i).getNumArguments() == 1) {
-      // Type ty = tc.convertType(caseop.getAltRHS(i).getArgument(0).getType());
-      rewriter.setInsertionPointToEnd(&out->front());
-      // Value arg = tc.fromVoidPointer(rewriter, scrutinee, ty);
-      rhsVals.push_back(scrutinee);
-    };
-    Block *caseEntryBB = &caseop.getAltRHS(i).front();
-    assert(caseEntryBB);
-    rewriter.inlineRegionBefore(caseop.getAltRHS(i), *out, out->end());
-    rewriter.mergeBlocks(caseEntryBB, &out->getBlocks().front(), rhsVals);
-  }
+     assert(caseop.getAltRHS(i).getNumArguments() == 0);
+     Block *caseEntryBB = &caseop.getAltRHS(i).front();
+     assert(caseEntryBB);
+     rewriter.inlineRegionBefore(caseop.getAltRHS(i), *out, out->end());
+     rewriter.mergeBlocks(caseEntryBB, &out->getBlocks().front(), rhsVals);
+   }
 
-  // generate the order[i]th case alt of caseop, We need this `order` thing to
-  // make sure we generate the default case last. I guess we don't need it if we
-  // are sure that people always write the default case last? whatever.
-  scf::IfOp genCaseAlt(mlir::standalone::HaskCaseIntRetOp caseop, Value scrutinee,
-                       int i, const std::vector<int> &order,
-                       ConversionPatternRewriter &rewriter) const {
+   // generate the order[i]th case alt of caseop, We need this `order` thing
+   // to make sure we generate the default case last. I guess we don't need it if
+   // we are sure that people always write the default case last? whatever.
+   scf::IfOp genCaseAlt(mlir::standalone::CaseIntOp caseop, Value scrutinee,
+                        int i, int n,
+                        ConversionPatternRewriter &rewriter) const {
 
-    // check if equal
-    const bool hasNext = (i + 1 < (int)order.size());
+     // check if equal
+     const bool hasNext = (i + 1 < (int)n);
 
-    Value condition = [&]() {
-      if (hasNext) {
-        IntegerType ity = scrutinee.getType().cast<IntegerType>();
-        int64_t lhsint = caseop.getAltLHS(order[i])->getInt();
-        Value lhsConst =
-            rewriter.create<ConstantIntOp>(caseop.getLoc(), lhsint, ity);
+     Value condition = [&]() {
+       if (hasNext) {
+         llvm::errs() << "caseInt | i: " << i << "\n";
+         IntegerType ity = scrutinee.getType().cast<IntegerType>();
+         int64_t lhsint = caseop.getAltLHS(i)->getInt();
+         llvm::errs() << "caseInt | i: " << i << " |lhsint: " << lhsint << "\n";
+         Value lhsConst =
+             rewriter.create<ConstantIntOp>(caseop.getLoc(), lhsint, ity);
 
-        CmpIOp isEq = rewriter.create<CmpIOp>(
-            caseop.getLoc(), CmpIPredicate::eq, scrutinee, lhsConst);
-        return isEq.getResult();
-      } else {
-        Value True = rewriter.create<ConstantOp>(
-            rewriter.getUnknownLoc(),
-            rewriter.getIntegerAttr(rewriter.getI1Type(), 1));
-        return True;
-      }
-    }();
+         CmpIOp isEq = rewriter.create<CmpIOp>(
+             caseop.getLoc(), CmpIPredicate::eq, scrutinee, lhsConst);
+         return isEq.getResult();
+       } else {
+         Value True = rewriter.create<ConstantOp>(
+             rewriter.getUnknownLoc(),
+             rewriter.getIntegerAttr(rewriter.getI1Type(), 1));
+         return True;
+       }
+     }();
 
-    // scf::IfOp ite = rewriter.create<mlir::scf::IfOp>(
-    //     caseop.getLoc(),
-    //     /*return types=*/
-    //     typeConverter->convertType(caseop.getResult().getType()),
-    //     /*cond=*/condition,
-    //     /* createelse=*/true);
-    
-    scf::IfOp ite = rewriter.create<mlir::scf::IfOp>(
-        caseop.getLoc(),
-        /*cond=*/condition,
-        /* createelse=*/true);
-    
-    rewriter.startRootUpdate(ite);
+    //  scf::IfOp ite = rewriter.create<mlir::scf::IfOp>(
+    //      caseop.getLoc(),
+    //      /*return types=*/
+    //      typeConverter->convertType(caseop.getResult().getType()),
+    //      /*cond=*/condition,
+    //      /* createelse=*/hasNext);
+     scf::IfOp ite = rewriter.create<mlir::scf::IfOp>(
+         caseop.getLoc(),
+         /*cond=*/condition,
+          /* createelse=*/hasNext);
+      
+     rewriter.startRootUpdate(ite);
 
-    // THEN
-    rewriter.setInsertionPointToStart(&ite.thenRegion().front());
-    genCaseAltRHS(&ite.thenRegion(), caseop, scrutinee, order[i], rewriter);
+     // THEN
+     rewriter.setInsertionPointToStart(&ite.thenRegion().front());
+    //  genCaseAltRHS(&ite.thenRegion(), caseop, order[i], rewriter);
+     genCaseAltRHS(&ite.thenRegion(), caseop, n, rewriter);
 
-    // ELSE
-    rewriter.setInsertionPointToStart(&ite.elseRegion().front());
-    if (hasNext) {
-      // scf::IfOp caseladder =
-          genCaseAlt(caseop, scrutinee, i + 1, order, rewriter);
+     // ELSE
+     if (hasNext) {
+       rewriter.setInsertionPointToStart(&ite.elseRegion().front());
+      //  scf::IfOp caseladder =
+      //      genCaseAlt(caseop, scrutinee, i + 1, order, rewriter);
+      genCaseAlt(caseop, scrutinee, i + 1, n, rewriter);
 
-      // rewriter.setInsertionPointAfter(caseladder);
-      // rewriter.create<scf::YieldOp>(rewriter.getUnknownLoc(),
-      //                               caseladder.getResults());
+      //  rewriter.setInsertionPointAfter(caseladder);
+      //  rewriter.create<scf::YieldOp>(rewriter.getUnknownLoc(),
+      //                                caseladder.getResults());
 
-    } else {
-      // auto undef = rewriter.create<ptr::PtrUndefOp>(
-      //     rewriter.getUnknownLoc(),
-      //     typeConverter->convertType(caseop.getResult().getType()));
-      // rewriter.create<scf::YieldOp>(rewriter.getUnknownLoc(),
-      //                               undef.getResult());
-      rewriter.create<scf::YieldOp>(rewriter.getUnknownLoc());
-    }
-    rewriter.finalizeRootUpdate(ite);
-    return ite;
-  }
+     }
+    //  else {
+    //    auto undef = rewriter.create<ptr::PtrUndefOp>(
+    //        rewriter.getUnknownLoc(),
+    //        typeConverter->convertType(caseop.getResult().getType()));
+    //    rewriter.create<scf::YieldOp>(rewriter.getUnknownLoc(),
+    //                                  undef.getResult());
+    //  }
+     rewriter.finalizeRootUpdate(ite);
+     return ite;
+   }
 
-  LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> rands,
-                  ConversionPatternRewriter &rewriter) const override {
-    HaskCaseIntRetOp caseop = cast<HaskCaseIntRetOp>(op);
+   LogicalResult
+   matchAndRewrite(Operation *op, ArrayRef<Value> rands,
+                   ConversionPatternRewriter &rewriter) const override {
+     CaseIntOp caseop = cast<CaseIntOp>(op);
 
-    assert(rands.size() == 1);
+     assert(rands.size() == 1);
 
-    rewriter.setInsertionPointAfter(op);
-    const std::vector<int> order = getAltGenerationOrder(caseop);
-    scf::IfOp caseladder = genCaseAlt(caseop, rands[0], 0, order, rewriter);
-    llvm::errs() << "vvvvvvcase int op (before)vvvvvv\n";
-    caseop.dump();
-    llvm::errs() << "======case int op (after)======\n";
-    caseladder.print(llvm::errs(),
-                     mlir::OpPrintingFlags().printGenericOpForm());
-    llvm::errs() << "\n^^^^^^^^^caseIntop[before/after]^^^^^^^^^\n";
+     rewriter.setInsertionPoint(op);
+    //  scf::IfOp caseladder = genCaseAlt(caseop, rands[0], 0, caseop.getNumAlts(), rewriter);
+    genCaseAlt(caseop, rands[0], 0, caseop.getNumAlts(), rewriter);
+    //  llvm::errs() << "vvvvvvcase int op (before)vvvvvv\n";
+    //  caseop.dump();
+    //  llvm::errs() << "======case int op (after)======\n";
+    //  caseladder.print(llvm::errs(),
+    //                   mlir::OpPrintingFlags().printGenericOpForm());
+    //  llvm::errs() << "\n^^^^^^^^^caseIntop[before/after]^^^^^^^^^\n";
 
-    // caseop.getResult().replaceAllUsesWith(caseladder.getResult(0));
-    // rewriter.eraseOp(caseop);
-    rewriter.replaceOp(caseop, caseladder.getResults());
+     // caseop.getResult().replaceAllUsesWith(caseladder.getResult(0));
+     rewriter.eraseOp(caseop);
+    //  rewriter.replaceOp(caseop, caseladder.getResults());
 
-    llvm::errs() << "\nvvvvvvcase op module [after inline]vvvvvv\n";
-    caseladder->getParentOfType<ModuleOp>().print(
-        llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
-    llvm::errs() << "\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
+    //  llvm::errs() << "\nvvvvvvcase op module [after inline]vvvvvv\n";
+    //  caseladder->getParentOfType<ModuleOp>().print(
+    //      llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
+    //  llvm::errs() << "\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
 
-    return success();
-  }
+     return success();
+   }
+
 }; // HaskCaseIntRetOp end
 
 
