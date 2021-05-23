@@ -72,6 +72,32 @@ What is the return type of a `lz.caseRet`? So far, I was doing weird
 shit like looking at the case branch. Maybe it's possible to do this in some
 other way?
 
+[WIP] give up on SCF.if
+
+The `SCF.if` by default inserts a `scf.yield` which is first of all
+annoying.
+
+Furthermore, the problem is that `scf.if` creates a region from which
+we need to region values from. This complicates basically everything
+about generating code, because I can't generate code with the semantics:
+
+```
+int foo(int x) {
+    if (x == 1) { return -1; }
+    if (x == 2) { return -2; }
+    return -42;
+}
+```
+
+because `return` can only return from a *region*, not escape out of an enclosing region. We would
+need this power to be able to useful things.
+
+I'm gonna say fuck this and just directly
+generate BBs.
+
+Seriously, LLVM is JUST BETTER!
+
+
 # May 20th, list of jumps:
 
 - occruences of `mkJmp` in `src/`:
