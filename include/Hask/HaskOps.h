@@ -652,29 +652,16 @@ public:
 
    Value getScrutinee() { return this->getOperation()->getOperand(0); }
   int getNumAlts() { return this->getOperation()->getNumRegions(); }
-  Region &getAltRHS(int i) { return this->getOperation()->getRegion(i); }
-  Region &getDefaultRHS() {
-    assert(this->getDefaultAltIndex().hasValue());
-    return this->getAltRHS(*this->getDefaultAltIndex());
+  Region &getAltRHS(int i) {
+     assert(i < getNumAlts());
+     return this->getOperation()->getRegion(i);
   }
 
-  llvm::Optional<int> getAltIndexForConstInt(int constval) {
-    for (int i = 0; i < this->getNumAlts(); ++i) {
-      Optional<IntegerAttr> iattr = this->getAltLHS(i);
-      if (!iattr) {
-        continue;
-      };
-
-      if (iattr->getInt() == constval) {
-        return i;
-      }
-    }
-    return this->getDefaultAltIndex();
-  }
 
   mlir::DictionaryAttr getAltLHSs() {
     return this->getOperation()->getAttrDictionary();
   }
+
   Optional<IntegerAttr> getAltLHS(int i) {
     Attribute lhs = getAltLHSs().get("alt" + std::to_string(i));
     if (lhs.isa<IntegerAttr>()) {
@@ -682,6 +669,7 @@ public:
     }
     return {};
   }
+
   Attribute getAltLHSRaw(int i) {
     return getAltLHSs().get("alt" + std::to_string(i));
   }

@@ -67,6 +67,11 @@ should `caseRet` be a terminator? If it is a terminator, how should it lower? if
 what instruction should it keep "after" its insertion? should it emit a `std.return` or a `scf.yield`?
 this would depend on the parent (!) 
 
+
+What is the return type of a `lz.caseRet`? So far, I was doing weird
+shit like looking at the case branch. Maybe it's possible to do this in some
+other way?
+
 # May 20th, list of jumps:
 
 - occruences of `mkJmp` in `src/`:
