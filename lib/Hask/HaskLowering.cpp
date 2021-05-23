@@ -888,6 +888,7 @@ public:
   matchAndRewrite(Operation *op, ArrayRef<Value> rands,
                   ConversionPatternRewriter &rewriter) const override {
     auto caseop = cast<HaskCaseRetOp>(op);
+    assert(false);
 
     assert(rands.size() == 1);
 
@@ -1049,6 +1050,8 @@ public:
   }
 }; // CaseIntOp end
 
+
+
 struct HaskCaseIntRetOpConversionPattern : public mlir::ConversionPattern {
 public:
   explicit HaskCaseIntRetOpConversionPattern(HaskTypeConverter &tc,
@@ -1164,6 +1167,7 @@ public:
   matchAndRewrite(Operation *op, ArrayRef<Value> rands,
                   ConversionPatternRewriter &rewriter) const override {
     HaskCaseIntRetOp caseop = cast<HaskCaseIntRetOp>(op);
+    assert(false);
 
     assert(rands.size() == 1);
 
@@ -1700,6 +1704,18 @@ public:
   }
 };
 
+struct CanonicalizeCaseIntRetPattern
+    : public mlir::OpRewritePattern<HaskCaseIntRetOp> {
+  CanonicalizeCaseIntRetPattern(mlir::MLIRContext *context)
+      : OpRewritePattern<HaskCaseIntRetOp>(context, /*benefit=*/1) {}
+
+  mlir::LogicalResult
+  matchAndRewrite(HaskCaseIntRetOp caseret,
+                  mlir::PatternRewriter &rewriter) const override {
+          assert(false && "canonicalize case int ret");
+  }
+};
+
 struct LowerHaskPass : public Pass {
   LowerHaskPass() : Pass(mlir::TypeID::get<LowerHaskPass>()){};
   StringRef getName() const override { return "LowerHaskToLLVM"; }
@@ -1712,10 +1728,12 @@ struct LowerHaskPass : public Pass {
   }
 
   void runOnOperation() override {
+    assert(false && "please only use --lean-lower. Don't waste an hour of your life debugging this.");
     // LLVMConversionTarget target(getContext());
     ConversionTarget target(getContext());
     target.addIllegalDialect<HaskDialect>();
     // target.addLegalDialect<HaskDialect>();
+    target.addIllegalOp<HaskCaseIntRetOp>();
     // target.addIllegalOp<HaskConstructOp>();
 
     target.addLegalDialect<StandardOpsDialect>();
@@ -1858,6 +1876,7 @@ struct LowerHaskPass : public Pass {
     patterns.insert<CaseIntOpConversionPattern>(typeConverter, &getContext());
     patterns.insert<HaskCaseRetOpConversionPattern>(typeConverter, &getContext());
     patterns.insert<HaskCaseIntRetOpConversionPattern>(typeConverter, &getContext());
+    // patterns.insert<CanonicalizeCaseIntRetPattern>(typeConverter, &getContext());
 
     patterns.insert<HaskConstructOpLowering>(typeConverter, &getContext());
     patterns.insert<ThunkifyOpLowering>(typeConverter, &getContext());
