@@ -60,8 +60,14 @@
 
 # Log:  [newest] to [oldest]
 
-# May 20th, list of jumps:
 
+# May 23:
+
+should `caseRet` be a terminator? If it is a terminator, how should it lower? if it lowers to a `scf.if`,
+what instruction should it keep "after" its insertion? should it emit a `std.return` or a `scf.yield`?
+this would depend on the parent (!) 
+
+# May 20th, list of jumps:
 
 - occruences of `mkJmp` in `src/`:
 ```

@@ -60,10 +60,10 @@ struct CanonicalizeCaseRetPattern
     // TagGetOp tag = rewriter.create<mlir::standalone::TagGetOp>(
     //    rewriter.getUnknownLoc(), caseret.getScrutinee());
     CaseOp caseop = rewriter.create<CaseOp>(rewriter.getUnknownLoc(), caseret.getScrutinee(),
-                                            caseret.numAlts());
+                                            caseret.getNumAlts());
 
     BlockAndValueMapping mapper;
-    for (int i = 0; i < caseret.numAlts(); ++i) {
+    for (int i = 0; i < caseret.getNumAlts(); ++i) {
       caseret->getRegion(i).cloneInto(&caseop->getRegion(i), mapper);
     }
 

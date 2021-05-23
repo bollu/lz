@@ -635,52 +635,9 @@ public:
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   void print(OpAsmPrinter &p);
   Value getScrutinee() { return getOperand(); }
-  int numAlts() { return this->getOperation()->getNumRegions(); }
 
   int getNumAlts() { return this->getOperation()->getNumRegions(); }
-
-  Optional<int> getAltIndexForConstructor(llvm::StringRef constructorName) {
-    for (int i = 0; i < this->getNumAlts(); ++i) {
-      if (this->getAltLHS(i).getValue() == constructorName) {
-        return i;
-      }
-    }
-    return {};
-  };
-
   Region &getAltRHS(int i) { return this->getOperation()->getRegion(i); }
-  Region &getDefaultRHS() {
-    assert(this->getDefaultAltIndex().hasValue());
-    return this->getAltRHS(*this->getDefaultAltIndex());
-  }
-  // get dictionary attribute that contains all the LHSs
-  mlir::DictionaryAttr getAltLHSsDict() {
-    return this->getOperation()->getAttrDictionary();
-  }
-  FlatSymbolRefAttr getAltLHS(int i) {
-    return getAltLHSsDict()
-        .get("alt" + std::to_string(i))
-        .cast<FlatSymbolRefAttr>();
-  }
-
-  std::vector<mlir::FlatSymbolRefAttr> getAltLHSs() {
-    std::vector<mlir::FlatSymbolRefAttr> out;
-    for (int i = 0; i < this->getNumAlts(); ++i) {
-      out.push_back(getAltLHS(i));
-    }
-    return out;
-  }
-
-  llvm::Optional<int> getDefaultAltIndex() {
-    for (int i = 0; i < getNumAlts(); ++i) {
-      Attribute ai = this->getAltLHS(i);
-      FlatSymbolRefAttr sai = ai.dyn_cast<FlatSymbolRefAttr>();
-      if (sai && sai.getValue() == "default") {
-        return i;
-      }
-    }
-    return llvm::Optional<int>();
-  }
 };
 
 // for lambdapure
