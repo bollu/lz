@@ -266,7 +266,6 @@ public:
   // for lambdapure.
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
                     Value scrutinee, ArrayRef<NamedAttribute> lhss);
-
 };
 
 // LAMBDA OP
@@ -325,7 +324,11 @@ public:
         ->getAttrOfType<FlatSymbolRefAttr>(getDataConstructorAttrKey())
         .getValue();
   }
-  int getSize() { return this->getOperation()->getAttrOfType<IntegerAttr>(getSizeKey()).getInt(); }
+  int getSize() {
+    return this->getOperation()
+        ->getAttrOfType<IntegerAttr>(getSizeKey())
+        .getInt();
+  }
 
   int getNumOperands() { return this->getOperation()->getNumOperands(); }
   Value getOperand(int i) { return this->getOperation()->getOperand(i); }
@@ -437,12 +440,8 @@ public:
         .getValue()
         .str();
   }
-  int getNumFnArguments() {
-    return this->getOperation()->getNumOperands();
-  };
-  Value getFnArgument(int i) {
-    return this->getOperation()->getOperand(i);
-  };
+  int getNumFnArguments() { return this->getOperation()->getNumOperands(); };
+  Value getFnArgument(int i) { return this->getOperation()->getOperand(i); };
 
   SmallVector<Value, 4> getFnArguments() {
     SmallVector<Value, 4> args;
@@ -637,20 +636,110 @@ public:
   void print(OpAsmPrinter &p);
   Value getScrutinee() { return getOperand(); }
   int numAlts() { return this->getOperation()->getNumRegions(); }
+
+  int getNumAlts() { return this->getOperation()->getNumRegions(); }
+
+  Optional<int> getAltIndexForConstructor(llvm::StringRef constructorName) {
+    for (int i = 0; i < this->getNumAlts(); ++i) {
+      if (this->getAltLHS(i).getValue() == constructorName) {
+        return i;
+      }
+    }
+    return {};
+  };
+
+  Region &getAltRHS(int i) { return this->getOperation()->getRegion(i); }
+  Region &getDefaultRHS() {
+    assert(this->getDefaultAltIndex().hasValue());
+    return this->getAltRHS(*this->getDefaultAltIndex());
+  }
+  // get dictionary attribute that contains all the LHSs
+  mlir::DictionaryAttr getAltLHSsDict() {
+    return this->getOperation()->getAttrDictionary();
+  }
+  FlatSymbolRefAttr getAltLHS(int i) {
+    return getAltLHSsDict()
+        .get("alt" + std::to_string(i))
+        .cast<FlatSymbolRefAttr>();
+  }
+
+  std::vector<mlir::FlatSymbolRefAttr> getAltLHSs() {
+    std::vector<mlir::FlatSymbolRefAttr> out;
+    for (int i = 0; i < this->getNumAlts(); ++i) {
+      out.push_back(getAltLHS(i));
+    }
+    return out;
+  }
+
+  llvm::Optional<int> getDefaultAltIndex() {
+    for (int i = 0; i < getNumAlts(); ++i) {
+      Attribute ai = this->getAltLHS(i);
+      FlatSymbolRefAttr sai = ai.dyn_cast<FlatSymbolRefAttr>();
+      if (sai && sai.getValue() == "default") {
+        return i;
+      }
+    }
+    return llvm::Optional<int>();
+  }
 };
+
 // for lambdapure
 class HaskCaseIntRetOp : public Op<HaskCaseIntRetOp, OpTrait::OneOperand,
-    OpTrait::ZeroResult, OpTrait::IsTerminator> {
+                                   OpTrait::ZeroResult, OpTrait::IsTerminator> {
 public:
   using Op::Op;
   static StringRef getOperationName() { return "lz.caseIntRet"; };
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   void print(OpAsmPrinter &p);
-  Value getScrutinee() { return getOperand(); }
-  int numAlts() { return this->getOperation()->getNumRegions(); }
+
+
+   Value getScrutinee() { return this->getOperation()->getOperand(0); }
+  int getNumAlts() { return this->getOperation()->getNumRegions(); }
+  Region &getAltRHS(int i) { return this->getOperation()->getRegion(i); }
+  Region &getDefaultRHS() {
+    assert(this->getDefaultAltIndex().hasValue());
+    return this->getAltRHS(*this->getDefaultAltIndex());
+  }
+
+  llvm::Optional<int> getAltIndexForConstInt(int constval) {
+    for (int i = 0; i < this->getNumAlts(); ++i) {
+      Optional<IntegerAttr> iattr = this->getAltLHS(i);
+      if (!iattr) {
+        continue;
+      };
+
+      if (iattr->getInt() == constval) {
+        return i;
+      }
+    }
+    return this->getDefaultAltIndex();
+  }
+
+  mlir::DictionaryAttr getAltLHSs() {
+    return this->getOperation()->getAttrDictionary();
+  }
+  Optional<IntegerAttr> getAltLHS(int i) {
+    Attribute lhs = getAltLHSs().get("alt" + std::to_string(i));
+    if (lhs.isa<IntegerAttr>()) {
+      return {lhs.cast<IntegerAttr>()};
+    }
+    return {};
+  }
+  Attribute getAltLHSRaw(int i) {
+    return getAltLHSs().get("alt" + std::to_string(i));
+  }
+  
+  llvm::Optional<int> getDefaultAltIndex() {
+    for (int i = 0; i < getNumAlts(); ++i) {
+      Attribute ai = this->getAltLHSRaw(i);
+      FlatSymbolRefAttr sai = ai.dyn_cast<FlatSymbolRefAttr>();
+      if (sai && sai.getValue() == "default") {
+        return i;
+      }
+    }
+    return llvm::Optional<int>();
+  }
 };
-
-
 
 // for lambdapure
 class HaskCallOp

@@ -91,7 +91,7 @@ struct CanonicalizeCaseIntRetPattern
                                             caseret->getAttrs());
 
     BlockAndValueMapping mapper;
-    for (int i = 0; i < caseret.numAlts(); ++i) {
+    for (int i = 0; i < caseret.getNumAlts(); ++i) {
       caseret->getRegion(i).cloneInto(&caseop->getRegion(i), mapper);
     }
 
@@ -178,8 +178,10 @@ public:
     // TODO: use the MLIR canonicalization hooks, instead of writing a pass.
     // https://mlir.llvm.org/docs/Canonicalization/
     // const int MAX_ITERATIONS = 100;
-    patterns.insert<CanonicalizeCaseRetPattern>(&getContext());
-    patterns.insert<CanonicalizeCaseIntRetPattern>(&getContext());
+    // vvv Disable the caseRet -> case conversion.
+    // patterns.insert<CanonicalizeCaseRetPattern>(&getContext());
+    // patterns.insert<CanonicalizeCaseIntRetPattern>(&getContext());
+
     patterns.insert<CanonicalizeHaskReturnOpPattern>(&getContext());
     patterns.insert<CanonicalizeHaskCallPattern>(&getContext());
     ::llvm::DebugFlag = true;
