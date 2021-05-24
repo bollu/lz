@@ -92,8 +92,7 @@ int foo(int x) {
 because `return` can only return from a *region*, not escape out of an enclosing region. We would
 need this power to be able to useful things.
 
-I'm gonna say fuck this and just directly
-generate BBs.
+I'm gonna say fuck this and just directly generate BBs.
 
 Seriously, LLVM is JUST BETTER!
 
@@ -135,6 +134,46 @@ func @foo() {
 }
 ```
 
+- Observation 1: Okay, screw this, I'm going to disable join points as tobias suggested, and just deal with code bloat.
+- Observation 2: model nested case/multi-dimensional case directly within MLIR.
+
+We also lose out on our `case`s. Before, I could generate a `case` as:
+
+```
+%x = case v of alt0 -> { y0 }, alt1 -> { y1 }, alt2 -> { y2 }
+%user = foo %x
+```
+
+when we lower this, we generate sth like:
+
+```
+^entry:
+  switch v bb0 bb1 bb2
+
+^bb0: br ^landingpad(y0)
+^bb1: br ^landingpad(y1)
+^bb2: br ^landingpad(y2)
+
+^landingpad(%x):
+  %user = foo %x
+```
+
+where we have a landing pad. Now imagine we have a case with a `jmp` inside it:
+
+
+```
+joinpoint @jp { ... }
+{
+    %wrench = jmp @jp
+    %x = case v of alt0 -> { y0 }, alt1 -> { y1 }, alt2 -> { jmp @jp }
+    %user = foo %x
+}
+```
+
+This code doesn't make sense, since we're saying "continue executing code from `@jp` at both `%wrench`
+and at `%x`. When we lower this, there is no way to get clean control flow, because the control flow of `case`
+is no longer CONTAINED WITHIN `case`! we can't always convert a `lz.caseRet` [which is a terminator/continuation]
+into a `lz.case` which returns a value, because of these jumps. IDK what this is actually called.
 
 # May 20th, list of jumps:
 
