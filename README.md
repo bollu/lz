@@ -113,6 +113,10 @@ There is a failure mode where:
 - What we need is for `BranchOp` to attempt to legalize `lz.construct(..)`
 - We can't let `LzJumpOp` be processed in a separate pass, because once `LzJoinPoint` is lowered, `LzJump` does not know
   where to JUMP TO!
+- MLIR needs to recognize that sometimes, having a TYPE MISMATCH is not AN ERROR, but is a STAGE of LOWERING.
+  Other passes like async seem to emit a `bitcast` and then assume (?) that the bitcast lowers correctly.
+- More importantly, MLIR needs to recognize that during lowering, someone might want to generate more illegal
+  ops that can be legalized.
 
 
 # May 20th, list of jumps:

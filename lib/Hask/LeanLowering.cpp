@@ -1242,14 +1242,17 @@ public:
     llvm::errs() << __FUNCTION__ << ":" << __LINE__ << "\n";
 
     // TODO: replace only if name matches jump names.
+
     jpOp.getFirstRegionWithJmp().walk([&](HaskJumpOp jmp) {
       rewriter.setInsertionPoint(jmp);
+      // assert(false && "lowering join point");
       Block *jumpTarget = &jpOp.getLaterJumpedIntoRegion().front();
       // vvv this needs to go through type converter x(
       rewriter.setInsertionPointAfter(jmp);
       // rewriter.replaceOpWithNewOp<BranchOp>(jmp, jumpTarget, jmp.getOperand());
       llvm::errs() << "creating a branch op: branch(" << jumpTarget << ", " << jmp.getOperand() << ")\n";
-      rewriter.create<mlir::BranchOp>(jmp.getLoc(), jumpTarget, 
+      rewriter.create<mlir::BranchOp>(jmp.getLoc(), 
+        jumpTarget,  
         rewriter.getRemappedValue(jmp.getOperand()));
       rewriter.eraseOp(jmp);
 
@@ -1287,7 +1290,6 @@ public:
   }
 };
 
-/*
 class HaskJumpOpLowering : public ConversionPattern {
 private:
   HaskTypeConverter &tc;
@@ -1301,11 +1303,12 @@ public:
   matchAndRewrite(Operation *op, ArrayRef<Value> rands,
                   ConversionPatternRewriter &rewriter) const override {
     HaskJumpOp jmpop = cast<HaskJumpOp>(op);
-    rewriter.replaceOpWithNewOp<BranchOp>()
+    assert(false && "jump op lowering");
+    rewriter.eraseOp(jmpop);
+    // rewriter.replaceOpWithNewOp<BranchOp>()
     return success();
   }
 };
- */
 
 struct AllocOpLowering : public mlir::ConversionPattern {
   explicit AllocOpLowering(TypeConverter &tc, MLIRContext *context)
@@ -1801,6 +1804,7 @@ public:
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> rands,
                   ConversionPatternRewriter &rewriter) const override {
+    assert(false && "branch op type conversion");
     BranchOp br = cast<BranchOp>(op);
     // rewriter.replaceOpWithNewOp<BranchOp>(br, br.getDest(), br->getOperands());
     rewriter.replaceOpWithNewOp<BranchOp>(br, br.getDest(), rands);
@@ -2213,6 +2217,7 @@ struct LowerLeanPass : public Pass {
     patterns.insert<PapOpLowering>(typeConverter, &getContext());
     patterns.insert<HaskStringConstOpLowering>(typeConverter, &getContext());
     patterns.insert<HaskJoinPointOpLowering>(typeConverter, &getContext());
+    patterns.insert<HaskJumpOpLowering>(typeConverter, &getContext());
 
     patterns.insert<HaskIntegerConstOpLowering>(typeConverter, &getContext());
     patterns.insert<ProjectionOpLowering>(typeConverter, &getContext());
