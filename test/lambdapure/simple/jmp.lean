@@ -1,5 +1,5 @@
---  lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize | FileCheck %s
---  RUN: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize  --lz-interpret="mode=lambdapure" | FileCheck %s --check-prefix=CHECK-INTERPRET
+-- lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize | FileCheck %s
+-- RUN: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize  --lz-interpret="mode=lambdapure" | FileCheck %s --check-prefix=CHECK-INTERPRET
 
 -- Directly generating a `br` instruction does not work, because we need to branch into a region that is outside our region 
 -- in the case of generating a case instruction. Eg:
@@ -8,7 +8,7 @@
 -- ^jp12(...):
 -- ...
 -- case %x 
-- [1 -> {
+-- [1 -> {
 --  %foo = ...;
 --  br ^jp12(...); // ERROR! can't jump to join point that is outside the region.
 -- }]
@@ -29,7 +29,6 @@ set_option trace.compiler.ir.init true
 -- CHECK-INTERPRET-NEXT: 1
 -- CHECK-INTERPRET-NEXT: 2
 -- CHECK-INTERPRET-NEXT: constructor(0 420 420)
-
 
 inductive Expr
 | Add : Expr -> Expr -> Expr
