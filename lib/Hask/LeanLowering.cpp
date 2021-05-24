@@ -1233,50 +1233,46 @@ public:
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> rands,
                   ConversionPatternRewriter &rewriter) const override {
-    HaskJoinPointOp blkop = cast<HaskJoinPointOp>(op);
+    llvm::errs() << __FUNCTION__ << ":" << __LINE__ << "\n";
 
-    // block { ^entry(param): do_stuff } { ... jump(params) }
-    rewriter.setInsertionPoint(blkop);
-    Block *end = rewriter.splitBlock(blkop->getBlock(), blkop->getIterator());
+    HaskJoinPointOp jpOp = cast<HaskJoinPointOp>(op);
 
-    // blk: begin; lz.block {} {};  end;
-    // begin --> fstRegion --jmp-> laterRegion -lz.ret--> end
-    // first replace all jumps in the "rest" region into the "block" region
+    llvm::errs() << __FUNCTION__ << ":" << __LINE__ << "\n";
 
-    // fstRegion --> later
-
-    blkop.getFirstRegionWithJmp().walk([&](HaskJumpOp jmp) {
-      // TODO: do this in a way that we only recurse into regions upto the
-      //  next blkop.
-      // if (jmp->getParentOfType<HaskJoinPointOp>() != blkop) { return
-      // WalkResult::skip(); }
+    // TODO: replace only if name matches jump names.
+    jpOp.getFirstRegionWithJmp().walk([&](HaskJumpOp jmp) {
       rewriter.setInsertionPoint(jmp);
-      rewriter.replaceOpWithNewOp<ReturnOp>(jmp, jmp->getOperands());
-      // rewriter.replaceOpWithNewOp<BranchOp>(jmp, jmp->getOperands(),
-      // &blkop.getLaterJumpedIntoRegion().front());
+      Block *jumpTarget = &jpOp.getLaterJumpedIntoRegion().front();
+      rewriter.replaceOpWithNewOp<BranchOp>(jmp, jumpTarget, jmp->getOperands());
       return WalkResult::advance();
     });
 
-    /*
-    // laterRegion --> end
-    blkop.getLaterJumpedIntoRegion().walk([&](HaskReturnOp ret) {
-      if (ret->getParentOfType<HaskJoinPointOp>() != blkop) { return
-    WalkResult::skip(); } rewriter.setInsertionPoint(ret);
-      rewriter.replaceOpWithNewOp<BranchOp>(ret, ret->getOperands(),  end);
-      return WalkResult::advance();
-    });
-     */
+    llvm::errs() << __FUNCTION__ << ":" << __LINE__ << "\n";
+
 
     // begin --> fstRegion
-    rewriter.setInsertionPointToEnd(blkop->getBlock());
-    mlir::SmallVector<mlir::Value, 0> args;
-    rewriter.create<BranchOp>(blkop->getLoc(), args,
-                              &blkop.getFirstRegionWithJmp().front());
+    rewriter.setInsertionPointToEnd(jpOp->getBlock());
+    rewriter.create<mlir::BranchOp>(jpOp->getLoc(), &jpOp.getFirstRegionWithJmp().front());
+
+    // mlir::SmallVector<mlir::Value, 0> noArgs;
+    llvm::errs() << __FUNCTION__ << ":" << __LINE__ << "\n";
 
     // inline fstRegion at (begin ---> fstRegion)
-    rewriter.inlineRegionBefore(blkop.getFirstRegionWithJmp(), end);
-    rewriter.inlineRegionBefore(blkop.getLaterJumpedIntoRegion(), end);
-    rewriter.eraseOp(blkop);
+    rewriter.inlineRegionBefore(jpOp.getFirstRegionWithJmp(), 
+      *jpOp->getParentRegion(), jpOp->getParentRegion()->end());
+
+    llvm::errs() << __FUNCTION__ << ":" << __LINE__ << "\n";
+
+    rewriter.inlineRegionBefore(jpOp.getLaterJumpedIntoRegion(), 
+      *jpOp->getParentRegion(), jpOp->getParentRegion()->end());
+
+    llvm::errs() << __FUNCTION__ << ":" << __LINE__ << "\n";
+
+    // rewriter.replaceOpWithNewOp<BranchOp>(jpOp, noArgs,
+    //                           &jpOp.getFirstRegionWithJmp().front());
+
+    llvm::errs() << __FUNCTION__ << ":" << __LINE__ << "\n";
+    rewriter.eraseOp(jpOp);
 
     return success();
   }
@@ -1865,7 +1861,6 @@ public:
 
     rewriter.create<mlir::CondBranchOp>(caseop.getLoc(), condition,
       &caseop.getAltRHS(i).front(), falseBB);
-    
     // this is because LEAN never uses arguments, it chooses to extract arguments
     // by using intrincics from a case scrutinee.   
     assert(caseop.getAltRHS(i).getNumArguments() == 0);
