@@ -1854,22 +1854,19 @@ public:
       return isEq.getResult();
     }();
 
-    Block *trueBB = rewriter.createBlock(caseop->getBlock(), {});
-    Block *falseBB = rewriter.createBlock(caseop->getBlock(), {});
-    rewriter.create<mlir::CondBranchOp>(caseop.getLoc(), condition, trueBB, falseBB);
+   
+    Block *falseBB =  [&]() {
+      // createBlock moves the insetion point x(
+      OpBuilder::InsertionGuard guard(rewriter);
+      return rewriter.createBlock(caseop->getParentRegion(), 
+        caseop->getParentRegion()->end(), {});
+    }();
 
-    //  rewriter.startRootUpdate(ite);
-
-    // THEN
-    rewriter.setInsertionPointToStart(trueBB);
     assert(caseop.getAltRHS(i).getNumArguments() == 0);
-
-    //   Block *caseEntryBB = &caseop.getAltRHS(i).front();
-    //   assert(caseEntryBB);
-    rewriter.inlineRegionBefore(caseop.getAltRHS(i), trueBB);
-    //  genCaseAltRHS(&ite.thenRegion(), caseop, order[i], rewriter);
-    // genCaseAltRHS(trueBB, caseop, i, rewriter);
-    //  rewriter.finalizeRootUpdate(ite);
+    rewriter.create<mlir::CondBranchOp>(caseop.getLoc(), condition,
+      &caseop.getAltRHS(i).front(), falseBB);
+    
+    rewriter.inlineRegionBefore(caseop.getAltRHS(i), falseBB);
     return falseBB;
   }
 
@@ -1880,12 +1877,10 @@ public:
 
     assert(rands.size() == 1);
 
-    rewriter.setInsertionPoint(op);
+    rewriter.setInsertionPoint(caseop);
     for (int i = 0; i < caseop.getNumAlts(); ++i) {
-      Block *caseladder =
-          genCaseAlt(caseop, rands[0], i, caseop.getNumAlts(), rewriter);
-      rewriter.setInsertionPointToStart(caseladder);
-      // genCaseAlt(caseop, rands[0], 0, caseop.getNumAlts(), rewriter);
+      Block *falsebb = genCaseAlt(caseop, rands[0], i, caseop.getNumAlts(), rewriter);
+      rewriter.setInsertionPointToStart(falsebb);
     }
 
     // HACK! Assume that we always return a !lz.value
@@ -1893,23 +1888,7 @@ public:
         rewriter.getUnknownLoc(),
         typeConverter->convertType(ValueType::get(rewriter.getContext())));
     rewriter.create<ReturnOp>(rewriter.getUnknownLoc(), undef.getResult());
-
-    //  llvm::errs() << "vvvvvvcase int op (before)vvvvvv\n";
-    //  caseop.dump();
-    //  llvm::errs() << "======case int op (after)======\n";
-    //  caseladder.print(llvm::errs(),
-    //                   mlir::OpPrintingFlags().printGenericOpForm());
-    //  llvm::errs() << "\n^^^^^^^^^caseIntop[before/after]^^^^^^^^^\n";
-
-    // caseop.getResult().replaceAllUsesWith(caseladder.getResult(0));
     rewriter.eraseOp(caseop);
-    //  rewriter.replaceOp(caseop, caseladder.getResults());
-
-    //  llvm::errs() << "\nvvvvvvcase op module [after inline]vvvvvv\n";
-    //  caseladder->getParentOfType<ModuleOp>().print(
-    //      llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
-    //  llvm::errs() << "\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
-
     return success();
   }
 
