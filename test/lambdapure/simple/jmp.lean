@@ -1,6 +1,19 @@
 --  lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize | FileCheck %s
 --  RUN: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize  --lz-interpret="mode=lambdapure" | FileCheck %s --check-prefix=CHECK-INTERPRET
 
+-- Directly generating a `br` instruction does not work, because we need to branch into a region that is outside our region 
+-- in the case of generating a case instruction. Eg:
+
+-- func @foo() {
+-- ^jp12(...):
+-- ...
+-- case %x 
+- [1 -> {
+--  %foo = ...;
+--  br ^jp12(...); // ERROR! can't jump to join point that is outside the region.
+-- }]
+-- }
+
 -- Testcase to check a join point / jump instruction
 
 -- CHECK: "lz.jump"
