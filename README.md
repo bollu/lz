@@ -119,6 +119,23 @@ There is a failure mode where:
   ops that can be legalized.
 
 
+God damn it, I can't even directly generate a new BB `^jpblock` for a join point and a `br ^jpblock`, because the
+branch instruction may need to jump  outside a region x(
+
+
+```llvm
+func @foo() {
+    ^jp12(...):
+    ...
+    case %x 
+    1 -> {
+    %foo = ...;
+    br ^jp12(...); // ERROR! can't jump to join point that is outside the region.
+    }]
+}
+```
+
+
 # May 20th, list of jumps:
 
 - occruences of `mkJmp` in `src/`:
