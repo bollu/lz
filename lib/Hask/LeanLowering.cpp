@@ -1862,9 +1862,14 @@ public:
         caseop->getParentRegion()->end(), {});
     }();
 
-    assert(caseop.getAltRHS(i).getNumArguments() == 0);
+
     rewriter.create<mlir::CondBranchOp>(caseop.getLoc(), condition,
       &caseop.getAltRHS(i).front(), falseBB);
+    
+    // this is because LEAN never uses arguments, it chooses to extract arguments
+    // by using intrincics from a case scrutinee.   
+    assert(caseop.getAltRHS(i).getNumArguments() == 0);
+    assert(caseop.getAltRHS(i).getBlocks().size() == 1);
     
     rewriter.inlineRegionBefore(caseop.getAltRHS(i), falseBB);
     return falseBB;
@@ -1938,15 +1943,12 @@ public:
     rewriter.mergeBlocks(caseEntryBB, &out->getBlocks().front(), rhsVals);
   }
 
-  scf::IfOp genCaseAlt(HaskCaseRetOp caseop, Value scrutinee, int i, int n,
+  Block *genCaseAlt(HaskCaseRetOp caseop, Value scrutinee, int i, int n,
                        ConversionPatternRewriter &rewriter) const {
     ModuleOp mod = caseop->getParentOfType<ModuleOp>();
 
-    // check if equal
-    const bool hasNext = (i + 1 < (int)n);
 
     Value condition = [&]() {
-      if (hasNext) {
         FuncOp fn = getOrInsertGetObjTag(rewriter, mod);
         SmallVector<Value, 4> params{scrutinee};
         CallOp tag = rewriter.create<CallOp>(caseop.getLoc(), fn, params);
@@ -1955,52 +1957,25 @@ public:
         CmpIOp isEq = rewriter.create<CmpIOp>(
             caseop.getLoc(), CmpIPredicate::eq, tag.getResult(0), lhsConst);
         return isEq.getResult();
-      } else {
-        Value True = rewriter.create<ConstantOp>(
-            rewriter.getUnknownLoc(),
-            rewriter.getIntegerAttr(rewriter.getI1Type(), 1));
-        return True;
-      }
     }();
 
-    // scf::IfOp ite = rewriter.create<mlir::scf::IfOp>(
-    //     caseop.getLoc(),
-    //     /*return types=*/
-    //     typeConverter->convertType(caseop.getResult().getType()),
-    //     /*cond=*/condition,
-    //     /* createelse=*/true);
 
-    scf::IfOp ite = rewriter.create<mlir::scf::IfOp>(caseop.getLoc(),
-                                                     /*cond=*/condition,
-                                                     /* createelse=*/hasNext);
+    Block *falseBB =  [&]() {
+      // createBlock moves the insetion point x(
+      OpBuilder::InsertionGuard guard(rewriter);
+      return rewriter.createBlock(caseop->getParentRegion(), 
+        caseop->getParentRegion()->end(), {});
+    }();
 
-    rewriter.startRootUpdate(ite);
+    rewriter.create<mlir::CondBranchOp>(caseop.getLoc(), condition,
+      &caseop.getAltRHS(i).front(), falseBB);
 
-    // THEN
-    rewriter.setInsertionPointToStart(&ite.thenRegion().front());
-    genCaseAltRHS(&ite.thenRegion(), caseop, scrutinee, i, rewriter);
-
-    // ELSE
-    if (hasNext) {
-      rewriter.setInsertionPointToStart(&ite.elseRegion().front());
-      scf::IfOp caseladder = genCaseAlt(caseop, scrutinee, i + 1, n, rewriter);
-
-      rewriter.setInsertionPointAfter(caseladder);
-      // rewriter.create<scf::YieldOp>(rewriter.getUnknownLoc(),
-      //                               caseladder.getResults());
-
-      // rewriter.create<scf::YieldOp>(rewriter.getUnknownLoc());
-
-    } else {
-      // auto undef = rewriter.create<ptr::PtrUndefOp>(
-      //     rewriter.getUnknownLoc(),
-      //     typeConverter->convertType(caseop.getResult().getType()));
-      // rewriter.create<scf::YieldOp>(rewriter.getUnknownLoc(),
-      //                               undef.getResult());
-      // rewriter.create<scf::YieldOp>(rewriter.getUnknownLoc());
-    }
-    rewriter.finalizeRootUpdate(ite);
-    return ite;
+    // this is because LEAN never uses arguments, it chooses to extract arguments
+    // by using intrincics from a case scrutinee.
+    assert(caseop.getAltRHS(i).getBlocks().size() == 1);
+    assert(caseop.getAltRHS(i).getNumArguments() == 0);
+    rewriter.inlineRegionBefore(caseop.getAltRHS(i), falseBB);
+    return falseBB;
   }
 
   LogicalResult
@@ -2009,29 +1984,18 @@ public:
     auto caseop = cast<HaskCaseRetOp>(op);
 
     assert(rands.size() == 1);
-
-    rewriter.setInsertionPointAfter(op);
-    // const std::vector<int> order = getAltGenerationOrder(caseop);
-    // scf::IfOp caseladder = genCaseAlt(caseop, rands[0], 0,
-    // caseop.getNumAlts(), rewriter);
-    genCaseAlt(caseop, rands[0], 0, caseop.getNumAlts(), rewriter);
-
-    // llvm::errs() << "vvvvvvcase op (before)vvvvvv\n";
-    // caseop.dump();
-    // llvm::errs() << "======case op (after)======\n";
-    // caseladder.print(llvm::errs(),
-    //                  mlir::OpPrintingFlags().printGenericOpForm());
-    // llvm::errs() << "\n^^^^^^^^^caseop[before/after]^^^^^^^^^\n";
-
-    // caseop.getResult().replaceAllUsesWith(caseladder.getResult(0));
-    // I can just erase?
-    // rewriter.replaceOp(caseop, caseladder.getResults());
+    rewriter.setInsertionPoint(caseop);
+    
+    for (int i = 0; i < caseop.getNumAlts(); ++i) {
+      Block *falsebb = genCaseAlt(caseop, rands[0], i, caseop.getNumAlts(), rewriter);
+      rewriter.setInsertionPointToStart(falsebb);
+    }
+    auto undef = rewriter.create<ptr::PtrUndefOp>(
+    rewriter.getUnknownLoc(),
+    typeConverter->convertType(ValueType::get(rewriter.getContext())));
+    rewriter.create<ReturnOp>(rewriter.getUnknownLoc(), undef.getResult());
     rewriter.eraseOp(caseop);
 
-    // llvm::errs() << "\nvvvvvvcase op module [after inline]vvvvvv\n";
-    // caseladder->getParentOfType<ModuleOp>().print(
-    //     llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
-    // llvm::errs() << "\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
     return success();
   }
 }; // end HASK CASE RET OP.
