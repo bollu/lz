@@ -237,6 +237,7 @@ public:
                     Value vptr);
   void print(OpAsmPrinter &p);
 };
+*/
 
 class HaskValueToPtrOp
     : public Op<HaskValueToPtrOp, OpTrait::OneOperand, OpTrait::OneResult> {
@@ -248,7 +249,7 @@ public:
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
                     Value v);
 };
-*/
+
 
 void registerLowerPointerPass();
 

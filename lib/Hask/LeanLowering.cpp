@@ -120,7 +120,7 @@ public:
     });
 
     // lz.value -> !ptr.void
-    /*
+    // /*
     addTargetMaterialization([&](OpBuilder &rewriter, ptr::VoidPtrType resultty,
                                  ValueRange vals,
                                  Location loc) -> Optional<Value> {
@@ -133,7 +133,7 @@ public:
       }
       return {rewriter.create<ptr::HaskValueToPtrOp>(loc, vals[0])};
     });
-    */
+    
 
     // int->!ptr.void
     /*
@@ -1290,6 +1290,7 @@ public:
   }
 };
 
+/*
 class HaskJumpOpLowering : public ConversionPattern {
 private:
   HaskTypeConverter &tc;
@@ -1309,6 +1310,7 @@ public:
     return success();
   }
 };
+*/
 
 struct AllocOpLowering : public mlir::ConversionPattern {
   explicit AllocOpLowering(TypeConverter &tc, MLIRContext *context)
@@ -1804,7 +1806,7 @@ public:
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> rands,
                   ConversionPatternRewriter &rewriter) const override {
-    assert(false && "branch op type conversion");
+    assert(false);
     BranchOp br = cast<BranchOp>(op);
     // rewriter.replaceOpWithNewOp<BranchOp>(br, br.getDest(), br->getOperands());
     rewriter.replaceOpWithNewOp<BranchOp>(br, br.getDest(), rands);
@@ -2013,6 +2015,24 @@ public:
   }
 }; // end HASK CASE RET OP.
 
+class HaskValueToPtrOpTypeConversion : public ConversionPattern {
+public:
+  explicit HaskValueToPtrOpTypeConversion(TypeConverter &tc, MLIRContext *context)
+      : ConversionPattern(ptr::HaskValueToPtrOp::getOperationName(), 1, tc, context) {
+  }
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> rands,
+                  ConversionPatternRewriter &rewriter) const override {
+    ptr::HaskValueToPtrOp ptr = cast<ptr::HaskValueToPtrOp>(op);
+    assert(rands.size() == 1);
+    rewriter.replaceOp(ptr, rands[0]);
+    return success();
+  }
+};
+
+
+
 struct LowerLeanPass : public Pass {
   LowerLeanPass() : Pass(mlir::TypeID::get<LowerLeanPass>()){};
   StringRef getName() const override { return "LowerLeanPass"; }
@@ -2050,15 +2070,6 @@ struct LowerLeanPass : public Pass {
 
     target.addDynamicallyLegalOp<ReturnOp>([](ReturnOp ret) {
       for (Value arg : ret.getOperands()) {
-        if (!isTypeLegal(arg.getType())) {
-          return false;
-        }
-      }
-      return true;
-    });
-
-    target.addDynamicallyLegalOp<BranchOp>([](BranchOp br) {
-      for (Value arg : br.getOperands()) {
         if (!isTypeLegal(arg.getType())) {
           return false;
         }
@@ -2200,6 +2211,8 @@ struct LowerLeanPass : public Pass {
       return true;
     });
 
+    
+
     HaskTypeConverter typeConverter(&getContext());
     mlir::OwningRewritePatternList patterns(&getContext());
 
@@ -2217,7 +2230,7 @@ struct LowerLeanPass : public Pass {
     patterns.insert<PapOpLowering>(typeConverter, &getContext());
     patterns.insert<HaskStringConstOpLowering>(typeConverter, &getContext());
     patterns.insert<HaskJoinPointOpLowering>(typeConverter, &getContext());
-    patterns.insert<HaskJumpOpLowering>(typeConverter, &getContext());
+    // patterns.insert<HaskJumpOpLowering>(typeConverter, &getContext());
 
     patterns.insert<HaskIntegerConstOpLowering>(typeConverter, &getContext());
     patterns.insert<ProjectionOpLowering>(typeConverter, &getContext());
@@ -2258,6 +2271,11 @@ struct LowerLeanPass : public Pass {
     patterns.insert<PtrStoreGlobalOpTypeConversion>(typeConverter,
                                                     &getContext());
     patterns.insert<PtrFnPtrOpTypeConversion>(typeConverter, &getContext());
+
+    // this only exists for type conversion reasons. Will be eliminated
+    target.addIllegalOp<mlir::ptr::HaskValueToPtrOp>();
+    patterns.insert<HaskValueToPtrOpTypeConversion>(typeConverter, &getContext());
+    
 
     ::llvm::DebugFlag = true;
 
