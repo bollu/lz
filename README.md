@@ -101,6 +101,20 @@ Seriously, LLVM is JUST BETTER!
 Is `replaceOpWithNewOp<NewOpTy>(oldOp ...)` supposed to trigger a `isDynamicallyLegal(NewOpTy)`?
 It doesn't seem to for me, and I don't know if this me doing something wrong.
 
+
+There is a failure mode where:
+
+- We are working on some op (say, `LzJoinPoint`)
+- This op needs to replace its children (say, `LzJump(lz.construct(..))`)
+- `LzJump` is rewritten into a STANDARD op (say, `BranchOp`)
+- The ARGUMENT for `BranchOp` is a value `lz.construct(..)` of  illegal type (say, `!lz.value`)
+- This type WILL BE FIXED LATER ON! at the end of lowering.
+- However, the act of creating a `BranchOp` causes legalization to fail, saying that the type `!lz.value` is illegal.
+- What we need is for `BranchOp` to attempt to legalize `lz.construct(..)`
+- We can't let `LzJumpOp` be processed in a separate pass, because once `LzJoinPoint` is lowered, `LzJump` does not know
+  where to JUMP TO!
+
+
 # May 20th, list of jumps:
 
 - occruences of `mkJmp` in `src/`:
