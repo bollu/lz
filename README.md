@@ -98,6 +98,9 @@ generate BBs.
 Seriously, LLVM is JUST BETTER!
 
 
+Is `replaceOpWithNewOp<NewOpTy>(oldOp ...)` supposed to trigger a `isDynamicallyLegal(NewOpTy)`?
+It doesn't seem to for me, and I don't know if this me doing something wrong.
+
 # May 20th, list of jumps:
 
 - occruences of `mkJmp` in `src/`:

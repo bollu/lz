@@ -1245,7 +1245,14 @@ public:
     jpOp.getFirstRegionWithJmp().walk([&](HaskJumpOp jmp) {
       rewriter.setInsertionPoint(jmp);
       Block *jumpTarget = &jpOp.getLaterJumpedIntoRegion().front();
-      rewriter.replaceOpWithNewOp<BranchOp>(jmp, jumpTarget, rands);
+      // vvv this needs to go through type converter x(
+      rewriter.setInsertionPointAfter(jmp);
+      // rewriter.replaceOpWithNewOp<BranchOp>(jmp, jumpTarget, jmp.getOperand());
+      llvm::errs() << "creating a branch op: branch(" << jumpTarget << ", " << jmp.getOperand() << ")\n";
+      rewriter.create<mlir::BranchOp>(jmp.getLoc(), jumpTarget, 
+        rewriter.getRemappedValue(jmp.getOperand()));
+      rewriter.eraseOp(jmp);
+
       return WalkResult::advance();
     });
 
