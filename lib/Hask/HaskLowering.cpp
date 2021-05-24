@@ -91,14 +91,14 @@ public:
     addConversion([](Type type) { return type; });
 
     // lz.value -> ptr.void
-    addConversion([](ValueType type) -> Type {
-      return ptr::VoidPtrType::get(type.getContext());
-    });
+    // addConversion([](ValueType type) -> Type {
+    //   return ptr::VoidPtrType::get(type.getContext());
+    // });
 
-    // lz.thunk -> ptr.void
-    addConversion([](ThunkType type) -> Type {
-      return ptr::VoidPtrType::get(type.getContext());
-    });
+    // // lz.thunk -> ptr.void
+    // addConversion([](ThunkType type) -> Type {
+    //   return ptr::VoidPtrType::get(type.getContext());
+    // });
 
     addConversion([&](FunctionType fnty) -> Type {
       SmallVector<Type, 4> argtys;
@@ -190,67 +190,62 @@ public:
   };
 
   // convert a thing to a void pointer.
-  Value toVoidPointer(OpBuilder &builder, Value src) {
-    if (src.getType().isa<ptr::VoidPtrType>()) {
-      return src;
-    }
-    if (src.getType().isa<IntegerType>()) {
-      ptr::IntToPtrOp op =
-          builder.create<ptr::IntToPtrOp>(builder.getUnknownLoc(), src);
-      return op;
-    }
+  // Value toVoidPointer(OpBuilder &builder, Value src) {
+  //   if (src.getType().isa<ptr::VoidPtrType>()) {
+  //     return src;
+  //   }
+  //   if (src.getType().isa<IntegerType>()) {
+  //     ptr::IntToPtrOp op =
+  //         builder.create<ptr::IntToPtrOp>(builder.getUnknownLoc(), src);
+  //     return op;
+  //   }
+  //   if (src.getType().isa<FunctionType>()) {
+  //     return builder.create<ptr::FnToVoidPtrOp>(builder.getUnknownLoc(), src);
+  //   }
+  //   if (src.getType().isa<MemRefType>()) {
+  //     ptr::MemrefToVoidPtrOp op =
+  //         builder.create<ptr::MemrefToVoidPtrOp>(builder.getUnknownLoc(), src);
+  //     return op;
+  //   }
+  //   if (src.getType().isa<FloatType>()) {
+  //     ptr::DoubleToPtrOp op =
+  //         builder.create<ptr::DoubleToPtrOp>(builder.getUnknownLoc(), src);
+  //     return op;
+  //   }
+  //   llvm::errs() << "ERROR: unknown type: |" << src.getType() << "|\n";
+  //   assert(false && "unknown type to convert to void pointer");
+  // };
 
-    if (src.getType().isa<FunctionType>()) {
-      return builder.create<ptr::FnToVoidPtrOp>(builder.getUnknownLoc(), src);
-    }
+  // // convert to `retty` from a void pointer.
+  // Value fromVoidPointer(OpBuilder &builder, Value src, Type retty) {
+  //   if (retty.isa<ptr::VoidPtrType>()) {
+  //     return src;
+  //   }
+  //   if (IntegerType it = retty.dyn_cast<IntegerType>()) {
+  //     ptr::PtrToIntOp op =
+  //         builder.create<ptr::PtrToIntOp>(builder.getUnknownLoc(), src, it);
+  //     return op;
+  //   }
+  //   if (MemRefType mr = retty.dyn_cast<MemRefType>()) {
+  //     ptr::PtrToMemrefOp op =
+  //         builder.create<ptr::PtrToMemrefOp>(builder.getUnknownLoc(), src, mr);
+  //     return op;
+  //   }
+  //   if (ValueType val = retty.dyn_cast<ValueType>()) {
+  //     return src;
+  //     //    ptr::PtrToHaskValueOp op =
+  //     //      builder.create<ptr::PtrToHaskValueOp>(builder.getUnknownLoc(),
+  //     //      src);
+  //     //  return op;
+  //   }
+  //   if (FloatType ft = retty.dyn_cast<FloatType>()) {
+  //     return builder.create<ptr::PtrToFloatOp>(builder.getUnknownLoc(), src,
+  //                                              ft);
+  //   }
 
-    if (src.getType().isa<MemRefType>()) {
-      ptr::MemrefToVoidPtrOp op =
-          builder.create<ptr::MemrefToVoidPtrOp>(builder.getUnknownLoc(), src);
-      return op;
-    }
-    if (src.getType().isa<FloatType>()) {
-      ptr::DoubleToPtrOp op =
-          builder.create<ptr::DoubleToPtrOp>(builder.getUnknownLoc(), src);
-      return op;
-    }
-    llvm::errs() << "ERROR: unknown type: |" << src.getType() << "|\n";
-    assert(false && "unknown type to convert to void pointer");
-  };
-
-  // convert to `retty` from a void pointer.
-  Value fromVoidPointer(OpBuilder &builder, Value src, Type retty) {
-    if (retty.isa<ptr::VoidPtrType>()) {
-      return src;
-    }
-    if (IntegerType it = retty.dyn_cast<IntegerType>()) {
-      ptr::PtrToIntOp op =
-          builder.create<ptr::PtrToIntOp>(builder.getUnknownLoc(), src, it);
-      return op;
-    }
-
-    if (MemRefType mr = retty.dyn_cast<MemRefType>()) {
-      ptr::PtrToMemrefOp op =
-          builder.create<ptr::PtrToMemrefOp>(builder.getUnknownLoc(), src, mr);
-      return op;
-    }
-
-    if (ValueType val = retty.dyn_cast<ValueType>()) {
-      return src;
-      //    ptr::PtrToHaskValueOp op =
-      //      builder.create<ptr::PtrToHaskValueOp>(builder.getUnknownLoc(),
-      //      src);
-      //  return op;
-    }
-
-    if (FloatType ft = retty.dyn_cast<FloatType>()) {
-      return builder.create<ptr::PtrToFloatOp>(builder.getUnknownLoc(), src,
-                                               ft);
-    }
-
-    llvm::errs() << "ERROR: unknown type: |" << retty << "|\n";
-    assert(false && "unknown type to convert from void pointer");
-  };
+  //   llvm::errs() << "ERROR: unknown type: |" << retty << "|\n";
+  //   assert(false && "unknown type to convert from void pointer");
+  // };
 };
 
 class ConstantOpLowering : public ConversionPattern {
@@ -460,8 +455,8 @@ struct ForceOpConversionPattern : public mlir::ConversionPattern {
     }
 
     MLIRContext *context = rewriter.getContext();
-    Type argty = ptr::VoidPtrType::get(context);
-    Type retty = ptr::VoidPtrType::get(context);
+    Type argty = ValueType::get(context);
+    Type retty = ValueType::get(context);
     FunctionType fnty = rewriter.getFunctionType(argty, retty);
 
     PatternRewriter::InsertionGuard insertGuard(rewriter);
@@ -475,7 +470,7 @@ struct ForceOpConversionPattern : public mlir::ConversionPattern {
   matchAndRewrite(Operation *op, ArrayRef<Value> rands,
                   ConversionPatternRewriter &rewriter) const override {
     FuncOp parent = op->getParentOfType<FuncOp>();
-    ForceOp force = mlir::cast<ForceOp>(op);
+    // ForceOp force = mlir::cast<ForceOp>(op);
     ModuleOp mod = op->getParentOfType<ModuleOp>();
     FuncOp evalClosure = getOrInsertEvalClosure(rewriter, mod);
     rewriter.setInsertionPointAfter(op);
@@ -483,11 +478,13 @@ struct ForceOpConversionPattern : public mlir::ConversionPattern {
     // vvv HACK: I ought not need this!
     //    SmallVector<Value, 4> args(rands.begin(), rands.end());
     rewriter.setInsertionPointAfter(op);
-    Value toForce = tc.toVoidPointer(rewriter, rands[0]);
+    // Value toForce = tc.toVoidPointer(rewriter, rands[0]);
+    Value toForce = rands[0];
     CallOp call = rewriter.create<CallOp>(op->getLoc(), evalClosure, toForce);
     rewriter.setInsertionPointAfter(call);
-    Value out = tc.fromVoidPointer(rewriter, call.getResult(0),
-                                   force.getResult().getType());
+    // Value out = tc.fromVoidPointer(rewriter, call.getResult(0),
+    //                                force.getResult().getType());
+    Value out = call.getResult(0);
     rewriter.replaceOp(op, out);
     llvm::errs() << "vvvv--after-force---vvv\n";
     parent.print(llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
@@ -533,8 +530,8 @@ public:
     }
 
     // constructor, string constructor name
-    SmallVector<Type, 4> argtys{ptr::VoidPtrType::get(context),
-                                ptr::CharPtrType::get(context)};
+    SmallVector<Type, 4> argtys{ValueType::get(context),
+                                ValueType::get(context)};
     Type retty = rewriter.getI1Type();
     auto llvmFnType = rewriter.getFunctionType(argtys, retty);
     // Insert the printf function into the body of the parent module.
@@ -555,9 +552,9 @@ public:
       return fn;
     }
 
-    SmallVector<Type, 4> argsTy{ptr::VoidPtrType::get(context),
+    SmallVector<Type, 4> argsTy{ValueType::get(context),
                                 rewriter.getI64Type()};
-    Type retty = ptr::VoidPtrType::get(context);
+    Type retty = ValueType::get(context);
     FunctionType fnty = rewriter.getFunctionType(argsTy, retty);
 
     PatternRewriter::InsertionGuard insertGuard(rewriter);
@@ -610,10 +607,9 @@ public:
     for (int argix = 0; argix < (int)caseop.getAltRHS(i).getNumArguments();
          ++argix) {
       Value arg = mkCallExtractConstructorArg(scrutinee, argix, mod, rewriter);
-      Type ty =
-          tc.convertType(caseop.getAltRHS(i).getArgument(argix).getType());
+      // Type ty = tc.convertType(caseop.getAltRHS(i).getArgument(argix).getType());
       rewriter.setInsertionPointToEnd(&out->front());
-      arg = tc.fromVoidPointer(rewriter, arg, ty);
+      // arg = tc.fromVoidPointer(rewriter, arg, ty);
       rhsVals.push_back(arg);
     }
 
@@ -871,11 +867,12 @@ public:
     }
 
     SmallVector<mlir::Type, 4> argTys;
-    argTys.push_back(ptr::CharPtrType::get(rewriter.getContext()));
+    // argTys.push_back(ptr::CharPtrType::get(rewriter.getContext()));
+    argTys.push_back(ValueType::get(rewriter.getContext()));
     for (int i = 0; i < n; ++i) {
-      argTys.push_back(ptr::VoidPtrType::get(rewriter.getContext()));
+      argTys.push_back(ValueType::get(rewriter.getContext()));
     }
-    mlir::Type retty = ptr::VoidPtrType::get(rewriter.getContext());
+    mlir::Type retty = ValueType::get(rewriter.getContext());
 
     auto fntype = rewriter.getFunctionType(argTys, retty);
     PatternRewriter::InsertionGuard insertGuard(rewriter);
@@ -904,7 +901,8 @@ public:
     rewriter.setInsertionPointAfter(cons);
 
     for (int i = 0; i < (int)operands.size(); ++i) {
-      args.insert(args.end(), tc.toVoidPointer(rewriter, operands[i]));
+      // args.insert(args.end(), tc.toVoidPointer(rewriter, operands[i]));
+      args.insert(args.end(), operands[i]);
     }
 
     // CallOp call = rewriter.create<CallOp>(cons.getLoc(), fn, args);
@@ -931,8 +929,8 @@ public:
     }
 
     MLIRContext *context = rewriter.getContext();
-    Type argty = ptr::VoidPtrType::get(context);
-    Type retty = ptr::VoidPtrType::get(context);
+    Type argty = ValueType::get(context);
+    Type retty = ValueType::get(context);
     FunctionType fnty = rewriter.getFunctionType(argty, retty);
 
     PatternRewriter::InsertionGuard insertGuard(rewriter);
@@ -946,7 +944,8 @@ public:
   matchAndRewrite(Operation *rator, ArrayRef<Value> rands,
                   ConversionPatternRewriter &rewriter) const override {
     ModuleOp mod = rator->getParentOfType<ModuleOp>();
-    Value param = tc.toVoidPointer(rewriter, rands[0]);
+    // Value param = tc.toVoidPointer(rewriter, rands[0]);
+    Value param = rands[0];
     FuncOp mkClosure = getOrInsertMkClosureThunkify(rewriter, mod);
     rewriter.replaceOpWithNewOp<CallOp>(rator, mkClosure, param);
     return success();
@@ -977,9 +976,9 @@ public:
 
     SmallVector<Type, 4> argTys;
     for (int i = 0; i < n + 1; ++i) {
-      argTys.push_back(ptr::VoidPtrType::get(ctx));
+      argTys.push_back(ValueType::get(ctx));
     }
-    Type retty = ptr::VoidPtrType::get(ctx);
+    Type retty = ValueType::get(ctx);
     FunctionType fnty = rewriter.getFunctionType(argTys, retty);
 
     // Insert the printf function into the body of the parent module.
@@ -1001,11 +1000,13 @@ public:
     SmallVector<Value, 4> args;
 
     // function.
-    args.push_back(tc.toVoidPointer(rewriter, rands[0]));
+    // args.push_back(tc.toVoidPointer(rewriter, rands[0]));
+    args.push_back(rands[0]);
 
     // function arguments
     for (int i = 1; i < (int)rands.size(); ++i) {
-      args.push_back(tc.toVoidPointer(rewriter, rands[i]));
+      // args.push_back(tc.toVoidPointer(rewriter, rands[i]));
+      args.push_back(rands[i]);
     }
 
     FuncOp mkclosure =
@@ -1251,7 +1252,7 @@ public:
 
     MLIRContext *context = rewriter.getContext();
     Type argty = rewriter.getI64Type();
-    Type retty = ptr::VoidPtrType::get(context);
+    Type retty = ValueType::get(context);
     FunctionType fnty = rewriter.getFunctionType(argty, retty);
 
     PatternRewriter::InsertionGuard insertGuard(rewriter);
@@ -1290,7 +1291,7 @@ public:
     }
 
     MLIRContext *context = rewriter.getContext();
-    Type argty = ptr::VoidPtrType::get(context);
+    Type argty = ValueType::get(context);
     Type retty = rewriter.getI64Type();
     FunctionType fnty = rewriter.getFunctionType(argty, retty);
 
@@ -1324,9 +1325,9 @@ public:
     MLIRContext *context = rewriter.getContext();
     SmallVector<Type, 4> argtys;
 
-    argtys.push_back(ptr::VoidPtrType::get(context)); // argument.
+    argtys.push_back(ValueType::get(context)); // argument.
     for (int i = 0; i < nargs; ++i) {
-      argtys.push_back(ptr::VoidPtrType::get(context));
+      argtys.push_back(ValueType::get(context));
     }
 
     Type retty = rewriter.getI64Type();

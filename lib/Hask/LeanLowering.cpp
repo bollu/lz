@@ -90,37 +90,35 @@ public:
     addConversion([](Type type) { return type; });
 
     // lz.value -> ptr.void
-    addConversion([](ValueType type) -> Type {
-      return ptr::VoidPtrType::get(type.getContext());
-    });
+    // addConversion([](ValueType type) -> Type {
+    //   return ptr::VoidPtrType::get(type.getContext());
+    // });
 
-    // lz.thunk -> ptr.void
-    addConversion([](ThunkType type) -> Type {
-      return ptr::VoidPtrType::get(type.getContext());
-    });
+    // // lz.thunk -> ptr.void
+    // addConversion([](ThunkType type) -> Type {
+    //   return ptr::VoidPtrType::get(type.getContext());
+    // });
 
-    addConversion([&](FunctionType fnty) -> Type {
-      SmallVector<Type, 4> argtys;
-      for (Type t : fnty.getInputs()) {
-        argtys.push_back(this->convertType(t));
-      }
+    // addConversion([&](FunctionType fnty) -> Type {
+    //   SmallVector<Type, 4> argtys;
+    //   for (Type t : fnty.getInputs()) {
+    //     argtys.push_back(this->convertType(t));
+    //   }
+    //   SmallVector<Type, 4> rettys;
+    //   for (Type t : fnty.getResults()) {
+    //     rettys.push_back(this->convertType(t));
+    //   }
+    //   return mlir::FunctionType::get(fnty.getContext(), argtys, rettys);
+    // });
 
-      SmallVector<Type, 4> rettys;
-      for (Type t : fnty.getResults()) {
-        rettys.push_back(this->convertType(t));
-      }
-
-      return mlir::FunctionType::get(fnty.getContext(), argtys, rettys);
-    });
-
-    addConversion([&](mlir::MemRefType memref) -> Type {
-      return mlir::MemRefType::get(memref.getShape(),
-                                   this->convertType(memref.getElementType()),
-                                   memref.getAffineMaps());
-    });
+    // addConversion([&](mlir::MemRefType memref) -> Type {
+    //   return mlir::MemRefType::get(memref.getShape(),
+    //                                this->convertType(memref.getElementType()),
+    //                                memref.getAffineMaps());
+    // });
 
     // lz.value -> !ptr.void
-    // /*
+    /*
     addTargetMaterialization([&](OpBuilder &rewriter, ptr::VoidPtrType resultty,
                                  ValueRange vals,
                                  Location loc) -> Optional<Value> {
@@ -133,6 +131,7 @@ public:
       }
       return {rewriter.create<ptr::HaskValueToPtrOp>(loc, vals[0])};
     });
+    */
     
 
     // int->!ptr.void
@@ -189,67 +188,61 @@ public:
   };
 
   // convert a thing to a void pointer.
-  Value toVoidPointer(OpBuilder &builder, Value src) {
-    if (src.getType().isa<ptr::VoidPtrType>()) {
-      return src;
-    }
-    if (src.getType().isa<IntegerType>()) {
-      ptr::IntToPtrOp op =
-          builder.create<ptr::IntToPtrOp>(builder.getUnknownLoc(), src);
-      return op;
-    }
+  // Value toVoidPointer(OpBuilder &builder, Value src) {
+  //   if (src.getType().isa<ptr::VoidPtrType>()) {
+  //     return src;
+  //   }
+  //   if (src.getType().isa<IntegerType>()) {
+  //     ptr::IntToPtrOp op =
+  //         builder.create<ptr::IntToPtrOp>(builder.getUnknownLoc(), src);
+  //     return op;
+  //   }
+  //   if (src.getType().isa<FunctionType>()) {
+  //     return builder.create<ptr::FnToVoidPtrOp>(builder.getUnknownLoc(), src);
+  //   }
+  //   if (src.getType().isa<MemRefType>()) {
+  //     ptr::MemrefToVoidPtrOp op =
+  //         builder.create<ptr::MemrefToVoidPtrOp>(builder.getUnknownLoc(), src);
+  //     return op;
+  //   }
+  //   if (src.getType().isa<FloatType>()) {
+  //     ptr::DoubleToPtrOp op =
+  //         builder.create<ptr::DoubleToPtrOp>(builder.getUnknownLoc(), src);
+  //     return op;
+  //   }
+  //   llvm::errs() << "ERROR: unknown type: |" << src.getType() << "|\n";
+  //   assert(false && "unknown type to convert to void pointer");
+  // };
 
-    if (src.getType().isa<FunctionType>()) {
-      return builder.create<ptr::FnToVoidPtrOp>(builder.getUnknownLoc(), src);
-    }
-
-    if (src.getType().isa<MemRefType>()) {
-      ptr::MemrefToVoidPtrOp op =
-          builder.create<ptr::MemrefToVoidPtrOp>(builder.getUnknownLoc(), src);
-      return op;
-    }
-    if (src.getType().isa<FloatType>()) {
-      ptr::DoubleToPtrOp op =
-          builder.create<ptr::DoubleToPtrOp>(builder.getUnknownLoc(), src);
-      return op;
-    }
-    llvm::errs() << "ERROR: unknown type: |" << src.getType() << "|\n";
-    assert(false && "unknown type to convert to void pointer");
-  };
-
-  // convert to `retty` from a void pointer.
-  Value fromVoidPointer(OpBuilder &builder, Value src, Type retty) {
-    if (retty.isa<ptr::VoidPtrType>()) {
-      return src;
-    }
-    if (IntegerType it = retty.dyn_cast<IntegerType>()) {
-      ptr::PtrToIntOp op =
-          builder.create<ptr::PtrToIntOp>(builder.getUnknownLoc(), src, it);
-      return op;
-    }
-
-    if (MemRefType mr = retty.dyn_cast<MemRefType>()) {
-      ptr::PtrToMemrefOp op =
-          builder.create<ptr::PtrToMemrefOp>(builder.getUnknownLoc(), src, mr);
-      return op;
-    }
-
-    if (ValueType val = retty.dyn_cast<ValueType>()) {
-      return src;
-      //    ptr::PtrToHaskValueOp op =
-      //      builder.create<ptr::PtrToHaskValueOp>(builder.getUnknownLoc(),
-      //      src);
-      //  return op;
-    }
-
-    if (FloatType ft = retty.dyn_cast<FloatType>()) {
-      return builder.create<ptr::PtrToFloatOp>(builder.getUnknownLoc(), src,
-                                               ft);
-    }
-
-    llvm::errs() << "ERROR: unknown type: |" << retty << "|\n";
-    assert(false && "unknown type to convert from void pointer");
-  };
+  // // convert to `retty` from a void pointer.
+  // Value fromVoidPointer(OpBuilder &builder, Value src, Type retty) {
+  //   if (retty.isa<ptr::VoidPtrType>()) {
+  //     return src;
+  //   }
+  //   if (IntegerType it = retty.dyn_cast<IntegerType>()) {
+  //     ptr::PtrToIntOp op =
+  //         builder.create<ptr::PtrToIntOp>(builder.getUnknownLoc(), src, it);
+  //     return op;
+  //   }
+  //   if (MemRefType mr = retty.dyn_cast<MemRefType>()) {
+  //     ptr::PtrToMemrefOp op =
+  //         builder.create<ptr::PtrToMemrefOp>(builder.getUnknownLoc(), src, mr);
+  //     return op;
+  //   }
+  //   if (ValueType val = retty.dyn_cast<ValueType>()) {
+  //     return src;
+  //     //    ptr::PtrToHaskValueOp op =
+  //     //      builder.create<ptr::PtrToHaskValueOp>(builder.getUnknownLoc(),
+  //     //      src);
+  //     //  return op;
+  //   }
+  //   if (FloatType ft = retty.dyn_cast<FloatType>()) {
+  //     return builder.create<ptr::PtrToFloatOp>(builder.getUnknownLoc(), src,
+  //                                              ft);
+  //   }
+  //   llvm::errs() << "ERROR: unknown type: |" << retty << "|\n";
+  //   assert(false && "unknown type to convert from void pointer");
+  // };
 };
 
 class ConstantOpLowering : public ConversionPattern {
@@ -390,7 +383,7 @@ public:
 
     MLIRContext *context = rewriter.getContext();
     Type argty = rewriter.getI64Type();
-    Type retty = ptr::VoidPtrType::get(context);
+    Type retty = ValueType::get(context);
     FunctionType fnty = rewriter.getFunctionType(argty, retty);
 
     PatternRewriter::InsertionGuard insertGuard(rewriter);
@@ -434,8 +427,8 @@ public:
     }
 
     MLIRContext *context = rewriter.getContext();
-    Type argty = ptr::VoidPtrType::get(context);
-    Type retty = ptr::VoidPtrType::get(context);
+    Type argty = ValueType::get(context);
+    Type retty = ValueType::get(context);
     FunctionType fnty = rewriter.getFunctionType(argty, retty);
 
     PatternRewriter::InsertionGuard insertGuard(rewriter);
@@ -563,8 +556,8 @@ struct ForceOpConversionPattern : public mlir::ConversionPattern {
     }
 
     MLIRContext *context = rewriter.getContext();
-    Type argty = ptr::VoidPtrType::get(context);
-    Type retty = ptr::VoidPtrType::get(context);
+    Type argty = ValueType::get(context);
+    Type retty = ValueType::get(context);
     FunctionType fnty = rewriter.getFunctionType(argty, retty);
 
     PatternRewriter::InsertionGuard insertGuard(rewriter);
@@ -578,7 +571,7 @@ struct ForceOpConversionPattern : public mlir::ConversionPattern {
   matchAndRewrite(Operation *op, ArrayRef<Value> rands,
                   ConversionPatternRewriter &rewriter) const override {
     FuncOp parent = op->getParentOfType<FuncOp>();
-    ForceOp force = mlir::cast<ForceOp>(op);
+    // ForceOp force = mlir::cast<ForceOp>(op);
     ModuleOp mod = op->getParentOfType<ModuleOp>();
     FuncOp evalClosure = getOrInsertEvalClosure(rewriter, mod);
     rewriter.setInsertionPointAfter(op);
@@ -586,11 +579,13 @@ struct ForceOpConversionPattern : public mlir::ConversionPattern {
     // vvv HACK: I ought not need this!
     //    SmallVector<Value, 4> args(rands.begin(), rands.end());
     rewriter.setInsertionPointAfter(op);
-    Value toForce = tc.toVoidPointer(rewriter, rands[0]);
+    // Value toForce = tc.toVoidPointer(rewriter, rands[0]);
+    Value toForce; assert(false && "why is force in LEAN?");
     CallOp call = rewriter.create<CallOp>(op->getLoc(), evalClosure, toForce);
     rewriter.setInsertionPointAfter(call);
-    Value out = tc.fromVoidPointer(rewriter, call.getResult(0),
-                                   force.getResult().getType());
+    // Value out = tc.fromVoidPointer(rewriter, call.getResult(0),
+    //                                force.getResult().getType());
+    Value out; assert(false && "why is force in LEAN?");
     rewriter.replaceOp(op, out);
     llvm::errs() << "vvvv--after-force---vvv\n";
     parent.print(llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
@@ -636,7 +631,7 @@ public:
     }
 
     // constructor, string constructor name
-    SmallVector<Type, 4> argtys{ptr::VoidPtrType::get(context)};
+    SmallVector<Type, 4> argtys{ValueType::get(context)};
     Type retty = rewriter.getI64Type();
     auto llvmFnType = rewriter.getFunctionType(argtys, retty);
     // Insert the printf function into the body of the parent module.
@@ -913,7 +908,7 @@ public:
     }
 
     SmallVector<mlir::Type, 4> argTys{rewriter.getI64Type()};
-    mlir::Type retty = ptr::VoidPtrType::get(rewriter.getContext());
+    mlir::Type retty = ValueType::get(rewriter.getContext());
 
     auto fntype = rewriter.getFunctionType(argTys, retty);
     PatternRewriter::InsertionGuard insertGuard(rewriter);
@@ -938,7 +933,7 @@ public:
     argTys.push_back(rewriter.getI64Type()); // size/nargs
     argTys.push_back(rewriter.getI64Type()); // scalar size
 
-    mlir::Type retty = ptr::VoidPtrType::get(rewriter.getContext());
+    mlir::Type retty = ValueType::get(rewriter.getContext());
 
     auto fntype = rewriter.getFunctionType(argTys, retty);
     PatternRewriter::InsertionGuard insertGuard(rewriter);
@@ -959,11 +954,11 @@ public:
     }
 
     SmallVector<mlir::Type, 4> argTys;
-    argTys.push_back(ptr::VoidPtrType::get(rewriter.getContext())); // ctor
+    argTys.push_back(ValueType::get(rewriter.getContext())); // ctor
     argTys.push_back(rewriter.getI64Type());                        // ix
-    argTys.push_back(ptr::VoidPtrType::get(rewriter.getContext())); // val
+    argTys.push_back(ValueType::get(rewriter.getContext())); // val
 
-    mlir::Type retty = ptr::VoidPtrType::get(rewriter.getContext());
+    mlir::Type retty = ValueType::get(rewriter.getContext());
 
     auto fntype = rewriter.getFunctionType(argTys, retty);
     PatternRewriter::InsertionGuard insertGuard(rewriter);
@@ -1041,10 +1036,10 @@ public:
     }
 
     SmallVector<mlir::Type, 4> argTys;
-    argTys.push_back(ptr::VoidPtrType::get(rewriter.getContext()));
+    argTys.push_back(ValueType::get(rewriter.getContext()));
     argTys.push_back(IntegerType::get(rewriter.getContext(), 64));
 
-    mlir::Type retty = ptr::VoidPtrType::get(rewriter.getContext());
+    mlir::Type retty = ValueType::get(rewriter.getContext());
     auto fntype = rewriter.getFunctionType(argTys, retty);
 
     PatternRewriter::InsertionGuard insertGuard(rewriter);
@@ -1093,8 +1088,8 @@ public:
     }
 
     MLIRContext *context = rewriter.getContext();
-    Type argty = ptr::VoidPtrType::get(context);
-    Type retty = ptr::VoidPtrType::get(context);
+    Type argty = ValueType::get(context);
+    Type retty = ValueType::get(context);
     FunctionType fnty = rewriter.getFunctionType(argty, retty);
 
     PatternRewriter::InsertionGuard insertGuard(rewriter);
@@ -1108,7 +1103,8 @@ public:
   matchAndRewrite(Operation *rator, ArrayRef<Value> rands,
                   ConversionPatternRewriter &rewriter) const override {
     ModuleOp mod = rator->getParentOfType<ModuleOp>();
-    Value param = tc.toVoidPointer(rewriter, rands[0]);
+    // Value param = tc.toVoidPointer(rewriter, rands[0]);
+    Value param = rands[0];
     FuncOp mkClosure = getOrInsertMkClosureThunkify(rewriter, mod);
     rewriter.replaceOpWithNewOp<CallOp>(rator, mkClosure, param);
     return success();
@@ -1139,9 +1135,9 @@ public:
 
     SmallVector<Type, 4> argTys;
     for (int i = 0; i < n + 1; ++i) {
-      argTys.push_back(ptr::VoidPtrType::get(ctx));
+      argTys.push_back(ValueType::get(ctx));
     }
-    Type retty = ptr::VoidPtrType::get(ctx);
+    Type retty = ValueType::get(ctx);
     FunctionType fnty = rewriter.getFunctionType(argTys, retty);
 
     // Insert the printf function into the body of the parent module.
@@ -1163,11 +1159,13 @@ public:
     SmallVector<Value, 4> args;
 
     // function.
-    args.push_back(tc.toVoidPointer(rewriter, rands[0]));
+    // args.push_back(tc.toVoidPointer(rewriter, rands[0]));
+    args.push_back(rands[0]);
 
     // function arguments
     for (int i = 1; i < (int)rands.size(); ++i) {
-      args.push_back(tc.toVoidPointer(rewriter, rands[i]));
+      // args.push_back(tc.toVoidPointer(rewriter, rands[i]));
+      args.push_back(rands[i]);
     }
 
     FuncOp mkclosure =
@@ -1251,9 +1249,9 @@ public:
       rewriter.setInsertionPointAfter(jmp);
       // rewriter.replaceOpWithNewOp<BranchOp>(jmp, jumpTarget, jmp.getOperand());
       llvm::errs() << "creating a branch op: branch(" << jumpTarget << ", " << jmp.getOperand() << ")\n";
-      rewriter.create<mlir::BranchOp>(jmp.getLoc(), 
-        jumpTarget,  
-        rewriter.getRemappedValue(jmp.getOperand()));
+      getchar();
+      // rewriter.create<ptr::PtrBranchOp>(jmp.getLoc(),  jumpTarget, jmp.getOperand());
+      rewriter.create<BranchOp>(jmp.getLoc(), jumpTarget, jmp.getOperand());
       rewriter.eraseOp(jmp);
 
       return WalkResult::advance();
@@ -1498,6 +1496,24 @@ bool isTypeLegal(Type t) {
   return true;
 }
 
+
+template<typename T>
+// bool isOpArgsAndResultsLegal(Operation op) {
+bool isOpArgsAndResultsLegal(T op) {
+    for (Value arg : op->getOperands()) {
+        if (!isTypeLegal(arg.getType())) {
+            return false;
+        }
+    }
+
+    for (Value arg : op->getResults()) {
+        if (!isTypeLegal(arg.getType())) {
+            return false;
+        }
+    }
+    return true;
+}
+
 // I don't know why, but OpConversionPattern just dies.
 // class ErasedValueOpLowering : public OpConversionPattern<ErasedValueOp> {
 struct ErasedValueOpLowering : public mlir::ConversionPattern {
@@ -1511,7 +1527,7 @@ public:
 
     MLIRContext *context = rewriter.getContext();
     Type argty = rewriter.getI64Type();
-    Type retty = ptr::VoidPtrType::get(context);
+    Type retty = ValueType::get(context);
     FunctionType fnty = rewriter.getFunctionType(argty, retty);
 
     PatternRewriter::InsertionGuard insertGuard(rewriter);
@@ -1550,7 +1566,7 @@ public:
     }
 
     MLIRContext *context = rewriter.getContext();
-    // Type argty = ptr::VoidPtrType::get(context);
+    // Type argty = ValueType::get(context);
     Type argty = ValueType::get(context);
     Type retty = rewriter.getI64Type();
     FunctionType fnty = rewriter.getFunctionType(argty, retty);
@@ -1585,12 +1601,12 @@ public:
     MLIRContext *context = rewriter.getContext();
     SmallVector<Type, 4> argtys;
 
-    argtys.push_back(ptr::VoidPtrType::get(context)); // argument.
+    argtys.push_back(ValueType::get(context)); // argument.
     for (int i = 0; i < nargs; ++i) {
-      argtys.push_back(ptr::VoidPtrType::get(context));
+      argtys.push_back(ValueType::get(context));
     }
 
-    Type retty = ptr::VoidPtrType::get(context);
+    Type retty = ValueType::get(context);
     FunctionType fnty = rewriter.getFunctionType(argtys, retty);
 
     PatternRewriter::InsertionGuard insertGuard(rewriter);
@@ -1636,11 +1652,11 @@ public:
     MLIRContext *context = rewriter.getContext();
     SmallVector<Type, 4> argtys;
 
-    argtys.push_back(ptr::VoidPtrType::get(context)); // fn.
-    argtys.push_back(rewriter.getI64Type());          // arity of fn
-    argtys.push_back(rewriter.getI64Type());          // nargs
+    argtys.push_back(ValueType::get(context)); // fn.
+    argtys.push_back(rewriter.getI64Type());   // arity of fn
+    argtys.push_back(rewriter.getI64Type());   // nargs
 
-    Type retty = ptr::VoidPtrType::get(context);
+    Type retty = ValueType::get(context);
     FunctionType fnty = rewriter.getFunctionType(argtys, retty);
 
     PatternRewriter::InsertionGuard insertGuard(rewriter);
@@ -1658,9 +1674,9 @@ public:
     MLIRContext *context = rewriter.getContext();
     SmallVector<Type, 4> argtys;
 
-    argtys.push_back(ptr::VoidPtrType::get(context)); // closure
-    argtys.push_back(rewriter.getI64Type());          // nargs
-    argtys.push_back(ptr::VoidPtrType::get(context)); // value
+    argtys.push_back(ValueType::get(context)); // closure
+    argtys.push_back(rewriter.getI64Type());   // nargs
+    argtys.push_back(ValueType::get(context)); // value
 
     FunctionType fnty = rewriter.getFunctionType(argtys, {});
 
@@ -1933,7 +1949,7 @@ public:
     }
 
     // constructor, string constructor name
-    SmallVector<Type, 4> argtys{ptr::VoidPtrType::get(context)};
+    SmallVector<Type, 4> argtys{ValueType::get(context)};
     Type retty = rewriter.getI64Type();
     auto llvmFnType = rewriter.getFunctionType(argtys, retty);
     // Insert the printf function into the body of the parent module.
@@ -2007,7 +2023,7 @@ public:
     }
     auto undef = rewriter.create<ptr::PtrUndefOp>(
     rewriter.getUnknownLoc(),
-    typeConverter->convertType(ValueType::get(rewriter.getContext())));
+    ValueType::get(rewriter.getContext()));
     rewriter.create<ReturnOp>(rewriter.getUnknownLoc(), undef.getResult());
     rewriter.eraseOp(caseop);
 
@@ -2015,6 +2031,7 @@ public:
   }
 }; // end HASK CASE RET OP.
 
+/*
 class HaskValueToPtrOpTypeConversion : public ConversionPattern {
 public:
   explicit HaskValueToPtrOpTypeConversion(TypeConverter &tc, MLIRContext *context)
@@ -2030,6 +2047,24 @@ public:
     return success();
   }
 };
+*/
+
+// class PtrBranchOpTypeConversion : public ConversionPattern {
+// public:
+//   explicit PtrBranchOpTypeConversion(TypeConverter &tc, MLIRContext *context)
+//       : ConversionPattern(ptr::PtrBranchOp::getOperationName(), 1, tc, context) {}
+// 
+//   LogicalResult
+//   matchAndRewrite(Operation *op, ArrayRef<Value> rands,
+//                   ConversionPatternRewriter &rewriter) const override {
+//     assert(false && "legalizing ptr branch op");
+//     ptr::PtrBranchOp br = cast<ptr::PtrBranchOp>(op);
+//     // rewriter.replaceOpWithNewOp<BranchOp>(br, br.getDest(), br->getOperands());
+//     rewriter.replaceOpWithNewOp<ptr::PtrBranchOp>(br, br.getSuccessor(), rands);
+//     return success();
+//   }
+// };
+
 
 
 
@@ -2044,8 +2079,106 @@ struct LowerLeanPass : public Pass {
     return newInst;
   }
 
+  void runPatterns(ConversionTarget &target, mlir::OwningRewritePatternList &patterns) {
+        ::llvm::DebugFlag = true;
+
+    if (failed(mlir::applyPartialConversion(getOperation(), target,
+                                            std::move(patterns)))) {
+      llvm::errs() << "===Hask lowering failed at Conversion===\n";
+      getOperation()->print(llvm::errs(),
+                            mlir::OpPrintingFlags().printGenericOpForm());
+      llvm::errs() << "\n===\n";
+      signalPassFailure();
+    };
+
+    if (failed(mlir::verify(getOperation()))) {
+      llvm::errs() << "===Hask lowering failed at Verification===\n";
+      getOperation()->print(llvm::errs());
+
+      llvm::errs() << "\n===\n";
+      signalPassFailure();
+    }
+
+    ::llvm::DebugFlag = false;
+
+  }
+
   void runOnOperation() override {
+    
+    {
+
+      HaskTypeConverter typeConverter(&getContext());
+      mlir::OwningRewritePatternList patterns(&getContext());
+      ConversionTarget target(getContext());
+      target.addLegalDialect<HaskDialect, ptr::PtrDialect>();
+      target.addLegalDialect<StandardOpsDialect>();
+      target.addLegalDialect<AffineDialect>();
+      target.addLegalDialect<scf::SCFDialect>();
+      target.addLegalDialect<ptr::PtrDialect>();
+      target.addLegalOp<ModuleOp, ModuleTerminatorOp, FuncOp>();
+
+
+      target.addIllegalOp<HaskCaseIntRetOp>();
+      target.addIllegalOp<HaskCaseRetOp>();
+      target.addIllegalOp<HaskJoinPointOp>();
+      // target.addIllegalOp<HaskJumpOp>();
+
+      // target.addDynamicallyLegalOp<FuncOp>([](FuncOp funcOp) { return isTypeLegal(funcOp.getType()); });
+      // target.addDynamicallyLegalOp<ReturnOp>(isOpArgsAndResultsLegal<ReturnOp>);
+      // target.addDynamicallyLegalOp<BranchOp>(isOpArgsAndResultsLegal<BranchOp>);
+      // target.addDynamicallyLegalOp<ptr::PtrBranchOp>(isOpArgsAndResultsLegal<ptr::PtrBranchOp>);
+      // 
+      patterns.insert<HaskJoinPointOpLowering>(typeConverter, &getContext());
+      patterns.insert<HaskCaseRetOpConversionPattern>(typeConverter, &getContext());
+      patterns.insert<HaskCaseIntRetOpConversionPattern>(typeConverter, &getContext());
+      // patterns.insert<FuncOpLowering>(typeConverter, &getContext());
+      // patterns.insert<ReturnOpLowering>(typeConverter, &getContext());
+      // patterns.insert<BranchOpTypeConversion>(typeConverter, &getContext());
+      // patterns.insert<PtrBranchOpTypeConversion>(typeConverter, &getContext());
+      runPatterns(target, patterns);
+    }
+
+    // === control flow has been lowered. lower simple instructions ===/
+    {
+
+      HaskTypeConverter typeConverter(&getContext());
+      mlir::OwningRewritePatternList patterns(&getContext());
+      ConversionTarget target(getContext());
+      target.addIllegalDialect<HaskDialect>();
+      target.addLegalDialect<ptr::PtrDialect>();
+      target.addLegalDialect<StandardOpsDialect>();
+      target.addLegalDialect<AffineDialect>();
+      target.addLegalDialect<scf::SCFDialect>();
+      target.addLegalDialect<ptr::PtrDialect>();
+      target.addLegalOp<ModuleOp, ModuleTerminatorOp, FuncOp>();
+
+
+      patterns.insert<HaskConstructOpLowering>(typeConverter, &getContext());
+      patterns.insert<ErasedValueOpLowering>(typeConverter, &getContext());
+      patterns.insert<TagGetOpLowering>(typeConverter, &getContext());
+      patterns.insert<PapExtendOpLowering>(typeConverter, &getContext());
+      patterns.insert<PapOpLowering>(typeConverter, &getContext());
+      patterns.insert<HaskStringConstOpLowering>(typeConverter, &getContext());
+      patterns.insert<HaskIntegerConstOpLowering>(typeConverter, &getContext());
+      patterns.insert<ProjectionOpLowering>(typeConverter, &getContext());
+      patterns.insert<CallOpLowering>(typeConverter, &getContext());
+      patterns.insert<ApOpConversionPattern>(typeConverter, &getContext());
+      patterns.insert<ApEagerOpConversionPattern>(typeConverter, &getContext());
+      patterns.insert<HaskReturnOpConversionPattern>(typeConverter,
+              &getContext());
+
+      // patterns.insert<FuncOpLowering>(typeConverter, &getContext());
+      // patterns.insert<ReturnOpLowering>(typeConverter, &getContext());
+      // patterns.insert<BranchOpTypeConversion>(typeConverter, &getContext());
+      runPatterns(target, patterns);
+      return;
+    }
+
+
+
+    /*
     // LLVMConversionTarget target(getContext());
+    HaskTypeConverter typeConverter(&getContext());
     ConversionTarget target(getContext());
     target.addIllegalDialect<HaskDialect>();
     // target.addLegalDialect<HaskDialect>();
@@ -2093,29 +2226,24 @@ struct LowerLeanPass : public Pass {
       return true;
     });
 
-    /*
-  target.addDynamicallyLegalOp<CallIndirectOp>([](CallIndirectOp call) {
+  // target.addDynamicallyLegalOp<CallIndirectOp>([](CallIndirectOp call) {
 
-    llvm::errs() << "===Checking callIndirectOp===\n";
-    for (Value arg : call.getOperands()) {
-      llvm::errs() << " - " << arg.getType() << "\n";
-      if (!isTypeLegal(arg.getType())) {
-        return false;
-
-      }
-    }
-
-    for (Type t : call.getResultTypes()) {
-      llvm::errs() << " - " << t << "\n";
-
-      if (!isTypeLegal(t)) {
-        return false;
-      }
-    }
-    llvm::errs() << "\n===\n";
-    return true;
-  });
-     */
+  //   llvm::errs() << "===Checking callIndirectOp===\n";
+  //   for (Value arg : call.getOperands()) {
+  //     llvm::errs() << " - " << arg.getType() << "\n";
+  //     if (!isTypeLegal(arg.getType())) {
+  //       return false;
+  //     }
+  //   }
+  //   for (Type t : call.getResultTypes()) {
+  //     llvm::errs() << " - " << t << "\n";
+  //     if (!isTypeLegal(t)) {
+  //       return false;
+  //     }
+  //   }
+  //   llvm::errs() << "\n===\n";
+  //   return true;
+  // });
 
     target.addDynamicallyLegalOp<memref::AllocOp>(
         [](memref::AllocOp op) { return isTypeLegal(op.getType()); });
@@ -2202,6 +2330,16 @@ struct LowerLeanPass : public Pass {
       return true;
     });
 
+    target.addDynamicallyLegalOp<ptr::PtrBranchOp>([](ptr::PtrBranchOp br) {
+      return false;
+      for (int i = 0; i < (int)br->getNumOperands(); ++i) {
+        if (!isTypeLegal(br.getOperand(i).getType())) {
+          return false;
+        }
+      }
+      return true;
+    });
+
     target.addDynamicallyLegalOp<ReturnOp>([](ReturnOp ret) {
       for (int i = 0; i < (int)ret->getNumOperands(); ++i) {
         if (!isTypeLegal(ret.getOperand(i).getType())) {
@@ -2213,7 +2351,7 @@ struct LowerLeanPass : public Pass {
 
     
 
-    HaskTypeConverter typeConverter(&getContext());
+
     mlir::OwningRewritePatternList patterns(&getContext());
 
     // patterns.insert<ForceOpConversionPattern>(typeConverter, &getContext());
@@ -2262,6 +2400,8 @@ struct LowerLeanPass : public Pass {
 
     patterns.insert<AffineForOpLowering>(typeConverter, &getContext());
 
+    patterns.insert<PtrBranchOpTypeConversion>(typeConverter, &getContext());
+
     patterns.insert<BranchOpTypeConversion>(typeConverter, &getContext());
     patterns.insert<ReturnOpTypeConversion>(typeConverter, &getContext());
 
@@ -2273,30 +2413,12 @@ struct LowerLeanPass : public Pass {
     patterns.insert<PtrFnPtrOpTypeConversion>(typeConverter, &getContext());
 
     // this only exists for type conversion reasons. Will be eliminated
-    target.addIllegalOp<mlir::ptr::HaskValueToPtrOp>();
-    patterns.insert<HaskValueToPtrOpTypeConversion>(typeConverter, &getContext());
+    // target.addIllegalOp<mlir::ptr::HaskValueToPtrOp>();
+    // patterns.insert<HaskValueToPtrOpTypeConversion>(typeConverter, &getContext());
     
 
-    ::llvm::DebugFlag = true;
-
-    if (failed(mlir::applyPartialConversion(getOperation(), target,
-                                            std::move(patterns)))) {
-      llvm::errs() << "===Hask lowering failed at Conversion===\n";
-      getOperation()->print(llvm::errs(),
-                            mlir::OpPrintingFlags().printGenericOpForm());
-      llvm::errs() << "\n===\n";
-      signalPassFailure();
-    };
-
-    if (failed(mlir::verify(getOperation()))) {
-      llvm::errs() << "===Hask lowering failed at Verification===\n";
-      getOperation()->print(llvm::errs());
-
-      llvm::errs() << "\n===\n";
-      signalPassFailure();
-    }
-
-    ::llvm::DebugFlag = false;
+    runPatterns(target, patterns);
+    */
   };
 };
 } // end anonymous namespace.

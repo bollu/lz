@@ -8,6 +8,7 @@
 
 #include "Pointer/PointerDialect.h"
 #include "Hask/HaskOps.h"
+#include "Hask/HaskDialect.h"
 #include "Pointer/PointerOps.h"
 
 // includes
@@ -56,7 +57,8 @@ PtrDialect::PtrDialect(mlir::MLIRContext *context)
   // clang-format off
   addOperations<IntToPtrOp, PtrToIntOp, PtrStringOp, FnToVoidPtrOp, PtrUndefOp>();
   // addOperations<PtrToHaskValueOp> 
-  addOperations<HaskValueToPtrOp>();
+  // addOperations<HaskValueToPtrOp>();
+  addOperations<PtrBranchOp>(); 
   addOperations<PtrToMemrefOp>();
   addOperations<DoubleToPtrOp>();
   addOperations<MemrefToVoidPtrOp>();
@@ -65,32 +67,34 @@ PtrDialect::PtrDialect(mlir::MLIRContext *context)
   addOperations<PtrLoadGlobalOp>();
   addOperations<PtrFnPtrOp>();
   addOperations<PtrStoreGlobalOp>();
-  addTypes<VoidPtrType, CharPtrType>();
+  // addTypes<VoidPtrType, CharPtrType>();
 
   // clang-format on
 }
 
 mlir::Type PtrDialect::parseType(mlir::DialectAsmParser &parser) const {
-  if (succeeded(parser.parseOptionalKeyword("void"))) { // !ptr.void
-    return VoidPtrType::get(parser.getBuilder().getContext());
-  }
-  if (succeeded(parser.parseOptionalKeyword("char"))) { // !ptr.char
-    return CharPtrType::get(parser.getBuilder().getContext());
-  }
+  // if (succeeded(parser.parseOptionalKeyword("void"))) { // !ptr.void
+  //   return VoidPtrType::get(parser.getBuilder().getContext());
+  // }
+  // if (succeeded(parser.parseOptionalKeyword("char"))) { // !ptr.char
+  //   return CharPtrType::get(parser.getBuilder().getContext());
+  // }
 
+  assert(false && "this dialect has no types");
   return Type();
 }
 
 void PtrDialect::printType(mlir::Type type, mlir::DialectAsmPrinter &p) const {
-  if (type.isa<VoidPtrType>()) {
-    p << "void"; // !ptr.void
-    return;
-  }
+  assert(false && "this dialect has no types");
+  // if (type.isa<VoidPtrType>()) {
+  //   p << "void"; // !ptr.void
+  //   return;
+  // }
 
-  if (type.isa<CharPtrType>()) {
-    p << "char"; // !ptr.char
-    return;
-  }
+  // if (type.isa<CharPtrType>()) {
+  //   p << "char"; // !ptr.char
+  //   return;
+  // }
 
   assert(false && "unknown type to print");
 }
@@ -105,7 +109,7 @@ void IntToPtrOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
                        Value vint) {
   assert(vint.getType().isa<IntegerType>());
   state.addOperands(vint);
-  state.addTypes(VoidPtrType::get(builder.getContext()));
+  state.addTypes(standalone::ValueType::get(builder.getContext()));
 };
 
 void IntToPtrOp::print(OpAsmPrinter &p) {
@@ -123,7 +127,7 @@ void DoubleToPtrOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
   FloatType ft = v.getType().dyn_cast<FloatType>();
   assert(ft && "expected argument to be of float type");
   state.addOperands(v);
-  state.addTypes(VoidPtrType::get(builder.getContext()));
+  state.addTypes(standalone::ValueType::get(builder.getContext()));
 };
 
 void DoubleToPtrOp::print(OpAsmPrinter &p) {
@@ -140,7 +144,7 @@ void FnToVoidPtrOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
                           Value v) {
   assert(v.getType().isa<FunctionType>());
   state.addOperands(v);
-  state.addTypes(VoidPtrType::get(builder.getContext()));
+  state.addTypes(standalone::ValueType::get(builder.getContext()));
 };
 
 void FnToVoidPtrOp::print(OpAsmPrinter &p) {
@@ -157,7 +161,7 @@ void MemrefToVoidPtrOp::build(mlir::OpBuilder &builder,
                               mlir::OperationState &state, Value v) {
   assert(v.getType().isa<MemRefType>());
   state.addOperands(v);
-  state.addTypes(VoidPtrType::get(builder.getContext()));
+  state.addTypes(standalone::ValueType::get(builder.getContext()));
 };
 
 void MemrefToVoidPtrOp::print(OpAsmPrinter &p) {
@@ -172,7 +176,7 @@ void MemrefToVoidPtrOp::print(OpAsmPrinter &p) {
 
 void PtrToIntOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
                        Value vptr, IntegerType ity) {
-  assert(vptr.getType().isa<VoidPtrType>() &&
+  assert(vptr.getType().isa<standalone::ValueType>() &&
          "expected argument to be a void pointer type");
   state.addOperands(vptr);
   state.addTypes(ity);
@@ -190,7 +194,7 @@ void PtrToIntOp::print(OpAsmPrinter &p) {
 
 void PtrToFloatOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
                          Value vptr, FloatType ty) {
-  assert(vptr.getType().isa<VoidPtrType>() &&
+  assert(vptr.getType().isa<standalone::ValueType>() &&
          "expected argument to be a void pointer type");
   state.addOperands(vptr);
   state.addTypes(ty);
@@ -208,7 +212,7 @@ void PtrToFloatOp::print(OpAsmPrinter &p) {
 
 void PtrToMemrefOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
                           Value vptr, MemRefType mty) {
-  assert(vptr.getType().isa<VoidPtrType>() &&
+  assert(vptr.getType().isa<standalone::ValueType>() &&
          "expected argument to be a void pointer type");
   state.addOperands(vptr);
   state.addTypes(mty);
@@ -227,23 +231,26 @@ void PtrToMemrefOp::print(OpAsmPrinter &p) {
 void PtrStringOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
                         const char *str) {
   state.addAttribute("value", builder.getStringAttr(str));
-//  state.addTypes(CharPtrType::get(builder.getContext()));
-  state.addTypes(VoidPtrType::get(builder.getContext()));
+  // state.addTypes(CharPtrType::get(builder.getContext()));
+  // state.addTypes(standalone::ValueType::get(builder.getContext()));
+  state.addTypes(mlir::standalone::ValueType::get(builder.getContext()));
 
 };
 
 void PtrStringOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
                         std::string str) {
   state.addAttribute("value", builder.getStringAttr(str));
-//  state.addTypes(CharPtrType::get(builder.getContext()));
-  state.addTypes(VoidPtrType::get(builder.getContext()));
+  // state.addTypes(CharPtrType::get(builder.getContext()));
+  // state.addTypes(standalone::ValueType::get(builder.getContext()));
+  state.addTypes(mlir::standalone::ValueType::get(builder.getContext()));
 };
 
 void PtrStringOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
                         llvm::StringRef str) {
   state.addAttribute("value", builder.getStringAttr(str));
-//  state.addTypes(CharPtrType::get(builder.getContext()));
-  state.addTypes(VoidPtrType::get(builder.getContext()));
+  // state.addTypes(CharPtrType::get(builder.getContext()));
+  // state.addTypes(VoidPtrType::get(builder.getContext()));
+  state.addTypes(mlir::standalone::ValueType::get(builder.getContext()));
 };
 
 void PtrStringOp::print(OpAsmPrinter &p) {
@@ -256,7 +263,7 @@ ParseResult PtrStringOp::parse(OpAsmParser &parser, OperationState &result) {
     return failure();
   }
 
-  result.addTypes(CharPtrType::get(parser.getBuilder().getContext()));
+  result.addTypes(standalone::ValueType::get(parser.getBuilder().getContext()));
   return success();
 }
 
@@ -267,10 +274,10 @@ public:
   PtrTypeConverter(MLIRContext *ctx) : LLVMTypeConverter(ctx) {
     // !ptr.void -> i8*
     addConversion(
-        [](ptr::VoidPtrType ty) { return getInt8PtrTy(ty.getContext()); });
+        [](standalone::ValueType ty) { return getInt8PtrTy(ty.getContext()); });
     // !ptr.char -> i8*
     addConversion(
-        [](ptr::CharPtrType ty) { return getInt8PtrTy(ty.getContext()); });
+        [](standalone::ValueType ty) { return getInt8PtrTy(ty.getContext()); });
   };
 };
 // === UNDEF OP ===
@@ -335,7 +342,8 @@ void PtrFnPtrOp::print(OpAsmPrinter &p) {
 void PtrFnPtrOp::build(mlir::OpBuilder &builder, mlir::OperationState &state, std::string name, Type fnty) {
   state.addAttribute(PtrFnPtrOp::getGlobalNameAttrKey(), builder.getSymbolRefAttr(name));
   state.addAttribute(PtrFnPtrOp::getGlobalTypeAttrKey(), TypeAttr::get(fnty));
-  state.addTypes(VoidPtrType::get(builder.getContext()));
+  // state.addTypes(VoidPtrType::get(builder.getContext()));
+  state.addTypes(mlir::standalone::ValueType::get(builder.getContext()));
 };
 
 
@@ -407,6 +415,7 @@ void PtrToHaskValueOp::print(OpAsmPrinter &p) {
 // === VALUE TO PTR OP===
 // === VALUE TO PTR OP===
 // === VALUE TO PTR OP===
+/*
 ParseResult HaskValueToPtrOp::parse(OpAsmParser &parser,
                                     OperationState &result) {
   OpAsmParser::OperandType rand; // ope'rand
@@ -431,6 +440,34 @@ void HaskValueToPtrOp::build(mlir::OpBuilder &builder,
 void HaskValueToPtrOp::print(OpAsmPrinter &p) {
   p.printGenericOp(this->getOperation());
 };
+*/
+
+
+// === PTR BRANCH OP===
+// === PTR BRANCH OP===
+// === PTR BRANCH OP===
+// === PTR BRANCH OP===
+// === PTR BRANCH OP===
+ParseResult PtrBranchOp::parse(OpAsmParser &parser, OperationState &result) {
+    assert(false && "unimplemented");
+};
+void PtrBranchOp::print(OpAsmPrinter &p) {
+  p.printGenericOp(*this);
+};
+
+void PtrBranchOp::build(mlir::OpBuilder &builder, mlir::OperationState &state, 
+  mlir::Block *next, mlir::ValueRange args) {
+  state.addOperands(args);
+  state.addSuccessors(next);
+};
+
+void PtrBranchOp::build(mlir::OpBuilder &builder, mlir::OperationState &state, 
+    mlir::Block *next, llvm::ArrayRef<Value> &args) {
+      state.addOperands(args);
+      state.addSuccessors(next);
+}
+
+
 
 
 // === LOWERING ===
@@ -478,7 +515,8 @@ public:
                               argtys))) {
       assert(false && "unable to convert memref type.");
     };
-    Type retty = ptr::VoidPtrType::get(rewriter.getContext());
+    // Type retty = ptr::VoidPtrType::get(rewriter.getContext());
+    Type retty = standalone::ValueType::get(rewriter.getContext());
     FunctionType fnty = rewriter.getFunctionType(argtys, retty);
 
     PatternRewriter::InsertionGuard insertGuard(rewriter);
@@ -521,7 +559,8 @@ public:
 
     // MLIRContext *context = rewriter.getContext();
 
-    Type argty = ptr::VoidPtrType::get(rewriter.getContext());
+    // Type argty = ptr::VoidPtrType::get(rewriter.getContext());
+    Type argty = standalone::ValueType::get(rewriter.getContext());
     Type retty = tc.convertType(MemRefType::get({0}, rewriter.getI64Type()));
     assert(retty);
 
@@ -804,6 +843,21 @@ public:
   }
 };
 
+struct PtrBranchOpLowering : public ConversionPattern {
+public:
+  explicit PtrBranchOpLowering(TypeConverter &tc, MLIRContext *context)
+      : ConversionPattern(PtrBranchOp::getOperationName(), 1, tc, context) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *rator, ArrayRef<Value> rands,
+                  ConversionPatternRewriter &rewriter) const override {
+    PtrBranchOp ptr = cast<PtrBranchOp>(rator);
+    rewriter.replaceOpWithNewOp<LLVM::BrOp>(rator, rands, ptr.getSuccessor());
+    return success();
+  }
+};
+
+
 /*
 //
 https://github.com/spcl/open-earth-compiler/blob/master/lib/Conversion/StencilToStandard/ConvertStencilToStandard.cpp#L45
@@ -940,7 +994,6 @@ struct LowerPointerPass : public Pass {
     target.addIllegalDialect<PtrDialect>();
     target.addLegalDialect<LLVM::LLVMDialect>();
     // target.addLegalDialect<StandardOpsDialect>();
-
     target.addLegalOp<ModuleOp, ModuleTerminatorOp>();
 
     PtrTypeConverter typeConverter(&getContext());
@@ -1004,6 +1057,7 @@ struct LowerPointerPass : public Pass {
     patterns.insert<PtrStoreGlobalOpLowering>(typeConverter, &getContext());
     patterns.insert<PtrGlobalOpLowering>(typeConverter, &getContext());
     patterns.insert<PtrFnPtrOpLowering>(typeConverter, &getContext());
+    patterns.insert<PtrBranchOpLowering>(typeConverter, &getContext());
 
 
     // &getContext()); patterns.insert<CaseOpConversionPattern>(typeConverter,

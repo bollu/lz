@@ -35,19 +35,19 @@ public:
   PtrDialect &getDialect();
 };
 
-class VoidPtrType
-    : public mlir::Type::TypeBase<VoidPtrType, PtrType, TypeStorage> {
-public:
-  using Base::Base;
-  static VoidPtrType get(MLIRContext *context) { return Base::get(context); }
-};
-
-class CharPtrType
-    : public mlir::Type::TypeBase<CharPtrType, PtrType, TypeStorage> {
-public:
-  using Base::Base;
-  static CharPtrType get(MLIRContext *context) { return Base::get(context); }
-};
+// class VoidPtrType
+//     : public mlir::Type::TypeBase<VoidPtrType, PtrType, TypeStorage> {
+// public:
+//   using Base::Base;
+//   static VoidPtrType get(MLIRContext *context) { return Base::get(context); }
+// };
+// 
+// class CharPtrType
+//     : public mlir::Type::TypeBase<CharPtrType, PtrType, TypeStorage> {
+// public:
+//   using Base::Base;
+//   static CharPtrType get(MLIRContext *context) { return Base::get(context); }
+// };
 
 // %ptr = inttoptr %i
 class IntToPtrOp
@@ -239,6 +239,7 @@ public:
 };
 */
 
+/*
 class HaskValueToPtrOp
     : public Op<HaskValueToPtrOp, OpTrait::OneOperand, OpTrait::OneResult> {
 public:
@@ -248,6 +249,22 @@ public:
   void print(OpAsmPrinter &p);
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
                     Value v);
+};
+*/
+
+class PtrBranchOp : 
+  public Op<PtrBranchOp, OpTrait::VariadicOperands, 
+      OpTrait::IsTerminator, OpTrait::ZeroResult, OpTrait::OneSuccessor> {
+public:
+  using Op::Op;
+  static StringRef getOperationName() { return "ptr.br"; };
+  static ParseResult parse(OpAsmParser &parser, OperationState &result);
+  void print(OpAsmPrinter &p);
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state, 
+    mlir::Block *next, mlir::ValueRange args);
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state, 
+    mlir::Block *next, llvm::ArrayRef<Value> &args);
+
 };
 
 
