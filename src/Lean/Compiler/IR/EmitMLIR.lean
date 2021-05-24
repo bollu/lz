@@ -455,14 +455,14 @@ def emitJmp (j : JoinPointId) (xs : Array Arg)
   (tys: HashMap VarId IRType) : M Unit := do
   -- let ps ← getJPParams j
   -- unless xs.size == ps.size do throw "invalid goto"
-  emit (escape "br "); emit ("^jp" ++ (toString j.idx)); emit "(";
+  emit "br "; emit ("^jp" ++ (toString j.idx)); emit "(";
   xs.size.forM fun i => do
     -- let p := ps[i]
     let x := xs[i]
     if i > 0 then emit ", ";
-    emitArg xs[i];
-  emit ")";
-  emit ": ("; emitArgsOnlyTys  xs tys; emit ")"; emitLn " -> ()";
+    emitArg xs[i]; emit " : "; emit (toCType (lookupArgTy tys x));
+  emitLn ")";
+  -- emit ": ("; emitArgsOnlyTys  xs tys; emit ")"; emitLn " -> ()";
 
 
 def emitCtorScalarSize (usize : Nat) (ssize : Nat) : M Unit := do
@@ -905,34 +905,37 @@ partial def emitCase (x : VarId) (xType : IRType) (alts : Array Alt)
   --     | Alt.default b => emitLn "default: "; (emitFnBody b {})
   --   emitLn "}"
 
-partial def emitJoinPointDecl (j : JoinPointId) (xs : Array Param) (inblock : FnBody)
-  (rest : FnBody) (tys: HashMap VarId IRType) : M Unit := do
-    emit ((escape "lz.joinpoint") ++ "()");
-    emit "({\n";
-    emit "^entry(";  
-    xs.size.forM fun i => do
-      if i > 0 then emit ", "
-      let x := xs[i]
-      emit "%"; emit x.x; emit ": "; emit (toCType x.ty)
-    emit "):\n";
-    let tysInBlock := xs.foldl (fun hashmap p => (hashmap.insert p.x p.ty)) tys
-    emitBlock inblock tysInBlock;
-    emit "}, {\n";
-    emitBlock rest tys;
-    emit "})";
-    emitLn ": () -> ()";
-
 -- partial def emitJoinPointDecl (j : JoinPointId) (xs : Array Param) (inblock : FnBody)
 --   (rest : FnBody) (tys: HashMap VarId IRType) : M Unit := do
---     emitBlock rest tys;
---     emit "^jp"; emit (toString j.idx); emit (";  
+--     emit ((escape "lz.joinpoint") ++ "()");
+--     emit "({\n";
+--     emit "^entry(";  
 --     xs.size.forM fun i => do
 --       if i > 0 then emit ", "
 --       let x := xs[i]
---       emit "%"; emit x.x; emit ": "; emit (toCType x.ty);
+--       emit "%"; emit x.x; emit ": "; emit (toCType x.ty)
 --     emit "):\n";
 --     let tysInBlock := xs.foldl (fun hashmap p => (hashmap.insert p.x p.ty)) tys
 --     emitBlock inblock tysInBlock;
+--     emit "}, {\n";
+--     emitBlock rest tys;
+--     emit "})";
+--     emitLn ": () -> ()";
+
+partial def emitJoinPointDecl (j : JoinPointId) (xs : Array Param) (inblock : FnBody)
+  (rest : FnBody) (tys: HashMap VarId IRType) : M Unit := do
+    emitBlock rest tys;
+    emit "^jp"; emit (toString j.idx); emit "(";  
+    xs.size.forM fun i => do
+      if i > 0 then emit ", "
+      let x := xs[i]
+      emit "%";
+      emit x.x;
+      emit ": ";
+      emit (toCType x.ty);
+    emit "):\n";
+    let tysInBlock := xs.foldl (fun hashmap p => (hashmap.insert p.x p.ty)) tys
+    emitBlock inblock tysInBlock
 
 partial def emitBlock (b : FnBody) (tys: HashMap VarId IRType) : M Unit := do
   match b with
