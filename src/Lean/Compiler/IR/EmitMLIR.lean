@@ -273,6 +273,7 @@ def emitFnFwdDecls : M Unit := do
 -- def emitMainFnIfNeeded : M Unit := do
 --   if (← hasMainFn) then emitMainFn
 
+-- Prelude
 def emitPreamble : M Unit := do
   let env ← getEnv
   let modName ← getModName
@@ -286,6 +287,7 @@ def emitPreamble : M Unit := do
   emitLn "func private @lean_box(i64) -> !lz.value"
   emitLn "func private @lean_io_result_mk_ok(!lz.value) -> !lz.value"
   emitLn "func private @lean_mark_persistent(!lz.value) -> ()"
+  emitLn "func private @lean_box_uint32(i32) -> (!lz.value)"
 
 
 def emitFileHeader : M Unit := do
@@ -436,17 +438,30 @@ def emitArgs (ys : Array Arg) : M Unit :=
     emitArg ys[i]
 
 
+-- def emitJmp (j : JoinPointId) (xs : Array Arg)
+--   (tys: HashMap VarId IRType) : M Unit := do
+--   -- let ps ← getJPParams j
+--   -- unless xs.size == ps.size do throw "invalid goto"
+--   emit (escape "lz.jump"); emit "(";
+--   xs.size.forM fun i => do
+--     -- let p := ps[i]
+--     let x := xs[i]
+--     if i > 0 then emit ", ";
+--     emitArg xs[i];
+--   emit $ "){value=" ++ (toString j.idx) ++  "}";
+--   emit ": ("; emitArgsOnlyTys  xs tys; emit ")"; emitLn " -> ()";
+
 def emitJmp (j : JoinPointId) (xs : Array Arg)
   (tys: HashMap VarId IRType) : M Unit := do
   -- let ps ← getJPParams j
   -- unless xs.size == ps.size do throw "invalid goto"
-  emit (escape "lz.jump"); emit "(";
+  emit (escape "br "); emit ("^jp" ++ (toString j.idx)); emit "(";
   xs.size.forM fun i => do
     -- let p := ps[i]
     let x := xs[i]
     if i > 0 then emit ", ";
     emitArg xs[i];
-  emit $ "){value=" ++ (toString j.idx) ++  "}";
+  emit ")";
   emit ": ("; emitArgsOnlyTys  xs tys; emit ")"; emitLn " -> ()";
 
 
@@ -833,6 +848,10 @@ partial def emitCaseObj (x : VarId) (xType : IRType) (alts : Array Alt)
  emit "("; emit (toCType xType); emit ")"; emit " -> "; emit "()";
  emitLn "";
 
+-- | when does this EVER emit a default? As far as I can tell, integer pattern matches
+-- are emitted as 
+--   caseInt lean_dec_eq(x, LHS) { 0 -> ...; 1 -> ... }
+-- so there is no way to even GET a @default.
 partial def emitCaseInt (x : VarId) (xType : IRType) (alts : Array Alt) 
         (tys: HashMap VarId IRType): M Unit := do
  emit (escape ("lz.caseIntRet")); emit "("; emit "%"; emit x; emit ")";
@@ -888,7 +907,7 @@ partial def emitCase (x : VarId) (xType : IRType) (alts : Array Alt)
 
 partial def emitJoinPointDecl (j : JoinPointId) (xs : Array Param) (inblock : FnBody)
   (rest : FnBody) (tys: HashMap VarId IRType) : M Unit := do
-    emit ((escape "lz.block") ++ "()");
+    emit ((escape "lz.joinpoint") ++ "()");
     emit "({\n";
     emit "^entry(";  
     xs.size.forM fun i => do
@@ -902,6 +921,18 @@ partial def emitJoinPointDecl (j : JoinPointId) (xs : Array Param) (inblock : Fn
     emitBlock rest tys;
     emit "})";
     emitLn ": () -> ()";
+
+-- partial def emitJoinPointDecl (j : JoinPointId) (xs : Array Param) (inblock : FnBody)
+--   (rest : FnBody) (tys: HashMap VarId IRType) : M Unit := do
+--     emitBlock rest tys;
+--     emit "^jp"; emit (toString j.idx); emit (";  
+--     xs.size.forM fun i => do
+--       if i > 0 then emit ", "
+--       let x := xs[i]
+--       emit "%"; emit x.x; emit ": "; emit (toCType x.ty);
+--     emit "):\n";
+--     let tysInBlock := xs.foldl (fun hashmap p => (hashmap.insert p.x p.ty)) tys
+--     emitBlock inblock tysInBlock;
 
 partial def emitBlock (b : FnBody) (tys: HashMap VarId IRType) : M Unit := do
   match b with
