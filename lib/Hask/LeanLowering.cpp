@@ -348,6 +348,8 @@ public:
   }
 };
 
+
+
 class ScfYieldOpLowering : public ConversionPattern {
 public:
   explicit ScfYieldOpLowering(TypeConverter &tc, MLIRContext *context)
@@ -1243,7 +1245,7 @@ public:
     jpOp.getFirstRegionWithJmp().walk([&](HaskJumpOp jmp) {
       rewriter.setInsertionPoint(jmp);
       Block *jumpTarget = &jpOp.getLaterJumpedIntoRegion().front();
-      rewriter.replaceOpWithNewOp<BranchOp>(jmp, jumpTarget, jmp->getOperands());
+      rewriter.replaceOpWithNewOp<BranchOp>(jmp, jumpTarget, rands);
       return WalkResult::advance();
     });
 
@@ -1603,7 +1605,10 @@ public:
     //   "; emitArgs ys; emitLn ");"
     // TODO: generate lean_apply_m;
     FuncOp f = getOrCreateLeanApply(papext.getNumFnArguments(), rewriter, mod);
-    rewriter.replaceOpWithNewOp<mlir::CallOp>(op, f, papext->getOperands());
+    // rewriter.replaceOpWithNewOp<mlir::CallOp>(op, f, papext->getOperands());
+    rewriter.replaceOpWithNewOp<mlir::CallOp>(op, f, rands);
+    
+    
     return success();
   }
 };
@@ -1790,7 +1795,8 @@ public:
   matchAndRewrite(Operation *op, ArrayRef<Value> rands,
                   ConversionPatternRewriter &rewriter) const override {
     BranchOp br = cast<BranchOp>(op);
-    rewriter.replaceOpWithNewOp<BranchOp>(br, br.getDest(), br->getOperands());
+    // rewriter.replaceOpWithNewOp<BranchOp>(br, br.getDest(), br->getOperands());
+    rewriter.replaceOpWithNewOp<BranchOp>(br, br.getDest(), rands);
     return success();
   }
 };
@@ -1804,7 +1810,8 @@ public:
   matchAndRewrite(Operation *op, ArrayRef<Value> rands,
                   ConversionPatternRewriter &rewriter) const override {
     ReturnOp ret = cast<ReturnOp>(op);
-    rewriter.replaceOpWithNewOp<ReturnOp>(ret, ret->getOperands());
+    // rewriter.replaceOpWithNewOp<ReturnOp>(ret, ret->getOperands());
+    rewriter.replaceOpWithNewOp<ReturnOp>(ret, rands);
     return success();
   }
 };
@@ -2039,6 +2046,16 @@ struct LowerLeanPass : public Pass {
       return true;
     });
 
+    target.addDynamicallyLegalOp<BranchOp>([](BranchOp br) {
+      for (Value arg : br.getOperands()) {
+        if (!isTypeLegal(arg.getType())) {
+          return false;
+        }
+      }
+      return true;
+    });
+
+
     target.addDynamicallyLegalOp<CallOp>([](CallOp call) {
       for (Value arg : call.getOperands()) {
         if (!isTypeLegal(arg.getType())) {
@@ -2196,6 +2213,7 @@ struct LowerLeanPass : public Pass {
     patterns.insert<ConstantOpLowering>(typeConverter, &getContext());
     patterns.insert<FuncOpLowering>(typeConverter, &getContext());
     patterns.insert<ReturnOpLowering>(typeConverter, &getContext());
+
     patterns.insert<CallOpLowering>(typeConverter, &getContext());
     //    patterns.insert<CallIndirectOpLowering>(typeConverter, &getContext());
     patterns.insert<ScfYieldOpLowering>(typeConverter, &getContext());
