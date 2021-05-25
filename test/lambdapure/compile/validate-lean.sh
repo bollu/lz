@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+# https://stackoverflow.com/a/23161454/5305365
+SCRIPTDIR="${BASH_SOURCE[0]}";
+SCRIPTDIR=$(dirname $SCRIPTDIR)
+
+
 set -e
 set -o xtrace
 
@@ -11,7 +16,6 @@ rm out-ref.txt || true
 
 
 rm out-ours.txt || true
-./run-lean.sh $1 > ours.txt 
-
+$SCRIPTDIR/run-lean.sh $1 > ours.txt 
 
 diff ref.txt ours.txt

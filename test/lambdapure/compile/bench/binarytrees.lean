@@ -1,6 +1,4 @@
---  RUN: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize  | FileCheck %s
---  RUN: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize --lz-lambdapure-destructive-updates | FileCheck %s
---  RUN: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize --lz-lambdapure-destructive-updates --lz-lambdapure-reference-rewriter | FileCheck %s
+-- RUN: ../validate-lean.sh %s
 
 -- STATUS: can be round-tripped, DOES NOT interpret.
 -- STATUS: DOES NOT interpret because it needs support for tasks.
@@ -50,9 +48,30 @@ partial def depth : Nat -> Nat -> List (Nat × Nat × Task UInt32)
     (n, d, Task.spawn (fun _ => sumT (UInt32.ofNat d) (UInt32.ofNat n) 0)) :: depth (d+2) m
   else []
 
-def main : List String → IO UInt32
-| [s] => do
-  let n := s.toNat!;
+-- def main : List String → IO UInt32
+-- | [s] => do
+--   let n := s.toNat!;
+--   let maxN := Nat.max (minN + 2) n;
+--   let stretchN := maxN + 1;
+-- 
+--   -- stretch memory tree
+--   let c := check (make $ UInt32.ofNat stretchN);
+--   out "stretch tree" stretchN c;
+-- 
+--   -- allocate a long lived tree
+--   let long := make $ UInt32.ofNat maxN;
+-- 
+--   -- allocate, walk, and deallocate many bottom-up binary trees
+--   let vs := (depth minN maxN); -- `using` (parList $ evalTuple3 r0 r0 rseq)
+--   vs.forM (fun (m, d, i) => out (toString m ++ "\t trees") d i.get);
+-- 
+--   -- confirm the the long-lived binary tree still exists
+--   out "long lived tree" maxN (check long);
+--   pure 0
+-- | _ => pure 1
+
+def main : IO UInt32 := do
+  let n := 4;
   let maxN := Nat.max (minN + 2) n;
   let stretchN := maxN + 1;
 
@@ -70,4 +89,3 @@ def main : List String → IO UInt32
   -- confirm the the long-lived binary tree still exists
   out "long lived tree" maxN (check long);
   pure 0
-| _ => pure 1

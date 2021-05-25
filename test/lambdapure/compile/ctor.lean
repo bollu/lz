@@ -1,4 +1,5 @@
 --  RUN: ./run-lean.sh %s | FileCheck %s --check-prefix=CHECK-INTERPRET
+--  RUN: ./validate-lean.sh %s 
 -- CHECK-INTERPRET: (((nil , nil) , (nil , nil)) , ((nil , nil) , (nil , nil)))
 
 

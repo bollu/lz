@@ -1,12 +1,13 @@
---  RUN: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize  | FileCheck %s
---  RUN: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize  --lz-interpret="mode=lambdapure stdio=3" | FileCheck %s --check-prefix=CHECK-INTERPRET
+-- RUN: ../validate-lean.sh %s
+-- run: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize  | FileCheck %s
+-- run: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize  --lz-interpret="mode=lambdapure stdio=3" | FileCheck %s --check-prefix=CHECK-INTERPRET
 
 -- TODO: doesn't run properly; Tries to execute erased content.
 -- CHECK: func @main
 -- CHECK-INTERPRET: num_force_calls(0)
 
---  these fail: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize  --lz-lambdapure-destructive-updates | FileCheck %s
---  these fail: lean %s 2>&1 1>/dev/null | hask-opt  --lz-canonicalize --lz-lambdapure-destructive-updates --lz-lambdapure-reference-rewriter | FileCheck %s
+-- these fail: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize  --lz-lambdapure-destructive-updates | FileCheck %s
+-- these fail: lean %s 2>&1 1>/dev/null | hask-opt  --lz-canonicalize --lz-lambdapure-destructive-updates --lz-lambdapure-reference-rewriter | FileCheck %s
 
 
 set_option trace.compiler.ir.init true

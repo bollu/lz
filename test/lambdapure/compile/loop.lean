@@ -1,4 +1,6 @@
 --  RUN: ./run-lean.sh %s | FileCheck %s --check-prefix=CHECK-INTERPRET
+--  RUN: ./validate-lean.sh %s 
+
 
 -- 4 + 3 + 2 + 1 = 10
 -- CHECK-INTERPRET: 10

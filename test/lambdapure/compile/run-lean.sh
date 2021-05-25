@@ -6,14 +6,13 @@ set -o xtrace
 rm $1-exe.out || true
 
 # lean -c fails if relative path walks upward. eg. lean -c ../exe.c -o foo
-lean $1 -c exe-ref.c || true
+(lean $1 -c exe-ref.c && clang -I /home/bollu/work/lean4/build/stage0/include  -S  -emit-llvm exe-ref.c -o exe-lean-ref.ll) || true
 
 lean $1 2>&1 | \
         hask-opt | tee exe.mlir | \
         hask-opt  --lean-lower  --ptr-lower | \
         mlir-translate --mlir-to-llvmir | tee exe.ll  | llc -filetype=obj -o exe.o
 
-clang -I /home/bollu/work/lean4/build/stage0/include  -S  -emit-llvm exe.c -o exe-lean-ref.ll
 
 c++ -D LEAN_MULTI_THREAD -I/home/bollu/work/lean4/build/stage1/include \
     exe.o \

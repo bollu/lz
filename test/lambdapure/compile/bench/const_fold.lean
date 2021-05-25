@@ -1,16 +1,4 @@
---  RUN: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize  | FileCheck %s
---  RUN: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize --lz-interpret="mode=lambdapure stdio=1" | FileCheck %s --check-prefix=CHECK-INTERPRET-1
---  RUN: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize --lz-interpret="mode=lambdapure stdio=2" | FileCheck %s --check-prefix=CHECK-INTERPRET-2
---  RUN: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize --lz-interpret="mode=lambdapure stdio=3" | FileCheck %s --check-prefix=CHECK-INTERPRET-3
-
-
---  fail: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize --lz-lambdapure-destructive-updates | FileCheck %s
---  fail: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize --lz-lambdapure-destructive-updates --lz-lambdapure-reference-rewriter | FileCheck %s
-
--- CHECK: func @main
--- CHECK-INTERPRET-1: 2 2
--- CHECK-INTERPRET-2: 4 4
--- CHECK-INTERPRET-3: 8 8
+-- RUN: ../validate-lean.sh %s
 
 set_option trace.compiler.ir.init true
 
@@ -87,12 +75,20 @@ end Expr
 
 open Expr
 
-unsafe def main : List String → IO UInt32
-| [s] => do
-  let n := s.toNat!;
+-- unsafe def main : List String → IO UInt32
+-- | [s] => do
+--   let n := s.toNat!;
+--   let e  := (mkExpr n 1);
+--   let v₁ := eval e;
+--   let v₂ := eval (constFolding (reassoc e));
+--   IO.println (toString v₁ ++ "  " ++ toString v₂);
+--   pure 0
+-- | _ => pure 1
+
+unsafe def main :  IO UInt32 := do
+  let n := 4;
   let e  := (mkExpr n 1);
   let v₁ := eval e;
   let v₂ := eval (constFolding (reassoc e));
   IO.println (toString v₁ ++ "  " ++ toString v₂);
   pure 0
-| _ => pure 1

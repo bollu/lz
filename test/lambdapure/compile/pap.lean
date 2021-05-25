@@ -1,5 +1,7 @@
 --  RUN: lean %s 2>&1 | hask-opt | FileCheck %s
 --  RUN: ./run-lean.sh %s | FileCheck %s --check-prefix=CHECK-INTERPRET
+--  RUN: ./validate-lean.sh %s 
+
 
 -- | check that we generate pap and papExtend.
 -- CHECK: lz.pap

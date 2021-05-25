@@ -1,5 +1,7 @@
 --  RUN: lean %s 2>&1 | hask-opt --lz-canonicalize | FileCheck %s
 --  RUN: ./run-lean.sh %s | FileCheck %s --check-prefix=CHECK-INTERPRET
+--  RUN: ./validate-lean.sh %s 
+
 
 -- | disable for now because the interpreter does not know the protocol.
 --  run: lean %s 2>&1 | hask-opt --lz-canonicalize --lz-interpret=mode=lambdapure | FileCheck --check-prefix=CHECK-INTERPRET %s

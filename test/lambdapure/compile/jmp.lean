@@ -1,5 +1,6 @@
 --  lean %s 2>&1 1>/dev/null | hask-opt  | FileCheck %s
 --  RUN: ./run-lean.sh %s | FileCheck %s --check-prefix=CHECK-INTERPRET
+--  RUN: ./validate-lean.sh %s 
 --  run: lean %s 2>&1 1>/dev/null | hask-opt  --lz-interpret="mode=lambdapure" | FileCheck %s --check-prefix=CHECK-INTERPRET
 
 -- Testcase to check a join point / jump instruction
