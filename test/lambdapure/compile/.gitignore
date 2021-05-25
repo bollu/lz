@@ -1,3 +1,4 @@
+exe-ref.c
 exe.c
 exe.mlir
 exe.ll

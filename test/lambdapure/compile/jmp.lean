@@ -1,7 +1,6 @@
-
---  lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize | FileCheck %s
+--  lean %s 2>&1 1>/dev/null | hask-opt  | FileCheck %s
 --  RUN: ./run-lean.sh %s | FileCheck %s --check-prefix=CHECK-INTERPRET
---  run: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize  --lz-interpret="mode=lambdapure" | FileCheck %s --check-prefix=CHECK-INTERPRET
+--  run: lean %s 2>&1 1>/dev/null | hask-opt  --lz-interpret="mode=lambdapure" | FileCheck %s --check-prefix=CHECK-INTERPRET
 
 -- Testcase to check a join point / jump instruction
 
@@ -17,7 +16,6 @@ set_option trace.compiler.ir.init true
 -- CHECK-INTERPRET:      0  
 -- CHECK-INTERPRET-NEXT: 1
 -- CHECK-INTERPRET-NEXT: 2
--- CHECK-INTERPRET-NEXT: constructor(0 420 420)
 
 
 inductive Expr

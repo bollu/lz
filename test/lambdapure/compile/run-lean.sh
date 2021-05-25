@@ -5,7 +5,7 @@ set -o xtrace
 
 rm $1-exe.out || true
 
-# lean -c fails with relative paths, go figure why.
+# lean -c fails if relative path walks upward. eg. lean -c ../exe.c -o foo
 lean $1 -c exe-ref.c || true
 
 lean $1 2>&1 | \
