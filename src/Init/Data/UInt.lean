@@ -14,8 +14,11 @@ def UInt8.ofNat (n : @& Nat) : UInt8 := ⟨Fin.ofNat n⟩
 abbrev Nat.toUInt8 := UInt8.ofNat
 @[extern "lean_uint8_to_nat"]
 def UInt8.toNat (n : UInt8) : Nat := n.val.val
-@[extern c inline "#1 + #2"]
+-- @[extern c inline "#1 + #2"]
+-- @[extern c inline "add #1, #2"]
+@[extern "lean_uint8_add"]
 def UInt8.add (a b : UInt8) : UInt8 := ⟨a.val + b.val⟩
+
 @[extern c inline "#1 - #2"]
 def UInt8.sub (a b : UInt8) : UInt8 := ⟨a.val - b.val⟩
 @[extern c inline "#1 * #2"]
@@ -145,7 +148,8 @@ def UInt32.ofNat (n : @& Nat) : UInt32 := ⟨Fin.ofNat n⟩
 @[extern "lean_uint32_of_nat"]
 def UInt32.ofNat' (n : Nat) (h : n < UInt32.size) : UInt32 := ⟨⟨n, h⟩⟩
 abbrev Nat.toUInt32 := UInt32.ofNat
-@[extern c inline "#1 + #2"]
+@[extern "lean_uint32_add"]
+-- @[extern c inline "#1 + #2"]
 def UInt32.add (a b : UInt32) : UInt32 := ⟨a.val + b.val⟩
 @[extern c inline "#1 - #2"]
 def UInt32.sub (a b : UInt32) : UInt32 := ⟨a.val - b.val⟩
