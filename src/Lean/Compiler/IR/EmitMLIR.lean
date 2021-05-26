@@ -709,8 +709,9 @@ def quoteString (s : String) : String :=
       else if c == '\n' then "\\t"
       else if c == '\\' then "\\\\"
       else if c == '\"' then "\\\""
-      else if c.toNat <= 31 then
-        "\\x" ++ toHexDigit (c.toNat / 16) ++ toHexDigit (c.toNat % 16)
+      -- commented by bollu
+      -- else if c.toNat <= 31 then
+      --  "\\x" ++ toHexDigit (c.toNat / 16) ++ toHexDigit (c.toNat % 16)
       -- TODO(Leo): we should use `\unnnn` for escaping unicode characters.
       else String.singleton c)
     q;
