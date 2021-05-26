@@ -567,25 +567,30 @@ def emitSimpleExternalCall (f : String) (ps : Array Param) (ys : Array Arg)
   pure ()
 
 
-def emitExternCall (f : FunId) (ps : Array Param) (extData : ExternAttrData) (ys : Array Arg)
-  (tys: HashMap VarId IRType) (retty: IRType) : M Unit := do
+def emitExternCall (f : FunId)
+                   (ps : Array Param)
+                   (extData : ExternAttrData)
+                   (ys : Array Arg)      
+                   (tys: HashMap VarId IRType)
+                   (retty: IRType) : M Unit := do
    match getExternEntryFor extData `c with
   | some (ExternEntry.standard _ extFn) => do
-         -- emitLn "//ERR: ExternEntry.standard"; 
          emitSimpleExternalCall extFn ps ys tys retty
+         emitLn "// ^^ ERR: ExternEntry.standard"; 
   | some (ExternEntry.inline _ pat)     => do 
-         -- emitLn "//ERR: ExternEntry.inline"; 
          emit (expandExternPattern pat (toStringArgs ys)); emitLn ";"
+         emitLn $ "//^^ ERR: ExternEntry.inline [pat: " ++ pat ++ "]"; 
+
   | some (ExternEntry.foreign _ extFn)  => do
-         -- emitLn "//ERR: ExternEntry.foreign"; 
          emitSimpleExternalCall extFn ps ys tys retty
+         emitLn "// ^^ ERR: ExternEntry.foreign"; 
   | _ => throw s!"failed to emit extern application '{f}'"
 
 
 def emitFullApp  (f : FunId) (ys : Array Arg) (tys: HashMap VarId IRType) : M Unit := do
   let decl ← getDecl f
   match decl with
-  | Decl.extern _ ps _ extData => do
+  | Decl.extern _ ps _ extData => do        
          emitExternCall f ps extData ys tys (Decl.resultType decl)
          emitLn "// ^^^ ERR: emitFullApp (Decl.extern)"
   | _ => do

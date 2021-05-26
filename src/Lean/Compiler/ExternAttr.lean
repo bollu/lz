@@ -86,6 +86,10 @@ private def parseOptNum : Nat → String.Iterator → Nat → String.Iterator ×
       then parseOptNum n it.next (r*10 + (c.toNat - '0'.toNat))
       else (it, r)
 
+-- getD: 
+-- i:  index.
+-- it: string iterator.
+-- r:  rest.
 def expandExternPatternAux (args : List String) : Nat → String.Iterator → String → String
   | 0,   it, r => r
   | i+1, it, r =>
@@ -100,6 +104,26 @@ def expandExternPatternAux (args : List String) : Nat → String.Iterator → St
 
 def expandExternPattern (pattern : String) (args : List String) : String :=
   expandExternPatternAux args pattern.length pattern.mkIterator ""
+
+-- TODO: don't hack this code, make the code to the "right thing"
+def expandExternPatternAuxMLIR (args : List String) : 
+ Nat → String.Iterator → String → String
+  | 0,   it, r => r
+  | i+1, it, r =>
+    if ¬ it.hasNext then r
+    else let c := it.curr
+      if c ≠ '#' then expandExternPatternAuxMLIR args i it.next (r.push c)
+      else
+        let it      := it.next
+        let (it, j) := parseOptNum it.remainingBytes it 0
+        let j       := j-1
+        expandExternPatternAuxMLIR args i it (r ++ args.getD j "")
+
+-- TODO: don't hack this code, make the code to the "right thing"
+def expandExternPatternMLIR
+  (pattern : String)
+  (args : List String) : String :=
+    expandExternPatternAuxMLIR args pattern.length pattern.mkIterator ""
 
 def mkSimpleFnCall (fn : String) (args : List String) : String :=
   fn ++ "(" ++ ((args.intersperse ", ").foldl (·++·) "") ++ ")"
