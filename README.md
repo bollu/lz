@@ -60,6 +60,196 @@
 
 # Log:  [newest] to [oldest]
 
+# May 26:
+
+
+We get code generated like:
+
+```
+//ERR: fnBody.vdecl (non-tail) call
+// ERR: Expr.fap
+%x_8 = x_6 + x_7;
+//^^ ERR: ExternEntry.inline [pat: #1 + #2]
+// ^^^ ERR: emitFullApp (Decl.extern)
+```
+
+because the pattern compiles directly to `a + b`, not some kind of function call `x(`
+
+
+
+```
+| some (ExternEntry.inline _ pat)     => do 
+       emit (expandExternPattern pat (toStringArgs ys)); emitLn ";"
+       emitLn $ "//^^ ERR: ExternEntry.inline [pat: " ++ pat ++ "]"; 
+```
+
+This expand pattern thing expands into a pattern that's in C-like syntax. It carries
+no semantic information for me to generate an actual function call x(. Can I find out
+where this pattern comes from? Looking for the pattern `#1 + #2` gives:
+
+```
+/home/bollu/work/lean4$ ag -F "#1 + #2"        
+stage0/src/Lean/Compiler/ExternAttr.lean
+27:- `@[extern cpp inline "#1 + #2"]`
+28:   encoding: ```.entries = [inline `cpp "#1 + #2"]```
+
+stage0/src/Init/Data/UInt.lean
+17:@[extern c inline "#1 + #2"]
+82:@[extern c inline "#1 + #2"]
+148:@[extern c inline "#1 + #2"]
+200:@[extern c inline "#1 + #2"]
+279:@[extern c inline "#1 + #2"]
+
+stage0/src/Init/Data/Float.lean
+35:@[extern c inline "#1 + #2"]  constant Float.add : Float → Float → Float
+
+src/Lean/Compiler/ExternAttr.lean
+27:- `@[extern cpp inline "#1 + #2"]`
+28:   encoding: ```.entries = [inline `cpp "#1 + #2"]```
+
+src/Init/Data/Float.lean
+35:@[extern c inline "#1 + #2"]  constant Float.add : Float → Float → Float
+
+src/Init/Data/UInt.lean
+17:@[extern c inline "#1 + #2"]
+82:@[extern c inline "#1 + #2"]
+148:@[extern c inline "#1 + #2"]
+200:@[extern c inline "#1 + #2"]
+279:@[extern c inline "#1 + #2"]
+```
+
+To get a sense of how much this is going to screw me, I looked for all
+instances of `extern c inline`: (I deleted the entries from `stage0`, because
+those are double):
+
+```
+tmp/PreludeNew.lean:@[extern c inline "lean_nat_sub(#1, lean_box(1))"]
+tmp/PreludeNew.lean:@[extern c inline "#1 == #2"]
+tmp/PreludeNew.lean:@[extern c inline "#1 == #2"]
+tmp/PreludeNew.lean:@[extern c inline "#1 == #2"]
+tmp/PreludeNew.lean:@[extern c inline "#1 == #2"]
+tmp/PreludeNew.lean:@[extern c inline "#1 == #2"]
+tmp/PreludeNew.lean:@[extern c inline "#3"]
+tests/compiler/lazylist.lean:@[extern c inline "#2"]
+src/Lean/Expr.lean:@[extern c inline "(uint8_t)((#1 << 24) >> 61)"]
+src/Lean/Expr.lean:@[extern c inline "(uint64_t)#1"]
+src/Lean/Util/Path.lean:@[extern c inline "LEAN_IS_STAGE0"]
+src/Lean/Compiler/IR/Checker.lean:@[extern c inline "lean_box(LEAN_MAX_CTOR_FIELDS)"]
+src/Lean/Compiler/IR/Checker.lean:@[extern c inline "lean_box(LEAN_MAX_CTOR_SCALARS_SIZE)"]
+src/Lean/Compiler/IR/Checker.lean:@[extern c inline "lean_box(sizeof(size_t))"]
+src/Init/Core.lean:@[extern c inline "#1 || #2"] def strictOr  (b₁ b₂ : Bool) := b₁ || b₂
+src/Init/Core.lean:@[extern c inline "#1 && #2"] def strictAnd (b₁ b₂ : Bool) := b₁ && b₂
+src/Init/Prelude.lean:@[extern c inline "lean_nat_sub(#1, lean_box(1))"]
+src/Init/Prelude.lean:@[extern c inline "#1 == #2"]
+src/Init/Prelude.lean:@[extern c inline "#1 == #2"]
+src/Init/Prelude.lean:@[extern c inline "#1 == #2"]
+src/Init/Prelude.lean:@[extern c inline "#1 < #2"]
+src/Init/Prelude.lean:@[extern c inline "#1 <= #2"]
+src/Init/Prelude.lean:@[extern c inline "#1 == #2"]
+src/Init/Prelude.lean:@[extern c inline "#1 == #2"]
+src/Init/Prelude.lean:@[extern c inline "#3"]
+src/Init/Data/Float.lean:@[extern c inline "#1 + #2"]  constant Float.add : Float → Float → Float
+src/Init/Data/Float.lean:@[extern c inline "#1 - #2"]  constant Float.sub : Float → Float → Float
+src/Init/Data/Float.lean:@[extern c inline "#1 * #2"]  constant Float.mul : Float → Float → Float
+src/Init/Data/Float.lean:@[extern c inline "#1 / #2"]  constant Float.div : Float → Float → Float
+src/Init/Data/Float.lean:@[extern c inline "(- #1)"]   constant Float.neg : Float → Float
+src/Init/Data/Float.lean:@[extern c inline "#1 == #2"] constant Float.beq (a b : Float) : Bool
+src/Init/Data/Float.lean:@[extern c inline "#1 < #2"]   constant Float.decLt (a b : Float) : Decidable (a < b) :=
+src/Init/Data/Float.lean:@[extern c inline "#1 <= #2"] constant Float.decLe (a b : Float) : Decidable (a ≤ b) :=
+src/Init/Data/Float.lean:@[extern c inline "(uint8_t)#1"] constant Float.toUInt8 : Float → UInt8
+src/Init/Data/Float.lean:@[extern c inline "(uint16_t)#1"] constant Float.toUInt16 : Float → UInt16
+src/Init/Data/Float.lean:@[extern c inline "(uint32_t)#1"] constant Float.toUInt32 : Float → UInt32
+src/Init/Data/Float.lean:@[extern c inline "(uint64_t)#1"] constant Float.toUInt64 : Float → UInt64
+src/Init/Data/Float.lean:@[extern c inline "(size_t)#1"] constant Float.toUSize : Float → USize
+src/Init/Data/UInt.lean:@[extern c inline "#1 + #2"]
+src/Init/Data/UInt.lean:@[extern c inline "#1 - #2"]
+src/Init/Data/UInt.lean:@[extern c inline "#1 * #2"]
+src/Init/Data/UInt.lean:@[extern c inline "#2 == 0 ? 0 : #1 / #2"]
+src/Init/Data/UInt.lean:@[extern c inline "#2 == 0 ? #1 : #1 % #2"]
+src/Init/Data/UInt.lean:@[extern c inline "#1 & #2"]
+src/Init/Data/UInt.lean:@[extern c inline "#1 | #2"]
+src/Init/Data/UInt.lean:@[extern c inline "#1 ^ #2"]
+src/Init/Data/UInt.lean:@[extern c inline "#1 << #2"]
+src/Init/Data/UInt.lean:@[extern c inline "#1 >> #2"]
+src/Init/Data/UInt.lean:@[extern c inline "~ #1"]
+src/Init/Data/UInt.lean:@[extern c inline "#1 < #2"]
+src/Init/Data/UInt.lean:@[extern c inline "#1 <= #2"]
+src/Init/Data/UInt.lean:@[extern c inline "#1 + #2"]
+src/Init/Data/UInt.lean:@[extern c inline "#1 - #2"]
+src/Init/Data/UInt.lean:@[extern c inline "#1 * #2"]
+src/Init/Data/UInt.lean:@[extern c inline "#2 == 0 ? 0 : #1 / #2"]
+src/Init/Data/UInt.lean:@[extern c inline "#2 == 0 ? #1 : #1 % #2"]
+src/Init/Data/UInt.lean:@[extern c inline "#1 & #2"]
+src/Init/Data/UInt.lean:@[extern c inline "#1 | #2"]
+src/Init/Data/UInt.lean:@[extern c inline "#1 ^ #2"]
+src/Init/Data/UInt.lean:@[extern c inline "#1 << #2"]
+src/Init/Data/UInt.lean:@[extern c inline "#1 >> #2"]
+src/Init/Data/UInt.lean:@[extern c inline "~ #1"]
+src/Init/Data/UInt.lean:@[extern c inline "#1 < #2"]
+src/Init/Data/UInt.lean:@[extern c inline "#1 <= #2"]
+src/Init/Data/UInt.lean:@[extern c inline "#1 + #2"]
+src/Init/Data/UInt.lean:@[extern c inline "#1 - #2"]
+src/Init/Data/UInt.lean:@[extern c inline "#1 * #2"]
+src/Init/Data/UInt.lean:@[extern c inline "#2 == 0 ? 0 : #1 / #2"]
+src/Init/Data/UInt.lean:@[extern c inline "#2 == 0 ? #1 : #1 % #2"]
+src/Init/Data/UInt.lean:@[extern c inline "#1 & #2"]
+src/Init/Data/UInt.lean:@[extern c inline "#1 | #2"]
+src/Init/Data/UInt.lean:@[extern c inline "#1 ^ #2"]
+src/Init/Data/UInt.lean:@[extern c inline "#1 << #2"]
+src/Init/Data/UInt.lean:@[extern c inline "#1 >> #2"]
+src/Init/Data/UInt.lean:@[extern c inline "((uint8_t)#1)"]
+src/Init/Data/UInt.lean:@[extern c inline "((uint16_t)#1)"]
+src/Init/Data/UInt.lean:@[extern c inline "((uint32_t)#1)"]
+src/Init/Data/UInt.lean:@[extern c inline "~ #1"]
+src/Init/Data/UInt.lean:@[extern c inline "#1 + #2"]
+src/Init/Data/UInt.lean:@[extern c inline "#1 - #2"]
+src/Init/Data/UInt.lean:@[extern c inline "#1 * #2"]
+src/Init/Data/UInt.lean:@[extern c inline "#2 == 0 ? 0 : #1 / #2"]
+src/Init/Data/UInt.lean:@[extern c inline "#2 == 0 ? #1 : #1 % #2"]
+src/Init/Data/UInt.lean:@[extern c inline "#1 & #2"]
+src/Init/Data/UInt.lean:@[extern c inline "#1 | #2"]
+src/Init/Data/UInt.lean:@[extern c inline "#1 ^ #2"]
+src/Init/Data/UInt.lean:@[extern c inline "#1 << #2"]
+src/Init/Data/UInt.lean:@[extern c inline "#1 >> #2"]
+src/Init/Data/UInt.lean:@[extern c inline "((uint8_t)#1)"]
+src/Init/Data/UInt.lean:@[extern c inline "((uint16_t)#1)"]
+src/Init/Data/UInt.lean:@[extern c inline "((uint32_t)#1)"]
+src/Init/Data/UInt.lean:@[extern c inline "((uint64_t)#1)"]
+src/Init/Data/UInt.lean:@[extern c inline "~ #1"]
+src/Init/Data/UInt.lean:@[extern c inline "(uint64_t)#1"]
+src/Init/Data/UInt.lean:@[extern c inline "#1 < #2"]
+src/Init/Data/UInt.lean:@[extern c inline "#1 <= #2"]
+src/Init/Data/UInt.lean:@[extern c inline "#1 + #2"]
+src/Init/Data/UInt.lean:@[extern c inline "#1 - #2"]
+src/Init/Data/UInt.lean:@[extern c inline "#1 * #2"]
+src/Init/Data/UInt.lean:@[extern c inline "#2 == 0 ? 0 : #1 / #2"]
+src/Init/Data/UInt.lean:@[extern c inline "#2 == 0 ? #1 : #1 % #2"]
+src/Init/Data/UInt.lean:@[extern c inline "#1 & #2"]
+src/Init/Data/UInt.lean:@[extern c inline "#1 | #2"]
+src/Init/Data/UInt.lean:@[extern c inline "#1 ^ #2"]
+src/Init/Data/UInt.lean:@[extern c inline "#1 << #2"]
+src/Init/Data/UInt.lean:@[extern c inline "#1 >> #2"]
+src/Init/Data/UInt.lean:@[extern c inline "#1"]
+src/Init/Data/UInt.lean:@[extern c inline "((size_t)#1)"]
+src/Init/Data/UInt.lean:@[extern c inline "(uint32_t)#1"]
+src/Init/Data/UInt.lean:@[extern c inline "~ #1"]
+src/Init/Data/UInt.lean:@[extern c inline "#1 < #2"]
+src/Init/Data/UInt.lean:@[extern c inline "#1 <= #2"]
+src/Init/Meta.lean:@[extern c inline "lean_box(LEAN_VERSION_MAJOR)"]
+src/Init/Meta.lean:@[extern c inline "lean_box(LEAN_VERSION_MINOR)"]
+src/Init/Meta.lean:@[extern c inline "lean_box(LEAN_VERSION_PATCH)"]
+src/Init/Meta.lean:-- @[extern c inline "lean_mk_string(LEAN_GITHASH)"]
+src/Init/Meta.lean:@[extern c inline "LEAN_VERSION_IS_RELEASE"]
+src/Init/Meta.lean:@[extern c inline "lean_mk_string(LEAN_SPECIAL_VERSION_DESC)"]
+src/Init/Fix.lean:@[extern c inline "lean_fixpoint(#4, #5)"]
+src/Init/Fix.lean:@[extern c inline "lean_fixpoint2(#5, #6, #7)"]
+src/Init/Fix.lean:@[extern c inline "lean_fixpoint3(#6, #7, #8, #9)"]
+src/Init/Fix.lean:@[extern c inline "lean_fixpoint4(#7, #8, #9, #10, #11)"]
+src/Init/Fix.lean:@[extern c inline "lean_fixpoint5(#8, #9, #10, #11, #12, #13)"]
+src/Init/Fix.lean:@[extern c inline "lean_fixpoint6(#9, #10, #11, #12, #13, #14, #15)"]
+```
+
+
 
 # May 23:
 
