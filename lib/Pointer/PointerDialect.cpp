@@ -58,7 +58,7 @@ PtrDialect::PtrDialect(mlir::MLIRContext *context)
   addOperations<IntToPtrOp, PtrToIntOp, PtrStringOp, FnToVoidPtrOp, PtrUndefOp>();
   // addOperations<PtrToHaskValueOp> 
   // addOperations<HaskValueToPtrOp>();
-  addOperations<PtrBranchOp>(); 
+  // addOperations<PtrBranchOp>(); 
   addOperations<PtrToMemrefOp>();
   addOperations<DoubleToPtrOp>();
   addOperations<MemrefToVoidPtrOp>();
@@ -67,6 +67,7 @@ PtrDialect::PtrDialect(mlir::MLIRContext *context)
   addOperations<PtrLoadGlobalOp>();
   addOperations<PtrFnPtrOp>();
   addOperations<PtrStoreGlobalOp>();
+  addOperations<PtrUnreachableOp>();
   // addTypes<VoidPtrType, CharPtrType>();
 
   // clang-format on
@@ -388,6 +389,21 @@ void PtrStoreGlobalOp::build(mlir::OpBuilder &builder, mlir::OperationState &sta
 };
 
 
+// === PTR UNREACHABLE OP ===
+// === PTR UNREACHABLE OP ===
+// === PTR UNREACHABLE OP ===
+// === PTR UNREACHABLE OP ===
+// === PTR UNREACHABLE OP ===
+
+ParseResult PtrUnreachableOp::parse(OpAsmParser &parser, OperationState &result) {
+  assert(false && "unimplemented");
+};
+
+void PtrUnreachableOp::print(OpAsmPrinter &p) {
+  p.printGenericOp(this->getOperation());
+};
+
+void PtrUnreachableOp::build(mlir::OpBuilder &builder, mlir::OperationState &state) {};
 
 /*
 // === PTR TO VALUE ===
@@ -448,6 +464,7 @@ void HaskValueToPtrOp::print(OpAsmPrinter &p) {
 // === PTR BRANCH OP===
 // === PTR BRANCH OP===
 // === PTR BRANCH OP===
+/*
 ParseResult PtrBranchOp::parse(OpAsmParser &parser, OperationState &result) {
     assert(false && "unimplemented");
 };
@@ -466,6 +483,7 @@ void PtrBranchOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
       state.addOperands(args);
       state.addSuccessors(next);
 }
+*/
 
 
 
@@ -843,19 +861,33 @@ public:
   }
 };
 
-struct PtrBranchOpLowering : public ConversionPattern {
+struct PtrUnreachableOpLowering : public ConversionPattern {
 public:
-  explicit PtrBranchOpLowering(TypeConverter &tc, MLIRContext *context)
-      : ConversionPattern(PtrBranchOp::getOperationName(), 1, tc, context) {}
+  explicit PtrUnreachableOpLowering(TypeConverter &tc, MLIRContext *context)
+      : ConversionPattern(PtrUnreachableOp::getOperationName(), 1, tc, context) {}
 
   LogicalResult
   matchAndRewrite(Operation *rator, ArrayRef<Value> rands,
                   ConversionPatternRewriter &rewriter) const override {
-    PtrBranchOp ptr = cast<PtrBranchOp>(rator);
-    rewriter.replaceOpWithNewOp<LLVM::BrOp>(rator, rands, ptr.getSuccessor());
+    PtrUnreachableOp ptr = cast<PtrUnreachableOp>(rator);
+    rewriter.replaceOpWithNewOp<LLVM::UnreachableOp>(ptr);
     return success();
   }
 };
+
+// struct PtrBranchOpLowering : public ConversionPattern {
+// public:
+//   explicit PtrBranchOpLowering(TypeConverter &tc, MLIRContext *context)
+//       : ConversionPattern(PtrBranchOp::getOperationName(), 1, tc, context) {}
+// 
+//   LogicalResult
+//   matchAndRewrite(Operation *rator, ArrayRef<Value> rands,
+//                   ConversionPatternRewriter &rewriter) const override {
+//     PtrBranchOp ptr = cast<PtrBranchOp>(rator);
+//     rewriter.replaceOpWithNewOp<LLVM::BrOp>(rator, rands, ptr.getSuccessor());
+//     return success();
+//   }
+// };
 
 
 /*
@@ -939,22 +971,6 @@ public:
 };
 */
 
-class PtrUndefOpLowering : public ConversionPattern {
-public:
-  explicit PtrUndefOpLowering(TypeConverter &tc, MLIRContext *context)
-      : ConversionPattern(ptr::PtrUndefOp::getOperationName(), 1, tc, context) {
-  }
-
-  LogicalResult
-  matchAndRewrite(Operation *operation, ArrayRef<Value> operands,
-                  ConversionPatternRewriter &rewriter) const override {
-    auto undef = mlir::cast<ptr::PtrUndefOp>(operation);
-    // vvv LLVM ops can only have LLVM types. *eye roll*
-    rewriter.replaceOpWithNewOp<LLVM::UndefOp>(
-        undef, typeConverter->convertType(undef.getType()));
-    return success();
-  }
-};
 
 bool isTypeLegal(Type t) {
   if (t.isa<ptr::PtrType>()) {
@@ -1050,14 +1066,15 @@ struct LowerPointerPass : public Pass {
     patterns.insert<Ptr2FloatOpLowering>(typeConverter, &getContext());
 
     // vvv yuge hack.
-    patterns.insert<PtrUndefOpLowering>(typeConverter, &getContext());
+    // patterns.insert<PtrUndefOpLowering>(typeConverter, &getContext());
     patterns.insert<Ptr2MemrefOpLowering>(typeConverter, &getContext());
 
     patterns.insert<PtrLoadGlobalOpLowering>(typeConverter, &getContext());
     patterns.insert<PtrStoreGlobalOpLowering>(typeConverter, &getContext());
     patterns.insert<PtrGlobalOpLowering>(typeConverter, &getContext());
     patterns.insert<PtrFnPtrOpLowering>(typeConverter, &getContext());
-    patterns.insert<PtrBranchOpLowering>(typeConverter, &getContext());
+    patterns.insert<PtrUnreachableOpLowering>(typeConverter, &getContext());
+    // patterns.insert<PtrBranchOpLowering>(typeConverter, &getContext());
 
 
     // &getContext()); patterns.insert<CaseOpConversionPattern>(typeConverter,
@@ -1073,16 +1090,17 @@ struct LowerPointerPass : public Pass {
     // &getContext());
     // patterns.insert<HaskReturnOpConversionPattern>(typeConverter,
     //                                                &getContext());
-    ::llvm::DebugFlag = true;
 
     ModuleOp mod = mlir::cast<ModuleOp>(getOperation());
 
+    // ::llvm::DebugFlag = true;
     // applyPartialConversion | applyFullConversion
     if (failed(mlir::applyFullConversion(mod, target, std::move(patterns)))) {
       llvm::errs() << "===Ptr lowering failed at Conversion===\n";
       getOperation()->print(llvm::errs());
       llvm::errs() << "\n===\n";
       signalPassFailure();
+      ::llvm::DebugFlag = false;
     };
 
     if (failed(mod.verify())) {
@@ -1090,6 +1108,7 @@ struct LowerPointerPass : public Pass {
       getOperation()->print(llvm::errs());
       llvm::errs() << "\n===\n";
       signalPassFailure();
+      ::llvm::DebugFlag = false;
     }
 
     ::llvm::DebugFlag = false;

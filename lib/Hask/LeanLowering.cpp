@@ -724,11 +724,12 @@ public:
                                     caseladder.getResults());
 
     } else {
-      auto undef = rewriter.create<ptr::PtrUndefOp>(
-          rewriter.getUnknownLoc(),
-          typeConverter->convertType(caseop.getResult().getType()));
-      rewriter.create<scf::YieldOp>(rewriter.getUnknownLoc(),
-                                    undef.getResult());
+      rewriter.create<ptr::PtrUnreachableOp>(rewriter.getUnknownLoc());
+      // auto undef = rewriter.create<ptr::PtrUndefOp>(
+      //     rewriter.getUnknownLoc(),
+      //     typeConverter->convertType(caseop.getResult().getType()));
+      // rewriter.create<scf::YieldOp>(rewriter.getUnknownLoc(),
+      //                               undef.getResult());
     }
     rewriter.finalizeRootUpdate(ite);
     return ite;
@@ -853,11 +854,12 @@ public:
                                     caseladder.getResults());
 
     } else {
-      auto undef = rewriter.create<ptr::PtrUndefOp>(
-          rewriter.getUnknownLoc(),
-          typeConverter->convertType(caseop.getResult().getType()));
-      rewriter.create<scf::YieldOp>(rewriter.getUnknownLoc(),
-                                    undef.getResult());
+      rewriter.create<ptr::PtrUnreachableOp>(rewriter.getUnknownLoc());
+      // auto undef = rewriter.create<ptr::PtrUndefOp>(
+      //     rewriter.getUnknownLoc(),
+      //     typeConverter->convertType(caseop.getResult().getType()));
+      // rewriter.create<scf::YieldOp>(rewriter.getUnknownLoc(),
+      //                               undef.getResult());
     }
     rewriter.finalizeRootUpdate(ite);
     return ite;
@@ -1920,10 +1922,11 @@ public:
     }
 
     // HACK! Assume that we always return a !lz.value
-    auto undef = rewriter.create<ptr::PtrUndefOp>(
-        rewriter.getUnknownLoc(),
-        typeConverter->convertType(ValueType::get(rewriter.getContext())));
-    rewriter.create<ReturnOp>(rewriter.getUnknownLoc(), undef.getResult());
+    rewriter.create<ptr::PtrUnreachableOp>(rewriter.getUnknownLoc());
+    // auto undef = rewriter.create<ptr::PtrUndefOp>(
+    //     rewriter.getUnknownLoc(),
+    //     typeConverter->convertType(ValueType::get(rewriter.getContext())));
+    // rewriter.create<ReturnOp>(rewriter.getUnknownLoc(), undef.getResult());
     rewriter.eraseOp(caseop);
     return success();
   }
@@ -2021,10 +2024,11 @@ public:
       Block *falsebb = genCaseAlt(caseop, rands[0], i, caseop.getNumAlts(), rewriter);
       rewriter.setInsertionPointToStart(falsebb);
     }
-    auto undef = rewriter.create<ptr::PtrUndefOp>(
-    rewriter.getUnknownLoc(),
-    ValueType::get(rewriter.getContext()));
-    rewriter.create<ReturnOp>(rewriter.getUnknownLoc(), undef.getResult());
+    rewriter.create<ptr::PtrUnreachableOp>(rewriter.getUnknownLoc());
+    // auto undef = rewriter.create<ptr::PtrUndefOp>(
+    // rewriter.getUnknownLoc(),
+    // ValueType::get(rewriter.getContext()));
+    // rewriter.create<ReturnOp>(rewriter.getUnknownLoc(), undef.getResult());
     rewriter.eraseOp(caseop);
 
     return success();
@@ -2080,23 +2084,26 @@ struct LowerLeanPass : public Pass {
   }
 
   void runPatterns(ConversionTarget &target, mlir::OwningRewritePatternList &patterns) {
-        ::llvm::DebugFlag = true;
+    
+    // ::llvm::DebugFlag = true;
 
     if (failed(mlir::applyPartialConversion(getOperation(), target,
                                             std::move(patterns)))) {
       llvm::errs() << "===Hask lowering failed at Conversion===\n";
-      getOperation()->print(llvm::errs(),
-                            mlir::OpPrintingFlags().printGenericOpForm());
+      getOperation()->print(llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
       llvm::errs() << "\n===\n";
       signalPassFailure();
+      ::llvm::DebugFlag = false;
+      return;
     };
 
     if (failed(mlir::verify(getOperation()))) {
       llvm::errs() << "===Hask lowering failed at Verification===\n";
       getOperation()->print(llvm::errs());
-
       llvm::errs() << "\n===\n";
       signalPassFailure();
+      ::llvm::DebugFlag = false;
+      return;
     }
 
     ::llvm::DebugFlag = false;

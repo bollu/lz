@@ -252,6 +252,7 @@ public:
 };
 */
 
+/*
 class PtrBranchOp : 
   public Op<PtrBranchOp, OpTrait::VariadicOperands, 
       OpTrait::IsTerminator, OpTrait::ZeroResult, OpTrait::OneSuccessor> {
@@ -264,6 +265,18 @@ public:
     mlir::Block *next, mlir::ValueRange args);
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state, 
     mlir::Block *next, llvm::ArrayRef<Value> &args);
+
+};
+*/
+
+class PtrUnreachableOp : 
+  public Op<PtrUnreachableOp, OpTrait::IsTerminator, OpTrait::ZeroResult> {
+public:
+  using Op::Op;
+  static StringRef getOperationName() { return "ptr.unreachable"; };
+  static ParseResult parse(OpAsmParser &parser, OperationState &result);
+  void print(OpAsmPrinter &p);
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state);
 
 };
 
