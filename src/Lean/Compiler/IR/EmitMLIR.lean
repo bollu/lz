@@ -25,6 +25,11 @@ open ExplicitBoxing (requiresBoxedVersion mkBoxedName isBoxedName)
 inductive OwningBlockType where
   | funcop | caseop
 
+
+inductive EmitIrrelevant where
+  | yes | no
+
+
 -- def mkModuleInitializationFunctionName (moduleName : Name) : String :=
 def mkModuleInitializationFunctionNameHACK (moduleName : Name) : String :=
   "initialize_" ++  "main"
@@ -101,8 +106,8 @@ def emitLns {α : Type} [ToString α] (as : List α) : M Unit :=
 
 def argToCString (x : Arg) : String :=
   match x with
-  | Arg.var x => toString x
-  | _         => "irrelevant" --  "lean_box(0)"
+  | Arg.var x  => toString x
+  | irrelevant => "irrelevant" -- "lean_box(0)"
 
 def emitArg (x : Arg) : M Unit :=
   emit ("%" ++ (argToCString x))
@@ -118,7 +123,7 @@ def toCType : IRType → String
   | IRType.tobject    => "!lz.value" -- "lean_object*"
   | IRType.irrelevant => "!lz.value" -- "lean_object*"
   | IRType.struct _ _ => panic! "not implemented yet"
-  | IRType.union _ _  => "!lz.errorNoKey"  -- panic! "not implemented yet"
+  | IRType.union _ _  => "!lz.value"  -- panic! "not implemented yet"
 
 def throwInvalidExportName {α : Type} (n : Name) : M α :=
   throw s!"invalid export name '{n}'"
@@ -817,11 +822,11 @@ def emitTailCall (v : Expr) (tys: HashMap VarId IRType): M Unit :=
 
 mutual
 
-partial def emitIf (x : VarId) (xType : IRType) (tag : Nat) (t : FnBody) (e : FnBody) : M Unit := do
-  emit "if ("; emitTag x xType; emit " == "; emit tag; emitLn ")";
-  emitFnBody t {};
-  emitLn "else";
-  emitFnBody e {};
+-- partial def emitIf (x : VarId) (xType : IRType) (tag : Nat) (t : FnBody) (e : FnBody) : M Unit := do
+--   emit "eif ("; emitTag x xType; emit " == "; emit tag; emitLn ")";
+--   emitFnBody t {} EmitIrrelevant.no;
+--   emitLn "else";
+--   emitFnBody e {} EmitIrrelevant.no;
 
 
 -- I have no idea why writing `do` notation gives me weird
@@ -844,8 +849,8 @@ partial def emitCaseObj (x : VarId) (xType : IRType) (alts : Array Alt)
  forMIx_ (as:= alts) (fun ix alt => do
     emit (if ix > 0 then ", " else "");
     match alt with 
-     |  Alt.ctor info b => emitFnBody b tys
-     |  Alt.default b => emitFnBody b tys)
+     |  Alt.ctor info b => emitFnBody b tys EmitIrrelevant.no
+     |  Alt.default b => emitFnBody b tys EmitIrrelevant.no) 
  emit ")";
  emitLn "";
  -- TODO: emit case LHSs
@@ -865,8 +870,8 @@ partial def emitCaseInt (x : VarId) (xType : IRType) (alts : Array Alt)
  forMIx_ (as:= alts) (fun ix alt => do
     emit (if ix > 0 then ", " else "");
     match alt with 
-     |  Alt.ctor info b => emitFnBody b tys
-     |  Alt.default b => emitFnBody b tys)
+     |  Alt.ctor info b => emitFnBody b tys EmitIrrelevant.no
+     |  Alt.default b => emitFnBody b tys EmitIrrelevant.no)
  emit ")";
  emitLn "";
  emit "{";
@@ -999,7 +1004,9 @@ partial def emitBlock (b : FnBody) (tys: HashMap VarId IRType) : M Unit := do
     emitLn "// ERR: FnBody.unreachable" -- emitLn "lean_internal_panic_unreachable();"
 
 partial def emitJPs : FnBody → M Unit
-  | FnBody.jdecl j xs v b => do emit j; emitLn ":"; emitFnBody v {}; emitJPs b
+  | FnBody.jdecl j xs v b => do emit j; emitLn ":"; 
+                                emitFnBody v {} EmitIrrelevant.yes;
+                                emitJPs b
   | e                     => do unless e.isTerminal do emitJPs e.body
 
 
@@ -1014,17 +1021,27 @@ partial def insertFnBodyArgTypes : FnBody → M (HashMap VarId IRType)
     -- else
     -- declareVar x t; declareVars b true
     pure {}
-  | FnBody.jdecl j xs _ b,    d => do
+  | FnBody.jdecl j xs _ b, d => do
     -- pure {}
     pure (xs.foldl (fun m p => (m.insert p.x p.ty)) {})
     -- declareParams xs; declareVars b (d || xs.size > 0)
-  | e,                        d => pure {}
+  | e, d => pure {}
 
 
 
-partial def emitFnBody (b : FnBody) (tys: HashMap VarId IRType): M Unit := do
+
+-- EmitIrrelevant is used to emit a value %irrelevant = ptr.undef 
+-- at some regions, where we want to create a %irrelevant value that should be
+-- in scope to emit an irrelevant argument. 
+partial def emitFnBody (b : FnBody) (tys: HashMap VarId IRType)
+   (irr: EmitIrrelevant): M Unit := do
   emitLn "{"
-  -- let tys <- insertFnBodyArgTypes b
+  match irr with
+     | EmitIrrelevant.yes => 
+        emitLn $ "%c0_irr = std.constant 0 : i64"
+        emitLn $ "%irrelevant = call @lean_box(%c0_irr) : (i64) -> (!lz.value)"
+     | EmitIrrelevant.no => pure ()
+  let tys <- insertFnBodyArgTypes b
   emitBlock b tys
   emitLn "}"
 
@@ -1073,7 +1090,9 @@ def emitDeclAux (d : Decl) : M Unit := do
       -- emitLn "_start:";
       -- let tys :=  (xs.foldl (fun m p => (m.insert p.x p.ty)) {});
       withReader (fun ctx => { ctx with mainFn := f, mainParams := xs })
-                 (emitFnBody b ((xs.foldl (fun m p => (m.insert p.x p.ty)) {})));
+                 (emitFnBody b 
+                             ((xs.foldl (fun m p => (m.insert p.x p.ty)) {}))
+                             EmitIrrelevant.yes);
     | _ => emitLn "// ERR: unknwown decl"; pure ()
 
 -- calle from emitFns
