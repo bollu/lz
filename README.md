@@ -249,6 +249,66 @@ src/Init/Fix.lean:@[extern c inline "lean_fixpoint5(#8, #9, #10, #11, #12, #13)"
 src/Init/Fix.lean:@[extern c inline "lean_fixpoint6(#9, #10, #11, #12, #13, #14, #15)"]
 ```
 
+Oh god damn, I can't just directly change a line such as:
+
+```
+src/Init/Data/UInt.lean:@[extern c inline "#1 + #2"]
+```
+
+into:
+
+```
+src/Init/Data/UInt.lean:@[extern c inline "add #1, #2"]
+```
+
+because the code is *self-hosting*. So if I try to compile stuff using the MLIR backend,
+I need to compile LEAN using the MLIR backend x(
+One way to "solve" this is to convert `Uint32` to `Int` (The example comes from `test/lambdapure/compile/bench/deriv.lean`):
+
+
+```diff
+-def count : Expr → UInt32
++def count : Expr → Int
+| Val _   => 1
+| Var _   => 1
+| Add f g   => count f + count g
+| Mul f g   => count f + count g
+| Pow f g   => count f + count g
+| Ln f      => count f
+```
+
+I'm now trying to hack into the compiler, and change the meaning `Uint` to be an external call:
+
+```diff
+--- a/src/Init/Data/UInt.lean
++++ b/src/Init/Data/UInt.lean
+@@ -14,8 +14,11 @@ def UInt8.ofNat (n : @& Nat) : UInt8 := ⟨Fin.ofNat n⟩
+ abbrev Nat.toUInt8 := UInt8.ofNat
+ @[extern "lean_uint8_to_nat"]
+ def UInt8.toNat (n : UInt8) : Nat := n.val.val
+-@[extern c inline "#1 + #2"]
++-- @[extern c inline "#1 + #2"]
++-- @[extern c inline "add #1, #2"]
++@[extern "lean_uint8_add"]
+ def UInt8.add (a b : UInt8) : UInt8 := ⟨a.val + b.val⟩
++
+ @[extern c inline "#1 - #2"]
+ def UInt8.sub (a b : UInt8) : UInt8 := ⟨a.val - b.val⟩
+ @[extern c inline "#1 * #2"]
+@@ -145,7 +148,8 @@ def UInt32.ofNat (n : @& Nat) : UInt32 := ⟨Fin.ofNat n⟩
+ @[extern "lean_uint32_of_nat"]
+ def UInt32.ofNat' (n : Nat) (h : n < UInt32.size) : UInt32 := ⟨⟨n, h⟩⟩
+ abbrev Nat.toUInt32 := UInt32.ofNat
+-@[extern c inline "#1 + #2"]
++@[extern "lean_uint32_add"]
++-- @[extern c inline "#1 + #2"]
+```
+
+This hack works, and I now generate the "expected" MLIR code. I'm surprised that the compiler
+still self-hosts; I expected linker errors for missing reference to `lean_uint32_add`.
+It seems like the lean compiler does not in fact use `uint32` all that much.
+
+
 
 
 # May 23:

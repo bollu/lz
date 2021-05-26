@@ -77,6 +77,7 @@ def d (x : String) : Expr → Expr
 | Pow f g   => mul (pow f g) (add (mul (mul g (d x f)) (pow f (Val (-1)))) (mul (ln f) (d x g)))
 | Ln f      => mul (d x f) (pow f (Val (-1)))
 
+-- def count : Expr → Int
 def count : Expr → UInt32
 | Val _   => 1
 | Var _   => 1
