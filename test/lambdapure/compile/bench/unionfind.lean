@@ -133,8 +133,15 @@ else do
   mergePack 1000;
   numEqs
 
-def main (xs : List String) : IO UInt32 :=
-let n := xs.head!.toNat!;
-match run (test n) with
-| (Except.ok v, s)    => IO.println ("ok " ++ toString v) *> pure 0
-| (Except.error e, s) => IO.println ("Error : " ++ e) *> pure 1
+-- def main (xs : List String) : IO UInt32 :=
+-- let n := xs.head!.toNat!;
+-- match run (test n) with
+-- | (Except.ok v, s)    => IO.println ("ok " ++ toString v) *> pure 0
+-- | (Except.error e, s) => IO.println ("Error : " ++ e) *> pure 1
+
+
+def main : IO UInt32 := do
+  let n := 4;
+  match run (test n) with
+  | (Except.ok v, s)    => IO.println ("ok " ++ toString v) *> pure 0
+  | (Except.error e, s) => IO.println ("Error : " ++ e) *> pure 1

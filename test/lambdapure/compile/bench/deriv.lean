@@ -113,11 +113,19 @@ end Expr
 
 open Expr
 
-unsafe def main : List String → IO UInt32
-| [s] => do
-  let n := s.toNat!;
+-- unsafe def main : List String → IO UInt32
+-- | [s] => do
+--   let n := s.toNat!;
+--   let x := Var "x";
+--   let f := pow x x;
+--   _ ← nest deriv n f;
+--   pure 0
+-- | _ => pure 1
+
+
+unsafe def main : IO UInt32 := do
+  let n := 4
   let x := Var "x";
   let f := pow x x;
   _ ← nest deriv n f;
   pure 0
-| _ => pure 1
