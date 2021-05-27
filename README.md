@@ -23,8 +23,12 @@
 - [GHC grin has benchmark suite](https://github.com/grin-compiler/ghc-grin/tree/master/ghc-grin-benchmark/boquist-grin-bench)
 - [`fast-math` haskell library has some RULES limitations](https://github.com/liyang/fast-math/)
 
-# Thoughts on lambdapure
+# Thoughts on writing a new LEAN backend
 
+- The existence of `extern C inline` within the compiler / prelude makes stuff very complicated. Eg.
+  the fact that adding `uint` is implemented using `[extern c inline "#1 + #2]` makes it complex to use,
+  since I can't lower this to MLIR (or any other lowering mechanism, really). I am concerned this feature will lead to 
+  a lock-in into C(++) syntax.
 - One massive quality of life improvement would be if lambdapure printed in MLIR syntax.
   That way, it's unambiguous about semantics! and can potentially eventually round-trip
   through the compiler!
@@ -165,6 +169,9 @@ def emitSimpleExternalCall (f : String) (ps : Array Param) (ys : Array Arg)
   emit "\n"
   pure ()
 ```
+
+My implementation of adding types at the beginning of  function was broken.
+Fixing that allows us to codegen `binarytrees.lean`.
 
 # May 26:
 

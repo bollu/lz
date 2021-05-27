@@ -1,5 +1,6 @@
-- Removed `rbmap.lean`, `unionfind_clean.lean` and related because they don't see to compile??
-- deriv.lean: tofix lz. For now, I changed the type `UInt` to `Int` so that I don't need to deal with the extern call. [This works now, for real!]
-- unionfind.lean: tofix lz
-- `qsort.lean` crashes now x(
+- Removed `rbmap.lean`, `unionfind_clean.lean` and related because they don't see to compile?
+- deriv.lean: works now.
+- `rbmap_checkpoint.lean`: needs `sproj` and friends.
+- `qsort.lean`: needs multiplication for `UInt32`.
+- unionfind.lean: works now.
 

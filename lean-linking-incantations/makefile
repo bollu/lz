@@ -2,7 +2,8 @@
 # export LEANPATH=/home/bollu/work/lean4/build/stage1/
 # compiler flags stolen from `which leanc` and then `cat /path/to/leanc`.
 #
-all: handlink.out main-print.out
+.PHONY: all clean
+all: handlink.out main-print.out lean-shell.o use-lean-shell.o
 
 
 lean-shell.o: lean-shell.c
@@ -17,6 +18,12 @@ handlink.out: lean-shell.o use-lean-shell.o
 	c++ -D LEAN_MULTI_THREAD -I/home/bollu/work/lean4/build/stage1/bin/../include \
 		lean-shell.o use-lean-shell.o ./lib-includes/library.o  -no-pie -Wl,--start-group -lleancpp -lInit -lStd -lLean -Wl,--end-group \
 		-L/home/bollu/work/lean4/build/stage1/bin/../lib/lean -lgmp -ldl -pthread -Wno-unused-command-line-argument -o handlink.out
+
+clean: 
+	-rm lean-shell.o
+	-rm use-lean-shell.o
+	-rm main-print.out
+	-rm handlink.out
 
 # arcane commands discovered by `cat` ing `leanc
 main-print.out: main-print.c
