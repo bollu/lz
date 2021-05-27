@@ -123,7 +123,7 @@ def toCType : IRType → String
   | IRType.tobject    => "!lz.value" -- "lean_object*"
   | IRType.irrelevant => "!lz.value" -- "lean_object*"
   | IRType.struct _ _ => panic! "not implemented yet"
-  | IRType.union _ _  => "!lz.value"  -- panic! "not implemented yet"
+  | IRType.union _ _  => "UNION"  --panic! "not implemented yet"
 
 def throwInvalidExportName {α : Type} (n : Name) : M α :=
   throw s!"invalid export name '{n}'"
@@ -293,6 +293,7 @@ def emitPreamble : M Unit := do
   emitLn "func private @lean_io_result_mk_ok(!lz.value) -> !lz.value"
   emitLn "func private @lean_mark_persistent(!lz.value) -> ()"
   emitLn "func private @lean_box_uint32(i32) -> (!lz.value)"
+  emitLn "func private @lean_uint32_eq(i32, i32) -> (i8)"
 
 
 def emitFileHeader : M Unit := do
