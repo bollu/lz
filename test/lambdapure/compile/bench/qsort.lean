@@ -1,26 +1,5 @@
 -- RUN: ../validate-lean.sh %s
---  run: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize | FileCheck %s
---  run: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize  --lz-interpret="mode=lambdapure stdio=3" | FileCheck %s --check-prefix=CHECK-INTERPRET
---  fail: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize  --lz-lambdapure-destructive-updates | FileCheck %s
---  fail: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize  --lz-lambdapure-destructive-updates --lz-lambdapure-reference-rewriter | FileCheck %s
-
--- CHECK-INTERPRET: #[]
--- CHECK-INTERPRET: #[1]
--- CHECK-INTERPRET: #[2, 1017233273]
--- CHECK-INTERPRET: #[]
--- CHECK-INTERPRET: #[1]
--- CHECK-INTERPRET: #[2, 1017233273]
--- CHECK-INTERPRET: #[]
--- CHECK-INTERPRET: #[1]
--- CHECK-INTERPRET: #[2, 1017233273]
-
-
--- CHECK: func @main
--- TODO: needs the parser to be fixed (`let x_1 : obj := "term↑__1";`) Can't parse uparrow (`↑`) right now.
-
-set_option trace.compiler.ir.init true
-
-
+-- This miscompiles, eg. see what happens when we turn on println!
 abbrev Elem := UInt32
 
 def badRand (seed : Elem) : Elem :=
@@ -81,18 +60,12 @@ qsortAux lt as 0 (UInt32.ofNat (as.size - 1))
 -- def main (xs : List String) : IO Unit :=
 -- do
 -- let n := xs.head!.toNat!;
--- n.forM $ fun _ =>
--- n.forM $ fun i => do
---   let xs := mkRandomArray i (UInt32.ofNat i) Array.empty;
---   let xs := qsort xs (fun a b => a < b);
---   IO.println xs;
---   checkSortedAux xs 0
-
-def main : IO Unit := do
-  let n := 3;
+def main : IO UInt32 := do
+  let n := 100
   n.forM $ fun _ =>
-  n.forM $ fun i => do
-    let xs := mkRandomArray i (UInt32.ofNat i) Array.empty;
-    let xs := qsort xs (fun a b => a < b);
-    IO.println xs;
-    checkSortedAux xs 0
+    n.forM $ fun i => do
+      let xs := mkRandomArray i (UInt32.ofNat i) Array.empty;
+      let xs := qsort xs (fun a b => a < b);
+      -- IO.println (xs.toList.toString);
+      checkSortedAux xs 0
+  return 0

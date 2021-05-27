@@ -173,6 +173,16 @@ def emitSimpleExternalCall (f : String) (ps : Array Param) (ys : Array Arg)
 My implementation of adding types at the beginning of  function was broken.
 Fixing that allows us to codegen `binarytrees.lean`.
 
+One of the big hacks of the day is:
+
+```
+/home/bollu/work/lean4/lean4-mode$ cp ~/work/lean4/src/include/lean/lean.h ~/work/lean4/build/stage0/include/lean/lean.h
+/home/bollu/work/lean4/lean4-mode$ cp ~/work/lean4/src/include/lean/lean.h ~/work/lean4/build/stage1/include/lean/lean.h
+```
+
+Ie, I edit the prelude files and force-copy them into the build system. I'm not too sure if this is necessary,
+or even correct, but it works once, and I'm too scared to modify the ritual since.
+
 # May 26:
 
 

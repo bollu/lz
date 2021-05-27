@@ -1888,6 +1888,20 @@ lean_obj_res lean_st_ref_swap(b_lean_obj_arg, lean_obj_arg, lean_obj_arg);
 /* pointer address unsafe primitive  */
   size_t lean_ptr_addr(b_lean_obj_arg a) { return (size_t)a; }
 
+ uint8_t lean_uint8_le(uint8_t a, uint8_t b) { return a <= b; }
+ uint8_t lean_uint16_le(uint16_t a, uint16_t b) { return a <= b; }
+ uint8_t lean_uint32_le(uint32_t a, uint32_t b) { return a <= b; }
+ uint8_t lean_uint64_le(uint64_t a, uint64_t b) { return a <= b; }
+ uint8_t lean_float_le(double a, double b) { return a <= b; }
+ uint8_t lean_usize_le(uint64_t a, uint64_t b) { return a <= b; }
+
+ uint8_t lean_uint8_lt(uint8_t a, uint8_t b) { return a < b; }
+ uint8_t lean_uint16_lt(uint16_t a, uint16_t b) { return a < b; }
+ uint8_t lean_uint32_lt(uint32_t a, uint32_t b) { return a < b; }
+ uint8_t lean_uint64_lt(uint64_t a, uint64_t b) { return a < b; }
+ uint8_t lean_float_lt(double a, double b) { return a < b; }
+ uint8_t lean_usize_lt(uint64_t a, uint64_t b) { return a < b; }
+
 #ifdef __cplusplus
 }
 #endif
