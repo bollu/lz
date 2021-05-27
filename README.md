@@ -60,6 +60,74 @@
 
 # Log:  [newest] to [oldest]
 
+# May 27
+
+Continuing my debugging saga of getting `USize` and its equalities to work:
+
+
+For whatever reason, it needs the option `bootstrap.genMatcherCode`:
+
+```
+set_option bootstrap.genMatcherCode false in
+-- @[extern c inline "#1 == #2"]
+@[extern c "lean_uint64_eq"]
+def UInt64.decEq (a b : UInt64) : Decidable (Eq a b) :=
+  match a, b with
+  | ⟨n⟩, ⟨m⟩ =>
+    dite (Eq n m) (fun h => isTrue (h ▸ rfl)) (fun h => isFalse (fun h' => UInt64.noConfusion h' (fun h' => absurd h' h)))
+```
+
+which is documented in `Meta/Match.lean`
+
+```
+stage0/src/Lean/Meta/Match/Match.lean
+571:register_builtin_option bootstrap.genMatcherCode : Bool := {
+583:  let compile := bootstrap.genMatcherCode.get (← getOptions)
+```
+
+On implementing new primops, `stage1` fails compiling because of mismatch, `stage2` fails compiling because of incorrect return type?!
+Apparently one should return `uint8_t`, not `bool` (as I did when I wrote the include).
+
+```
+../build/stage1/lib/temp/Init/Prelude.c:53:9: error: conflicting types for ‘lean_uint64_eq’
+   53 | uint8_t lean_uint64_eq(uint64_t, uint64_t);
+      |         ^~~~~~~~~~~~~~
+In file included from ../build/stage1/lib/temp/Init/Prelude.c:4:
+/home/bollu/work/lean4/build/stage1/bin/../include/lean/lean.h:1316:20: note: previous definition of ‘lean_uint64_eq’ was here
+ 1316 | static inline bool lean_uint64_eq(uint64_t a, uint64_t b) {
+      |                    ^~~~~~~~~~~~~~
+../build/stage1/lib/temp/Init/Prelude.c:67:9: error: conflicting types for ‘lean_uint8_eq’
+   67 | uint8_t lean_uint8_eq(uint8_t, uint8_t);
+      |         ^~~~~~~~~~~~~
+In file included from ../build/stage1/lib/temp/Init/Prelude.c:4:
+/home/bollu/work/lean4/build/stage1/bin/../include/lean/lean.h:1325:20: note: previous definition of ‘lean_uint8_eq’ was here
+ 1325 | static inline bool lean_uint8_eq(uint8_t a, uint8_t b) {
+      |                    ^~~~~~~~~~~~~
+../build/stage1/lib/temp/Init/Prelude.c:77:9: error: conflicting types for ‘lean_usize_eq’
+   77 | uint8_t lean_usize_eq(size_t, size_t);
+      |         ^~~~~~~~~~~~~
+In file included from ../build/stage1/lib/temp/Init/Prelude.c:4:
+/home/bollu/work/lean4/build/stage1/bin/../include/lean/lean.h:1313:20: note: previous definition of ‘lean_usize_eq’ was here
+ 1313 | static inline bool lean_usize_eq(size_t a, size_t b) {
+      |                    ^~~~~~~~~~~~~
+../build/stage1/lib/temp/Init/Prelude.c:544:9: error: conflicting types for ‘lean_uint32_eq’
+  544 | uint8_t lean_uint32_eq(uint32_t, uint32_t);
+      |         ^~~~~~~~~~~~~~
+In file included from ../build/stage1/lib/temp/Init/Prelude.c:4:
+/home/bollu/work/lean4/build/stage1/bin/../include/lean/lean.h:1319:20: note: previous definition of ‘lean_uint32_eq’ was here
+ 1319 | static inline bool lean_uint32_eq(uint32_t a, uint32_t b) {
+      |                    ^~~~~~~~~~~~~~
+../build/stage1/lib/temp/Init/Prelude.c:732:9: error: conflicting types for ‘lean_uint16_eq’
+  732 | uint8_t lean_uint16_eq(uint16_t, uint16_t);
+      |         ^~~~~~~~~~~~~~
+In file included from ../build/stage1/lib/temp/Init/Prelude.c:4:
+/home/bollu/work/lean4/build/stage1/bin/../include/lean/lean.h:1322:20: note: previous definition of ‘lean_uint16_eq’ was here
+ 1322 | static inline bool lean_uint16_eq(uint16_t a, uint16_t b) {
+      |                    ^~~~~~~~~~~~~~
+```
+
+The document at `lean4/doc/make/index.md` was very helpful since it talks about the entire build process.
+
 # May 26:
 
 
@@ -308,7 +376,15 @@ This hack works, and I now generate the "expected" MLIR code. I'm surprised that
 still self-hosts; I expected linker errors for missing reference to `lean_uint32_add`.
 It seems like the lean compiler does not in fact use `uint32` all that much.
 
+Remember, if you builds run slower than real LEAN, it's probably because you're encoding equality of `UIntN`
+is some extremely stupid way!
 
+```
+-- set_option bootstrap.genMatcherCode false in
+-- @[extern c inline "#1 == #2"]
+```
+
+what is `genMatcherCode`? Will be interesting to find out
 
 
 # May 23:
