@@ -290,13 +290,14 @@ def emitPreamble : M Unit := do
   emit "// Imports:"
   env.imports.forM fun m => emit (" " ++ toString m); emitLn ""
   emitLn "func private @lean_unbox_float(!lz.value) -> f64"
+  emitLn "func private @lean_unbox(!lz.value) -> i8"
   emitLn "func private @lean_io_mk_world() -> (!lz.value)"
   emitLn "func private @lean_dec_ref(!lz.value) -> ()"
   emitLn "func private @lean_box(i64) -> !lz.value"
   emitLn "func private @lean_io_result_mk_ok(!lz.value) -> !lz.value"
   emitLn "func private @lean_mark_persistent(!lz.value) -> ()"
   emitLn "func private @lean_box_uint32(i32) -> (!lz.value)"
-  emitLn "func private @lean_unbox_uint32(!lz.value) -> (i32)"
+  emitLn "func private @lean_unbox_uint32(!lz.value) -> (i32 )"
   -- emitLn "func private @lean_uint32_eq(i32, i32) -> (i8)"
 
 
@@ -701,9 +702,10 @@ def emitUnbox (z : VarId) (t : IRType) (x : VarId) : M Unit := do
   | IRType.uint32 => emit "call @lean_unbox_uint32"
   | IRType.uint64 => emit "call @lean_unbox_uint64"
   | IRType.float  => emit "call @lean_unbox_float"
-  | other         => emit "call @lean_unbox";
+  | other         => emit $ "call @lean_unbox"
   emit "(%"; emit x; emit ") : ";
   emit "(!lz.value)"; emit " -> ("; emit (toCType t); emit ")";
+  emit $ "\n//^UNBOX type: (" ++ toCType t ++")";
   emit "\n"
   
 

@@ -837,13 +837,16 @@ instance : HasLessEq UInt32 where
   LessEq a b := LessEq a.val b.val
 
 set_option bootstrap.genMatcherCode false in
-@[extern c inline "#1 < #2"]
+-- @[extern c inline "#1 < #2"]
+@[extern "lean_uint32_lt"]
 def UInt32.decLt (a b : UInt32) : Decidable (Less a b) :=
   match a, b with
   | ⟨n⟩, ⟨m⟩ => inferInstanceAs (Decidable (Less n m))
 
+-- | why does this live here instead of in Data/UInt.lean
 set_option bootstrap.genMatcherCode false in
-@[extern c inline "#1 <= #2"]
+-- @[extern c inline "#1 <= #2"]
+@[extern c "lean_uint32_le"]
 def UInt32.decLe (a b : UInt32) : Decidable (LessEq a b) :=
   match a, b with
   | ⟨n⟩, ⟨m⟩ => inferInstanceAs (Decidable (LessEq n m))
