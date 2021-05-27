@@ -151,7 +151,8 @@ abbrev Nat.toUInt32 := UInt32.ofNat
 @[extern "lean_uint32_add"]
 -- @[extern c inline "#1 + #2"]
 def UInt32.add (a b : UInt32) : UInt32 := ⟨a.val + b.val⟩
-@[extern c inline "#1 - #2"]
+@[extern "lean_uint32_sub"]
+-- @[extern c inline "#1 - #2"]
 def UInt32.sub (a b : UInt32) : UInt32 := ⟨a.val - b.val⟩
 @[extern c inline "#1 * #2"]
 def UInt32.mul (a b : UInt32) : UInt32 := ⟨a.val * b.val⟩
