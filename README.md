@@ -128,6 +128,44 @@ In file included from ../build/stage1/lib/temp/Init/Prelude.c:4:
 
 The document at `lean4/doc/make/index.md` was very helpful since it talks about the entire build process.
 
+
+There is something funky about external calls. In particular, I added a TODO where the previous code
+would emit incorrect code, while the new does not (see the `TODO: understand why the line does not work`).
+
+```lean
+-- | ps: description of formal parameters to the function f.
+def emitSimpleExternalCall (f : String) (ps : Array Param) (ys : Array Arg)
+  (tys: HashMap VarId IRType) (retty: IRType) : M Unit := do
+  -- let fname <- toCName f; -- added by bollu
+  let fname := f;
+  emit "call "; emit "@"; emit (escape fname)
+  -- We must remove irrelevant arguments to extern calls
+  let psys := (ps.zip ys).filter (fun py => not (py.fst.ty.isIrrelevant))
+  let ys := Array.map Prod.snd psys
+
+  emit "("
+  -- We must remove irrelevant arguments to extern calls.
+  ys.size.forM (fun i => do
+         if i > 0 then emit ", ";
+         emitArg ys[i])
+  emit ")"
+  -- TODO: understand why the line
+  --    emit " : ("; emitArgsOnlyTys ys tys; emit ")";
+  -- does not work!!!!
+  emit " : ("; 
+  psys.size.forM (fun i => do
+    if i > 0 then emit ","
+    emit (toCType psys[i].fst.ty);
+  )
+  emit ")";
+
+  emit " -> "; emit "(";  emit (toCType retty);  emit ")";
+  emit " // <== ERR: emitSimpleExternalCall";
+  emit $ " // <== ys: " ++ toString (toStringArgs ys) ++ "| tys: ";
+  emit "\n"
+  pure ()
+```
+
 # May 26:
 
 
