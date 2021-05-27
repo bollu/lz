@@ -405,7 +405,7 @@ def emitSet (x : VarId) (i : Nat) (y : Arg) : M Unit := do
 
 def emitOffset (n : Nat) (offset : Nat) : M String := do
   let name <- gensym "offset";
-  let SIZEOF_VOIDPTR := 4; -- this is the janky bit.
+  let SIZEOF_VOIDPTR := 8; -- this is the janky bit.
   let ix := SIZEOF_VOIDPTR * n + offset;
   emit "%"; emit name; emit " = std.constant "; emit ix; emit " : i64";
   emitLn $ " // n=" ++ toString n ++ " | offset=" ++ toString offset 
