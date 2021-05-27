@@ -1310,7 +1310,24 @@ static inline lean_obj_res lean_nat_add(b_lean_obj_arg a1, b_lean_obj_arg a2) {
     else
         return lean_nat_big_add(a1, a2);
 }
-
+static inline uint8_t lean_usize_eq(size_t a, size_t b) {
+    return a == b;
+}
+static inline uint8_t lean_uint64_eq(uint64_t a, uint64_t b) {
+    return a == b;
+}
+static inline uint8_t lean_uint32_eq(uint32_t a, uint32_t b) {
+    return a == b;
+}
+static inline uint8_t lean_uint16_eq(uint16_t a, uint16_t b) {
+    return a == b;
+}
+static inline uint8_t lean_uint8_eq(uint8_t a, uint8_t b) {
+    return a == b;
+}
+static inline uint8_t lean_float_eq(double a, double b) {
+    return a == b;
+}
 static inline lean_obj_res lean_nat_sub(b_lean_obj_arg a1, b_lean_obj_arg a2) {
     if (LEAN_LIKELY(lean_is_scalar(a1) && lean_is_scalar(a2))) {
         size_t n1 = lean_unbox(a1);

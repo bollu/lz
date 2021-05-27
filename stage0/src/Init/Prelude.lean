@@ -765,7 +765,7 @@ def UInt8.ofNatCore (n : @& Nat) (h : Less n UInt8.size) : UInt8 := {
 }
 
 set_option bootstrap.genMatcherCode false in
-@[extern c inline "#1 == #2"]
+-- @[extern c inline "#1 == #2"]
 def UInt8.decEq (a b : UInt8) : Decidable (Eq a b) :=
   match a, b with
   | ⟨n⟩, ⟨m⟩ =>
@@ -789,7 +789,7 @@ def UInt16.ofNatCore (n : @& Nat) (h : Less n UInt16.size) : UInt16 := {
 }
 
 set_option bootstrap.genMatcherCode false in
-@[extern c inline "#1 == #2"]
+-- @[extern c inline "#1 == #2"]
 def UInt16.decEq (a b : UInt16) : Decidable (Eq a b) :=
   match a, b with
   | ⟨n⟩, ⟨m⟩ =>
@@ -816,7 +816,7 @@ def UInt32.ofNatCore (n : @& Nat) (h : Less n UInt32.size) : UInt32 := {
 def UInt32.toNat (n : UInt32) : Nat := n.val.val
 
 set_option bootstrap.genMatcherCode false in
-@[extern c inline "#1 == #2"]
+-- @[extern c inline "#1 == #2"]
 def UInt32.decEq (a b : UInt32) : Decidable (Eq a b) :=
   match a, b with
   | ⟨n⟩, ⟨m⟩ =>
@@ -861,7 +861,7 @@ def UInt64.ofNatCore (n : @& Nat) (h : Less n UInt64.size) : UInt64 := {
 }
 
 set_option bootstrap.genMatcherCode false in
-@[extern c inline "#1 == #2"]
+-- @[extern c inline "#1 == #2"]
 def UInt64.decEq (a b : UInt64) : Decidable (Eq a b) :=
   match a, b with
   | ⟨n⟩, ⟨m⟩ =>
@@ -892,7 +892,7 @@ def USize.ofNatCore (n : @& Nat) (h : Less n USize.size) : USize := {
 }
 
 set_option bootstrap.genMatcherCode false in
-@[extern c inline "#1 == #2"]
+-- @[extern c inline "#1 == #2"]
 def USize.decEq (a b : USize) : Decidable (Eq a b) :=
   match a, b with
   | ⟨n⟩, ⟨m⟩ =>
