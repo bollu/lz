@@ -282,6 +282,7 @@ def emitFnFwdDecls : M Unit := do
 --   if (← hasMainFn) then emitMainFn
 
 -- Prelude
+-- emitPrelude
 def emitPreamble : M Unit := do
   let env ← getEnv
   let modName ← getModName
@@ -290,6 +291,7 @@ def emitPreamble : M Unit := do
   emit "// Imports:"
   env.imports.forM fun m => emit (" " ++ toString m); emitLn ""
   emitLn "func private @lean_unbox_float(!lz.value) -> f64"
+  emitLn "func private @lean_unbox_uint8(!lz.value) -> i8"
   emitLn "func private @lean_unbox(!lz.value) -> i8"
   emitLn "func private @lean_io_mk_world() -> (!lz.value)"
   emitLn "func private @lean_dec_ref(!lz.value) -> ()"
@@ -297,7 +299,12 @@ def emitPreamble : M Unit := do
   emitLn "func private @lean_io_result_mk_ok(!lz.value) -> !lz.value"
   emitLn "func private @lean_mark_persistent(!lz.value) -> ()"
   emitLn "func private @lean_box_uint32(i32) -> (!lz.value)"
-  emitLn "func private @lean_unbox_uint32(!lz.value) -> (i32 )"
+  emitLn "func private @lean_box_uint8(i8) -> (!lz.value)"
+  emitLn "func private @lean_ctor_get_uint8(!lz.value, i64) -> (i8)"
+  emitLn "func private @lean_ctor_get_uint32(!lz.value, i64) -> (i32)"
+  emitLn "func private @lean_ctor_get_uint64(!lz.value, i64) -> (i64)"
+  emitLn "func private @lean_ctor_get_float(!lz.value, i64) -> (f64)"
+  emitLn "func private @lean_ctor_set_uint8(!lz.value, i64, i8) -> ()"
   -- emitLn "func private @lean_uint32_eq(i32, i32) -> (i8)"
 
 
@@ -399,10 +406,9 @@ def emitSet (x : VarId) (i : Nat) (y : Arg) : M Unit := do
 def emitOffset (n : Nat) (offset : Nat) : M String := do
   let name <- gensym "offset";
   let SIZEOF_VOIDPTR := 4; -- this is the janky bit.
-  let offset := SIZEOF_VOIDPTR * n + offset;
-  emit "%"; emit name; emit " = std.constant "; emit offset; emit " : i64";
-  emit $ "// offset(" ++ toString n ++ ", offset=" ++ toString offset ++ ")"
-  emitLn "";
+  let ix := SIZEOF_VOIDPTR * n + offset;
+  emit "%"; emit name; emit " = std.constant "; emit ix; emit " : i64";
+  emitLn $ " // n=" ++ toString n ++ " | offset=" ++ toString offset 
   return name;
   -- if n > 0 then
   --   emit "sizeof(void*)*"; emit n;
@@ -441,8 +447,8 @@ def emitSSet (x : VarId) (n : Nat) (offset : Nat) (y : VarId) (t : IRType) (tys:
   | IRType.uint64 => emit "@lean_ctor_set_uint64"
   | _             => throw $ "invalid SSet (" ++ toString x ++ " : " ++ toString t ++ ")";
   -- emit "("; emit x; emit ", "; emitOffset n offset; emit ", "; emit y; emitLn ");"
-  emit "("; emit x; emit ", "; emit ix; emit ","; emit y; emit ")";
-  emit " : "; emit "("; emitVarTy x tys; emit ", i64, ";  emitVarTy y tys; emitLn ") -> ()"; 
+  emit "(%"; emit x; emit ", %"; emit ix; emit ", %"; emit y; emit ")";
+  emit " : ("; emitVarTy x tys; emit ", i64, ";  emitVarTy y tys; emitLn ") -> ()"; 
 
 -- | emit args with types interleaved
 def emitArgsInterleavedTys (ys: Array Arg) (tys: HashMap VarId IRType) : M Unit :=
@@ -561,14 +567,15 @@ def emitUProj (z : VarId) (i : Nat) (x : VarId) : M Unit := do
 def emitSProj (z : VarId) (t : IRType) (n offset : Nat) (x : VarId) (tys: HashMap VarId IRType): M Unit := do
   let ix <- emitOffset n offset;
   emitLhs z;
+  emit "call ";
   match t with
-  | IRType.float  => emit "lean_ctor_get_float"
-  | IRType.uint8  => emit "lean_ctor_get_uint8"
-  | IRType.uint16 => emit "lean_ctor_get_uint16"
-  | IRType.uint32 => emit "lean_ctor_get_uint32"
-  | IRType.uint64 => emit "lean_ctor_get_uint64"
+  | IRType.float  => emit "@lean_ctor_get_float"
+  | IRType.uint8  => emit "@lean_ctor_get_uint8"
+  | IRType.uint16 => emit "@lean_ctor_get_uint16"
+  | IRType.uint32 => emit "@lean_ctor_get_uint32"
+  | IRType.uint64 => emit "@lean_ctor_get_uint64"
   | _             => throw "invalid instruction"
-  emit "("; emit x; emit ", "; emit ix; emit ")";
+  emit "(%"; emit x; emit ", %"; emit ix; emit ")";
   emit " : ("; emitVarTy x tys; emit ", i64) -> ("; emit (toCType t); emitLn ")";
 
 def toStringArgs (ys : Array Arg) : List String :=
@@ -703,26 +710,34 @@ def emitApp (z : VarId) (f : VarId) (ys : Array Arg) (tys: HashMap VarId IRType)
     emit "("; emitVarTy z tys; emit ")"; 
     emitLn "";
 
+-- | I added a lean_box_uint8
 def emitBoxFn (xType : IRType) : M Unit :=
   match xType with
   | IRType.usize  => emit "call @lean_box_usize"
+  | IRType.uint8  => emit "call @lean_box_uint8"
   | IRType.uint32 => emit "call @lean_box_uint32"
   | IRType.uint64 => emit "call @lean_box_uint64"
   | IRType.float  => emit "call @lean_box_float"
-  | other         => emit "call @lean_box"
+  | other         => emit "call @lean_box_OTHER"
 
 def emitBox (z : VarId) (x : VarId) (xType : IRType) : M Unit := do
-  emitLhs z; emitBoxFn xType; emit "(%"; emit x; emitLn ") : ";
-  emit "("; emit "i32"; emit ") -> (!lz.value)"; emit "\n"
+  emitLhs z; emitBoxFn xType; emit "(%"; emit x; emit ") : ";
+  emit "("; emit (toCType xType);
+  -- emit "i32";
+  emit ") -> (!lz.value)";
+   emit $ " // ERR: xType: " ++ (toString xType);
+  emit "\n"
 
+-- | I added a lean_unbox_uint8
 def emitUnbox (z : VarId) (t : IRType) (x : VarId) : M Unit := do
   emitLhs z;
   match t with
   | IRType.usize  => emit "call @lean_unbox_usize"
+  | IRType.uint8  => emit "call @lean_unbox_uint8"
   | IRType.uint32 => emit "call @lean_unbox_uint32"
   | IRType.uint64 => emit "call @lean_unbox_uint64"
   | IRType.float  => emit "call @lean_unbox_float"
-  | other         => emit $ "call @lean_unbox"
+  | other         => emit $ "call @lean_unbox_OTHER"
   emit "(%"; emit x; emit ") : ";
   emit "(!lz.value)"; emit " -> ("; emit (toCType t); emit ")";
   emit $ "\n//^UNBOX type: (" ++ toCType t ++")";
@@ -1208,7 +1223,7 @@ def emitDeclInit (d : Decl) : M Unit := do
 def emitInitFn : M Unit := do
   let env ← getEnv
   let modName ← getModName
-  assertM "expected only one import" (env.imports.toList.length == 1)
+  -- assertM "expected only one import" (env.imports.toList.length == 1)
     -- | TODO: figure out what this code is doing. As it is currently written,
   -- the C code makes no sense to me. It calls the initialization function on itself???
   -- I guess the difference is between modName and imp.module; I don't understand
@@ -1218,17 +1233,19 @@ def emitInitFn : M Unit := do
     emitLn $ "func private @" ++ mkModuleInitializationFunctionName imp.module ++ 
        "(!lz.value) -> (!lz.value)"
 
+  emit $ "func private @" ++ "init_lean_custom_entrypoint_hack";
+     emitLn "(%w :!lz.value) -> !lz.value {"
+     let worldname <- gensym "world"
+     emitLn $ "%" ++ worldname ++ " = call @lean_io_mk_world() : () -> (!lz.value)"
+   
   env.imports.forM fun imp => do
      -- emitLn $ " //ERR: initialization: (" ++ mkModuleInitializationFunctionName modName ++ ")"
      -- emit $ "func private @" ++ mkModuleInitializationFunctionName modName;
      -- | name of lean entrypoint
-     emit $ "func private @" ++ "init_lean_custom_entrypoint_hack";
-     emitLn "(%w :!lz.value) -> !lz.value {"
-     let initResult <- gensym "initResult"
-     let worldname <- gensym "world"
-     emitLn $ "%" ++ worldname ++ " = call @lean_io_mk_world() : () -> (!lz.value)"
      -- | this CALLS the initialization function for MODULES
-     emitLn $ "//ERR: initializing imp.module(" ++ (mkModuleInitializationFunctionName imp.module) ++ ")"
+     emitLn $ "//ERR: initializing imp.module(" ++ 
+         (mkModuleInitializationFunctionName imp.module) ++ ")"
+     let initResult <- gensym "initResult"
      emitLn ("%" ++ initResult  ++ " = " ++
        "call @" ++ mkModuleInitializationFunctionName imp.module ++ 
        "(" ++  "%" ++ worldname ++ ")" ++ 
