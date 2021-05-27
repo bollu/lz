@@ -123,7 +123,10 @@ def toCType : IRType → String
   | IRType.tobject    => "!lz.value" -- "lean_object*"
   | IRType.irrelevant => "!lz.value" -- "lean_object*"
   | IRType.struct _ _ => panic! "not implemented yet"
-  | IRType.union _ _  => "UNION"  --panic! "not implemented yet"
+  | IRType.union name arrtys  =>
+     if arrtys.toList.length == 0 -- from binarytrees.lean: errorLookupArgTy
+     then "!lz.value"
+     else panic! "not implemented yet" 
 
 def throwInvalidExportName {α : Type} (n : Name) : M α :=
   throw s!"invalid export name '{n}'"
@@ -557,18 +560,28 @@ def emitSimpleExternalCall (f : String) (ps : Array Param) (ys : Array Arg)
   let fname := f;
   emit "call "; emit "@"; emit (escape fname)
   -- We must remove irrelevant arguments to extern calls
-  let pys := (ps.zip ys).filter (fun py => not (py.fst.ty.isIrrelevant))
-  let ys := Array.map Prod.snd pys
+  let psys := (ps.zip ys).filter (fun py => not (py.fst.ty.isIrrelevant))
+  let ys := Array.map Prod.snd psys
 
   emit "("
   -- We must remove irrelevant arguments to extern calls.
-  pys.size.forM (fun i => do
+  ys.size.forM (fun i => do
          if i > 0 then emit ", ";
          emitArg ys[i])
   emit ")"
-  emit " : ("; emitArgsOnlyTys ys tys; emit ")";
+  -- TODO: understand why the line
+  --    emit " : ("; emitArgsOnlyTys ys tys; emit ")";
+  -- does not work!!!!
+  emit " : ("; 
+  psys.size.forM (fun i => do
+    if i > 0 then emit ","
+    emit (toCType psys[i].fst.ty);
+  )
+  emit ")";
+
   emit " -> "; emit "(";  emit (toCType retty);  emit ")";
   emit " // <== ERR: emitSimpleExternalCall";
+  emit $ " // <== ys: " ++ toString (toStringArgs ys) ++ "| tys: ";
   emit "\n"
   pure ()
 
@@ -1079,7 +1092,7 @@ def emitDeclAux (d : Decl) : M Unit := do
             emit "%"; emit x.x; emit ": "; emit (toCType x.ty)
         emit ")"
         emit (" -> " ++ (toCType t))
-      else -- [xs.size = 0]
+      else -- [xs.size == 0]
         -- TODO: there is something super funky about this codegen here!
         -- In particular, I don't understand this __init__ invariant.
         emitLn ("@_init_" ++ baseName ++ "()" ++ " -> " ++ (toCType t))
@@ -1090,10 +1103,10 @@ def emitDeclAux (d : Decl) : M Unit := do
       --     let x := xs[i]
       --     emit "lean_object* "; emit x.x; emit " = _args["; emit i; emitLn "];"
       -- emitLn "_start:";
-      -- let tys :=  (xs.foldl (fun m p => (m.insert p.x p.ty)) {});
+      -- let name2ty :=  xs.foldl (fun m p => (m.insert p.x p.ty)) {};
       withReader (fun ctx => { ctx with mainFn := f, mainParams := xs })
                  (emitFnBody b 
-                             ((xs.foldl (fun m p => (m.insert p.x p.ty)) {}))
+                             ((xs.foldl (fun m x => (m.insert x.x x.ty)) {}))
                              EmitIrrelevant.yes);
     | _ => emitLn "// ERR: unknwown decl"; pure ()
 
