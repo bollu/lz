@@ -396,25 +396,19 @@ def emitSetTag (x : VarId) (i : Nat) : M Unit := do
 def emitSet (x : VarId) (i : Nat) (y : Arg) : M Unit := do
   emit "lean_ctor_set("; emit x; emit ", "; emit i; emit ", "; emitArg y; emitLn ");"
 
-def emitOffset (n : Nat) (offset : Nat) : M Unit := do
-  if n > 0 then
-    emit "sizeof(void*)*"; emit n;
-    if offset > 0 then emit " + "; emit offset
-  else
-    emit offset
-
-def emitUSet (x : VarId) (n : Nat) (y : VarId) : M Unit := do
-  emit "lean_ctor_set_usize("; emit x; emit ", "; emit n; emit ", "; emit y; emitLn ");"
-
-def emitSSet (x : VarId) (n : Nat) (offset : Nat) (y : VarId) (t : IRType) : M Unit := do
-  match t with
-  | IRType.float  => emit "lean_ctor_set_float"
-  | IRType.uint8  => emit "lean_ctor_set_uint8"
-  | IRType.uint16 => emit "lean_ctor_set_uint16"
-  | IRType.uint32 => emit "lean_ctor_set_uint32"
-  | IRType.uint64 => emit "lean_ctor_set_uint64"
-  | _             => throw "invalid instruction";
-  emit "("; emit x; emit ", "; emitOffset n offset; emit ", "; emit y; emitLn ");"
+def emitOffset (n : Nat) (offset : Nat) : M String := do
+  let name <- gensym "offset";
+  let SIZEOF_VOIDPTR := 4; -- this is the janky bit.
+  let offset := SIZEOF_VOIDPTR * n + offset;
+  emit "%"; emit name; emit " = std.constant "; emit offset; emit " : i64";
+  emit $ "// offset(" ++ toString n ++ ", offset=" ++ toString offset ++ ")"
+  emitLn "";
+  return name;
+  -- if n > 0 then
+  --   emit "sizeof(void*)*"; emit n;
+  --   if offset > 0 then emit " + "; emit offset
+  -- else
+  --  emit offset
 
 def emitLhs (z : VarId) : M Unit := do
   emit "%"; emit z; emit " = "
@@ -427,6 +421,28 @@ def emitArgTy (a: Arg) (tys: HashMap VarId IRType) : M Unit :=  do
 def emitVarTy (v: VarId) (tys: HashMap VarId IRType) : M Unit :=  do
     emit (toCType (lookupArgTy tys (mkVarArg v)));
 
+
+
+def emitUSet (x : VarId) (n : Nat) (y : VarId) : M Unit := do
+  emit "lean_ctor_set_usize("; emit x; emit ", "; emit n; emit ", "; emit y; emitLn ");"
+
+ /- Store `y : ty` at Position `sizeof(void*)*i + offset` in `x`. `x` must be a Constructor object and `RC(x)` must be 1.
+    `ty` must not be `object`, `tobject`, `irrelevant` nor `Usize`.
+  | sset (x : VarId) (i : Nat) (offset : Nat) (y : VarId) (ty : IRType) (b : FnBody)
+ -/
+def emitSSet (x : VarId) (n : Nat) (offset : Nat) (y : VarId) (t : IRType) (tys: HashMap VarId IRType): M Unit := do
+  let ix <- emitOffset n offset
+  emit "call ";
+  match t with
+  | IRType.float  => emit "@lean_ctor_set_float"
+  | IRType.uint8  => emit "@lean_ctor_set_uint8"
+  | IRType.uint16 => emit "@lean_ctor_set_uint16"
+  | IRType.uint32 => emit "@lean_ctor_set_uint32"
+  | IRType.uint64 => emit "@lean_ctor_set_uint64"
+  | _             => throw $ "invalid SSet (" ++ toString x ++ " : " ++ toString t ++ ")";
+  -- emit "("; emit x; emit ", "; emitOffset n offset; emit ", "; emit y; emitLn ");"
+  emit "("; emit x; emit ", "; emit ix; emit ","; emit y; emit ")";
+  emit " : "; emit "("; emitVarTy x tys; emit ", i64, ";  emitVarTy y tys; emitLn ") -> ()"; 
 
 -- | emit args with types interleaved
 def emitArgsInterleavedTys (ys: Array Arg) (tys: HashMap VarId IRType) : M Unit :=
@@ -540,7 +556,10 @@ def emitProj (z : VarId) (i : Nat) (x : VarId) (tys: HashMap VarId IRType): M Un
 def emitUProj (z : VarId) (i : Nat) (x : VarId) : M Unit := do
   emitLhs z; emit "lean_ctor_get_usize("; emit x; emit ", "; emit i; emitLn ");"
 
-def emitSProj (z : VarId) (t : IRType) (n offset : Nat) (x : VarId) : M Unit := do
+--  /- Extract the scalar value at Position `sizeof(void*)*n + offset` from `x`. -/
+--  sproj (n : Nat) (offset : Nat) (x : VarId)
+def emitSProj (z : VarId) (t : IRType) (n offset : Nat) (x : VarId) (tys: HashMap VarId IRType): M Unit := do
+  let ix <- emitOffset n offset;
   emitLhs z;
   match t with
   | IRType.float  => emit "lean_ctor_get_float"
@@ -549,7 +568,8 @@ def emitSProj (z : VarId) (t : IRType) (n offset : Nat) (x : VarId) : M Unit := 
   | IRType.uint32 => emit "lean_ctor_get_uint32"
   | IRType.uint64 => emit "lean_ctor_get_uint64"
   | _             => throw "invalid instruction"
-  emit "("; emit x; emit ", "; emitOffset n offset; emitLn ");"
+  emit "("; emit x; emit ", "; emit ix; emit ")";
+  emit " : ("; emitVarTy x tys; emit ", i64) -> ("; emit (toCType t); emitLn ")";
 
 def toStringArgs (ys : Array Arg) : List String :=
   ys.toList.map argToCString
@@ -767,7 +787,9 @@ def emitVDecl (z : VarId) (t : IRType) (v : Expr)  (tys: HashMap VarId IRType) :
       emitLn "// ERR: Expr.proj"
       emitProj z i x tys
   | Expr.uproj i x      => panicM "// ERR: Expr.uproj" -- emitUProj z i x
-  | Expr.sproj n o x    => panicM "// ERR: Expr.sproj" -- emitSProj z t n o x
+  | Expr.sproj n o x    => do
+     emitLn "// ERR: Expr.sproj";
+     emitSProj z t n o x tys
   | Expr.fap c ys       => do
     emitLn "// ERR: Expr.fap";
     emitLhs z; 
@@ -1003,8 +1025,10 @@ partial def emitBlock (b : FnBody) (tys: HashMap VarId IRType) : M Unit := do
     panicM "// ERR: FnBody.set"; emitBlock b  tys; -- emitSet x i y; emitBlock b
   | FnBody.uset x i y b        =>
     panicM "// ERR: FnBody.uset"; emitBlock b tys; -- emitUSet x i y; emitBlock b
-  | FnBody.sset x i o y t b    =>
-    panicM "// ERR: FnBody.sset"; emitBlock b tys; -- emitSSet x i o y t; emitBlock b
+  | FnBody.sset x i o y t b    => do
+    emitLn "// ERR: FnBody.sset";
+    emitSSet x i o y t tys;
+    emitBlock b tys
   | FnBody.mdata _ b           => emitBlock b tys
   | FnBody.ret x               =>
     emitLn "//ERR: FnBody.ret"
