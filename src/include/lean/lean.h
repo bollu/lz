@@ -1328,6 +1328,22 @@ static inline uint8_t lean_uint8_eq(uint8_t a, uint8_t b) {
 static inline uint8_t lean_float_eq(double a, double b) {
     return a == b;
 }
+
+static inline uint8_t lean_uint8_le(uint8_t a, uint8_t b) { return a <= b; }
+static inline uint8_t lean_uint16_le(uint16_t a, uint16_t b) { return a <= b; }
+static inline uint8_t lean_uint32_le(uint32_t a, uint32_t b) { return a <= b; }
+static inline uint8_t lean_uint64_le(uint64_t a, uint64_t b) { return a <= b; }
+static inline uint8_t lean_float_le(double a, double b) { return a <= b; }
+static inline uint8_t lean_usize_le(uint64_t a, uint64_t b) { return a <= b; }
+
+static inline uint8_t lean_uint8_lt(uint8_t a, uint8_t b) { return a < b; }
+static inline uint8_t lean_uint16_lt(uint16_t a, uint16_t b) { return a < b; }
+static inline uint8_t lean_uint32_lt(uint32_t a, uint32_t b) { return a < b; }
+static inline uint8_t lean_uint64_lt(uint64_t a, uint64_t b) { return a < b; }
+static inline uint8_t lean_float_lt(double a, double b) { return a < b; }
+static inline uint8_t lean_usize_lt(uint64_t a, uint64_t b) { return a < b; }
+
+
 static inline lean_obj_res lean_nat_sub(b_lean_obj_arg a1, b_lean_obj_arg a2) {
     if (LEAN_LIKELY(lean_is_scalar(a1) && lean_is_scalar(a2))) {
         size_t n1 = lean_unbox(a1);
