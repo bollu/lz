@@ -93,10 +93,19 @@ def myLen : List Tree → Nat → Nat
 | _ :: xs,   r => myLen xs r
 | [], r => r
 
-def main (xs : List String) : IO UInt32 := do
-let [n, freq] ← pure xs | throw $ IO.userError "invalid input";
-let n     := n.toNat!;
-let freq  := freq.toNat!;
+-- def main (xs : List String) : IO UInt32 := do
+-- let [n, freq] ← pure xs | throw $ IO.userError "invalid input";
+-- let n     := n.toNat!;
+-- let freq  := freq.toNat!;
+-- let freq  := if freq == 0 then 1 else freq;
+-- let mList := mkMap n freq;
+-- let v     := fold (fun (k : Nat) (v : Bool) (r : Nat) => if v then r + 1 else r) mList.head! 0;
+-- IO.println (toString (myLen mList 0) ++ " " ++ toString v) *>
+-- pure 0
+
+def main : IO UInt32 := do
+let n     := 20;
+let freq  := 20;
 let freq  := if freq == 0 then 1 else freq;
 let mList := mkMap n freq;
 let v     := fold (fun (k : Nat) (v : Bool) (r : Nat) => if v then r + 1 else r) mList.head! 0;

@@ -290,7 +290,9 @@ typedef struct {
 
   bool lean_is_scalar(lean_object * o) { return ((size_t)(o) & 1) == 1; }
   lean_object * lean_box(size_t n) { return (lean_object*)(((size_t)(n) << 1) | 1); }
+  lean_object * lean_box_uint8(uint8_t n) { return lean_box(n); }
   size_t lean_unbox(lean_object * o) { return (size_t)(o) >> 1; }
+  uint8_t lean_unbox_uint8(lean_object * o) { return lean_unbox(o); }
 
 void lean_set_exit_on_panic(bool flag);
 lean_object * lean_panic_fn(lean_object * default_val, lean_object * msg);
