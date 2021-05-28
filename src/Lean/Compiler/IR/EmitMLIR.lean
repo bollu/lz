@@ -298,8 +298,21 @@ def emitPreamble : M Unit := do
   emitLn "func private @lean_unbox_usize(!lz.value) -> i64"
   emitLn "func private @lean_unbox(!lz.value) -> i8"
 
-  emitLn "func private @lean_io_mk_world() -> (!lz.value)"
+  emitLn "func private @lean_inc(!lz.value) -> ()"
+  emitLn "func private @lean_inc_n(!lz.value, i64) -> ()"
+  emitLn "func private @lean_inc_ref(!lz.value) -> ()"
+
+  emitLn "func private @lean_ctor_set(!lz.value, i64, !lz.value) -> ()"
+
+  emitLn "func private @lean_dec(!lz.value) -> ()"
+  emitLn "func private @lean_dec_n(!lz.value, i64) -> ()"
   emitLn "func private @lean_dec_ref(!lz.value) -> ()"
+
+  emitLn "func private @lean_is_exclusive(!lz.value) -> (i8)"
+  emitLn "func private @lean_is_scalar(!lz.value) -> (i8)"
+  
+
+  emitLn "func private @lean_io_mk_world() -> (!lz.value)"
   emitLn "func private @lean_io_result_mk_ok(!lz.value) -> !lz.value"
   emitLn "func private @lean_mark_persistent(!lz.value) -> ()"
 
@@ -396,30 +409,41 @@ def isIf (alts : Array Alt) : Option (Nat × FnBody × FnBody) :=
     | _            => none
 
 def emitInc (x : VarId) (n : Nat) (checkRef : Bool) : M Unit := do
+  let nname <- gensym "n"
+  emitLn $ "%" ++ nname ++ " = std.constant " ++ (toString n) ++ " : i64"
   emit "call ";
+  -- emit $
+  --  if checkRef then (if n == 1 then "@lean_inc" else "@lean_inc_n")
+  --  else (if n == 1 then "@lean_inc_ref" else "@lean_inc_ref_n")
+  -- emit "("; emit "%"; emit x
+  -- if n != 1 then emit ", "; emit n
   emit $
-    if checkRef then (if n == 1 then "lean_inc" else "lean_inc_n")
-    else (if n == 1 then "lean_inc_ref" else "lean_inc_ref_n")
+     if checkRef then "@lean_inc_n"
+     else  "@lean_inc_ref_n"
   emit "("; emit "%"; emit x
-  if n != 1 then emit ", "; emit n
-  emitLn ")"
-  emitLn " : !lz.value -> ()"
+  -- if n != 1 then emit ", "; emit n
+  emitLn $ ", %" ++ nname ++ ") : (!lz.value, i64) -> ()"
 
 def emitDec (x : VarId) (n : Nat) (checkRef : Bool) : M Unit := do
-  emit "call "; emit "@";
-  emit (if checkRef then "lean_dec" else "lean_dec_ref");
-  emit "("; emit x;
+  emit $ "call " ++ (if checkRef then "@lean_dec" else "@lean_dec_ref");
+  emit "(%"; emit x;
   if n != 1 then emit ", "; emit n
-  emitLn ");"
+  emitLn ") : (!lz.value) -> ()"
 
 def emitDel (x : VarId) : M Unit := do
-  emit "lean_free_object("; emit x; emitLn ");"
+  emit "call @lean_free_object(%"; emit x; emitLn ") : (!lz.value) -> ()"
 
 def emitSetTag (x : VarId) (i : Nat) : M Unit := do
-  emit "lean_ctor_set_tag("; emit x; emit ", "; emit i; emitLn ");"
+  let iname <- gensym "i";
+  emitLn $ "%" ++ iname ++ " = std.constant " ++ (toString i) ++ " : i64";
+  emit "call @lean_ctor_set_tag(%"; emit x; emit ", %"; emit iname; emit ")";
+  emitLn $ " : (!lz.value, i64) -> !lz.value"
 
 def emitSet (x : VarId) (i : Nat) (y : Arg) : M Unit := do
-  emit "lean_ctor_set("; emit x; emit ", "; emit i; emit ", "; emitArg y; emitLn ");"
+  let iname <- gensym "i";
+  emitLn $ "%" ++ iname ++ " = std.constant " ++ (toString i) ++ " : i64";
+  emit "call @lean_ctor_set(%"; emit x; emit ", %"; emit iname; emit ", "; emitArg y; emit ")"
+  emitLn $ " : (!lz.value, i64, !lz.value) -> ()"
 
 def emitOffset (n : Nat) (offset : Nat) : M String := do
   let name <- gensym "offset";
@@ -447,8 +471,13 @@ def emitVarTy (v: VarId) (tys: HashMap VarId IRType) : M Unit :=  do
 
 
 
+-- | TODO: what is this for?
 def emitUSet (x : VarId) (n : Nat) (y : VarId) : M Unit := do
-  emit "lean_ctor_set_usize("; emit x; emit ", "; emit n; emit ", "; emit y; emitLn ");"
+  let nname <- gensym "n";
+  emitLn $  "%" ++ nname ++ " = std.constant " ++ (toString n) ++ " i64"
+  emit "@lean_ctor_set_usize(%"; emit x; emit ", "; 
+  emit "%"; emit nname; emit ", ";
+  emit "%"; emit y; emitLn ") : (!lz.value, i64, !lz.value) -> ()"
 
  /- Store `y : ty` at Position `sizeof(void*)*i + offset` in `x`. `x` must be a Constructor object and `RC(x)` must be 1.
     `ty` must not be `object`, `tobject`, `irrelevant` nor `Usize`.
@@ -551,17 +580,51 @@ def emitExprCtor (z : VarId) (c : CtorInfo) (ys : Array Arg)
   -- else do
   --   emitAllocCtor c; emitCtorSetArgs z ys
 
-def emitReset (z : VarId) (n : Nat) (x : VarId) : M Unit := do
-  emit "if (lean_is_exclusive("; emit x; emitLn ")) {";
+
+-- def emitReset (z : VarId) (n : Nat) (x : VarId) : M Unit := do
+--   emit "if (lean_is_exclusive("; emit x; emitLn ")) {";
+--   n.forM fun i => do
+--     emit " lean_ctor_release("; emit x; emit ", "; emit i; emitLn ");"
+--   emit " "; emitLhs z; emit x; emitLn ";";
+--   emitLn "} else {";
+--   emit " lean_dec_ref("; emit x; emitLn ");";
+--   emit " "; emitLhs z; emitLn "lean_box(0);";
+--   emitLn "}"
+
+def emitReset (z : VarId) (n : Nat) (x : VarId) (tys: HashMap VarId IRType): M Unit := do
+  -- emit "if (lean_is_exclusive("; emit x; emitLn ")) {";
+  let excl <- gensym "excl"
+  emitLn $ "%" ++ (toString excl) ++ " = " ++ 
+    "call @lean_is_exclusive(%" ++ (toString x) ++ ") : (!lz.value) -> (i1)"
+  emitLhs z; emit " = scf.if "; emit excl; emitLn "{";
   n.forM fun i => do
-    emit " lean_ctor_release("; emit x; emit ", "; emit i; emitLn ");"
-  emit " "; emitLhs z; emit x; emitLn ";";
+    let ci <- gensym $ "c" ++ toString i;
+    emitLn $ "%" ++ (toString ci) ++ " = " ++ 
+      "constant " ++ (toString i) ++ " : i64"
+    emit "call @lean_ctor_release(%"; emit x; emit ", %"; emit ci; emitLn ") : (!lz.value, i64 ) -> ()"
+  emitLn $ "scf.yield "
+  -- emit " "; emitLhs z; emit x; emitLn ";";
   emitLn "} else {";
-  emit " lean_dec_ref("; emit x; emitLn ");";
-  emit " "; emitLhs z; emitLn "lean_box(0);";
+  emitLn " call @lean_dec_ref("; emit x; emitLn ") : (!lz.value) -> ()";
+  let c0 <- gensym "c0"
+  let c0box <- gensym "c0box";
+  emitLn $ "%" ++ c0 ++ " = std.constant 0 : i64"
+  emitLn $ "%" ++ c0box ++ " = call @lean_box(%" ++ c0 ++ ") : i64 -> (!lz.value)"
+  emitLn $ " scf.yield %" ++ c0box ++ " : (!lz.value) -> ()"
   emitLn "}"
 
-def emitReuse (z : VarId) (x : VarId) (c : CtorInfo) (updtHeader : Bool) (ys : Array Arg) : M Unit := do
+
+-- def emitReuse (z : VarId) (x : VarId) (c : CtorInfo) (updtHeader : Bool) (ys : Array Arg) (tys: HashMap VarId IRType): M Unit := do
+--   emit "if (lean_is_scalar("; emit x; emitLn ")) {";
+--   emit " "; emitLhs z; emitAllocCtor c;
+--   emitLn "} else {";
+--   emit " "; emitLhs z; emit x; emitLn ";";
+--   if updtHeader then emit " lean_ctor_set_tag("; emit z; emit ", "; emit c.cidx; emitLn ");"
+--   emitLn "}";
+--   emitCtorSetArgs z ys
+
+
+def emitReuse (z : VarId) (x : VarId) (c : CtorInfo) (updtHeader : Bool) (ys : Array Arg) (tys: HashMap VarId IRType): M Unit := do
   emit "if (lean_is_scalar("; emit x; emitLn ")) {";
   emit " "; emitLhs z; emitAllocCtor c;
   emitLn "} else {";
@@ -569,6 +632,8 @@ def emitReuse (z : VarId) (x : VarId) (c : CtorInfo) (updtHeader : Bool) (ys : A
   if updtHeader then emit " lean_ctor_set_tag("; emit z; emit ", "; emit c.cidx; emitLn ");"
   emitLn "}";
   emitCtorSetArgs z ys
+
+
 
 def emitProj (z : VarId) (i : Nat) (x : VarId) (tys: HashMap VarId IRType): M Unit := do
   emitLhs z; emit (escape "lz.project");
@@ -763,10 +828,19 @@ def emitUnbox (z : VarId) (t : IRType) (x : VarId) : M Unit := do
   
 
 def emitIsShared (z : VarId) (x : VarId) : M Unit := do
-  emitLhs z; emit "!lean_is_exclusive("; emit x; emitLn ");"
+  let excl <- gensym "exclusive";
+  emit $ "%" ++ excl ++ " = call @lean_is_exclusive(%" ++ (toString x) ++ ")";
+  emitLn $ " : (!lz.value) -> i8";
+  emitLhs z; emit $ (escape "ptr.not") ++ "(%" ++ excl ++ ")";
+  emitLn $ " : (i8) -> i8"
 
 def emitIsTaggedPtr (z : VarId) (x : VarId) : M Unit := do
-  emitLhs z; emit "!lean_is_scalar("; emit x; emitLn ");"
+  let scalar <- gensym "scalar";
+  emit $ "%" ++ scalar ++ " = call @lean_is_scalar(%" ++ (toString x) ++ ")";
+  emitLn $ " : (!lz.value) -> i1";
+  emitLhs z; emit $  (escape "ptr.not") ++ "(%" ++ scalar ++ ")";
+  emitLn $ " : (i8) -> i8"
+
 
 def toHexDigit (c : Nat) : String :=
   String.singleton c.digitChar
@@ -814,8 +888,12 @@ def emitLit (z : VarId) (t : IRType) (v : LitVal) : M Unit := do
 def emitVDecl (z : VarId) (t : IRType) (v : Expr)  (tys: HashMap VarId IRType) : M Unit :=
   match v with
   | Expr.ctor c ys      => emitExprCtor z c ys tys
-  | Expr.reset n x      => panicM "// ERR: Expr.reset" -- emitReset z n x
-  | Expr.reuse x c u ys => panicM "// ERR: Expr.reuse" -- emitReuse z x c u ys
+  | Expr.reset n x      => do 
+    emitLn "// ERR: Expr.reset"
+    emitReset z n x tys
+  | Expr.reuse x c u ys => do
+     emitLn "// ERR: Expr.reuse"
+     emitReuse z x c u ys tys
   | Expr.proj i x       => do
       emitLn "// ERR: Expr.proj"
       emitProj z i x tys
@@ -840,8 +918,12 @@ def emitVDecl (z : VarId) (t : IRType) (v : Expr)  (tys: HashMap VarId IRType) :
    Expr.unbox x        => do
     emitLn "// ERR: Expr.unbox"
     emitUnbox z t x
-  | Expr.isShared x     => panicM  "// ERR: Expr.isShared" -- emitIsShared z x
-  | Expr.isTaggedPtr x  => panicM "// ERR: Expr.isTaggedPtr: " -- emitIsTaggedPtr z x
+  | Expr.isShared x     => do 
+     emitLn  "// ERR: Expr.isShared"
+     emitIsShared z x
+  | Expr.isTaggedPtr x  => do
+    emitLn "// ERR: Expr.isTaggedPtr: "
+    emitIsTaggedPtr z x
   | Expr.lit v          => do emitLn "//ERR: Expr.lit"; emitLit z t v
 
 def isTailCall (x : VarId) (v : Expr) (b : FnBody) : M Bool := do
@@ -925,6 +1007,14 @@ partial def emitCaseObj (x : VarId) (xType : IRType) (alts : Array Alt)
      |  Alt.ctor info b => emitFnBody b tys EmitIrrelevant.no
      |  Alt.default b => emitFnBody b tys EmitIrrelevant.no) 
  emit ")";
+ emit "{";
+  forMIx_ (as:= alts) (fun ix alt => do
+    emit (if ix > 0 then ", " else "");
+    match alt with 
+     |  Alt.ctor info b => emit $ "alt" ++ (toString ix) ++ "=" ++ toString (info.cidx);
+     |  Alt.default b => emit $ "alt" ++ (toString ix) ++ "=" ++ "@default";
+    );
+ emit "}";
  emitLn "";
  -- TODO: emit case LHSs
  -- TODO: emit return type of case. How?
@@ -1051,13 +1141,18 @@ partial def emitBlock (b : FnBody) (tys: HashMap VarId IRType) : M Unit := do
     unless p do emitDec x n c
     emitBlock  b tys
   | FnBody.del x b             => 
-    panicM "// ERR: FnBody.del"; emitBlock b tys ; -- emitDel x; emitBlock b
+    emitLn "// ERR: FnBody.del";
+    emitDel x; emitBlock b tys
   | FnBody.setTag x i b        => 
-    panicM "// ERR: FnBody.setTag"; emitBlock b tys; -- emitSetTag x i; emitBlock b
+    emitLn "// ERR: FnBody.setTag";
+    emitSetTag x i;
+    emitBlock b tys
   | FnBody.set x i y b         =>
-    panicM "// ERR: FnBody.set"; emitBlock b  tys; -- emitSet x i y; emitBlock b
+    emitLn "// ERR: FnBody.set";
+    emitSet x i y; emitBlock b tys
   | FnBody.uset x i y b        =>
-    panicM "// ERR: FnBody.uset"; emitBlock b tys; -- emitUSet x i y; emitBlock b
+    emitLn "// ERR: FnBody.uset";
+    emitUSet x i y; emitBlock b tys
   | FnBody.sset x i o y t b    => do
     emitLn "// ERR: FnBody.sset";
     emitSSet x i o y t tys;

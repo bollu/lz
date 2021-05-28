@@ -35,8 +35,8 @@ private def compileAux (decls : Array Decl) : CompilerM Unit := do
   logDecls `elim_dead_branches decls
   let decls := decls.map Decl.pushProj
   logDecls `push_proj decls
-  -- let decls := decls.map Decl.insertResetReuse
-  -- logDecls `reset_reuse decls
+  let decls := decls.map Decl.insertResetReuse
+  logDecls `reset_reuse decls
   let decls := decls.map Decl.elimDead
   logDecls `elim_dead decls
   let decls := decls.map Decl.simpCase
@@ -48,10 +48,11 @@ private def compileAux (decls : Array Decl) : CompilerM Unit := do
   -- logDecls `borrow decls
   let decls ← explicitBoxing decls
   logDecls `boxing decls
-  -- let decls ← explicitRC decls
-  -- logDecls `rc decls
-  -- let decls := decls.map Decl.expandResetReuse
-  -- logDecls `expand_reset_reuse decls
+  let decls ← explicitRC decls
+  logDecls `rc decls
+  let decls := decls.map Decl.expandResetReuse
+  logDecls `expand_reset_reuse decls
+  -- | this pass seems to also insert reset/reuse somehow?
   let decls := decls.map Decl.pushProj
   logDecls `push_proj decls
   let decls ← updateSorryDep decls
