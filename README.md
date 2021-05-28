@@ -64,6 +64,166 @@
 
 # Log:  [newest] to [oldest]
 
+# May 28
+
+Some kind of miscompile of case statements from `render.lean`. I generate
+an empty `case:`
+
+```
+"lz.caseRet"(%2) ( {
+},  {
+}) : (!lz.value) -> ()
+```
+
+The larger context is from the function `l_IO_randFloat`:
+
+```
+caseop parent:
+func @l_IO_randFloat(%arg0: f64, %arg1: f64, %arg2: !lz.value) -> !lz.value {
+  %c0_i64 = constant 0 : i64
+  %0 = call @lean_box(%c0_i64) : (i64) -> !lz.value
+  %1 = "ptr.loadglobal"() {value = @l_IO_stdGenRef} : () -> !lz.value
+  %2 = call @lean_st_ref_get(%1, %arg2) : (!lz.value, !lz.value) -> !lz.value
+  %3 = call @lean_obj_tag(%2) : (!lz.value) -> i64
+  %c0_i64_0 = constant 0 : i64
+  %4 = cmpi eq, %3, %c0_i64_0 : i64
+  cond_br %4, ^bb1, ^bb2
+  "lz.caseRet"(%2) ( {
+  },  {
+  }) : (!lz.value) -> ()
+^bb1:  // pred: ^bb0
+  %5 = "lz.project"(%2) {value = 0 : i64} : (!lz.value) -> !lz.value
+  %6 = "lz.project"(%2) {value = 1 : i64} : (!lz.value) -> !lz.value
+  %7 = call @l_randomFloat___at_IO_randFloat___spec__1(%5) : (!lz.value) -> !lz.value
+  "lz.caseRet"(%7) ( {
+    %10 = "lz.project"(%7) {value = 0 : i64} : (!lz.value) -> !lz.value
+    %11 = "lz.project"(%7) {value = 1 : i64} : (!lz.value) -> !lz.value
+    %12 = call @lean_st_ref_set(%1, %11, %6) : (!lz.value, !lz.value, !lz.value) -> !lz.value
+    "lz.caseRet"(%12) ( {
+      %13 = "lz.project"(%12) {value = 1 : i64} : (!lz.value) -> !lz.value
+      %14 = call @lean_float_sub(%arg1, %arg0) : (f64, f64) -> f64
+      %15 = call @lean_unbox_float(%10) : (!lz.value) -> f64
+      %16 = call @lean_float_mul(%14, %15) : (f64, f64) -> f64
+      %17 = call @lean_float_add(%arg0, %16) : (f64, f64) -> f64
+      %18 = call @lean_box_float(%17) : (f64) -> !lz.value
+      %19 = "lz.construct"(%18, %13) {dataconstructor = @"0", size = 2 : i64} : (!lz.value, !lz.value) -> !lz.value
+      lz.return %19 : !lz.value
+    },  {
+    }) : (!lz.value) -> ()
+  }) : (!lz.value) -> ()
+^bb2:  // pred: ^bb0
+  %8 = call @lean_obj_tag(%2) : (!lz.value) -> i64
+  %c1_i64 = constant 1 : i64
+  %9 = cmpi eq, %8, %c1_i64 : i64
+}
+```
+
+The offending function, with comments:
+
+```
+// ERR: emitDeclAux (l_IO_randFloat) | isExtern?false
+// ERR: emitDeclAux Decl.fdecl (l_IO_randFloat)
+func @"l_IO_randFloat"(%x_1: f64, %x_2: f64, %x_3: !lz.value) -> !lz.value{
+%c0_irr = std.constant 0 : i64
+%irrelevant = call @lean_box(%c0_irr) : (i64) -> (!lz.value)
+//ERR: fnBody.vdecl (non-tail) call
+// ERR: Expr.fap
+%x_4 = "ptr.loadglobal"(){value=@"l_IO_stdGenRef"} : () -> !lz.value// <== ERR: emitFullApp (pointer)
+
+//ERR: fnBody.vdecl (non-tail) call
+// ERR: Expr.fap
+%x_5 = call @"lean_st_ref_get"(%x_4, %x_3) : (!lz.value,!lz.value) -> (!lz.value) // <== ERR: emitSimpleExternalCall // <== ys: [x_4, x_3]| tys: 
+// ^^ ERR: ExternEntry.standard
+// ^^^ ERR: emitFullApp (Decl.extern)
+// ERR: FnBody.case
+"lz.caseRet"(%x_5)({
+//ERR: fnBody.vdecl (non-tail) call
+// ERR: Expr.proj
+%x_6 = "lz.project"(%x_5){value=0}:(!lz.value)  -> (!lz.value)
+//ERR: fnBody.vdecl (non-tail) call
+// ERR: Expr.proj
+%x_7 = "lz.project"(%x_5){value=1}:(!lz.value)  -> (!lz.value)
+//ERR: fnBody.vdecl (non-tail) call
+// ERR: Expr.fap
+%x_8 = call @"l_randomFloat___at_IO_randFloat___spec__1"(%x_6):(!lz.value)->(!lz.value)// <== ERR: emitFullApp (fncall)
+
+// ERR: FnBody.case
+"lz.caseRet"(%x_8)({
+//ERR: fnBody.vdecl (non-tail) call
+// ERR: Expr.proj
+%x_9 = "lz.project"(%x_8){value=0}:(!lz.value)  -> (!lz.value)
+//ERR: fnBody.vdecl (non-tail) call
+// ERR: Expr.proj
+%x_10 = "lz.project"(%x_8){value=1}:(!lz.value)  -> (!lz.value)
+//ERR: fnBody.vdecl (non-tail) call
+// ERR: Expr.fap
+%x_11 = call @"lean_st_ref_set"(%x_4, %x_10, %x_7) : (!lz.value,!lz.value,!lz.value) -> (!lz.value) // <== ERR: emitSimpleExternalCall // <== ys: [x_4, x_10, x_7]| tys: 
+// ^^ ERR: ExternEntry.standard
+// ^^^ ERR: emitFullApp (Decl.extern)
+// ERR: FnBody.case
+"lz.caseRet"(%x_11)({
+//ERR: fnBody.vdecl (non-tail) call
+// ERR: Expr.proj
+%x_12 = "lz.project"(%x_11){value=1}:(!lz.value)  -> (!lz.value)
+//ERR: fnBody.vdecl (non-tail) call
+// ERR: Expr.fap
+%x_13 = call @"lean_float_sub"(%x_2, %x_1) : (f64,f64) -> (f64) // <== ERR: emitSimpleExternalCall // <== ys: [x_2, x_1]| tys: 
+// ^^ ERR: ExternEntry.standard
+// ^^^ ERR: emitFullApp (Decl.extern)
+//ERR: fnBody.vdecl (non-tail) call
+// ERR: Expr.unbox
+%x_14 = call @lean_unbox_float(%x_9) : (!lz.value) -> (f64)
+//^UNBOX type: (f64)
+//ERR: fnBody.vdecl (non-tail) call
+// ERR: Expr.fap
+%x_15 = call @"lean_float_mul"(%x_13, %x_14) : (f64,f64) -> (f64) // <== ERR: emitSimpleExternalCall // <== ys: [x_13, x_14]| tys: 
+// ^^ ERR: ExternEntry.standard
+// ^^^ ERR: emitFullApp (Decl.extern)
+//ERR: fnBody.vdecl (non-tail) call
+// ERR: Expr.fap
+%x_16 = call @"lean_float_add"(%x_1, %x_15) : (f64,f64) -> (f64) // <== ERR: emitSimpleExternalCall // <== ys: [x_1, x_15]| tys: 
+// ^^ ERR: ExternEntry.standard
+// ^^^ ERR: emitFullApp (Decl.extern)
+//ERR: fnBody.vdecl (non-tail) call
+// ERR: Expr.box
+%x_17 = call @lean_box_float(%x_16) : (f64) -> (!lz.value) // ERR: xType: float
+//ERR: fnBody.vdecl (non-tail) call
+%x_18 = "lz.construct"(%x_17, %x_12){dataconstructor = @"0", size=2} : (!lz.value, !lz.value) -> (!lz.value)
+//ERR: FnBody.ret
+lz.return %x_18 : !lz.value
+}
+, {
+// ERR: FnBody.unreachable
+}
+)
+ : (!lz.value) -> ()
+}
+)
+ : (!lz.value) -> ()
+}
+, {
+// ERR: FnBody.unreachable
+}
+)
+ : (!lz.value) -> ()
+}
+```
+
+At least some of the problem is caused by `// ERR: FnBody.unreachable`. Let me teach LEAN how to generate
+an unreachable.
+
+```
+Writing to out.ppm
+./exe-ref.out  532.94s user 8.26s system 712% cpu 1:15.99 total
+```
+
+```
+line 133 of 133
+Writing to out.ppm
+./exe.out  514.85s user 7.02s system 746% cpu 1:09.91 total
+/home/bollu/work/lz/test/lambdapure/compile$ 
+```
+
 # May 27
 
 Continuing my debugging saga of getting `USize` and its equalities to work:

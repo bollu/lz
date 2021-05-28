@@ -1904,11 +1904,12 @@ lean_obj_res lean_st_ref_swap(b_lean_obj_arg, lean_obj_arg, lean_obj_arg);
  uint8_t lean_float_lt(double a, double b) { return a < b; }
  uint8_t lean_usize_lt(uint64_t a, uint64_t b) { return a < b; }
 
-static inline double lean_float_add(double a, double b) { return a + b; }
-static inline double lean_float_sub(double a, double b) { return a - b; }
-static inline double lean_float_mul(double a, double b) { return a * b; }
-static inline double lean_float_div(double a, double b) { return a / b; }
-static inline double lean_float_negate(double a) { return -a; }
+ uint8_t lean_float_to_uint8(double a) { return (uint8_t)a; }
+ double lean_float_add(double a, double b) { return a + b; }
+ double lean_float_sub(double a, double b) { return a - b; }
+ double lean_float_mul(double a, double b) { return a * b; }
+ double lean_float_div(double a, double b) { return a / b; }
+ double lean_float_negate(double a) { return -a; }
 
 
 #ifdef __cplusplus

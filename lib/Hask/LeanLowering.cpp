@@ -1982,6 +1982,7 @@ public:
     ModuleOp mod = caseop->getParentOfType<ModuleOp>();
 
 
+
     Value condition = [&]() {
         FuncOp fn = getOrInsertGetObjTag(rewriter, mod);
         SmallVector<Value, 4> params{scrutinee};
@@ -2008,6 +2009,7 @@ public:
     // by using intrincics from a case scrutinee.
     assert(caseop.getAltRHS(i).getBlocks().size() == 1);
     assert(caseop.getAltRHS(i).getNumArguments() == 0);
+
     rewriter.inlineRegionBefore(caseop.getAltRHS(i), falseBB);
     return falseBB;
   }
