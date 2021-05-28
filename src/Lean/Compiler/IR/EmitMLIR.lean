@@ -1076,7 +1076,8 @@ partial def emitBlock (b : FnBody) (tys: HashMap VarId IRType) : M Unit := do
       emitLn "// ERR: FnBody.jmp"
       emitJmp j xs tys
   | FnBody.unreachable         => 
-    emitLn "// ERR: FnBody.unreachable" -- emitLn "lean_internal_panic_unreachable();"
+    emitLn "// ERR: FnBody.unreachable" 
+    emitLn $ (escape "ptr.unreachable") ++ "() : () -> ()"
 
 -- TODO: this should have access to declarations
 partial def emitJPs : FnBody → M Unit
