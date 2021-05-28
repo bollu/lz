@@ -879,8 +879,12 @@ struct Interpreter {
     if (auto jumpop = dyn_cast<standalone::HaskJumpOp>(op)) {
       standalone::HaskJoinPointOp parent = jumpop->getParentOfType<standalone::HaskJoinPointOp>();
       assert(parent && "jumpop must be surrounded by parent.");
-      InterpValue arg = env.lookup(jumpop->getLoc(), jumpop.getOperand());
-      Optional<InterpValue> retval = interpretRegion(parent.getLaterJumpedIntoRegion(), {arg}, env);
+      std::vector<InterpValue> args;
+      for(int i = 0; i < (int)jumpop.getNumOperands(); ++i) {
+        args.push_back(env.lookup(jumpop->getLoc(), jumpop.getOperand(i)));
+      }
+
+      Optional<InterpValue> retval = interpretRegion(parent.getLaterJumpedIntoRegion(), args, env);
       assert(retval && "block operation expects return value.");
       return TerminatorResult(*retval);
     }

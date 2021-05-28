@@ -617,7 +617,7 @@ public:
 };
 
 // for lambdapure
-class HaskJumpOp : public Op<HaskJumpOp, OpTrait::OneOperand,
+class HaskJumpOp : public Op<HaskJumpOp, OpTrait::VariadicOperands,
                              OpTrait::ZeroResult, OpTrait::IsTerminator> {
 public:
   using Op::Op;
@@ -629,7 +629,7 @@ public:
   }
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
                     int blockIx,
-                    Value v); // ?? what is blockIx? I am actually confused.
+                    ValueRange vs); // ?? what is blockIx? I am actually confused.
 };
 
 // for lambdapure

@@ -1250,10 +1250,10 @@ public:
       // vvv this needs to go through type converter x(
       rewriter.setInsertionPointAfter(jmp);
       // rewriter.replaceOpWithNewOp<BranchOp>(jmp, jumpTarget, jmp.getOperand());
-      llvm::errs() << "creating a branch op: branch(" << jumpTarget << ", " << jmp.getOperand() << ")\n";
-      getchar();
+      // llvm::errs() << "creating a branch op: branch(" << jumpTarget << ", " << jmp.getOperand() << ")\n";
+      // getchar();
       // rewriter.create<ptr::PtrBranchOp>(jmp.getLoc(),  jumpTarget, jmp.getOperand());
-      rewriter.create<BranchOp>(jmp.getLoc(), jumpTarget, jmp.getOperand());
+      rewriter.create<BranchOp>(jmp.getLoc(), jumpTarget, jmp.getOperands());
       rewriter.eraseOp(jmp);
 
       return WalkResult::advance();

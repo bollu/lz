@@ -1081,11 +1081,10 @@ ParseResult HaskJumpOp::parse(OpAsmParser &parser, OperationState &result) {
 };
 void HaskJumpOp::print(OpAsmPrinter &p) { p.printGenericOp(*this); };
 void HaskJumpOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                       int blockIx, Value v) {
+                       int blockIx, ValueRange vs) {
   state.addAttribute("value", builder.getI64IntegerAttr(blockIx));
-  state.addOperands(v);
+  state.addOperands(vs);
   return;
-  assert(false && "unimplemented");
 }
 
 // === HaskCaseRetOp ===
