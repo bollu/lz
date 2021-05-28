@@ -1910,7 +1910,13 @@ static inline double lean_float_add(double a, double b) { return a + b; }
 static inline double lean_float_sub(double a, double b) { return a - b; }
 static inline double lean_float_mul(double a, double b) { return a * b; }
 static inline double lean_float_div(double a, double b) { return a / b; }
-static inline double lean_float_negate(double a, double b) { return -a; }
+static inline double lean_float_negate(double a) { return -a; }
+
+static inline uint8_t lean_float_to_uint8(double a) { return (uint8_t) a; };
+static inline uint16_t lean_float_to_uint16(double a) { return (uint16_t) a; };
+static inline uint32_t lean_float_to_uint32(double a) { return (uint32_t) a; };
+static inline uint64_t lean_float_to_uint64(double a) { return (uint64_t) a; };
+static inline size_t lean_float_to_usize(double a) { return (size_t) a; };
 
 #ifdef __cplusplus
 }

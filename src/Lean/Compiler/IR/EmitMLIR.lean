@@ -626,9 +626,9 @@ def emitExternCall (f : FunId)
   | some (ExternEntry.standard _ extFn) => do
          emitSimpleExternalCall extFn ps ys tys retty
          emitLn "// ^^ ERR: ExternEntry.standard"; 
-  | some (ExternEntry.inline _ pat)     => do 
+  | some (ExternEntry.inline name pat)     => do 
          emit (expandExternPattern pat (toStringArgs ys)); emitLn ";"
-         emitLn $ "//^^ ERR: ExternEntry.inline [pat: " ++ pat ++ "]"; 
+         emitLn $ "//^^ ERR: ExternEntry.inline [f: " ++ f ++ "|name: " ++ name ++ "|pat: " ++ pat ++ "]"; 
 
   | some (ExternEntry.foreign _ extFn)  => do
          emitSimpleExternalCall extFn ps ys tys retty

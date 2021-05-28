@@ -14,15 +14,18 @@ def UInt8.ofNat (n : @& Nat) : UInt8 := ⟨Fin.ofNat n⟩
 abbrev Nat.toUInt8 := UInt8.ofNat
 @[extern "lean_uint8_to_nat"]
 def UInt8.toNat (n : UInt8) : Nat := n.val.val
-@[extern c inline "#1 + #2"]
+-- @[extern c inline "#1 + #2"]
+-- @[extern c inline "add #1, #2"]
+@[extern "lean_uint8_add"]
 def UInt8.add (a b : UInt8) : UInt8 := ⟨a.val + b.val⟩
+
 @[extern c inline "#1 - #2"]
 def UInt8.sub (a b : UInt8) : UInt8 := ⟨a.val - b.val⟩
 @[extern c inline "#1 * #2"]
 def UInt8.mul (a b : UInt8) : UInt8 := ⟨a.val * b.val⟩
-@[extern c inline "#2 == 0 ? 0 : #1 / #2"]
+-- @[extern c inline "#2 == 0 ? 0 : #1 / #2"]
 def UInt8.div (a b : UInt8) : UInt8 := ⟨a.val / b.val⟩
-@[extern c inline "#2 == 0 ? #1 : #1 % #2"]
+-- @[extern c inline "#2 == 0 ? #1 : #1 % #2"]
 def UInt8.mod (a b : UInt8) : UInt8 := ⟨a.val % b.val⟩
 @[extern "lean_uint8_modn"]
 def UInt8.modn (a : UInt8) (n : @& Nat) : UInt8 := ⟨a.val % n⟩
@@ -60,13 +63,15 @@ instance : ShiftLeft UInt8  := ⟨UInt8.shiftLeft⟩
 instance : ShiftRight UInt8 := ⟨UInt8.shiftRight⟩
 
 set_option bootstrap.genMatcherCode false in
-@[extern c inline "#1 < #2"]
+-- @[extern c inline "#1 < #2"]
+@[extern "lean_uint8_lt"]
 def UInt8.decLt (a b : UInt8) : Decidable (a < b) :=
   match a, b with
   | ⟨n⟩, ⟨m⟩ => inferInstanceAs (Decidable (n < m))
 
 set_option bootstrap.genMatcherCode false in
-@[extern c inline "#1 <= #2"]
+@[extern "lean_uint8_le"]
+-- @[extern c inline "#1 <= #2"]
 def UInt8.decLe (a b : UInt8) : Decidable (a ≤ b) :=
   match a, b with
   | ⟨n⟩, ⟨m⟩ => inferInstanceAs (Decidable (n <= m))
@@ -85,9 +90,9 @@ def UInt16.add (a b : UInt16) : UInt16 := ⟨a.val + b.val⟩
 def UInt16.sub (a b : UInt16) : UInt16 := ⟨a.val - b.val⟩
 @[extern c inline "#1 * #2"]
 def UInt16.mul (a b : UInt16) : UInt16 := ⟨a.val * b.val⟩
-@[extern c inline "#2 == 0 ? 0 : #1 / #2"]
+-- @[extern c inline "#2 == 0 ? 0 : #1 / #2"]
 def UInt16.div (a b : UInt16) : UInt16 := ⟨a.val / b.val⟩
-@[extern c inline "#2 == 0 ? #1 : #1 % #2"]
+-- @[extern c inline "#2 == 0 ? #1 : #1 % #2"]
 def UInt16.mod (a b : UInt16) : UInt16 := ⟨a.val % b.val⟩
 @[extern "lean_uint16_modn"]
 def UInt16.modn (a : UInt16) (n : @& Nat) : UInt16 := ⟨a.val % n⟩
@@ -126,13 +131,15 @@ instance : ShiftLeft UInt16  := ⟨UInt16.shiftLeft⟩
 instance : ShiftRight UInt16 := ⟨UInt16.shiftRight⟩
 
 set_option bootstrap.genMatcherCode false in
-@[extern c inline "#1 < #2"]
+-- @[extern c inline "#1 < #2"]
+@[extern "lean_uint16_lt"]
 def UInt16.decLt (a b : UInt16) : Decidable (a < b) :=
   match a, b with
   | ⟨n⟩, ⟨m⟩ => inferInstanceAs (Decidable (n < m))
 
 set_option bootstrap.genMatcherCode false in
-@[extern c inline "#1 <= #2"]
+@[extern "lean_uint16_le"]
+-- @[extern c inline "#1 <= #2"]
 def UInt16.decLe (a b : UInt16) : Decidable (a ≤ b) :=
   match a, b with
   | ⟨n⟩, ⟨m⟩ => inferInstanceAs (Decidable (n <= m))
@@ -145,15 +152,19 @@ def UInt32.ofNat (n : @& Nat) : UInt32 := ⟨Fin.ofNat n⟩
 @[extern "lean_uint32_of_nat"]
 def UInt32.ofNat' (n : Nat) (h : n < UInt32.size) : UInt32 := ⟨⟨n, h⟩⟩
 abbrev Nat.toUInt32 := UInt32.ofNat
-@[extern c inline "#1 + #2"]
+@[extern "lean_uint32_add"]
+-- @[extern c inline "#1 + #2"]
 def UInt32.add (a b : UInt32) : UInt32 := ⟨a.val + b.val⟩
-@[extern c inline "#1 - #2"]
+@[extern "lean_uint32_sub"]
+-- @[extern c inline "#1 - #2"]
 def UInt32.sub (a b : UInt32) : UInt32 := ⟨a.val - b.val⟩
-@[extern c inline "#1 * #2"]
+-- @[extern c inline "#1 * #2"]
+
+@[extern "lean_uint32_mul"]
 def UInt32.mul (a b : UInt32) : UInt32 := ⟨a.val * b.val⟩
-@[extern c inline "#2 == 0 ? 0 : #1 / #2"]
+-- @[extern c inline "#2 == 0 ? 0 : #1 / #2"]
 def UInt32.div (a b : UInt32) : UInt32 := ⟨a.val / b.val⟩
-@[extern c inline "#2 == 0 ? #1 : #1 % #2"]
+-- @[extern c inline "#2 == 0 ? #1 : #1 % #2"]
 def UInt32.mod (a b : UInt32) : UInt32 := ⟨a.val % b.val⟩
 @[extern "lean_uint32_modn"]
 def UInt32.modn (a : UInt32) (n : @& Nat) : UInt32 := ⟨a.val % n⟩
@@ -203,9 +214,9 @@ def UInt64.add (a b : UInt64) : UInt64 := ⟨a.val + b.val⟩
 def UInt64.sub (a b : UInt64) : UInt64 := ⟨a.val - b.val⟩
 @[extern c inline "#1 * #2"]
 def UInt64.mul (a b : UInt64) : UInt64 := ⟨a.val * b.val⟩
-@[extern c inline "#2 == 0 ? 0 : #1 / #2"]
+-- @[extern c inline "#2 == 0 ? 0 : #1 / #2"]
 def UInt64.div (a b : UInt64) : UInt64 := ⟨a.val / b.val⟩
-@[extern c inline "#2 == 0 ? #1 : #1 % #2"]
+-- @[extern c inline "#2 == 0 ? #1 : #1 % #2"]
 def UInt64.mod (a b : UInt64) : UInt64 := ⟨a.val % b.val⟩
 @[extern "lean_uint64_modn"]
 def UInt64.modn (a : UInt64) (n : @& Nat) : UInt64 := ⟨a.val % n⟩
@@ -254,13 +265,15 @@ instance : ShiftRight UInt64 := ⟨UInt64.shiftRight⟩
 def Bool.toUInt64 (b : Bool) : UInt64 := if b then 1 else 0
 
 set_option bootstrap.genMatcherCode false in
-@[extern c inline "#1 < #2"]
+-- @[extern c inline "#1 < #2"]
+@[extern "lean_uint64_lt"]
 def UInt64.decLt (a b : UInt64) : Decidable (a < b) :=
   match a, b with
   | ⟨n⟩, ⟨m⟩ => inferInstanceAs (Decidable (n < m))
 
 set_option bootstrap.genMatcherCode false in
-@[extern c inline "#1 <= #2"]
+@[extern "lean_uint64_le"]
+-- @[extern c inline "#1 <= #2"]
 def UInt64.decLe (a b : UInt64) : Decidable (a ≤ b) :=
   match a, b with
   | ⟨n⟩, ⟨m⟩ => inferInstanceAs (Decidable (n <= m))
@@ -276,15 +289,16 @@ def USize.ofNat (n : @& Nat) : USize := ⟨Fin.ofNat' n usizeSzGt0⟩
 abbrev Nat.toUSize := USize.ofNat
 @[extern "lean_usize_to_nat"]
 def USize.toNat (n : USize) : Nat := n.val.val
-@[extern c inline "#1 + #2"]
+@[extern c "lean_usize_add"]
+-- @[extern c inline "#1 + #2"]
 def USize.add (a b : USize) : USize := ⟨a.val + b.val⟩
 @[extern c inline "#1 - #2"]
 def USize.sub (a b : USize) : USize := ⟨a.val - b.val⟩
 @[extern c inline "#1 * #2"]
 def USize.mul (a b : USize) : USize := ⟨a.val * b.val⟩
-@[extern c inline "#2 == 0 ? 0 : #1 / #2"]
+-- @[extern c inline "#2 == 0 ? 0 : #1 / #2"]
 def USize.div (a b : USize) : USize := ⟨a.val / b.val⟩
-@[extern c inline "#2 == 0 ? #1 : #1 % #2"]
+-- @[extern c inline "#2 == 0 ? #1 : #1 % #2"]
 def USize.mod (a b : USize) : USize := ⟨a.val % b.val⟩
 @[extern "lean_usize_modn"]
 def USize.modn (a : USize) (n : @& Nat) : USize := ⟨a.val % n⟩
@@ -329,13 +343,15 @@ instance : ShiftLeft USize  := ⟨USize.shiftLeft⟩
 instance : ShiftRight USize := ⟨USize.shiftRight⟩
 
 set_option bootstrap.genMatcherCode false in
-@[extern c inline "#1 < #2"]
+@[extern "lean_usize_lt"]
+-- @[extern c inline "#1 < #2"]
 def USize.decLt (a b : USize) : Decidable (a < b) :=
   match a, b with
   | ⟨n⟩, ⟨m⟩ => inferInstanceAs (Decidable (n < m))
 
 set_option bootstrap.genMatcherCode false in
-@[extern c inline "#1 <= #2"]
+@[extern "lean_usize_le"]
+-- @[extern c inline "#1 <= #2"]
 def USize.decLe (a b : USize) : Decidable (a ≤ b) :=
   match a, b with
   | ⟨n⟩, ⟨m⟩ => inferInstanceAs (Decidable (n <= m))

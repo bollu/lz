@@ -289,7 +289,8 @@ def USize.ofNat (n : @& Nat) : USize := ⟨Fin.ofNat' n usizeSzGt0⟩
 abbrev Nat.toUSize := USize.ofNat
 @[extern "lean_usize_to_nat"]
 def USize.toNat (n : USize) : Nat := n.val.val
-@[extern c inline "#1 + #2"]
+@[extern c "lean_usize_add"]
+-- @[extern c inline "#1 + #2"]
 def USize.add (a b : USize) : USize := ⟨a.val + b.val⟩
 @[extern c inline "#1 - #2"]
 def USize.sub (a b : USize) : USize := ⟨a.val - b.val⟩
