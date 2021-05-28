@@ -31,17 +31,17 @@ private def compileAux (decls : Array Decl) : CompilerM Unit := do
   -- logPreamble (LogEntry.message mlirPreamble)
   -- logDeclsUnconditional decls
   checkDecls decls
-  -- let decls ← elimDeadBranches decls
-  -- logDecls `elim_dead_branches decls
-  -- let decls := decls.map Decl.pushProj
-  -- logDecls `push_proj decls
+  let decls ← elimDeadBranches decls
+  logDecls `elim_dead_branches decls
+  let decls := decls.map Decl.pushProj
+  logDecls `push_proj decls
   -- let decls := decls.map Decl.insertResetReuse
   -- logDecls `reset_reuse decls
-  -- let decls := decls.map Decl.elimDead
-  -- logDecls `elim_dead decls
-  -- let decls := decls.map Decl.simpCase
-  -- logDecls `simp_case decls
-  -- let decls := decls.map Decl.normalizeIds
+  let decls := decls.map Decl.elimDead
+  logDecls `elim_dead decls
+  let decls := decls.map Decl.simpCase
+  logDecls `simp_case decls
+  let decls := decls.map Decl.normalizeIds
   -- logDeclsUnconditional decls
 
   -- let decls ← inferBorrow decls
@@ -52,10 +52,10 @@ private def compileAux (decls : Array Decl) : CompilerM Unit := do
   -- logDecls `rc decls
   -- let decls := decls.map Decl.expandResetReuse
   -- logDecls `expand_reset_reuse decls
-  -- let decls := decls.map Decl.pushProj
-  -- logDecls `push_proj decls
-  -- let decls ← updateSorryDep decls
-  -- logDecls `result decls
+  let decls := decls.map Decl.pushProj
+  logDecls `push_proj decls
+  let decls ← updateSorryDep decls
+  logDecls `result decls
   checkDecls decls
   addDecls decls
 
