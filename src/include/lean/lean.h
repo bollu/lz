@@ -1331,6 +1331,8 @@ static inline uint8_t lean_float_eq(double a, double b) {
     return a == b;
 }
 
+
+
 static inline uint8_t lean_uint8_le(uint8_t a, uint8_t b) { return a <= b; }
 static inline uint8_t lean_uint16_le(uint16_t a, uint16_t b) { return a <= b; }
 static inline uint8_t lean_uint32_le(uint32_t a, uint32_t b) { return a <= b; }
@@ -1903,6 +1905,12 @@ lean_obj_res lean_st_ref_swap(b_lean_obj_arg, lean_obj_arg, lean_obj_arg);
 
 /* pointer address unsafe primitive  */
 static inline size_t lean_ptr_addr(b_lean_obj_arg a) { return (size_t)a; }
+
+static inline double lean_float_add(double a, double b) { return a + b; }
+static inline double lean_float_sub(double a, double b) { return a - b; }
+static inline double lean_float_mul(double a, double b) { return a * b; }
+static inline double lean_float_div(double a, double b) { return a / b; }
+static inline double lean_float_negate(double a, double b) { return -a; }
 
 #ifdef __cplusplus
 }
