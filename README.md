@@ -224,6 +224,110 @@ Writing to out.ppm
 /home/bollu/work/lz/test/lambdapure/compile$ 
 ```
 
+
+Next step, turn on all the passes in the LEAN compiler. This will force me to implement `reset/reuse` etc.
+Current status before I turn on more passes:
+
+```
+/home/bollu/work/lz/test/lambdapure/compile$ llvm-lit -j1 .
+-- Testing: 28 tests, 1 workers --
+
+PASS: HASK_OPT :: lambdapure/compile/bench/deriv.lean (1 of 28)
+PASS: HASK_OPT :: lambdapure/compile/bench/qsort.lean (2 of 28)
+PASS: HASK_OPT :: lambdapure/compile/bench/unionfind.lean (3 of 28)
+PASS: HASK_OPT :: lambdapure/compile/bench/rbmap_checkpoint.lean (4 of 28)
+PASS: HASK_OPT :: lambdapure/compile/render.lean (5 of 28)
+PASS: HASK_OPT :: lambdapure/compile/pap.lean (6 of 28)
+PASS: HASK_OPT :: lambdapure/compile/bench/const_fold.lean (7 of 28)
+PASS: HASK_OPT :: lambdapure/compile/jmp.lean (8 of 28)
+PASS: HASK_OPT :: lambdapure/compile/ctor.lean (9 of 28)
+PASS: HASK_OPT :: lambdapure/compile/loop.lean (10 of 28)
+PASS: HASK_OPT :: lambdapure/compile/bench/binarytrees-int.lean (11 of 28)
+PASS: HASK_OPT :: lambdapure/compile/bench/binarytrees.lean (12 of 28)
+PASS: HASK_OPT :: lambdapure/compile/case.lean (13 of 28)
+PASS: HASK_OPT :: lambdapure/compile/main-print.lean (14 of 28)
+PASS: HASK_OPT :: lambdapure/compile/ctor-simple.lean (15 of 28)
+PASS: HASK_OPT :: lambdapure/compile/bench/filter.lean (16 of 28)
+PASS: HASK_OPT :: lambdapure/compile/mutualrec.lean (17 of 28)
+UNRESOLVED: HASK_OPT :: lambdapure/compile/bench/exe.mlir (18 of 28)
+UNRESOLVED: HASK_OPT :: lambdapure/compile/bench/rbmap3.lean (19 of 28)
+UNRESOLVED: HASK_OPT :: lambdapure/compile/bench/map-destruct.mlir (20 of 28)
+UNRESOLVED: HASK_OPT :: lambdapure/compile/bench/rbmap2.lean (21 of 28)
+UNRESOLVED: HASK_OPT :: lambdapure/compile/bench/map-ref.mlir (22 of 28)
+UNRESOLVED: HASK_OPT :: lambdapure/compile/bench/rbmap4.lean (23 of 28)
+UNRESOLVED: HASK_OPT :: lambdapure/compile/bench/rbmap500k.lean (24 of 28)
+UNRESOLVED: HASK_OPT :: lambdapure/compile/bench/lambdapure.mlir (25 of 28)
+UNRESOLVED: HASK_OPT :: lambdapure/compile/bench/map-runtime.mlir (26 of 28)
+UNRESOLVED: HASK_OPT :: lambdapure/compile/exe.mlir (27 of 28)
+UNRESOLVED: HASK_OPT :: lambdapure/compile/bench/loop.mlir (28 of 28)
+********************
+Unresolved Tests (11):
+  HASK_OPT :: lambdapure/compile/bench/exe.mlir
+  HASK_OPT :: lambdapure/compile/bench/lambdapure.mlir
+  HASK_OPT :: lambdapure/compile/bench/loop.mlir
+  HASK_OPT :: lambdapure/compile/bench/map-destruct.mlir
+  HASK_OPT :: lambdapure/compile/bench/map-ref.mlir
+  HASK_OPT :: lambdapure/compile/bench/map-runtime.mlir
+  HASK_OPT :: lambdapure/compile/bench/rbmap2.lean
+  HASK_OPT :: lambdapure/compile/bench/rbmap3.lean
+  HASK_OPT :: lambdapure/compile/bench/rbmap4.lean
+  HASK_OPT :: lambdapure/compile/bench/rbmap500k.lean
+  HASK_OPT :: lambdapure/compile/exe.mlir
+
+
+Testing Time: 47.74s
+  Passed    : 17
+  Unresolved: 11
+```
+
+#### Turning on non-risky passes
+
+To turn on: reset/reuse, borrow, RC.
+
+```
+private def compileAux (decls : Array Decl) : CompilerM Unit := do
+  -- log (LogEntry.message "// compileAux")
+  -- logDecls `init decls
+  -- logPreamble (LogEntry.message mlirPreamble)
+  -- logDeclsUnconditional decls
+  checkDecls decls
+  let decls ← elimDeadBranches decls
+  logDecls `elim_dead_branches decls
+  let decls := decls.map Decl.pushProj
+  logDecls `push_proj decls
+  -- let decls := decls.map Decl.insertResetReuse
+  -- logDecls `reset_reuse decls
+  let decls := decls.map Decl.elimDead
+  logDecls `elim_dead decls
+  let decls := decls.map Decl.simpCase
+  logDecls `simp_case decls
+  let decls := decls.map Decl.normalizeIds
+  -- logDeclsUnconditional decls
+
+  -- let decls ← inferBorrow decls
+  -- logDecls `borrow decls
+  let decls ← explicitBoxing decls
+  logDecls `boxing decls
+  -- let decls ← explicitRC decls
+  -- logDecls `rc decls
+  -- let decls := decls.map Decl.expandResetReuse
+  -- logDecls `expand_reset_reuse decls
+  let decls := decls.map Decl.pushProj
+  logDecls `push_proj decls
+  let decls ← updateSorryDep decls
+  logDecls `result decls
+  checkDecls decls
+  addDecls decls
+```
+
+Failing tests:
+
+```
+HASK_OPT :: lambdapure/compile/bench/deriv.lean
+HASK_OPT :: lambdapure/compile/jmp.lean
+```
+
+
 # May 27
 
 Continuing my debugging saga of getting `USize` and its equalities to work:
