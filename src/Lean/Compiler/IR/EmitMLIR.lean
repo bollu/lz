@@ -292,20 +292,37 @@ def emitPreamble : M Unit := do
   env.imports.forM fun m => emit (" " ++ toString m); emitLn ""
   emitLn "func private @lean_unbox_float(!lz.value) -> f64"
   emitLn "func private @lean_unbox_uint8(!lz.value) -> i8"
+  emitLn "func private @lean_unbox_uint16(!lz.value) -> i16"
   emitLn "func private @lean_unbox_uint32(!lz.value) -> i32"
+  emitLn "func private @lean_unbox_uint64(!lz.value) -> i64"
+  emitLn "func private @lean_unbox_usize(!lz.value) -> i64"
   emitLn "func private @lean_unbox(!lz.value) -> i8"
+
   emitLn "func private @lean_io_mk_world() -> (!lz.value)"
   emitLn "func private @lean_dec_ref(!lz.value) -> ()"
-  emitLn "func private @lean_box(i64) -> !lz.value"
   emitLn "func private @lean_io_result_mk_ok(!lz.value) -> !lz.value"
   emitLn "func private @lean_mark_persistent(!lz.value) -> ()"
-  emitLn "func private @lean_box_uint32(i32) -> (!lz.value)"
+
+  emitLn "func private @lean_box_float(f64) -> (!lz.value)"
   emitLn "func private @lean_box_uint8(i8) -> (!lz.value)"
+  emitLn "func private @lean_box_uint16(i16) -> (!lz.value)"
+  emitLn "func private @lean_box_uint32(i32) -> (!lz.value)"
+  emitLn "func private @lean_box_uint64(i32) -> (!lz.value)"
+  emitLn "func private @lean_box_usize(i464) -> (!lz.value)"
+  emitLn "func private @lean_box(i64) -> !lz.value"
+
+  emitLn "func private @lean_ctor_get_float(!lz.value, i64) -> (f64)"
   emitLn "func private @lean_ctor_get_uint8(!lz.value, i64) -> (i8)"
+  emitLn "func private @lean_ctor_get_uint16(!lz.value, i64) -> (i16)"
   emitLn "func private @lean_ctor_get_uint32(!lz.value, i64) -> (i32)"
   emitLn "func private @lean_ctor_get_uint64(!lz.value, i64) -> (i64)"
-  emitLn "func private @lean_ctor_get_float(!lz.value, i64) -> (f64)"
+
+
+  emitLn "func private @lean_ctor_set_float(!lz.value, i64, f64) -> ()"
   emitLn "func private @lean_ctor_set_uint8(!lz.value, i64, i8) -> ()"
+  emitLn "func private @lean_ctor_set_uint16(!lz.value, i64, i16) -> ()"
+  emitLn "func private @lean_ctor_set_uint32(!lz.value, i64, i32) -> ()"
+  emitLn "func private @lean_ctor_set_uint64(!lz.value, i64, i64) -> ()"
   -- emitLn "func private @lean_uint32_eq(i32, i32) -> (i8)"
 
 
