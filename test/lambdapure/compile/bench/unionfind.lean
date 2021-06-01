@@ -140,8 +140,8 @@ else do
 -- | (Except.error e, s) => IO.println ("Error : " ++ e) *> pure 1
 
 
-def main : IO UInt32 := do
+def main : IO Unit := do
   let n := 4;
   match run (test n) with
-  | (Except.ok v, s)    => IO.println ("ok " ++ toString v) *> pure 0
-  | (Except.error e, s) => IO.println ("Error : " ++ e) *> pure 1
+  | (Except.ok v, s)    => IO.println ("ok " ++ toString v)
+  | (Except.error e, s) => IO.println ("Error : " ++ e)

@@ -10,7 +10,7 @@ rm $1-exe.out || true
 
 lean $1 2>&1 | \
         hask-opt | tee exe.mlir | \
-        hask-opt  --lean-lower  --ptr-lower | \
+        hask-opt  --convert-scf-to-std | hask-opt --lean-lower  | hask-opt --ptr-lower | \
         mlir-translate --mlir-to-llvmir | tee exe.ll  | llc -filetype=obj -o exe.o
 
 

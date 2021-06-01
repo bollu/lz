@@ -85,10 +85,10 @@ open Expr
 --   pure 0
 -- | _ => pure 1
 
-unsafe def main :  IO UInt32 := do
+unsafe def main :  IO Unit := do
   let n := 4;
   let e  := (mkExpr n 1);
   let v₁ := eval e;
   let v₂ := eval (constFolding (reassoc e));
   IO.println (toString v₁ ++ "  " ++ toString v₂);
-  pure 0
+  -- pure 0

@@ -60,7 +60,7 @@ qsortAux lt as 0 (UInt32.ofNat (as.size - 1))
 -- def main (xs : List String) : IO Unit :=
 -- do
 -- let n := xs.head!.toNat!;
-def main : IO UInt32 := do
+def main : IO Unit := do
   let n := 100
   n.forM $ fun _ =>
     n.forM $ fun i => do
@@ -68,4 +68,4 @@ def main : IO UInt32 := do
       let xs := qsort xs (fun a b => a < b);
       -- IO.println (xs.toList.toString);
       checkSortedAux xs 0
-  return 0
+  -- return 0

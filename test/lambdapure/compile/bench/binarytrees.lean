@@ -70,7 +70,7 @@ partial def depth : Nat -> Nat -> List (Nat × Nat × Task UInt32)
 --   pure 0
 -- | _ => pure 1
 
-def main : IO UInt32 := do
+def main : IO Unit := do
   let n := 4;
   let maxN := Nat.max (minN + 2) n;
   let stretchN := maxN + 1;
@@ -88,4 +88,4 @@ def main : IO UInt32 := do
 
   -- confirm the the long-lived binary tree still exists
   out "long lived tree" maxN (check long);
-  pure 0
+  -- pure 0

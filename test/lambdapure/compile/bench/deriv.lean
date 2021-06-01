@@ -124,9 +124,9 @@ open Expr
 -- | _ => pure 1
 
 
-unsafe def main : IO UInt32 := do
+unsafe def main : IO Unit := do
   let n := 4
   let x := Var "x";
   let f := pow x x;
   _ ← nest deriv n f;
-  pure 0
+  -- pure 0

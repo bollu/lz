@@ -1,5 +1,4 @@
---  RUN: lean %s 2>&1 1>/dev/null | hask-opt  --lz-canonicalize 
---  RUN: lean %s 2>&1 1>/dev/null | hask-opt  --lz-canonicalize --lz-interpret=mode=lambdapure 
+--  RUN: ./run-lean.sh %s
 -- Stolen from https://raw.githubusercontent.com/kmill/lean4-raytracer/master/render.lean
 --import render.Algebra
 -- The value of PI is too large -_-
@@ -311,11 +310,12 @@ def randomScene : IO (Array Hittable) := do
 
 def writeTestImage (filename : String) : IO Unit := do
   let width : Nat := 500
+  let height : Nat := width * 2 / 3
   let samplesPerPixel := 10
   let maxDepth := 30
 
-  let width : Nat := 512
-  let height : Nat := width * 2 / 3
+  let width : Nat := 64
+  let height : Nat := 64
   let aspectRatio : Float := (Float.ofNat width) / (Float.ofNat height)
   let numThreads := 16
   let samplesPerPixel := 1

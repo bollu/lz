@@ -1,24 +1,10 @@
--- RUN: ../validate-lean.sh %s
----  run: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize | FileCheck %s
----  run: lean %s 2>&1 1>/dev/null | hask-opt --lz-canonicalize --lz-interpret="mode=lambdapure stdio='5 5'" | FileCheck %s
-
---- TODO: this file uses a new kind of projection: `let x_6 : u8 := sproj[3, 0] x_1;`
---- CHECK: func @main
--- CHECK-INTERPRET: 2 1
-
-
 /-
 Copyright (c) 2017 Microsoft Corporation. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura
 -/
 prelude
-import Init.Data.Option.Basic
-import Init.Data.List.BasicAux
-import Init.Data.String
-import Init.System.IO
-
-set_option trace.compiler.ir.init true
+import init.coe init.data.option.basic init.system.io
 
 universes u v w w'
 
@@ -29,14 +15,12 @@ inductive Tree
 | Leaf  {}                                                                       : Tree
 | Node  (color : color) (lchild : Tree) (key : Nat) (val : Bool) (rchild : Tree) : Tree
 
-instance : Inhabited Tree := ⟨Tree.Leaf⟩
-
 variable {σ : Type w}
 open color Nat Tree
 
 def fold (f : Nat → Bool → σ → σ) : Tree → σ → σ
 | Leaf, b               => b
-| Node _ l k v r,     b => fold f r (f k v (fold f l b))
+| Node _ l k v r,     b => fold r (f k v (fold l b))
 
 @[inline]
 def balance1 : Nat → Bool → Tree → Tree → Tree
@@ -78,35 +62,14 @@ def insert (t : Tree) (k : Nat) (v : Bool) : Tree :=
 if isRed t then setBlack (ins t k v)
 else ins t k v
 
-def mkMapAux (freq : Nat) : Nat → Tree → List Tree → List Tree
-| 0,     m, r => m::r
-| n+1,   m, r =>
-  let m := insert m n (n % 10 = 0);
-  let r := if n % freq == 0 then m::r else r;
-  mkMapAux freq n m r
+def mkMapAux : Nat → Tree → Tree
+| 0, m => m
+| n+1,   m => mkMapAux n (insert m n (n % 10 = 0))
 
-def mkMap (n : Nat) (freq : Nat) : List Tree :=
-mkMapAux freq n Leaf []
+def mkMap (n : Nat) :=
+mkMapAux n Leaf
 
-def myLen : List Tree → Nat → Nat
-| Node _ _ _ _ _ :: xs,   r => myLen xs (r + 1)
-| _ :: xs,   r => myLen xs r
-| [], r => r
-
--- def main (xs : List String) : IO UInt32 := do
--- let [n, freq] ← pure xs | throw $ IO.userError "invalid input";
--- let n     := n.toNat!;
--- let freq  := freq.toNat!;
--- let freq  := if freq == 0 then 1 else freq;
--- let mList := mkMap n freq;
--- let v     := fold (fun (k : Nat) (v : Bool) (r : Nat) => if v then r + 1 else r) mList.head! 0;
--- IO.println (toString (myLen mList 0) ++ " " ++ toString v) *>
--- pure 0
-
-def main : IO Unit := do
-let n     := 20;
-let freq  := 20;
-let freq  := if freq == 0 then 1 else freq;
-let mList := mkMap n freq;
-let v     := fold (fun (k : Nat) (v : Bool) (r : Nat) => if v then r + 1 else r) mList.head! 0;
-IO.println (toString (myLen mList 0) ++ " " ++ toString v)
+def main (xs : List String) : IO Unit :=
+let m := mkMap 500000;
+let v := fold (fun (k : Nat) (v : Bool) (r : Nat) => if v then r + 1 else r) m 0;
+IO.println (toString v)
