@@ -280,6 +280,18 @@ public:
 
 };
 
+// this is for lean, which uses i8's everywhere but still wants a negation operation..
+class PtrNotOp : 
+  public Op<PtrNotOp, OpTrait::OneOperand, OpTrait::OneResult> {
+public:
+  using Op::Op;
+  static StringRef getOperationName() { return "ptr.not"; };
+  static ParseResult parse(OpAsmParser &parser, OperationState &result);
+  void print(OpAsmPrinter &p);
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state, Value v);
+
+};
+
 
 void registerLowerPointerPass();
 

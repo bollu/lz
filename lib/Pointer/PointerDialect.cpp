@@ -68,6 +68,7 @@ PtrDialect::PtrDialect(mlir::MLIRContext *context)
   addOperations<PtrFnPtrOp>();
   addOperations<PtrStoreGlobalOp>();
   addOperations<PtrUnreachableOp>();
+  addOperations<PtrNotOp>();
   // addTypes<VoidPtrType, CharPtrType>();
 
   // clang-format on
@@ -404,6 +405,27 @@ void PtrUnreachableOp::print(OpAsmPrinter &p) {
 };
 
 void PtrUnreachableOp::build(mlir::OpBuilder &builder, mlir::OperationState &state) {};
+
+
+// === PTR NOT OP===
+// === PTR NOT OP===
+// === PTR NOT OP===
+// === PTR NOT OP===
+// === PTR NOT OP===
+
+
+ParseResult PtrNotOp::parse(OpAsmParser &parser, OperationState &result) {
+  assert(false && "unimplemented");
+};
+
+void PtrNotOp::print(OpAsmPrinter &p) {
+  p.printGenericOp(this->getOperation());
+};
+
+void PtrNotOp::build(mlir::OpBuilder &builder, mlir::OperationState &state, Value v) {
+    state.addOperands(v);
+};
+
 
 /*
 // === PTR TO VALUE ===
@@ -875,6 +897,35 @@ public:
   }
 };
 
+struct PtrNotOpLowering : public ConversionPattern {
+public:
+  explicit PtrNotOpLowering(TypeConverter &tc, MLIRContext *context)
+      : ConversionPattern(PtrNotOp::getOperationName(), 1, tc, context) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *rator, ArrayRef<Value> rands,
+                  ConversionPatternRewriter &rewriter) const override {
+    PtrNotOp notop = cast<PtrNotOp>(rator);
+    assert(rands.size() == 1);
+    IntegerType ity = notop.getOperand().getType().cast<IntegerType>();
+    assert(ity.getWidth() == 8 && "expected lean to generate a NOT on a i8 because it's weird like that");
+    rewriter.setInsertionPoint(notop);
+    
+    llvm::errs() << "Not operand: |" << rands[0] << "|\n"; getchar();
+
+    // x != 0 <-> x is true
+    Value c0 = rewriter.create<ConstantIntOp>(notop.getLoc(), 0, ity.getWidth());
+    rewriter.setInsertionPointAfter(notop);
+    CmpIOp cmp = rewriter.create<CmpIOp>(notop.getLoc(), CmpIPredicate::ne, rands[0], c0);
+    SignExtendIOp sext = rewriter.create<SignExtendIOp>(notop.getLoc(), cmp.getResult(), ity);
+    rewriter.replaceOp(notop, sext.getResult());
+    // rewriter.eraseOp(notop);
+    // rewriter.replaceOpWithNewOp<CmpIOp>(notop, 
+    //         CmpIPredicate::ne, rands[0], c0);
+    return success();
+  }
+};
+
 // struct PtrBranchOpLowering : public ConversionPattern {
 // public:
 //   explicit PtrBranchOpLowering(TypeConverter &tc, MLIRContext *context)
@@ -1074,6 +1125,7 @@ struct LowerPointerPass : public Pass {
     patterns.insert<PtrGlobalOpLowering>(typeConverter, &getContext());
     patterns.insert<PtrFnPtrOpLowering>(typeConverter, &getContext());
     patterns.insert<PtrUnreachableOpLowering>(typeConverter, &getContext());
+    patterns.insert<PtrNotOpLowering>(typeConverter, &getContext());
     // patterns.insert<PtrBranchOpLowering>(typeConverter, &getContext());
 
 
@@ -1093,20 +1145,20 @@ struct LowerPointerPass : public Pass {
 
     ModuleOp mod = mlir::cast<ModuleOp>(getOperation());
 
-    // ::llvm::DebugFlag = true;
+    ::llvm::DebugFlag = true;
     // applyPartialConversion | applyFullConversion
     if (failed(mlir::applyFullConversion(mod, target, std::move(patterns)))) {
       llvm::errs() << "===Ptr lowering failed at Conversion===\n";
-      getOperation()->print(llvm::errs());
-      llvm::errs() << "\n===\n";
+      // getOperation()->print(llvm::errs());
+      // llvm::errs() << "\n===\n";
       signalPassFailure();
       ::llvm::DebugFlag = false;
     };
 
     if (failed(mod.verify())) {
       llvm::errs() << "===Ptr lowering failed at Verification===\n";
-      getOperation()->print(llvm::errs());
-      llvm::errs() << "\n===\n";
+      // getOperation()->print(llvm::errs());
+      // llvm::errs() << "\n===\n";
       signalPassFailure();
       ::llvm::DebugFlag = false;
     }

@@ -24,7 +24,7 @@
 - [`fast-math` haskell library has some RULES limitations](https://github.com/liyang/fast-math/)
 
 # Thoughts on writing a new LEAN backend
-
+- Please don't use things like function overloading (looking at you `lean_inc`).
 - The existence of `extern C inline` within the compiler / prelude makes stuff very complicated. Eg.
   the fact that adding `uint` is implemented using `[extern c inline "#1 + #2]` makes it complex to use,
   since I can't lower this to MLIR (or any other lowering mechanism, really). I am concerned this feature will lead to 
@@ -279,6 +279,108 @@ Testing Time: 47.74s
   Passed    : 17
   Unresolved: 11
 ```
+
+#### debugging `lz.jmp` crash
+
+`simpCase` causes `lz.jmp` to crash. Diff between `nocrash.mlir` and `crash.mlir`
+
+
+```
+58,63d57
+<           %3 = "lz.papExtend"(%arg3, %arg0) : (!lz.value, !lz.value) -> !lz.value
+<           lz.return %3 : !lz.value
+<         },  {
+<           %3 = "lz.papExtend"(%arg3, %arg0) : (!lz.value, !lz.value) -> !lz.value
+<           lz.return %3 : !lz.value
+<         },  {
+66a61,63
+>         },  {
+>           %3 = "lz.papExtend"(%arg3, %arg0) : (!lz.value, !lz.value) -> !lz.value
+>           lz.return %3 : !lz.value
+70,75d66
+<           %3 = "lz.construct"() {dataconstructor = @"0", size = 0 : i64} : () -> !lz.value
+<           "lz.jump"(%3) {value = 12 : i64} : (!lz.value) -> ()
+<         },  {
+<           %3 = "lz.construct"() {dataconstructor = @"0", size = 0 : i64} : () -> !lz.value
+<           "lz.jump"(%3) {value = 12 : i64} : (!lz.value) -> ()
+<         },  {
+77,78c68,69
+<             %3 = "lz.project"(%1) {value = 0 : i64} : (!lz.value) -> !lz.value
+<             %4 = "lz.papExtend"(%arg2, %3, %2) : (!lz.value, !lz.value, !lz.value) -> !lz.value
+---
+>             %3 = "lz.project"(%2) {value = 0 : i64} : (!lz.value) -> !lz.value
+>             %4 = "lz.papExtend"(%arg1, %1, %3) : (!lz.value, !lz.value, !lz.value) -> !lz.value
+84,87d74
+<           },  {
+<             %3 = "lz.project"(%2) {value = 0 : i64} : (!lz.value) -> !lz.value
+<             %4 = "lz.papExtend"(%arg1, %1, %3) : (!lz.value, !lz.value, !lz.value) -> !lz.value
+<             lz.return %4 : !lz.value
+88a76,78
+>         },  {
+>           %3 = "lz.construct"() {dataconstructor = @"0", size = 0 : i64} : () -> !lz.value
+>           "lz.jump"(%3) {value = 11 : i64} : (!lz.value) -> ()
+94,96d83
+<     },  {
+<       %1 = "lz.papExtend"(%arg3, %arg0) : (!lz.value, !lz.value) -> !lz.value
+<       lz.return %1 : !lz.value
+135c122
+<           %3 = "ptr.loadglobal"() {value = @l_Expr_eval___closed__1} : () -> !lz.value
+---
+>           %3 = "ptr.loadglobal"() {value = @l_Expr_eval___closed__2} : () -> !lz.value
+140,142d126
+<         },  {
+<           %3 = "ptr.loadglobal"() {value = @l_Expr_eval___closed__2} : () -> !lz.value
+<           lz.return %3 : !lz.value
+146,151d129
+<           %3 = "lz.construct"() {dataconstructor = @"0", size = 0 : i64} : () -> !lz.value
+<           "lz.jump"(%3) {value = 8 : i64} : (!lz.value) -> ()
+<         },  {
+<           %3 = "lz.construct"() {dataconstructor = @"0", size = 0 : i64} : () -> !lz.value
+<           "lz.jump"(%3) {value = 8 : i64} : (!lz.value) -> ()
+<         },  {
+153c131
+<             %3 = "ptr.loadglobal"() {value = @l_Expr_eval___closed__3} : () -> !lz.value
+---
+>             %3 = "ptr.loadglobal"() {value = @l_Expr_eval___closed__2} : () -> !lz.value
+158,160d135
+<           },  {
+<             %3 = "ptr.loadglobal"() {value = @l_Expr_eval___closed__2} : () -> !lz.value
+<             lz.return %3 : !lz.value
+161a137,139
+>         },  {
+>           %3 = "lz.construct"() {dataconstructor = @"0", size = 0 : i64} : () -> !lz.value
+>           "lz.jump"(%3) {value = 7 : i64} : (!lz.value) -> ()
+167,169d144
+<     },  {
+<       %1 = "ptr.loadglobal"() {value = @l_Expr_eval___closed__1} : () -> !lz.value
+<       lz.return %1 : !lz.value
+176,181d150
+<       %1 = "lz.papExtend"(%arg2, %arg0) : (!lz.value, !lz.value) -> !lz.value
+<       lz.return %1 : !lz.value
+<     },  {
+<       %1 = "lz.papExtend"(%arg2, %arg0) : (!lz.value, !lz.value) -> !lz.value
+<       lz.return %1 : !lz.value
+<     },  {
+184a154,156
+>     },  {
+>       %1 = "lz.papExtend"(%arg2, %arg0) : (!lz.value, !lz.value) -> !lz.value
+>       lz.return %1 : !lz.value
+197c169
+<       %1 = "lz.int"() {value = 420 : i64} : () -> !lz.value
+---
+>       %1 = "lz.project"(%arg0) {value = 0 : i64} : (!lz.value) -> !lz.value
+201,203d172
+<       lz.return %1 : !lz.value
+<     },  {
+<       %1 = "lz.project"(%arg0) {value = 0 : i64} : (!lz.value) -> !lz.value
+```
+
+This is caused by the pass `simpCase.lean` which shuffles around case branches.
+This now exposes the compiler to more complex code. For example, without
+optimisation, I can assume that the case alternatives are in order, such as `0, 1, 2`.
+After `simplifyCase`, this is no longer the case, it could have been
+transformed into 2, default since the cases for 0 and 1 do the same thing. This
+needs me to change lowering.
 
 #### Turning on non-risky passes
 
