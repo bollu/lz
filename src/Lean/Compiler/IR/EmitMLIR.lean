@@ -1142,6 +1142,7 @@ partial def emitJoinPointDecl (j : JoinPointId) (xs : Array Param) (inblock : Fn
     emit "}, {\n";
     emitBlock rest tys;
     emit "})";
+    emit $ " { value= " ++ (toString j.idx) ++ "}";
     emitLn ": () -> ()";
 
 -- | this emits a join point as a BB 
