@@ -101,6 +101,11 @@ def getDecl (n : Name) : M Decl := do
 @[inline] def emitLn {α : Type} [ToString α] (a : α) : M Unit := do
   emit a; emit "\n"
 
+def emitI64 (name : String) (v: Nat) : M String := do
+  let lhs <- gensym name;
+  emitLn  $ "%" ++ lhs ++ " = " ++ "std.constant " ++ (toString v) ++ " : i64";
+  return lhs;
+
 def emitLns {α : Type} [ToString α] (as : List α) : M Unit :=
   as.forM fun a => emitLn a
 
@@ -441,8 +446,10 @@ def emitSetTag (x : VarId) (i : Nat) : M Unit := do
 
 def emitSet (x : VarId) (i : Nat) (y : Arg) : M Unit := do
   let iname <- gensym "i";
-  emitLn $ "%" ++ iname ++ " = std.constant " ++ (toString i) ++ " : i64";
-  emit "call @lean_ctor_set(%"; emit x; emit ", %"; emit iname; emit ", "; emitArg y; emit ")"
+  -- emitLn $ "%" ++ iname ++ " = std.constant " ++ (toString i) ++ " : i64";
+  let ix <- emitI64 "ix" i; 
+  emit "call @lean_ctor_set(%"; emit x; emit ", %"; emit ix;
+  emit ", "; emitArg y; emit ")"
   emitLn $ " : (!lz.value, i64, !lz.value) -> ()"
 
 def emitOffset (n : Nat) (offset : Nat) : M String := do
@@ -546,20 +553,36 @@ def emitJmp (j : JoinPointId) (xs : Array Arg)
 --   emitLn ")";
 
 
-def emitCtorScalarSize (usize : Nat) (ssize : Nat) : M Unit := do
-  if usize == 0 then emit ssize
-  else if ssize == 0 then emit "sizeof(size_t)*"; emit usize
-  else emit "sizeof(size_t)*"; emit usize; emit " + "; emit ssize
 
-def emitAllocCtor (c : CtorInfo) : M Unit := do
-  -- let idxName := gensym "idx";
-  -- emit $ "%" ++ idxName ++ " = " ++ "constant " ++ c.idx ++ " : i64";
-  emit "lean_alloc_ctor("; emit c.cidx; emit ", "; emit c.size; emit ", "
-  emitCtorScalarSize c.usize c.ssize; emitLn ");"
+def emitCtorScalarSize (usize : Nat) (ssize : Nat) : M String := do
+  let SIZEOF_VOIDPTR := 8; -- dodgy as fuck
+  -- if usize == 0 then emitI64 "scalarSize" ssize;
+  --- else if ssize == 0 then emitI64 "scalarSize" (SIZEOF_VOIDPTR; 
+  -- else 
+  emitI64 "scalarSize" ((SIZEOF_VOIDPTR * usize) + ssize); 
+
+def emitAllocCtor (c : CtorInfo) (out: String): M Unit := do
+  -- let idxName <- gensym "cidx";
+  -- let size  <- gensym "csize";
+  -- emit $ "%" ++ idxName ++ " = " ++ "constant " ++ (toString c.cidx) ++ " : i64";
+  -- emit $ "%" ++ size ++ " = " ++ "constant " ++ (toString c.size) ++ " : i64";
+  let idxName <- emitI64 "cidx" c.cidx
+  let csize <- emitI64 "csize" c.size
+  let scalarSize <- emitCtorScalarSize c.usize c.ssize;
+  emit $ "%" ++ out ++ " = "; 
+  emit "call @lean_alloc_ctor(%"; emit idxName; emit ", %"; emit csize; emit ", ";
+  emit "%"; emit scalarSize; emitLn ") : (i64, i64, i64) -> !lz.value"
+
+-- def emitCtorSetArgs (z : VarId) (ys : Array Arg) : M Unit :=
+--   ys.size.forM fun i => do
+--     emit "lean_ctor_set("; emit z; emit ", "; emit i; emit ", "; emitArg ys[i]; emitLn ");"
 
 def emitCtorSetArgs (z : VarId) (ys : Array Arg) : M Unit := 
   ys.size.forM fun i => do
-    emit "lean_ctor_set("; emit z; emit ", "; emit i; emit ", "; emitArg ys[i]; emitLn ");"
+    let ix <- emitI64 "ix" i;
+    emit "call @lean_ctor_set(%"; emit z; emit ",";
+    emit " %"; emit ix; emit ",";
+    emitArg ys[i]; emitLn ") : (!lz.value, i64, !lz.value) -> ()"
 
 -- | TODO: raise to a higher abstraction level. Generate !lz.construct()
 -- instead of the raw calls. 
@@ -595,8 +618,8 @@ def emitReset (z : VarId) (n : Nat) (x : VarId) (tys: HashMap VarId IRType): M U
   -- emit "if (lean_is_exclusive("; emit x; emitLn ")) {";
   let excl <- gensym "excl"
   emitLn $ "%" ++ (toString excl) ++ " = " ++ 
-    "call @lean_is_exclusive(%" ++ (toString x) ++ ") : (!lz.value) -> (i1)"
-  emitLhs z; emit " = scf.if "; emit excl; emitLn "{";
+    "call @lean_is_exclusive(%" ++ (toString x) ++ ") : (!lz.value) -> (i8)"
+  emitLhs z; emit " scf.if "; emit ("%" ++  excl); emitLn " -> (!lz.value) {";
   n.forM fun i => do
     let ci <- gensym $ "c" ++ toString i;
     emitLn $ "%" ++ (toString ci) ++ " = " ++ 
@@ -605,12 +628,12 @@ def emitReset (z : VarId) (n : Nat) (x : VarId) (tys: HashMap VarId IRType): M U
   emitLn $ "scf.yield "
   -- emit " "; emitLhs z; emit x; emitLn ";";
   emitLn "} else {";
-  emitLn " call @lean_dec_ref("; emit x; emitLn ") : (!lz.value) -> ()";
+  emit " call @lean_dec_ref(%"; emit x; emitLn ") : (!lz.value) -> ()";
   let c0 <- gensym "c0"
   let c0box <- gensym "c0box";
   emitLn $ "%" ++ c0 ++ " = std.constant 0 : i64"
-  emitLn $ "%" ++ c0box ++ " = call @lean_box(%" ++ c0 ++ ") : i64 -> (!lz.value)"
-  emitLn $ " scf.yield %" ++ c0box ++ " : (!lz.value) -> ()"
+  emitLn $ "%" ++ c0box ++ " = call @lean_box(%" ++ c0 ++ ") : (i64) -> (!lz.value)"
+  emitLn $ " scf.yield %" ++ c0box ++ " : !lz.value"
   emitLn "}"
 
 
@@ -625,14 +648,24 @@ def emitReset (z : VarId) (n : Nat) (x : VarId) (tys: HashMap VarId IRType): M U
 
 
 def emitReuse (z : VarId) (x : VarId) (c : CtorInfo) (updtHeader : Bool) (ys : Array Arg) (tys: HashMap VarId IRType): M Unit := do
-  emit "if (lean_is_scalar("; emit x; emitLn ")) {";
-  emit " "; emitLhs z; emitAllocCtor c;
+  --  emit "if (lean_is_scalar("; emit x; emitLn ")) {";
+  let excl <- gensym "scalar"
+  emitLn $ "%" ++ (toString excl) ++ " = " ++ 
+    "call @lean_is_scalar(%" ++ (toString x) ++ ") : (!lz.value) -> (i1)"
+  emitLhs z; emit " scf.if "; emit ("%" ++  excl); emitLn " -> (!lz.value) {";
+  let ctor <- gensym "ctor";
+  emitAllocCtor c ctor
+  emitLn $ "scf.yield %" ++ ctor ++ ": !lz.value"
   emitLn "} else {";
-  emit " "; emitLhs z; emit x; emitLn ";";
-  if updtHeader then emit " lean_ctor_set_tag("; emit z; emit ", "; emit c.cidx; emitLn ");"
+  -- emit " "; emitLhs z; emit x; emitLn ";";
+  -- if updtHeader then emit " lean_ctor_set_tag("; emit z; emit ", "; emit c.cidx; emitLn ");"
+  if updtHeader then do
+    let idx <- gensym "idx";
+    emitLn $ "%" ++ idx ++ " = std.constant " ++ (toString c.cidx) ++ " : i64"
+    emit "call @lean_ctor_set_tag(%"; emit x; emit ", "; emit idx; emitLn ") : (!lz.value, i64) -> ()";
+  emit "scf.yield %"; emit x; emitLn ": !lz.value"
   emitLn "}";
   emitCtorSetArgs z ys
-
 
 
 def emitProj (z : VarId) (i : Nat) (x : VarId) (tys: HashMap VarId IRType): M Unit := do
