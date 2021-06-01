@@ -629,13 +629,14 @@ def emitReset (z : VarId) (n : Nat) (x : VarId) (tys: HashMap VarId IRType): M U
     emitLn $ "%" ++ (toString ci) ++ " = " ++ 
       "constant " ++ (toString i) ++ " : i64"
     emit "call @lean_ctor_release(%"; emit x; emit ", %"; emit ci; emitLn ") : (!lz.value, i64 ) -> ()"
-  emitLn $ "scf.yield "
+  emitLn $ "scf.yield %" ++ (toString x) ++ " : !lz.value";
   -- emit " "; emitLhs z; emit x; emitLn ";";
   emitLn "} else {";
   emit " call @lean_dec_ref(%"; emit x; emitLn ") : (!lz.value) -> ()";
-  let c0 <- gensym "c0"
+  -- let c0 <- gensym "c0"
   let c0box <- gensym "c0box";
-  emitLn $ "%" ++ c0 ++ " = std.constant 0 : i64"
+  -- emitLn $ "%" ++ c0 ++ " = std.constant 0 : i64"
+  let c0 <- emitI64 "c0" 0
   emitLn $ "%" ++ c0box ++ " = call @lean_box(%" ++ c0 ++ ") : (i64) -> (!lz.value)"
   emitLn $ " scf.yield %" ++ c0box ++ " : !lz.value"
   emitLn "}"
