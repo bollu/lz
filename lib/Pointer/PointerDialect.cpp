@@ -908,7 +908,7 @@ public:
     PtrNotOp notop = cast<PtrNotOp>(rator);
     assert(rands.size() == 1);
     IntegerType ity = notop.getOperand().getType().cast<IntegerType>();
-    assert(ity.getWidth() == 8 && "expected lean to generate a NOT on a i8 because it's weird like that");
+    // assert(ity.getWidth() == 8 && "expected lean to generate a NOT on a i8 because it's weird like that");
     rewriter.setInsertionPoint(notop);
     
     llvm::errs() << "Not operand: |" << rands[0] << "|\n"; getchar();
@@ -917,7 +917,10 @@ public:
     Value c0 = rewriter.create<ConstantIntOp>(notop.getLoc(), 0, ity.getWidth());
     rewriter.setInsertionPointAfter(notop);
     CmpIOp cmp = rewriter.create<CmpIOp>(notop.getLoc(), CmpIPredicate::ne, rands[0], c0);
-    SignExtendIOp sext = rewriter.create<SignExtendIOp>(notop.getLoc(), cmp.getResult(), ity);
+    assert(notop.getResult().getType().isa<IntegerType>() && "return type of ptr.not must be int");
+    IntegerType iretty = notop.getResult().getType().cast<IntegerType>();
+    //sign extend the value to the desired type.
+    SignExtendIOp sext = rewriter.create<SignExtendIOp>(notop.getLoc(), cmp.getResult(), iretty);
     rewriter.replaceOp(notop, sext.getResult());
     // rewriter.eraseOp(notop);
     // rewriter.replaceOpWithNewOp<CmpIOp>(notop, 
