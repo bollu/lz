@@ -44,8 +44,8 @@ private def compileAux (decls : Array Decl) : CompilerM Unit := do
   let decls := decls.map Decl.normalizeIds
   -- logDeclsUnconditional decls
 
-  -- let decls ← inferBorrow decls
-  -- logDecls `borrow decls
+  let decls ← inferBorrow decls
+  logDecls `borrow decls
   let decls ← explicitBoxing decls
   logDecls `boxing decls
   let decls ← explicitRC decls

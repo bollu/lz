@@ -347,6 +347,7 @@ def emitPreamble : M Unit := do
   emitLn "func private @lean_ctor_set_tag(!lz.value, i64) -> ()"
   -- emitLn "func private @lean_uint32_eq(i32, i32) -> (i8)"
 
+  emitLn "func private @lean_free_object(!lz.value) -> ()"
 
 def emitFileHeader : M Unit := do
   let env ← getEnv
@@ -457,12 +458,10 @@ def emitSet (x : VarId) (i : Nat) (y : Arg) : M Unit := do
   emitLn $ " : (!lz.value, i64, !lz.value) -> ()"
 
 def emitOffset (n : Nat) (offset : Nat) : M String := do
-  let name <- gensym "offset";
   let SIZEOF_VOIDPTR := 8; -- this is the janky bit.
-  let ix := SIZEOF_VOIDPTR * n + offset;
-  emit "%"; emit name; emit " = std.constant "; emit ix; emit " : i64";
+  let out <- emitI64 "offset" ((SIZEOF_VOIDPTR*n) + offset)
   emitLn $ " // n=" ++ toString n ++ " | offset=" ++ toString offset 
-  return name;
+  return out;
   -- if n > 0 then
   --   emit "sizeof(void*)*"; emit n;
   --   if offset > 0 then emit " + "; emit offset
@@ -563,7 +562,9 @@ def emitCtorScalarSize (usize : Nat) (ssize : Nat) : M String := do
   -- if usize == 0 then emitI64 "scalarSize" ssize;
   --- else if ssize == 0 then emitI64 "scalarSize" (SIZEOF_VOIDPTR; 
   -- else 
-  emitI64 "scalarSize" ((SIZEOF_VOIDPTR * usize) + ssize); 
+  let out <- emitI64 "scalarSize" ((SIZEOF_VOIDPTR * usize) + ssize); 
+  emitLn $ "// CtorScalarSize: usize=" ++ (toString usize) ++ " | ssize=" ++ (toString ssize)
+  return out;
 
 def emitAllocCtor (c : CtorInfo) (out: String): M Unit := do
   -- let idxName <- gensym "cidx";
