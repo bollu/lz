@@ -1148,7 +1148,7 @@ struct LowerPointerPass : public Pass {
 
     ModuleOp mod = mlir::cast<ModuleOp>(getOperation());
 
-    ::llvm::DebugFlag = true;
+    // ::llvm::DebugFlag = true;
     // applyPartialConversion | applyFullConversion
     if (failed(mlir::applyFullConversion(mod, target, std::move(patterns)))) {
       llvm::errs() << "===Ptr lowering failed at Conversion===\n";
