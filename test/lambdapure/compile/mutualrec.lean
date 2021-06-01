@@ -1,4 +1,5 @@
---  RUN: ./run-lean.sh %s | FileCheck %s --check-prefix=CHECK-INTERPRET
+--  RUN: ./validate-lean.sh %s
+--  run: ./run-lean.sh %s | FileCheck %s --check-prefix=CHECK-INTERPRET
 
 --- CHECK-INTERPRET: 1
 --- CHECK-INTERPRET: 0
