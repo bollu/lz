@@ -1245,6 +1245,8 @@ public:
 
     jpOp.getFirstRegionWithJmp().walk([&](HaskJumpOp jmp) {
       rewriter.setInsertionPoint(jmp);
+      if (jmp.getJoinPointId() != jpOp.getJoinPointId()) { return WalkResult::advance(); }
+
       // assert(false && "lowering join point");
       Block *jumpTarget = &jpOp.getLaterJumpedIntoRegion().front();
       // vvv this needs to go through type converter x(
@@ -1984,14 +1986,19 @@ public:
 
 
     Value condition = [&]() {
-        FuncOp fn = getOrInsertGetObjTag(rewriter, mod);
-        SmallVector<Value, 4> params{scrutinee};
-        CallOp tag = rewriter.create<CallOp>(caseop.getLoc(), fn, params);
-        Value lhsConst = rewriter.create<ConstantIntOp>(caseop.getLoc(), i,
-                                                        rewriter.getI64Type());
-        CmpIOp isEq = rewriter.create<CmpIOp>(
-            caseop.getLoc(), CmpIPredicate::eq, tag.getResult(0), lhsConst);
-        return isEq.getResult();
+        Optional<int> lhsIx = caseop.getAltLHS(i);
+        if (!lhsIx) {
+          ConstantIntOp out =  rewriter.create<ConstantIntOp>(caseop.getLoc(), /*value=*/1, /*width=*/1);
+          return out.getResult();
+        } else {
+          FuncOp fn = getOrInsertGetObjTag(rewriter, mod);
+          SmallVector<Value, 4> params{scrutinee};
+          CallOp tag = rewriter.create<CallOp>(caseop.getLoc(), fn, params);
+          Value lhsConst = rewriter.create<ConstantIntOp>(caseop.getLoc(), *lhsIx, rewriter.getI64Type());
+          CmpIOp isEq = rewriter.create<CmpIOp>(
+              caseop.getLoc(), CmpIPredicate::eq, tag.getResult(0), lhsConst);
+          return isEq.getResult();
+        }
     }();
 
 

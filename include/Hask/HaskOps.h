@@ -611,9 +611,12 @@ public:
                     int blockIx);
   mlir::Region &getLaterJumpedIntoRegion() { return this->getRegion(0); }
   mlir::Region &getFirstRegionWithJmp() { return this->getRegion(1); }
-  StringRef getName() {
-    return getOperation()->getAttrOfType<FlatSymbolRefAttr>("value").getValue();
+  int getJoinPointId() { 
+    return this->getOperation()->getAttrOfType<IntegerAttr>("value").getInt();
   }
+  // StringRef getName() {
+  //   return getOperation()->getAttrOfType<FlatSymbolRefAttr>("value").getValue();
+  // }
 };
 
 // for lambdapure
@@ -624,9 +627,13 @@ public:
   static StringRef getOperationName() { return "lz.jump"; };
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   void print(OpAsmPrinter &p);
-  StringRef getName() {
-    return getOperation()->getAttrOfType<FlatSymbolRefAttr>("value").getValue();
+  int getJoinPointId() { 
+    return this->getOperation()->getAttrOfType<IntegerAttr>("value").getInt();
   }
+  
+  // StringRef getName() {
+  //   return getOperation()->getAttrOfType<FlatSymbolRefAttr>("value").getValue();
+  // }
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
                     int blockIx,
                     ValueRange vs); // ?? what is blockIx? I am actually confused.
@@ -641,6 +648,12 @@ public:
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   void print(OpAsmPrinter &p);
   Value getScrutinee() { return getOperand(); }
+  Optional<int> getAltLHS(int i) {
+    Attribute lhs = this->getOperation()->getAttr("alt" +  std::to_string(i));
+    IntegerAttr lhs_int_attr = lhs.dyn_cast<IntegerAttr>();
+    if (!lhs_int_attr) { return {}; }
+    return {(int)lhs_int_attr.getInt()};
+  }
 
   int getNumAlts() { return this->getOperation()->getNumRegions(); }
   Region &getAltRHS(int i) { return this->getOperation()->getRegion(i); }
