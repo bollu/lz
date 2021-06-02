@@ -73,6 +73,55 @@ which emit calls to `lean_ctor_set_tag`? This seems very schiozophrenic to me.
 A call to `ensureHasDefault` (my lean commit `e20ee48959078cb40aa19ee4ffd22a65fd6b0195`)
 changed the CORRECTNESS of the compliation. This seems dodgy at best?!
 
+
+```lean
+-- | pretty sure emitDec is broken, there is no variant of lean_dec
+-- that can take more than 1 arg.
+def emitDec (x : VarId) (n : Nat) (checkRef : Bool) : M Unit := do
+  emit (if checkRef then "lean_dec" else "lean_dec_ref");
+  emit "("; emit x;
+  if n != 1 then emit ", "; emit n
+  emitLn ");"
+```
+
+
+- In all of `render.lean`, there is no telltale sign of either reset or reuse.
+  I could find no calls to reuse's `lean_ctor_set_tag` and reset's `lean_ctor_release`.
+  So the crash must be from something else.
+
+- I changed `sext` to `zext` because `zext` extends true into `1`, while `sext` extends true into `-1`.
+
+- I also tried to see if sharing was the problem, so I forced LEAN to consider everything as shared all the time.
+  This still only allows `render.lean` to crash `x(`.
+
+
+```lean
+-- | Code to force everything to be considered as sharing.
+-- | when writing into a variable sign-extend boolean i1s into i8s.
+-- This is SUCH a clusterfuck.
+def emitIsShared (z : VarId) (x : VarId) : M Unit := do
+  emitLhs z; emit " std.constant 1 : i8"; -- nothing is ever exclusive!
+  -- let excl <- gensym "exclusive";
+  -- emit $ "%" ++ excl ++ " = call @lean_is_exclusive(%" ++ (toString x) ++ ")";
+  -- emitLn $ " : (!lz.value) -> i1";
+  -- emitLhs z; emit $ (escape "ptr.not") ++ "(%" ++ excl ++ ")";
+  -- emitLn $ " : (i1) -> i8"
+```
+
+
+- Disable `dec` (decrement) fixes the crash in `render.lean`. Of course, this is a disgusting hack!
+
+```
+-- | Hack to fix crash in `render.lean`.
+def emitDec (x : VarId) (n : Nat) (checkRef : Bool) : M Unit := do
+  -- if n != 1 then panicM "there is no lean_dec for more than 1 parameter"
+  -- let nv <- emitI64 "n" n;
+  -- emit $ "call " ++ (if checkRef then "@lean_dec" else "@lean_dec_ref");
+  -- emit "(%"; emit x; emitLn ") : (!lz.value) -> ()"
+  return ()
+```
+
+
 # May 28
 
 Some kind of miscompile of case statements from `render.lean`. I generate
