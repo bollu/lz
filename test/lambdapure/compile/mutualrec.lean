@@ -6,7 +6,7 @@
 --- CHECK-INTERPRET: 1
 --- CHECK-INTERPRET: 0
 
--- RUN: lean %s 2>&1 | hask-opt   --lean-lower  --ptr-lower | mlir-translate --mlir-to-llvmir |  opt -O3 -S | FileCheck %s --check-prefix=CHECK-LLVM
+-- run: lean %s 2>&1 | hask-opt   --lean-lower  --ptr-lower | mlir-translate --mlir-to-llvmir |  opt -O3 -S | FileCheck %s --check-prefix=CHECK-LLVM
 
 -- | todo: make this a better regex based match.
 -- CHECK-LLVM: define i8* @l_even(i8* %0) local_unnamed_addr !dbg !3 {
