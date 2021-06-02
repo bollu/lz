@@ -913,10 +913,10 @@ public:
     
     llvm::errs() << "Not operand: |" << rands[0] << "|\n"; getchar();
 
-    // x != 0 <-> x is true
+    // x == 0 <-> !x
     Value c0 = rewriter.create<ConstantIntOp>(notop.getLoc(), 0, ity.getWidth());
     rewriter.setInsertionPointAfter(notop);
-    CmpIOp cmp = rewriter.create<CmpIOp>(notop.getLoc(), CmpIPredicate::ne, rands[0], c0);
+    CmpIOp cmp = rewriter.create<CmpIOp>(notop.getLoc(), CmpIPredicate::eq, rands[0], c0);
     assert(notop.getResult().getType().isa<IntegerType>() && "return type of ptr.not must be int");
     IntegerType iretty = notop.getResult().getType().cast<IntegerType>();
     //sign extend the value to the desired type.

@@ -675,7 +675,6 @@ public:
      assert(i < getNumAlts());
      return this->getOperation()->getRegion(i);
   }
-
   Optional<int> getAltLHS(int i) {
     Attribute lhs = this->getOperation()->getAttr("alt" +  std::to_string(i));
     IntegerAttr lhs_int_attr = lhs.dyn_cast<IntegerAttr>();
