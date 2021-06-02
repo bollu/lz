@@ -1881,13 +1881,18 @@ public:
     // check if equal
     Value condition = [&]() {
       IntegerType ity = scrutinee.getType().cast<IntegerType>();
-      int64_t lhsint = caseop.getAltLHS(i)->getInt();
-      Value lhsConst =
-          rewriter.create<ConstantIntOp>(caseop.getLoc(), lhsint, ity);
+      Optional<int> lhsint = caseop.getAltLHS(i);
 
-      CmpIOp isEq = rewriter.create<CmpIOp>(caseop.getLoc(), CmpIPredicate::eq,
-                                            scrutinee, lhsConst);
-      return isEq.getResult();
+      if (!lhsint) {
+          ConstantIntOp out =  rewriter.create<ConstantIntOp>(caseop.getLoc(), /*value=*/1, /*width=*/1);
+          return out.getResult();
+        } else {
+        Value lhsConst =
+            rewriter.create<ConstantIntOp>(caseop.getLoc(), *lhsint, ity);
+        CmpIOp isEq = rewriter.create<CmpIOp>(caseop.getLoc(), 
+            CmpIPredicate::eq, scrutinee, lhsConst);
+          return isEq.getResult();
+      }
     }();
 
    

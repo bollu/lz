@@ -676,32 +676,11 @@ public:
      return this->getOperation()->getRegion(i);
   }
 
-
-  mlir::DictionaryAttr getAltLHSs() {
-    return this->getOperation()->getAttrDictionary();
-  }
-
-  Optional<IntegerAttr> getAltLHS(int i) {
-    Attribute lhs = getAltLHSs().get("alt" + std::to_string(i));
-    if (lhs.isa<IntegerAttr>()) {
-      return {lhs.cast<IntegerAttr>()};
-    }
-    return {};
-  }
-
-  Attribute getAltLHSRaw(int i) {
-    return getAltLHSs().get("alt" + std::to_string(i));
-  }
-  
-  llvm::Optional<int> getDefaultAltIndex() {
-    for (int i = 0; i < getNumAlts(); ++i) {
-      Attribute ai = this->getAltLHSRaw(i);
-      FlatSymbolRefAttr sai = ai.dyn_cast<FlatSymbolRefAttr>();
-      if (sai && sai.getValue() == "default") {
-        return i;
-      }
-    }
-    return llvm::Optional<int>();
+  Optional<int> getAltLHS(int i) {
+    Attribute lhs = this->getOperation()->getAttr("alt" +  std::to_string(i));
+    IntegerAttr lhs_int_attr = lhs.dyn_cast<IntegerAttr>();
+    if (!lhs_int_attr) { return {}; }
+    return {(int)lhs_int_attr.getInt()};
   }
 };
 

@@ -64,6 +64,15 @@
 
 # Log:  [newest] to [oldest]
 
+# June 2
+
+Why does the backend have BOTH things like `insertReset/insertReuse` which
+emit calls to `lean_ctor_set_tag` as well as PRIMITIVES like `setTg`
+which emit calls to `lean_ctor_set_tag`? This seems very schiozophrenic to me.
+
+A call to `ensureHasDefault` (my lean commit `e20ee48959078cb40aa19ee4ffd22a65fd6b0195`)
+changed the CORRECTNESS of the compliation. This seems dodgy at best?!
+
 # May 28
 
 Some kind of miscompile of case statements from `render.lean`. I generate
