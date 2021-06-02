@@ -920,8 +920,8 @@ public:
     assert(notop.getResult().getType().isa<IntegerType>() && "return type of ptr.not must be int");
     IntegerType iretty = notop.getResult().getType().cast<IntegerType>();
     //sign extend the value to the desired type.
-    SignExtendIOp sext = rewriter.create<SignExtendIOp>(notop.getLoc(), cmp.getResult(), iretty);
-    rewriter.replaceOp(notop, sext.getResult());
+    ZeroExtendIOp zext = rewriter.create<ZeroExtendIOp>(notop.getLoc(), cmp.getResult(), iretty);
+    rewriter.replaceOp(notop, zext.getResult());
     // rewriter.eraseOp(notop);
     // rewriter.replaceOpWithNewOp<CmpIOp>(notop, 
     //         CmpIPredicate::ne, rands[0], c0);
