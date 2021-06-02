@@ -418,40 +418,38 @@ def isIf (alts : Array Alt) : Option (Nat × FnBody × FnBody) :=
     | Alt.ctor c b => some (c.cidx, b, alts[1].body)
     | _            => none
 
+-- def emitInc (x : VarId) (n : Nat) (checkRef : Bool) : M Unit := do
+--  emit $
+--    if checkRef then (if n == 1 then "lean_inc" else "lean_inc_n")
+--    else (if n == 1 then "lean_inc_ref" else "lean_inc_ref_n")
+--  emit "("; emit x
+--  if n != 1 then emit ", "; emit n
+
 def emitInc (x : VarId) (n : Nat) (checkRef : Bool) : M Unit := do
   let nname <- gensym "n"
   emitLn $ "%" ++ nname ++ " = std.constant " ++ (toString n) ++ " : i64"
   emit "call ";
-  -- emit $
-  --  if checkRef then (if n == 1 then "@lean_inc" else "@lean_inc_n")
-  --  else (if n == 1 then "@lean_inc_ref" else "@lean_inc_ref_n")
-  -- emit "("; emit "%"; emit x
-  -- if n != 1 then emit ", "; emit n
   emit $
      if checkRef then "@lean_inc_n"
      else  "@lean_inc_ref_n"
   emit "("; emit "%"; emit x
-  -- if n != 1 then emit ", "; emit n
   emitLn $ ", %" ++ nname ++ ") : (!lz.value, i64) -> ()"
 
 def emitDec (x : VarId) (n : Nat) (checkRef : Bool) : M Unit := do
+  if n != 1 then panicM "there is no lean_dec for more than 1 parameter"
+  let nv <- emitI64 "n" n;
   emit $ "call " ++ (if checkRef then "@lean_dec" else "@lean_dec_ref");
-  emit "(%"; emit x;
-  if n != 1 then emit ", "; emit n
-  emitLn ") : (!lz.value) -> ()"
+  emit "(%"; emit x; emitLn ") : (!lz.value) -> ()"
 
 def emitDel (x : VarId) : M Unit := do
   emit "call @lean_free_object(%"; emit x; emitLn ") : (!lz.value) -> ()"
 
 def emitSetTag (x : VarId) (i : Nat) : M Unit := do
-  let iname <- gensym "i";
-  emitLn $ "%" ++ iname ++ " = std.constant " ++ (toString i) ++ " : i64";
-  emit "call @lean_ctor_set_tag(%"; emit x; emit ", %"; emit iname; emit ")";
+  let iv <- emitI64 "i" i;
+  emit "call @lean_ctor_set_tag(%"; emit x; emit ", %"; emit iv; emit ")";
   emitLn $ " : (!lz.value, i64) -> ()"
 
 def emitSet (x : VarId) (i : Nat) (y : Arg) : M Unit := do
-  let iname <- gensym "i";
-  -- emitLn $ "%" ++ iname ++ " = std.constant " ++ (toString i) ++ " : i64";
   let ix <- emitI64 "ix" i; 
   emit "call @lean_ctor_set(%"; emit x; emit ", %"; emit ix;
   emit ", "; emitArg y; emit ")"
@@ -483,10 +481,11 @@ def emitVarTy (v: VarId) (tys: HashMap VarId IRType) : M Unit :=  do
 
 -- | TODO: what is this for?
 def emitUSet (x : VarId) (n : Nat) (y : VarId) : M Unit := do
-  let nname <- gensym "n";
-  emitLn $  "%" ++ nname ++ " = std.constant " ++ (toString n) ++ " i64"
+  -- let nname <- gensym "n";
+  -- emitLn $  "%" ++ nname ++ " = std.constant " ++ (toString n) ++ " i64"
+  let nv <- emitI64 "n" n
   emit "@lean_ctor_set_usize(%"; emit x; emit ", "; 
-  emit "%"; emit nname; emit ", ";
+  emit "%"; emit nv; emit ", ";
   emit "%"; emit y; emitLn ") : (!lz.value, i64, !lz.value) -> ()"
 
  /- Store `y : ty` at Position `sizeof(void*)*i + offset` in `x`. `x` must be a Constructor object and `RC(x)` must be 1.
@@ -567,10 +566,6 @@ def emitCtorScalarSize (usize : Nat) (ssize : Nat) : M String := do
   return out;
 
 def emitAllocCtor (c : CtorInfo) (out: String): M Unit := do
-  -- let idxName <- gensym "cidx";
-  -- let size  <- gensym "csize";
-  -- emit $ "%" ++ idxName ++ " = " ++ "constant " ++ (toString c.cidx) ++ " : i64";
-  -- emit $ "%" ++ size ++ " = " ++ "constant " ++ (toString c.size) ++ " : i64";
   let idxName <- emitI64 "cidx" c.cidx
   let csize <- emitI64 "csize" c.size
   let scalarSize <- emitCtorScalarSize c.usize c.ssize;
@@ -589,6 +584,7 @@ def emitCtorSetArgs (z : VarId) (ys : Array Arg) : M Unit :=
     emit " %"; emit ix; emit ",";
     emitArg ys[i]; emitLn ") : (!lz.value, i64, !lz.value) -> ()"
 
+-- | this is literally emitCtor
 -- | TODO: raise to a higher abstraction level. Generate !lz.construct()
 -- instead of the raw calls. 
 -- For now, generate the raw calls to check that can lower correctly?
@@ -626,18 +622,13 @@ def emitReset (z : VarId) (n : Nat) (x : VarId) (tys: HashMap VarId IRType): M U
     "call @lean_is_exclusive(%" ++ (toString x) ++ ") : (!lz.value) -> (i1)"
   emitLhs z; emit " scf.if "; emit ("%" ++  excl); emitLn " -> (!lz.value) {";
   n.forM fun i => do
-    let ci <- gensym $ "c" ++ toString i;
-    emitLn $ "%" ++ (toString ci) ++ " = " ++ 
-      "constant " ++ (toString i) ++ " : i64"
+    let ci <- emitI64 "ix" i
     emit "call @lean_ctor_release(%"; emit x; emit ", %"; emit ci; emitLn ") : (!lz.value, i64 ) -> ()"
   emitLn $ "scf.yield %" ++ (toString x) ++ " : !lz.value";
-  -- emit " "; emitLhs z; emit x; emitLn ";";
   emitLn "} else {";
   emit " call @lean_dec_ref(%"; emit x; emitLn ") : (!lz.value) -> ()";
-  -- let c0 <- gensym "c0"
-  let c0box <- gensym "c0box";
-  -- emitLn $ "%" ++ c0 ++ " = std.constant 0 : i64"
   let c0 <- emitI64 "c0" 0
+  let c0box <- gensym "c0box";
   emitLn $ "%" ++ c0box ++ " = call @lean_box(%" ++ c0 ++ ") : (i64) -> (!lz.value)"
   emitLn $ " scf.yield %" ++ c0box ++ " : !lz.value"
   emitLn "}"
@@ -655,20 +646,20 @@ def emitReset (z : VarId) (n : Nat) (x : VarId) (tys: HashMap VarId IRType): M U
 
 def emitReuse (z : VarId) (x : VarId) (c : CtorInfo) (updtHeader : Bool) (ys : Array Arg) (tys: HashMap VarId IRType): M Unit := do
   --  emit "if (lean_is_scalar("; emit x; emitLn ")) {";
-  let excl <- gensym "scalar"
-  emitLn $ "%" ++ (toString excl) ++ " = " ++ 
+  let isScalar <- gensym "scalar"
+  emitLn $ "%" ++ (toString isScalar) ++ " = " ++ 
     "call @lean_is_scalar(%" ++ (toString x) ++ ") : (!lz.value) -> (i1)"
-  emitLhs z; emit " scf.if "; emit ("%" ++  excl); emitLn " -> (!lz.value) {";
+  emitLhs z; emit " scf.if "; emit ("%" ++  isScalar); emitLn " -> (!lz.value) {";
   let ctor <- gensym "ctor";
   emitAllocCtor c ctor
   emitLn $ "scf.yield %" ++ ctor ++ ": !lz.value"
   emitLn "} else {";
   -- emit " "; emitLhs z; emit x; emitLn ";";
   -- if updtHeader then emit " lean_ctor_set_tag("; emit z; emit ", "; emit c.cidx; emitLn ");"
-  if updtHeader then do
-    let idx <- gensym "idx";
-    emitLn $ "%" ++ idx ++ " = std.constant " ++ (toString c.cidx) ++ " : i64"
-    emit "call @lean_ctor_set_tag(%"; emit x; emit ", %"; emit idx; emitLn ") : (!lz.value, i64) -> ()";
+  if updtHeader then (do
+    let idx <- emitI64 "idx" c.cidx
+    emit "call @lean_ctor_set_tag(%"; emit x;
+    emit ", %"; emit idx; emitLn ") : (!lz.value, i64) -> ()";)
   emit "scf.yield %"; emit x; emitLn ": !lz.value"
   emitLn "}";
   emitCtorSetArgs z ys
@@ -681,7 +672,10 @@ def emitProj (z : VarId) (i : Nat) (x : VarId) (tys: HashMap VarId IRType): M Un
   emit ":"; emit "("; emitVarTy x tys; emit ")"; emit "  -> ";
   emit "("; emitVarTy z tys; emit ")"; emitLn "";
 
+-- | Pretty sure that has not been called so far.
+-- | TODO: this remains untested!
 def emitUProj (z : VarId) (i : Nat) (x : VarId) : M Unit := do
+  panicM "unimplemented emitUProj"
   emitLhs z; emit "lean_ctor_get_usize("; emit x; emit ", "; emit i; emitLn ");"
 
 --  /- Extract the scalar value at Position `sizeof(void*)*n + offset` from `x`. -/
