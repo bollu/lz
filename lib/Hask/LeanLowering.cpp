@@ -1904,7 +1904,9 @@ public:
     // this is because LEAN never uses arguments, it chooses to extract arguments
     // by using intrincics from a case scrutinee.   
     assert(caseop.getAltRHS(i).getNumArguments() == 0);
-    assert(caseop.getAltRHS(i).getBlocks().size() == 1);
+    // v This assert is no longer true, since we now use `scf`, so on lowering `scf`
+    // we can get more than one block inside a case.
+    // assert(caseop.getAltRHS(i).getBlocks().size() == 1);
     
     rewriter.inlineRegionBefore(caseop.getAltRHS(i), falseBB);
     return falseBB;
@@ -2014,7 +2016,9 @@ public:
 
     // this is because LEAN never uses arguments, it chooses to extract arguments
     // by using intrincics from a case scrutinee.
-    assert(caseop.getAltRHS(i).getBlocks().size() == 1);
+    // v This assert is no longer true, since we now use `scf`, so on lowering `scf`
+    // we can get more than one block inside a case.
+    // assert(caseop.getAltRHS(i).getBlocks().size() == 1);
     assert(caseop.getAltRHS(i).getNumArguments() == 0);
 
     rewriter.inlineRegionBefore(caseop.getAltRHS(i), falseBB);
