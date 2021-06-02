@@ -95,6 +95,7 @@ def emitDec (x : VarId) (n : Nat) (checkRef : Bool) : M Unit := do
   This still only allows `render.lean` to crash `x(`.
 
 
+
 ```lean
 -- | Code to force everything to be considered as sharing.
 -- | when writing into a variable sign-extend boolean i1s into i8s.
@@ -119,6 +120,17 @@ def emitDec (x : VarId) (n : Nat) (checkRef : Bool) : M Unit := do
   -- emit $ "call " ++ (if checkRef then "@lean_dec" else "@lean_dec_ref");
   -- emit "(%"; emit x; emitLn ") : (!lz.value) -> ()"
   return ()
+```
+
+- I wanted to get a sense of our backend v/s the LEAN backend. For one, we can tolerate larger problem sizes.
+  For example, set `n=15` on `const_fold.lean`. This program allows us to succeed, while the C backend fails.
+- We are also much faster. For example, on `qsort.lean` with `n=100`:
+
+```
+/home/bollu/work/lz/test/lambdapure/compile/bench$ time ./exe.out    
+./exe.out  0.64s user 0.01s system 99% cpu 0.652 total
+/home/bollu/work/lz/test/lambdapure/compile/bench$ time ./exe-ref.out
+./exe-ref.out  0.87s user 0.01s system 99% cpu 0.880 total
 ```
 
 
