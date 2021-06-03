@@ -64,6 +64,59 @@
 
 # Log:  [newest] to [oldest]
 
+# June 3
+
+- CMake settings for test files:
+
+```
+# src/shell/CMakeLists.txt
+# also look at tests/test_single.sh
+file(GLOB LEANT0TESTS "${LEAN_SOURCE_DIR}/../tests/lean/trust0/*.lean")
+FOREACH(T ${LEANT0TESTS})
+  GET_FILENAME_COMPONENT(T_NAME ${T} NAME)
+  add_test(NAME "leant0test_${T_NAME}"
+           WORKING_DIRECTORY "${LEAN_SOURCE_DIR}/../tests/lean/trust0"
+           COMMAND bash -c "PATH=${LEAN_BIN}:$PATH ./test_single.sh ${T_NAME}")
+ENDFOREACH(T)
+```
+
+```
+# https://cmake.org/cmake/help/latest/manual/cmake-generator-expressions.7.html#manual:cmake-generator-expressions(7)
+$<TARGET_OBJECTS:objLib>
+List of objects resulting from build of objLib.
+```
+
+This is used to link against `runtime`, `kernel`, etc.
+
+```
+if(LEANCPP)
+  add_library(leancpp STATIC IMPORTED)
+  set_target_properties(leancpp PROPERTIES
+    IMPORTED_LOCATION "${CMAKE_BINARY_DIR}/lib/lean/libleancpp.a")
+  add_custom_target(copy-leancpp
+    COMMAND cmake -E copy_if_different "${LEANCPP}" "${CMAKE_BINARY_DIR}/lib/lean/libleancpp.a")
+  add_dependencies(leancpp copy-leancpp)
+else()
+  add_subdirectory(runtime)
+  set(LEAN_OBJS ${LEAN_OBJS} $<TARGET_OBJECTS:runtime>)
+  add_subdirectory(util)
+  set(LEAN_OBJS ${LEAN_OBJS} $<TARGET_OBJECTS:util>)
+  add_subdirectory(kernel)
+  set(LEAN_OBJS ${LEAN_OBJS} $<TARGET_OBJECTS:kernel>)
+  add_subdirectory(library)
+  set(LEAN_OBJS ${LEAN_OBJS} $<TARGET_OBJECTS:library>)
+  add_subdirectory(library/constructions)
+  set(LEAN_OBJS ${LEAN_OBJS} $<TARGET_OBJECTS:constructions>)
+  add_subdirectory(library/compiler)
+  set(LEAN_OBJS ${LEAN_OBJS} $<TARGET_OBJECTS:compiler>)
+  add_subdirectory(initialize)
+  set(LEAN_OBJS ${LEAN_OBJS} $<TARGET_OBJECTS:initialize>)
+  if(${STAGE} EQUAL 0)
+    add_subdirectory(../stdlib stdlib)
+    set(LEAN_OBJS ${LEAN_OBJS} $<TARGET_OBJECTS:stage0>)
+  endif()
+```
+
 # June 2
 
 Why does the backend have BOTH things like `insertReset/insertReuse` which
@@ -132,6 +185,7 @@ def emitDec (x : VarId) (n : Nat) (checkRef : Bool) : M Unit := do
 /home/bollu/work/lz/test/lambdapure/compile/bench$ time ./exe-ref.out
 ./exe-ref.out  0.87s user 0.01s system 99% cpu 0.880 total
 ```
+- We need to control `musttail`, which I've addded as a `TODO`.
 
 
 # May 28
