@@ -179,12 +179,12 @@ def plot():
   # Y-Axis Label
   #
   # Use a horizontal label for improved readability.
-  ax.set_ylabel('leanc/mlircc', rotation='horizontal', position = (1, 1.05),
-      horizontalalignment='left', verticalalignment='bottom')
+  ax.set_ylabel('leanc/mlircc', rotation='horizontal', position = (1, 1.1),
+      horizontalalignment='left', verticalalignment='bottom', fontsize=8)
 
   # Add some text for labels, title and custom x-axis tick labels, etc.
   ax.set_xticks(x)
-  ax.set_xticklabels(labels, rotation=10)
+  ax.set_xticklabels(labels, rotation=15, fontsize=7)
   ax.legend(ncol=100, frameon=False, loc='lower right', bbox_to_anchor=(0, 1, 1, 0))
 
   # Hide the right and top spines
