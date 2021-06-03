@@ -86,6 +86,8 @@ $<TARGET_OBJECTS:objLib>
 List of objects resulting from build of objLib.
 ```
 
+
+
 This is used to link against `runtime`, `kernel`, etc.
 
 ```
@@ -116,6 +118,14 @@ else()
     set(LEAN_OBJS ${LEAN_OBJS} $<TARGET_OBJECTS:stage0>)
   endif()
 ```
+
+Running `filter.lean` with large enough program sizes causes the C++ backend
+to stack overflow:
+
+```
+def main : IO Unit := let l := length (filter (make 80000)); IO.println (toString l)
+```
+
 
 # June 2
 
