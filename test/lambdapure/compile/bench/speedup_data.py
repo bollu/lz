@@ -30,12 +30,11 @@ g_fpaths.append("const_fold.lean")
 g_fpaths.append("deriv.lean")
 g_fpaths.append("filter.lean")
 g_fpaths.append("qsort.lean")
-g_fpaths.append("rbmap2.lean")
-g_fpaths.append("rbmap3.lean")
-g_fpaths.append("rbmap4.lean")
-g_fpaths.append("rbmap500k.lean")
+# g_fpaths.append("rbmap2.lean")
+# g_fpaths.append("rbmap3.lean")
+# g_fpaths.append("rbmap4.lean")
+# g_fpaths.append("rbmap500k.lean")
 g_fpaths.append("rbmap_checkpoint.lean")
-g_fpaths.append("small_const_fold.lean")
 g_fpaths.append("unionfind.lean")
 g_nfiles = len(g_fpaths)
 
@@ -57,8 +56,8 @@ if __name__ == "__main__":
         # x = run_with_output("perf stat ./exe-ref.out 1>/dev/null")
         # proc = subprocess.Popen("perf stat ./exe-ref.out", shell=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
         out, perf = sh("perf stat ./exe-ref.out")
-        data["ours-out"] = out
-        data["ours-perf"] = perf
+        data["theirs-out"] = out
+        data["theirs-perf"] = perf
 
         os.system(f"lean {fpath} 2>&1 | \
                 hask-opt --convert-scf-to-std --lean-lower --ptr-lower | \
@@ -72,8 +71,8 @@ if __name__ == "__main__":
             -L/home/bollu/work/lean4/build/stage1/lib/lean -lgmp -ldl -pthread \
             -Wno-unused-command-line-argument -o exe-mlir.out")
         out, perf = sh("perf stat ./exe-mlir.out")
-        data["theirs-out"] = out
-        data["theirs-perf"] = perf
+        data["ours-out"] = out
+        data["ours-perf"] = perf
 
 
         g_data.append(data)

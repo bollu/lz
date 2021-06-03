@@ -36,4 +36,4 @@ partial def make' : Nat -> Nat -> L
 def make (n : Nat) : L := make' n n
 
 -- def main (xs: List String) : IO UInt32 := let l := length (filter (make 10)); IO.println (toString l) *> pure 1
-def main : IO Unit := let l := length (filter (make 10)); IO.println (toString l)
+def main : IO Unit := let l := length (filter (make 50000)); IO.println (toString l)

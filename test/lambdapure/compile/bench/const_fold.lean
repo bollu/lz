@@ -86,7 +86,7 @@ open Expr
 -- | _ => pure 1
 
 unsafe def main :  IO Unit := do
-  let n := 4;
+  let n := 10;
   let e  := (mkExpr n 1);
   let v₁ := eval e;
   let v₂ := eval (constFolding (reassoc e));

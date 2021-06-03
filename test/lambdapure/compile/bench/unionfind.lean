@@ -141,7 +141,7 @@ else do
 
 
 def main : IO Unit := do
-  let n := 4;
+  let n := 100000;
   match run (test n) with
   | (Except.ok v, s)    => IO.println ("ok " ++ toString v)
   | (Except.error e, s) => IO.println ("Error : " ++ e)

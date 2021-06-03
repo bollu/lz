@@ -14,8 +14,6 @@ leanc exe-ref.c -o exe-ref.out
 rm out-ref.txt || true
 ./exe-ref.out > ref.txt 
 
-
 rm out-ours.txt || true
 $SCRIPTDIR/run-lean.sh $1 > ours.txt 
-
 diff ref.txt ours.txt
