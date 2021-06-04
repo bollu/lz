@@ -164,6 +164,7 @@ def plot():
   labels = []
   baselines = []
   optims = []
+  speedups = []
   for i, data in enumerate(datapoints):
       # mark = "Y" if data['success'] else 'n'
       log(f"[{i+1:3}/{len(datapoints)}]|{data['file']:80}|")
@@ -175,11 +176,14 @@ def plot():
 
       theirs = np.average([perf_stat_to_time(data["file"], t) for t in data["theirs-perf"] ])
       ours = np.average([perf_stat_to_time(data["file"], t) for t in data["ours-perf"] ])
+      speedup = float("%4.2f" % (theirs/ours))
+      speedups.append(speedup)
       # baselines.append(baseline/baseline)
-      optims.append(float("%4.2f" % (theirs/ours)))
+      optims.append(speedup)
   print(labels)
   print(baselines)
   print(optims)
+  print("average speedup: %4.2f" % (np.average(speedups)))
 
   x = np.arange(len(labels))  # the label locations
   width = 0.35  # the width of the bars
