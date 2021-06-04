@@ -14,31 +14,34 @@ import numpy as np
 import json
 import sys
 import subprocess
+import numpy as np
 
 
-parser = argparse.ArgumentParser(description='Speedup b/w MLIR and LEAN')
-parser.add_argument("--data", help="regenerate plotting data", action="store_true")
-parser.add_argument("--plot", help="make the plot", action="store_true")
-parser.add_argument('--out', metavar='o', type=str,
+PARSER = argparse.ArgumentParser(description='Speedup b/w MLIR and LEAN')
+PARSER.add_argument("--data", help="regenerate plotting data", action="store_true")
+PARSER.add_argument("--plot", help="make the plot", action="store_true")
+PARSER.add_argument('--out', metavar='o', type=str,
                     help='path to dump output', default=os.path.basename(__file__).replace(".py", ".json"))
-args = parser.parse_args()
+PARSER.add_argument('--nruns', type=int,
+                    help='number of runs to average', default=10)
+ARGS = PARSER.parse_args()
 
-g_baseline = "../baseline-lean.sh"
-g_ours = "../run-lean.sh"
-g_fpaths = []
-g_fpaths.append("binarytrees-int.lean")
-g_fpaths.append("binarytrees.lean")
-g_fpaths.append("const_fold.lean")
-g_fpaths.append("deriv.lean")
-g_fpaths.append("filter.lean")
-g_fpaths.append("qsort.lean")
-# g_fpaths.append("rbmap2.lean")
-# g_fpaths.append("rbmap3.lean")
-# g_fpaths.append("rbmap4.lean")
-# g_fpaths.append("rbmap500k.lean")
-g_fpaths.append("rbmap_checkpoint.lean")
-g_fpaths.append("unionfind.lean")
-g_nfiles = len(g_fpaths)
+G_BASELINE = "../baseline-lean.sh"
+G_OURS = "../run-lean.sh"
+G_FPATHS = []
+G_FPATHS.append("binarytrees-int.lean")
+G_FPATHS.append("binarytrees.lean")
+G_FPATHS.append("const_fold.lean")
+G_FPATHS.append("deriv.lean")
+G_FPATHS.append("filter.lean")
+G_FPATHS.append("qsort.lean")
+# G_FPATHS.append("rbmap2.lean")
+# G_FPATHS.append("rbmap3.lean")
+# G_FPATHS.append("rbmap4.lean")
+# G_FPATHS.append("rbmap500k.lean")
+G_FPATHS.append("rbmap_checkpoint.lean")
+G_FPATHS.append("unionfind.lean")
+G_NFILES = len(G_FPATHS)
 
 
 # Color palette
@@ -52,8 +55,8 @@ light_red = "#fb9a99"
 dark_red = "#e31a1c"
 
 
-def log(*args, **kwargs):
-    print(*args, file=sys.stderr, **kwargs)
+def log(*ARGS, **kwargs):
+    print(*ARGS, file=sys.stderr, **kwargs)
 
 def run_with_output(path):
     return subprocess.check_output(path, shell=True)
@@ -66,33 +69,39 @@ def sh(path):
 
 def run_data():
     ds = []
-    for (i, fpath) in enumerate(g_fpaths):
+    for (i, fpath) in enumerate(G_FPATHS):
         datum = {"file": str(fpath) }
         os.system(f"lean {fpath} -c exe-ref.c")
         os.system(f"leanc exe-ref.c -o exe-ref.out")
         # x = run_with_output("perf stat ./exe-ref.out 1>/dev/null")
         # proc = subprocess.Popen("perf stat ./exe-ref.out", shell=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
-        out, perf = sh("perf stat ./exe-ref.out")
-        datum["theirs-out"] = out
-        datum["theirs-perf"] = perf
+        datum["theirs-out"] = []
+        datum["theirs-perf"] = []
+        for _ in range(ARGS.nruns):
+          out, perf = sh("perf stat ./exe-ref.out")
+          datum["theirs-out"].append(out)
+          datum["theirs-perf"].append(perf)
 
         os.system(f"lean {fpath} 2>&1 | \
                 hask-opt --convert-scf-to-std --lean-lower --ptr-lower | \
                 mlir-translate --mlir-to-llvmir -o exe.ll")
         os.system("llvm-link exe.ll /home/bollu/work/lz/lean-linking-incantations/lib-includes/library.ll -S | opt -O3 -S -o exe-linked.ll")
-        os.system("llc -filetype=obj exe-linked.ll -o exe.o")
+        os.system("llc -O3 -march=x86-64 -filetype=obj exe-linked.ll -o exe.o")
         os.system(f"c++ -D LEAN_MULTI_THREAD -I/home/bollu/work/lean4/build/stage1/include \
             exe.o \
             /home/bollu/work/lz/lean-linking-incantations/lean-shell.o \
             -no-pie -Wl,--start-group -lleancpp -lInit -lStd -lLean -Wl,--end-group \
             -L/home/bollu/work/lean4/build/stage1/lib/lean -lgmp -ldl -pthread \
             -Wno-unused-command-line-argument -o exe-mlir.out")
-        out, perf = sh("perf stat ./exe-mlir.out")
-        datum["ours-out"] = out
-        datum["ours-perf"] = perf
+        datum["ours-out"] = []
+        datum["ours-perf"] = []
+        for _ in range(ARGS.nruns):
+           out, perf = sh("perf stat ./exe-mlir.out")
+           datum["ours-out"].append(out)
+           datum["ours-perf"].append(perf)
+
         ds.append(datum)
-    print(ds)
-    with open(args.out, "w") as f:
+    with open(ARGS.out, "w") as f:
         json.dump(ds, f, indent=2)
     return ds
 
@@ -143,7 +152,7 @@ def autolabel(ax, rects):
                     ha='center', va='bottom')
 
 def plot():
-  with open(args.out, "r") as f:
+  with open(ARGS.out, "r") as f:
       datapoints = json.load(f)
   assert datapoints is not None
 
@@ -161,10 +170,13 @@ def plot():
       # if data["success"] == False:
       #     continue
       labels.append(data["file"].split(".lean")[0])
-      baseline = perf_stat_to_time(data["file"], data["theirs-perf"])
-      optimised = perf_stat_to_time(data["file"], data["ours-perf"])
+      N = len(data["theirs-perf"])
+      assert N == len(data["ours-perf"])
+
+      theirs = np.average([perf_stat_to_time(data["file"], t) for t in data["theirs-perf"] ])
+      ours = np.average([perf_stat_to_time(data["file"], t) for t in data["ours-perf"] ])
       # baselines.append(baseline/baseline)
-      optims.append(float("%4.2f" % (baseline/optimised)))
+      optims.append(float("%4.2f" % (theirs/ours)))
   print(labels)
   print(baselines)
   print(optims)
@@ -179,13 +191,13 @@ def plot():
   # Y-Axis Label
   #
   # Use a horizontal label for improved readability.
-  ax.set_ylabel('leanc/mlircc', rotation='horizontal', position = (1, 1.1),
+  ax.set_ylabel('Speedup over leanc', rotation='horizontal', position = (1, 1.1),
       horizontalalignment='left', verticalalignment='bottom', fontsize=8)
 
   # Add some text for labels, title and custom x-axis tick labels, etc.
   ax.set_xticks(x)
   ax.set_xticklabels(labels, rotation=15, fontsize=7)
-  ax.legend(ncol=100, frameon=False, loc='lower right', bbox_to_anchor=(0, 1, 1, 0))
+  # ax.legend(ncol=100, frameon=False, loc='lower right', bbox_to_anchor=(0, 1, 1, 0))
 
   # Hide the right and top spines
   # This reduces the number of lines in the plot. Lines typically catch
@@ -204,6 +216,6 @@ def plot():
 
 
 if __name__ == "__main__":
-    if args.data: run_data()
-    if args.plot: plot()
+    if ARGS.data: run_data()
+    if ARGS.plot: plot()
 
