@@ -104,7 +104,7 @@ def myLen : List Tree → Nat → Nat
 -- pure 0
 
 def main : IO Unit := do
-let n     := 20;
+let n     := 400000;
 let freq  := 20;
 let freq  := if freq == 0 then 1 else freq;
 let mList := mkMap n freq;
