@@ -185,7 +185,7 @@ static void display_help(std::ostream & out) {
     std::cout << "  --run              call the 'main' definition in a file with the remaining arguments\n";
     std::cout << "  --o=oname -o       create olean file\n";
     std::cout << "  --c=fname -c       name of the C output file\n";
-    std::cout << "  --m=fname -mlir    name of the MLIR output file\n";
+    std::cout << "  --m=fname -m       name of the MLIR output file\n";
     std::cout << "  --stdin            take input from stdin\n";
     std::cout << "  --root=dir         set package root directory from which the module name of the input file is calculated\n"
               << "                     (default: current working directory)\n";
@@ -213,6 +213,7 @@ static void display_help(std::ostream & out) {
 }
 
 static struct option g_long_options[] = {
+    {"m",            optional_argument, 0, 'm'},
     {"version",      no_argument,       0, 'v'},
     {"help",         no_argument,       0, 'h'},
     {"githash",      no_argument,       0, 'g'},
@@ -243,7 +244,7 @@ static struct option g_long_options[] = {
 };
 
 static char const * g_opt_str =
-    "PdD:o:c:C:qgvht:012j:012rR:M:012T:012ap:e"
+    "PdD:o:c:m:C:qgvht:012j:012rR:M:012T:012ap:e"
 #if defined(LEAN_MULTI_THREAD)
     "s:012"
 #endif
@@ -656,7 +657,7 @@ int main(int argc, char ** argv) {
         }
 
 
-        std::cerr << lean::ir::emit_mlir(env, *main_module_name).data();
+        // std::cerr << lean::ir::emit_mlir(env, *main_module_name).data();
         display_cumulative_profiling_times(std::cerr);
 
         return ok ? 0 : 1;
