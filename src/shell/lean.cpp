@@ -646,18 +646,15 @@ int main(int argc, char ** argv) {
         if (mlir_output && ok) {
             std::ofstream out(*mlir_output);
             if (out.fail()) {
-                std::cerr << "failed to create '" << *c_output << "'\n";
+                std::cerr << "failed to create '" << *mlir_output << "'\n";
                 return 1;
             }
             time_task _("MLIR code generation", opts);
-            auto s = lean::ir::emit_mlir(env, *main_module_name).data();
-            out << s;
+            out << lean::ir::emit_mlir(env, *main_module_name).data();
             out.close();
-            std::cerr << s;
         }
 
 
-        // std::cerr << lean::ir::emit_mlir(env, *main_module_name).data();
         display_cumulative_profiling_times(std::cerr);
 
         return ok ? 0 : 1;

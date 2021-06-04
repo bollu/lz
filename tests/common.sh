@@ -21,8 +21,19 @@ shift
 [ $# -eq 0 ] || fail "Usage: test_single.sh [-i] test-file.lean"
 
 function compile_lean {
-    lean --c="$f.c" "$f" || fail "Failed to compile $f into C file"
-    leanc -O3 -DNDEBUG -o "$f.out" "$@" "$f.c" || fail "Failed to compile C file $f.c"
+    # lean --c="$f.c" "$f" || fail "Failed to compile $f into C file"
+    # leanc -O3 -DNDEBUG -o "$f.out" "$@" "$f.c" || fail "Failed to compile C file $f.c"
+    lean -m "$f.mlir" "$f"
+    hask-opt "$f.mlir" --convert-scf-to-std --lean-lower --ptr-lower | \
+      mlir-translate --mlir-to-llvmir -o "$f.ll"
+    llvm-link "$f.ll" /home/bollu/work/lz/lean-linking-incantations/lib-includes/library.ll -S | opt -O3 -S  | \
+    llc -O3 -march=x86-64 -filetype=obj  -o "$f.o"
+    g++ -D LEAN_MULTI_THREAD -I/home/bollu/work/lean4/build/stage1/include \
+            "$f.o" \
+            /home/bollu/work/lz/lean-linking-incantations/lean-shell.o \
+            -no-pie -Wl,--start-group -lleancpp -lInit -lStd -lLean -Wl,--end-group \
+            -L/home/bollu/work/lean4/build/stage1/lib/lean -lgmp -ldl -pthread \
+            -Wno-unused-command-line-argument -o "$@" "$f.out"
 }
 
 function exec_capture {
