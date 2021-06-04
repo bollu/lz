@@ -82,8 +82,8 @@ def run_data():
           datum["theirs-out"].append(out)
           datum["theirs-perf"].append(perf)
 
-        os.system(f"lean {fpath} 2>&1 | \
-                hask-opt --convert-scf-to-std --lean-lower --ptr-lower | \
+        os.system(f"lean {fpath} -m exe.mlir")
+        os.system("hask-opt exe.mlir --convert-scf-to-std --lean-lower --ptr-lower | \
                 mlir-translate --mlir-to-llvmir -o exe.ll")
         os.system("llvm-link exe.ll /home/bollu/work/lz/lean-linking-incantations/lib-includes/library.ll -S | opt -O3 -S -o exe-linked.ll")
         os.system("llc -O3 -march=x86-64 -filetype=obj exe-linked.ll -o exe.o")

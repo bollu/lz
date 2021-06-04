@@ -126,6 +126,8 @@ to stack overflow:
 def main : IO Unit := let l := length (filter (make 80000)); IO.println (toString l)
 ```
 
+- Test for stack overflow: `leancomptest_StackOverflow.lean`
+
 
 # June 2
 

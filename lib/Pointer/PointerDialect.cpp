@@ -911,7 +911,7 @@ public:
     // assert(ity.getWidth() == 8 && "expected lean to generate a NOT on a i8 because it's weird like that");
     rewriter.setInsertionPoint(notop);
     
-    llvm::errs() << "Not operand: |" << rands[0] << "|\n"; getchar();
+    // llvm::errs() << "Not operand: |" << rands[0] << "|\n"; getchar();
 
     // x == 0 <-> !x
     Value c0 = rewriter.create<ConstantIntOp>(notop.getLoc(), 0, ity.getWidth());
