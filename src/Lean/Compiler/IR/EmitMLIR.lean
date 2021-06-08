@@ -21,6 +21,10 @@ namespace Lean.IR.EmitMLIR
 
 open ExplicitBoxing (requiresBoxedVersion mkBoxedName isBoxedName)
 
+-- hack
+def closureMaxArgs : Nat := 4200
+
+
 -- | type of owner, is the parent a funcop or a caseop
 inductive OwningBlockType where
   | funcop | caseop
@@ -792,6 +796,15 @@ def emitFullApp  (f : FunId) (ys : Array Arg) (tys: HashMap VarId IRType) : M Un
 
 
 --  create a new pap
+-- | Need to generate the arity correctly, this is fucked x(
+-- def emitPartialApp (z : VarId) (f : FunId) (ys : Array Arg) : M Unit := do
+--   let decl ← getDecl f
+--   let arity := decl.params.size;
+--   emitLhs z; emit "lean_alloc_closure((void*)("; emitCName f; emit "), "; emit arity; emit ", "; emit ys.size; emitLn ");";
+--   ys.size.forM fun i => do
+--     let y := ys[i]
+--     emit "lean_closure_set("; emit z; emit ", "; emit i; emit ", "; emitArg y; emitLn ");"
+
 def emitPartialApp (z : VarId) (f : FunId)
   (ys : Array Arg) (tys: HashMap VarId IRType): M Unit := do
   let decl ← getDecl f
@@ -905,7 +918,7 @@ def emitNumLit (t : IRType) (v : Nat) : M Unit := do
       -- emit "lean_unsigned_to_nat("; emit v; emit "u)"
     else
      panicM "// ERR: lean_cstr_to_nat"
-      -- emit "call @lean_cstr_to_nat(\""; emit v; emit "\")"
+     -- emit "call @lean_cstr_to_nat("; emit v; emit "\") : (!lz.value) -> !lz.value"
   else
     emit "std.constant "; emit v; emit " : "; emitLn (toCType t);
 
@@ -1040,8 +1053,8 @@ partial def emitCaseObj (x : VarId) (xType : IRType) (alts : Array Alt)
  forMIx_ (as:= alts) (fun ix alt => do
     emit (if ix > 0 then ", " else "");
     match alt with 
-     |  Alt.ctor info b => emitFnBody b tys EmitIrrelevant.no
-     |  Alt.default b => emitFnBody b tys EmitIrrelevant.no) 
+     |  Alt.ctor info b => emitLn "{"; emitFnBody b tys EmitIrrelevant.no; emitLn "}"
+     |  Alt.default b => emitLn "{"; emitFnBody b tys EmitIrrelevant.no); emitLn "}"
  emit ")";
  emit "{";
   forMIx_ (as:= alts) (fun ix alt => do
@@ -1074,8 +1087,8 @@ partial def emitCaseInt (x : VarId) (xType : IRType) (alts : Array Alt)
  forMIx_ (as:= alts) (fun ix alt => do
     emit (if ix > 0 then ", " else "");
     match alt with 
-     |  Alt.ctor info b => emitFnBody b tys EmitIrrelevant.no
-     |  Alt.default b => emitFnBody b tys EmitIrrelevant.no)
+     |  Alt.ctor info b => emitLn "{"; emitFnBody b tys EmitIrrelevant.no; emitLn "}";
+     |  Alt.default b => emitLn "{"; emitFnBody b tys EmitIrrelevant.no); emitLn "}";
  emit ")";
  emitLn "";
  emit "{";
@@ -1219,7 +1232,7 @@ partial def emitBlock (b : FnBody) (tys: HashMap VarId IRType) : M Unit := do
 -- TODO: this should have access to declarations
 partial def emitJPs : FnBody → M Unit
   | FnBody.jdecl j xs v b => do emit j; emitLn ":"; 
-                                emitFnBody v {} EmitIrrelevant.yes;
+                                emitLn "{"; emitFnBody v {} EmitIrrelevant.yes; emitLn "}"
                                 emitJPs b
   | e                     => do unless e.isTerminal do emitJPs e.body
 
@@ -1248,9 +1261,11 @@ partial def insertFnBodyArgTypes (tys: HashMap VarId IRType):
 -- EmitIrrelevant is used to emit a value %irrelevant = ptr.undef 
 -- at some regions, where we want to create a %irrelevant value that should be
 -- in scope to emit an irrelevant argument. 
+-- don't emit '{' and '}' because some callees [eg. the calle |emitDeclAux|] generate
+-- a preamble. There could be callees who wish to generate postambles.
 partial def emitFnBody (b : FnBody) (tys: HashMap VarId IRType)
    (irr: EmitIrrelevant): M Unit := do
-  emitLn "{"
+  -- emitLn "{"
   match irr with
      | EmitIrrelevant.yes => 
         emitLn $ "%c0_irr = std.constant 0 : i64"
@@ -1258,7 +1273,7 @@ partial def emitFnBody (b : FnBody) (tys: HashMap VarId IRType)
      | EmitIrrelevant.no => pure ()
   let tys <- insertFnBodyArgTypes tys b
   emitBlock b tys
-  emitLn "}"
+  -- emitLn "}"
 
 end
   
@@ -1284,30 +1299,36 @@ def emitDeclAux (d : Decl) : M Unit := do
         emit ("@" ++ (escape baseName));
         emit "(";
         if xs.size > closureMaxArgs && isBoxedName d.name then
-          emit "lean_object** _args"
+         emit "%_args : !ptr.array" -- not sure if this is the right translation!
+          -- emit "lean_object** _args"
         else
           xs.size.forM fun i => do
             if i > 0 then emit ", "
             let x := xs[i]
             emit "%"; emit x.x; emit ": "; emit (toCType x.ty)
         emit ")"
-        emit (" -> " ++ (toCType t))
+        emit $ " -> " ++ (toCType t)
       else -- [xs.size == 0]
         -- TODO: there is something super funky about this codegen here!
         -- In particular, I don't understand this __init__ invariant.
         emitLn ("@_init_" ++ baseName ++ "()" ++ " -> " ++ (toCType t))
-        
+      
+      emitLn "{"; -- open fn body
       -- | Do not have args like this.
-      -- if xs.size > closureMaxArgs && isBoxedName d.name then
-      --   xs.size.forM fun i => do
-      --     let x := xs[i]
-      --     emit "lean_object* "; emit x.x; emit " = _args["; emit i; emitLn "];"
-      -- emitLn "_start:";
-      -- let name2ty :=  xs.foldl (fun m p => (m.insert p.x p.ty)) {};
+      if xs.size > closureMaxArgs && isBoxedName d.name then
+         xs.size.forM fun i => do
+           let x := xs[i]
+           -- emit "lean_object* "; emit x.x; emit " = _args["; emit i; emitLn "];"
+           let ix <- emitI64 "ix" i
+           emit $ "%" ++ toString x.x ++ " = ";
+           emit $ (escape "ptr.loadarray") ++  "(%_args, %" ++ ix ++ ") : ";
+           emitLn $ "(!ptr.array, i64) -> !lz.value"      
       withReader (fun ctx => { ctx with mainFn := f, mainParams := xs })
                  (emitFnBody b 
                              ((xs.foldl (fun m x => (m.insert x.x x.ty)) {}))
                              EmitIrrelevant.yes);
+      emitLn "}";
+
     | _ => emitLn "// ERR: unknwown decl"; pure ()
 
 -- calle from emitFns

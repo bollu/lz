@@ -1918,6 +1918,7 @@ static inline uint32_t lean_float_to_uint32(double a) { return (uint32_t) a; };
 static inline uint64_t lean_float_to_uint64(double a) { return (uint64_t) a; };
 static inline size_t lean_float_to_usize(double a) { return (size_t) a; };
 
+static inline lean_object *unsafeCast(lean_object *o) { return o; }
 #ifdef __cplusplus
 }
 #endif
