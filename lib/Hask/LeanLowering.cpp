@@ -1129,7 +1129,7 @@ public:
       return fn;
     }
     MLIRContext *ctx = rewriter.getContext();
-
+    
     // auto I8PtrTy = LLVM::LLVMType::getInt8PtrTy(rewriter.getContext());
     // llvm::SmallVector<LLVM::LLVMType, 4> argTys(n + 1, I8PtrTy);
     // auto llvmFnType = LLVM::LLVMType::getFunctionTy(I8PtrTy, argTys,
@@ -1723,11 +1723,15 @@ public:
     rewriter.setInsertionPoint(pap);
 
     const int width = 64;
-    // vvvv I don't need the name, I need the fucking function pointer!o
+    // vvvv I don't need the name, I need the fucking function pointer!
     Value fnptr = rewriter.create<ptr::PtrFnPtrOp>(
         pap->getLoc(), pap.getFnName(), calledFn.getType());
     //    Value name = rewriter.create<ptr::PtrStringOp>(pap->getLoc(),
     //    pap.getFnName());
+
+    // const int LEAN_CLOSURE_MAX_ARGS = 16; // this is just asking for trouble. Unfortunately, I don't know a better way to coordinate this.
+    // const int arityint = calledFn.getNumArguments() > LEAN_CLOSURE_MAX_ARGS ? 1 : calledFn.getNumArguments();
+    // const int arityint = calledFn.getNumArguments();
     Value arity = rewriter.create<ConstantIntOp>(
         pap->getLoc(), calledFn.getNumArguments(), width);
     Value nargs = rewriter.create<ConstantIntOp>(

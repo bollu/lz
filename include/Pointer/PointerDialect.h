@@ -49,6 +49,16 @@ public:
 //   static CharPtrType get(MLIRContext *context) { return Base::get(context); }
 // };
 
+
+// HACK: for now, we assume that an array only contains !lz.value.
+class PtrArrayType
+    : public mlir::Type::TypeBase<PtrArrayType, PtrType, TypeStorage> {
+public:
+  using Base::Base;
+  static PtrArrayType get(MLIRContext *context) { return Base::get(context); }
+};
+
+
 // %ptr = inttoptr %i
 class IntToPtrOp
     : public Op<IntToPtrOp, OpTrait::OneResult, OpTrait::OneOperand> {
@@ -290,6 +300,17 @@ public:
   void print(OpAsmPrinter &p);
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state, Value v);
 
+};
+
+class PtrLoadArrayOp : public Op<PtrLoadArrayOp, OpTrait::OneResult, OpTrait::NOperands<2>::Impl> {
+public:
+  using Op::Op;
+  static StringRef getOperationName() { return "ptr.loadarray"; };
+  static ParseResult parse(OpAsmParser &parser, OperationState &result);
+  void print(OpAsmPrinter &p);
+  Value getArray() { return this->getOperand(0); }
+  Value getIx() { return this->getOperand(1); }
+  void build(mlir::OpBuilder &builder, mlir::OperationState &state, Value arr, Value ix);
 };
 
 

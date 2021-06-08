@@ -69,7 +69,9 @@ PtrDialect::PtrDialect(mlir::MLIRContext *context)
   addOperations<PtrStoreGlobalOp>();
   addOperations<PtrUnreachableOp>();
   addOperations<PtrNotOp>();
+  addOperations<PtrLoadArrayOp>();
   // addTypes<VoidPtrType, CharPtrType>();
+  addTypes<PtrArrayType>();
 
   // clang-format on
 }
@@ -82,12 +84,21 @@ mlir::Type PtrDialect::parseType(mlir::DialectAsmParser &parser) const {
   //   return CharPtrType::get(parser.getBuilder().getContext());
   // }
 
+
+  if (succeeded(parser.parseOptionalKeyword("array"))) {
+    return PtrArrayType::get(parser.getBuilder().getContext());
+    // Type elem;
+    // if (parser.parseLess() || parser.parseType(elem) || parser.parseGreater()) {
+    //   assert(false && "unable to parse array type for ptr dialect");
+    // }
+    // return PtrArrayType::get(parser.getBuilder().getContext(), elem);
+  }
+
   assert(false && "this dialect has no types");
   return Type();
 }
 
 void PtrDialect::printType(mlir::Type type, mlir::DialectAsmPrinter &p) const {
-  assert(false && "this dialect has no types");
   // if (type.isa<VoidPtrType>()) {
   //   p << "void"; // !ptr.void
   //   return;
@@ -97,6 +108,11 @@ void PtrDialect::printType(mlir::Type type, mlir::DialectAsmPrinter &p) const {
   //   p << "char"; // !ptr.char
   //   return;
   // }
+
+  if (type.isa<PtrArrayType>()) {
+    p << "arraay"; // !ptr.array
+    return;
+  }
 
   assert(false && "unknown type to print");
 }
@@ -274,6 +290,9 @@ public:
   using LLVMTypeConverter::LLVMTypeConverter;
 
   PtrTypeConverter(MLIRContext *ctx) : LLVMTypeConverter(ctx) {
+    // !ptr.array -> i8**
+    addConversion(
+      [](ptr::PtrArrayType ty) { return LLVM::LLVMPointerType::get(getInt8PtrTy(ty.getContext())); });
     // !ptr.void -> i8*
     addConversion(
         [](standalone::ValueType ty) { return getInt8PtrTy(ty.getContext()); });
@@ -425,6 +444,27 @@ void PtrNotOp::print(OpAsmPrinter &p) {
 void PtrNotOp::build(mlir::OpBuilder &builder, mlir::OperationState &state, Value v) {
     state.addOperands(v);
 };
+
+// === PTR LOAD ARRAY OP===
+// === PTR LOAD ARRAY OP===
+// === PTR LOAD ARRAY OP===
+// === PTR LOAD ARRAY OP===
+// === PTR LOAD ARRAY OP===
+
+
+ParseResult PtrLoadArrayOp::parse(OpAsmParser &parser, OperationState &result) {
+  assert(false && "unimplemented");
+};
+
+void PtrLoadArrayOp::print(OpAsmPrinter &p) {
+  p.printGenericOp(this->getOperation());
+};
+
+void PtrLoadArrayOp::build(mlir::OpBuilder &builder, mlir::OperationState &state, Value arr, Value ix) {
+    state.addOperands(arr);
+    state.addOperands(ix);
+};
+
 
 
 /*
@@ -929,6 +969,31 @@ public:
   }
 };
 
+struct PtrLoadArrayOpLowering : public ConversionPattern {
+public:
+  explicit PtrLoadArrayOpLowering(TypeConverter &tc, MLIRContext *context)
+      : ConversionPattern(PtrLoadArrayOp::getOperationName(), 1, tc, context) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *rator, ArrayRef<Value> rands,
+                  ConversionPatternRewriter &rewriter) const override {
+    PtrLoadArrayOp load = cast<PtrLoadArrayOp>(rator);
+    assert(rands.size() == 2);
+    rewriter.setInsertionPoint(rator);
+    
+    llvm::errs() << "building voidPtrTy...\n";
+    Type void_ptr_ptr_ty =  LLVM::LLVMPointerType::get(getInt8PtrTy(rewriter.getContext()));
+    llvm::errs() << "void_ptr_ptr_ty: |" << void_ptr_ptr_ty << "|\n";
+    LLVM::GEPOp gep = rewriter.create<LLVM::GEPOp>(rator->getLoc(), void_ptr_ptr_ty, rands[0], rands[1]);
+    llvm::errs() << "gep: |" << gep << "|\n";
+    LLVM::LoadOp gepload = rewriter.create<LLVM::LoadOp>(rator->getLoc(), gep);
+    rewriter.replaceOp(load, gepload.getResult());
+    return success();
+  }
+};
+
+
+
 // struct PtrBranchOpLowering : public ConversionPattern {
 // public:
 //   explicit PtrBranchOpLowering(TypeConverter &tc, MLIRContext *context)
@@ -1129,6 +1194,8 @@ struct LowerPointerPass : public Pass {
     patterns.insert<PtrFnPtrOpLowering>(typeConverter, &getContext());
     patterns.insert<PtrUnreachableOpLowering>(typeConverter, &getContext());
     patterns.insert<PtrNotOpLowering>(typeConverter, &getContext());
+    patterns.insert<PtrLoadArrayOpLowering>(typeConverter, &getContext());
+
     // patterns.insert<PtrBranchOpLowering>(typeConverter, &getContext());
 
 
