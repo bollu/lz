@@ -22,7 +22,7 @@ namespace Lean.IR.EmitMLIR
 open ExplicitBoxing (requiresBoxedVersion mkBoxedName isBoxedName)
 
 -- hack
-def closureMaxArgs : Nat := 4200
+-- def closureMaxArgs : Nat := 4200
 
 
 -- | type of owner, is the parent a funcop or a caseop
