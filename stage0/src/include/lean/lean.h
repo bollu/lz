@@ -290,7 +290,9 @@ typedef struct {
 
 static inline bool lean_is_scalar(lean_object * o) { return ((size_t)(o) & 1) == 1; }
 static inline lean_object * lean_box(size_t n) { return (lean_object*)(((size_t)(n) << 1) | 1); }
+static inline lean_object * lean_box_uint8(uint8_t n) { return lean_box(n); }
 static inline size_t lean_unbox(lean_object * o) { return (size_t)(o) >> 1; }
+static inline uint8_t lean_unbox_uint8(lean_object *o) { return lean_unbox(o); }
 
 void lean_set_exit_on_panic(bool flag);
 lean_object * lean_panic_fn(lean_object * default_val, lean_object * msg);
@@ -1310,6 +1312,41 @@ static inline lean_obj_res lean_nat_add(b_lean_obj_arg a1, b_lean_obj_arg a2) {
     else
         return lean_nat_big_add(a1, a2);
 }
+static inline uint8_t lean_usize_eq(size_t a, size_t b) {
+    return a == b;
+}
+static inline uint8_t lean_uint64_eq(uint64_t a, uint64_t b) {
+    return a == b;
+}
+static inline uint8_t lean_uint32_eq(uint32_t a, uint32_t b) {
+    return a == b;
+}
+static inline uint8_t lean_uint16_eq(uint16_t a, uint16_t b) {
+    return a == b;
+}
+static inline uint8_t lean_uint8_eq(uint8_t a, uint8_t b) {
+    return a == b;
+}
+static inline uint8_t lean_float_eq(double a, double b) {
+    return a == b;
+}
+
+
+
+static inline uint8_t lean_uint8_le(uint8_t a, uint8_t b) { return a <= b; }
+static inline uint8_t lean_uint16_le(uint16_t a, uint16_t b) { return a <= b; }
+static inline uint8_t lean_uint32_le(uint32_t a, uint32_t b) { return a <= b; }
+static inline uint8_t lean_uint64_le(uint64_t a, uint64_t b) { return a <= b; }
+static inline uint8_t lean_float_le(double a, double b) { return a <= b; }
+static inline uint8_t lean_usize_le(uint64_t a, uint64_t b) { return a <= b; }
+
+static inline uint8_t lean_uint8_lt(uint8_t a, uint8_t b) { return a < b; }
+static inline uint8_t lean_uint16_lt(uint16_t a, uint16_t b) { return a < b; }
+static inline uint8_t lean_uint32_lt(uint32_t a, uint32_t b) { return a < b; }
+static inline uint8_t lean_uint64_lt(uint64_t a, uint64_t b) { return a < b; }
+static inline uint8_t lean_float_lt(double a, double b) { return a < b; }
+static inline uint8_t lean_usize_lt(uint64_t a, uint64_t b) { return a < b; }
+
 
 static inline lean_obj_res lean_nat_sub(b_lean_obj_arg a1, b_lean_obj_arg a2) {
     if (LEAN_LIKELY(lean_is_scalar(a1) && lean_is_scalar(a2))) {
@@ -1869,6 +1906,19 @@ lean_obj_res lean_st_ref_swap(b_lean_obj_arg, lean_obj_arg, lean_obj_arg);
 /* pointer address unsafe primitive  */
 static inline size_t lean_ptr_addr(b_lean_obj_arg a) { return (size_t)a; }
 
+static inline double lean_float_add(double a, double b) { return a + b; }
+static inline double lean_float_sub(double a, double b) { return a - b; }
+static inline double lean_float_mul(double a, double b) { return a * b; }
+static inline double lean_float_div(double a, double b) { return a / b; }
+static inline double lean_float_negate(double a) { return -a; }
+
+static inline uint8_t lean_float_to_uint8(double a) { return (uint8_t) a; };
+static inline uint16_t lean_float_to_uint16(double a) { return (uint16_t) a; };
+static inline uint32_t lean_float_to_uint32(double a) { return (uint32_t) a; };
+static inline uint64_t lean_float_to_uint64(double a) { return (uint64_t) a; };
+static inline size_t lean_float_to_usize(double a) { return (size_t) a; };
+
+static inline lean_object *unsafeCast(lean_object *o) { return o; }
 #ifdef __cplusplus
 }
 #endif

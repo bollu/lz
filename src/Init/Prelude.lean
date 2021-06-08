@@ -1094,7 +1094,9 @@ def String.utf8ByteSize : (@& String) → Nat
   stopPos  := s.bsize
 }
 
-@[extern c inline "#3"]
+-- | JFC
+-- | we need this hack so we can call a function that dose nothing
+@[extern "unsafeCast"]
 unsafe def unsafeCast {α : Type u} {β : Type v} (a : α) : β :=
   cast lcProof (PUnit.{v})
 
