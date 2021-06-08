@@ -1910,6 +1910,7 @@ lean_obj_res lean_st_ref_swap(b_lean_obj_arg, lean_obj_arg, lean_obj_arg);
  double lean_float_mul(double a, double b) { return a * b; }
  double lean_float_div(double a, double b) { return a / b; }
  double lean_float_negate(double a) { return -a; }
+ lean_object *unsafeCast(lean_object *o) { return o; }
 
 
 #ifdef __cplusplus

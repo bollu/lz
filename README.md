@@ -24,6 +24,11 @@
 - [`fast-math` haskell library has some RULES limitations](https://github.com/liyang/fast-math/)
 
 # Thoughts on writing a new LEAN backend
+- Also, I should generate `llvm.switch` for efficiency.
+- Similary, I should check that me calling the intrinsics such as `lean_nat_sub`
+  does not impact my performance!
+- I should tag the values in the `library.ll` to be `alwaysinline` for performance.
+- I should generate `llvm.musttail`.
 - Please don't use things like function overloading (looking at you `lean_inc`).
 - The existence of `extern C inline` within the compiler / prelude makes stuff very complicated. Eg.
   the fact that adding `uint` is implemented using `[extern c inline "#1 + #2]` makes it complex to use,
