@@ -919,7 +919,7 @@ def emitNumLit (t : IRType) (v : Nat) : M Unit := do
       -- emit "lean_unsigned_to_nat("; emit v; emit "u)"
     else
      panicM "// ERR: lean_cstr_to_nat"
-     -- emit "call @lean_cstr_to_nat("; emit v; emit "\") : (!lz.value) -> !lz.value"
+     -- emit "call @lean_cstr_to_nat(%"; emit v; emit ") : (!lz.value) -> !lz.value"
   else
     emit "std.constant "; emit v; emit " : "; emitLn (toCType t);
 
