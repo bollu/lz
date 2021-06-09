@@ -69,6 +69,11 @@
 
 # Log:  [newest] to [oldest]
 
+# June 8
+
+- Scheme's design of laziness is very nice. they have force, delay, and clean semantics for what all of these mean.
+  Part of R5RS. Also, their thunks can have side effects.
+
 # June 3
 
 - CMake settings for test files:
