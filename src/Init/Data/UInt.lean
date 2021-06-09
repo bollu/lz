@@ -19,9 +19,9 @@ def UInt8.toNat (n : UInt8) : Nat := n.val.val
 @[extern "lean_uint8_add"]
 def UInt8.add (a b : UInt8) : UInt8 := ⟨a.val + b.val⟩
 
-@[extern c inline "#1 - #2"]
+-- @[extern c inline "#1 - #2"]
 def UInt8.sub (a b : UInt8) : UInt8 := ⟨a.val - b.val⟩
-@[extern c inline "#1 * #2"]
+-- @[extern c inline "#1 * #2"]
 def UInt8.mul (a b : UInt8) : UInt8 := ⟨a.val * b.val⟩
 -- @[extern c inline "#2 == 0 ? 0 : #1 / #2"]
 def UInt8.div (a b : UInt8) : UInt8 := ⟨a.val / b.val⟩
@@ -29,15 +29,15 @@ def UInt8.div (a b : UInt8) : UInt8 := ⟨a.val / b.val⟩
 def UInt8.mod (a b : UInt8) : UInt8 := ⟨a.val % b.val⟩
 @[extern "lean_uint8_modn"]
 def UInt8.modn (a : UInt8) (n : @& Nat) : UInt8 := ⟨a.val % n⟩
-@[extern c inline "#1 & #2"]
+-- @[extern c inline "#1 & #2"]
 def UInt8.land (a b : UInt8) : UInt8 := ⟨Fin.land a.val b.val⟩
-@[extern c inline "#1 | #2"]
+-- @[extern c inline "#1 | #2"]
 def UInt8.lor (a b : UInt8) : UInt8 := ⟨Fin.lor a.val b.val⟩
-@[extern c inline "#1 ^ #2"]
+-- @[extern c inline "#1 ^ #2"]
 def UInt8.xor (a b : UInt8) : UInt8 := ⟨Fin.xor a.val b.val⟩
-@[extern c inline "#1 << #2"]
+-- @[extern c inline "#1 << #2"]
 def UInt8.shiftLeft (a b : UInt8) : UInt8 := ⟨a.val <<< b.val⟩
-@[extern c inline "#1 >> #2"]
+-- @[extern c inline "#1 >> #2"]
 def UInt8.shiftRight (a b : UInt8) : UInt8 := ⟨a.val >>> b.val⟩
 def UInt8.lt (a b : UInt8) : Prop := a.val < b.val
 def UInt8.le (a b : UInt8) : Prop := a.val ≤ b.val
@@ -52,7 +52,7 @@ instance : Div UInt8       := ⟨UInt8.div⟩
 instance : HasLess UInt8   := ⟨UInt8.lt⟩
 instance : HasLessEq UInt8 := ⟨UInt8.le⟩
 
-@[extern c inline "~ #1"]
+-- @[extern c inline "~ #1"]
 def UInt8.complement (a:UInt8) : UInt8 := 0-(a+1)
 
 instance : Complement UInt8 := ⟨UInt8.complement⟩
@@ -84,11 +84,11 @@ def UInt16.ofNat (n : @& Nat) : UInt16 := ⟨Fin.ofNat n⟩
 abbrev Nat.toUInt16 := UInt16.ofNat
 @[extern "lean_uint16_to_nat"]
 def UInt16.toNat (n : UInt16) : Nat := n.val.val
-@[extern c inline "#1 + #2"]
+-- @[extern c inline "#1 + #2"]
 def UInt16.add (a b : UInt16) : UInt16 := ⟨a.val + b.val⟩
-@[extern c inline "#1 - #2"]
+-- @[extern c inline "#1 - #2"]
 def UInt16.sub (a b : UInt16) : UInt16 := ⟨a.val - b.val⟩
-@[extern c inline "#1 * #2"]
+-- @[extern c inline "#1 * #2"]
 def UInt16.mul (a b : UInt16) : UInt16 := ⟨a.val * b.val⟩
 -- @[extern c inline "#2 == 0 ? 0 : #1 / #2"]
 def UInt16.div (a b : UInt16) : UInt16 := ⟨a.val / b.val⟩
@@ -96,15 +96,15 @@ def UInt16.div (a b : UInt16) : UInt16 := ⟨a.val / b.val⟩
 def UInt16.mod (a b : UInt16) : UInt16 := ⟨a.val % b.val⟩
 @[extern "lean_uint16_modn"]
 def UInt16.modn (a : UInt16) (n : @& Nat) : UInt16 := ⟨a.val % n⟩
-@[extern c inline "#1 & #2"]
+-- @[extern c inline "#1 & #2"]
 def UInt16.land (a b : UInt16) : UInt16 := ⟨Fin.land a.val b.val⟩
-@[extern c inline "#1 | #2"]
+-- @[extern c inline "#1 | #2"]
 def UInt16.lor (a b : UInt16) : UInt16 := ⟨Fin.lor a.val b.val⟩
-@[extern c inline "#1 ^ #2"]
+-- @[extern c inline "#1 ^ #2"]
 def UInt16.xor (a b : UInt16) : UInt16 := ⟨Fin.xor a.val b.val⟩
-@[extern c inline "#1 << #2"]
+-- @[extern c inline "#1 << #2"]
 def UInt16.shiftLeft (a b : UInt16) : UInt16 := ⟨a.val <<< b.val⟩
-@[extern c inline "#1 >> #2"]
+-- @[extern c inline "#1 >> #2"]
 def UInt16.shiftRight (a b : UInt16) : UInt16 := ⟨a.val >>> b.val⟩
 def UInt16.lt (a b : UInt16) : Prop := a.val < b.val
 def UInt16.le (a b : UInt16) : Prop := a.val ≤ b.val
@@ -292,9 +292,9 @@ def USize.toNat (n : USize) : Nat := n.val.val
 @[extern c "lean_usize_add"]
 -- @[extern c inline "#1 + #2"]
 def USize.add (a b : USize) : USize := ⟨a.val + b.val⟩
-@[extern c inline "#1 - #2"]
+-- @[extern c inline "#1 - #2"]
 def USize.sub (a b : USize) : USize := ⟨a.val - b.val⟩
-@[extern c inline "#1 * #2"]
+-- @[extern c inline "#1 * #2"]
 def USize.mul (a b : USize) : USize := ⟨a.val * b.val⟩
 -- @[extern c inline "#2 == 0 ? 0 : #1 / #2"]
 def USize.div (a b : USize) : USize := ⟨a.val / b.val⟩
@@ -302,21 +302,21 @@ def USize.div (a b : USize) : USize := ⟨a.val / b.val⟩
 def USize.mod (a b : USize) : USize := ⟨a.val % b.val⟩
 @[extern "lean_usize_modn"]
 def USize.modn (a : USize) (n : @& Nat) : USize := ⟨a.val % n⟩
-@[extern c inline "#1 & #2"]
+-- @[extern c inline "#1 & #2"]
 def USize.land (a b : USize) : USize := ⟨Fin.land a.val b.val⟩
-@[extern c inline "#1 | #2"]
+-- @[extern c inline "#1 | #2"]
 def USize.lor (a b : USize) : USize := ⟨Fin.lor a.val b.val⟩
-@[extern c inline "#1 ^ #2"]
+-- @[extern c inline "#1 ^ #2"]
 def USize.xor (a b : USize) : USize := ⟨Fin.xor a.val b.val⟩
-@[extern c inline "#1 << #2"]
+-- @[extern c inline "#1 << #2"]
 def USize.shiftLeft (a b : USize) : USize := ⟨a.val <<< b.val⟩
-@[extern c inline "#1 >> #2"]
+-- @[extern c inline "#1 >> #2"]
 def USize.shiftRight (a b : USize) : USize := ⟨a.val >>> b.val⟩
-@[extern c inline "#1"]
+-- @[extern c inline "#1"]
 def UInt32.toUSize (a : UInt32) : USize := a.toNat.toUSize
-@[extern c inline "((size_t)#1)"]
+-- @[extern c inline "((size_t)#1)"]
 def UInt64.toUSize (a : UInt64) : USize := a.toNat.toUSize
-@[extern c inline "(uint32_t)#1"]
+-- @[extern c inline "(uint32_t)#1"]
 def USize.toUInt32 (a : USize) : UInt32 := a.toNat.toUInt32
 
 def USize.lt (a b : USize) : Prop := a.val < b.val
