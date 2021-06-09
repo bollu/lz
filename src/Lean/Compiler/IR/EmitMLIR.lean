@@ -1361,7 +1361,7 @@ def emitDeclInit (d : Decl) : M Unit := do
      let resIOName <- gensym "result"
      let worldName <- gensym "world"
     -- emit "res = "; emitCName n; emitLn "(lean_io_mk_world());"
-     emitLn $ "%" ++ worldName ++ " = " ++ "@lean_io_mk_world() : () -> !lz.value"
+     emitLn $ "%" ++ worldName ++ " = call @lean_io_mk_world() : () -> !lz.value"
      emit ("%" ++ resIOName ++ " = " ++ "call @"); emitCName n; emit "(%worldName)";
      emit " : (!lz.value) -> "; emit (toCType ∘ Decl.resultType $ d); emitLn "";
     -- emitLn "if (lean_io_result_is_error(res)) return res;"

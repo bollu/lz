@@ -64,7 +64,7 @@ instance : Neg Float       := ⟨Float.neg⟩
 instance : HasLess Float   := ⟨Float.lt⟩
 instance : HasLessEq Float := ⟨Float.le⟩
 
-@[extern c inline "#1 == #2"] constant Float.beq (a b : Float) : Bool
+@[extern c "lean_float_eq"] constant Float.beq (a b : Float) : Bool
 
 instance : BEq Float := ⟨Float.beq⟩
 
