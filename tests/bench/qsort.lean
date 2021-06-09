@@ -55,16 +55,12 @@ partitionAux lt hi pivot as lo lo
 @[inline] def qsort {α : Type} [Inhabited α] (as : Array α) (lt : α → α → Bool) : Array α :=
 qsortAux lt as 0 (UInt32.ofNat (as.size - 1))
 
--- def main (xs : List String) : IO Unit :=
--- do
--- let n := xs.head!.toNat!;
-def main : IO UInt32 :=
-let n := 100
+def main (xs : List String) : IO Unit :=
+do
+let n := xs.head!.toNat!;
 n.forM $ fun _ =>
 n.forM $ fun i => do
   let xs := mkRandomArray i (UInt32.ofNat i) Array.empty;
   let xs := qsort xs (fun a b => a < b);
-  -- let xs := xs
   --IO.println xs;
   checkSortedAux xs 0
-  return 0
