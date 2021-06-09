@@ -322,7 +322,8 @@ def emitPreamble : M Unit := do
   
 
   emitLn "func private @lean_io_mk_world() -> (!lz.value)"
-  emitLn "func private @lean_io_result_mk_ok(!lz.value) -> !lz.value"
+  emitLn "func private @lean_io_result_get_value(!lz.value) -> (!lz.value)"
+  emitLn "func private @lean_io_result_mk_ok(!lz.value) -> (!lz.value)"
   emitLn "func private @lean_mark_persistent(!lz.value) -> ()"
 
   emitLn "func private @lean_box_float(f64) -> (!lz.value)"
@@ -1362,7 +1363,7 @@ def emitDeclInit (d : Decl) : M Unit := do
      let worldName <- gensym "world"
     -- emit "res = "; emitCName n; emitLn "(lean_io_mk_world());"
      emitLn $ "%" ++ worldName ++ " = call @lean_io_mk_world() : () -> !lz.value"
-     emit ("%" ++ resIOName ++ " = " ++ "call @"); emitCName n; emit "(%worldName)";
+     emit ("%" ++ resIOName ++ " = " ++ "call @"); emitCName n; emit $ "(%" ++ worldName ++ ")";
      emit " : (!lz.value) -> "; emit (toCType ∘ Decl.resultType $ d); emitLn "";
     -- emitLn "if (lean_io_result_is_error(res)) return res;"
     -- emitLn "lean_dec_ref(res);"
@@ -1372,13 +1373,14 @@ def emitDeclInit (d : Decl) : M Unit := do
           -- emit "res = "; emitCName initFn; emitLn "(lean_io_mk_world());"
           let resIOName <- gensym "result"
           let worldName <- gensym "world"
-          emitLn $ "%" ++ worldName ++ " = " ++ "@lean_io_mk_world() : () -> !lz.value"
-          emit ("%" ++ resIOName ++ " = " ++ "call @"); emitCName initFn; emit "(%worldName)";
+          emitLn $ "%" ++ worldName ++ " = " ++ "call @lean_io_mk_world() : () -> !lz.value"
+          emit ("%" ++ resIOName ++ " = " ++ "call @"); emitCName initFn; 
+          emit $ "(%" ++ worldName ++ ")";
           emit " : (!lz.value) -> "; emit (toCType ∘ Decl.resultType $ d); emitLn "";
           -- emitLn "if (lean_io_result_is_error(res)) return res;"
           -- emitCName n; emitLn " = lean_io_result_get_value(res);"
           let resValueName <- gensym "resultVal"
-          emitLn $ "%" ++ resValueName ++ " = " ++ "std.call @lean_io_get_result_value(" ++ resIOName ++")"
+          emitLn $ "%" ++ resValueName ++ " = " ++ "std.call @lean_io_result_get_value(%" ++ resIOName ++") : (!lz.value) -> !lz.value"
           emit $ (escape "ptr.storeglobal"); 
           emit "(%";  emit resValueName; emit ")";
           emit "{value=@"; emitCName n; emit "}"
