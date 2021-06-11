@@ -806,13 +806,16 @@ def emitFullApp  (f : FunId) (ys : Array Arg) (tys: HashMap VarId IRType) : M Un
 --     let y := ys[i]
 --     emit "lean_closure_set("; emit z; emit ", "; emit i; emit ", "; emitArg y; emitLn ");"
 
+-- TODO: what is the difference between pap and papm? In particular,
+-- what are these CLOSURE_MAX_ARGS thing?
 def emitPartialApp (z : VarId) (f : FunId)
   (ys : Array Arg) (tys: HashMap VarId IRType): M Unit := do
   let decl ← getDecl f
   let arity := decl.params.size;
   emitLhs z; 
+  emitLn $ "// PAP ARITY: " ++ (toString decl.params.size) ++ " | num_fixed: " ++ toString ys.size;
   emit (escape "lz.pap"); emit "("; emitArgs ys; emit ") ";
-  emit "{value=@"; emitCName f; emit "} ";
+  emit "{value=@"; emitCName f; emit $ ", arity=" ++ (toString arity) ++ "} ";
   emit " : "; emit "("; emitArgsOnlyTys ys tys; emit ")"; emitLn " -> (!lz.value)";
   -- emit "lean_alloc_closure((void*)("; emitCName f; emit "), ";
   -- emit arity; emit ", "; emit ys.size; emitLn ");";
@@ -919,7 +922,7 @@ def emitNumLit (t : IRType) (v : Nat) : M Unit := do
       -- emit "lean_unsigned_to_nat("; emit v; emit "u)"
     else
      panicM "// ERR: lean_cstr_to_nat"
-     -- emit "call @lean_cstr_to_nat(%"; emit v; emit ") : (!lz.value) -> !lz.value"
+     -- emit "call @lean_cstr_to_nat("; emit v; emit "\") : (!lz.value) -> !lz.value"
   else
     emit "std.constant "; emit v; emit " : "; emitLn (toCType t);
 
