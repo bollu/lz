@@ -440,6 +440,7 @@ public:
         .getValue()
         .str();
   }
+  int getFnArity() { return this->getOperation()->getAttrOfType<IntegerAttr>("arity").getInt(); }
   int getNumFnArguments() { return this->getOperation()->getNumOperands(); };
   Value getFnArgument(int i) { return this->getOperation()->getOperand(i); };
 

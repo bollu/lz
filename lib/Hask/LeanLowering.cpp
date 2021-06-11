@@ -1733,7 +1733,7 @@ public:
     // const int arityint = calledFn.getNumArguments() > LEAN_CLOSURE_MAX_ARGS ? 1 : calledFn.getNumArguments();
     // const int arityint = calledFn.getNumArguments();
     Value arity = rewriter.create<ConstantIntOp>(
-        pap->getLoc(), calledFn.getNumArguments(), width);
+        pap->getLoc(), pap.getFnArity(), width);
     Value nargs = rewriter.create<ConstantIntOp>(
         pap->getLoc(), pap.getNumFnArguments(), width);
     mlir::SmallVector<Value, 4> allocArgs{fnptr, arity, nargs};

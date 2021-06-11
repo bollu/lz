@@ -24,6 +24,7 @@
 - [`fast-math` haskell library has some RULES limitations](https://github.com/liyang/fast-math/)
 
 # Thoughts on writing a new LEAN backend
+- Why only `closureMaxArgs` for `app` and not `pap`?
 - Also, I should generate `llvm.switch` for efficiency.
 - Similary, I should check that me calling the intrinsics such as `lean_nat_sub`
   does not impact my performance!
@@ -68,6 +69,19 @@
 
 
 # Log:  [newest] to [oldest]
+
+# June 11
+
+```
+The following tests FAILED:
+        568 - leancomptest_closure_bug1.lean (Failed)
+        569 - leancomptest_closure_bug2.lean (Failed)
+        570 - leancomptest_closure_bug3.lean (Failed)
+        576 - leancomptest_expr.lean (Failed)
+        585 - leancomptest_phashmap3.lean (Failed)
+        642 - leanplugintest_SnakeLinter.lean (Failed)
+```
+
 
 # June 8
 
