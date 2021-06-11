@@ -826,7 +826,7 @@ void CaseIntOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
 
 // for lambdapure.
 void CaseIntOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                  Value scrutinee, ArrayRef<NamedAttribute> lhss) {
+                      Value scrutinee, ArrayRef<NamedAttribute> lhss) {
   // assert(scrutinee.getType().isa<ValueType>());
   state.addOperands(scrutinee);
   // vvv TODO: Check if this is 0 or 1 indexed
@@ -837,7 +837,6 @@ void CaseIntOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
   // TODO/HACK! I need to fix the return type.
   state.addTypes(builder.getType<ValueType>());
 }
-
 
 // === THUNKIFY OP ===
 // === THUNKIFY OP ===
@@ -944,6 +943,39 @@ ParseResult HaskIntegerConstOp::parse(OpAsmParser &parser,
 };
 
 void HaskIntegerConstOp::print(OpAsmPrinter &p) {
+  p.printGenericOp(this->getOperation());
+  return;
+};
+
+// === HaskLargeIntegerConstOp  OP ===
+// === HaskLargeIntegerConstOp  OP ===
+// === HaskLargeIntegerConstOp  OP ===
+// === HaskLargeIntegerConstOp  OP ===
+// === HaskLargeIntegerConstOp  OP ===
+// === HaskLargeIntegerConstOp  OP ===
+
+void HaskLargeIntegerConstOp::build(mlir::OpBuilder &builder,
+                                    mlir::OperationState &state,
+                                    std::string s) {
+  state.addAttribute(HaskIntegerConstOp::getValueAttrKey(),
+                     builder.getStringAttr(s));
+  state.addTypes(builder.getType<ValueType>());
+};
+
+ParseResult HaskLargeIntegerConstOp::parse(OpAsmParser &parser,
+                                           OperationState &result) {
+  mlir::OpAsmParser::OperandType in;
+  mlir::StringAttr s;
+  if (parser.parseLParen() || parser.parseAttribute<mlir::StringAttr>(s) ||
+      parser.parseRParen()) {
+    return failure();
+  }
+  result.addAttribute(HaskLargeIntegerConstOp::getValueAttrKey(), s);
+  result.addTypes(parser.getBuilder().getType<ValueType>());
+  return success();
+};
+
+void HaskLargeIntegerConstOp::print(OpAsmPrinter &p) {
   p.printGenericOp(this->getOperation());
   return;
 };
@@ -1056,13 +1088,14 @@ void ErasedValueOp::print(OpAsmPrinter &p) {
 // === HaskJoinPointOp OP ===
 // === HaskJoinPointOp OP ===
 
-ParseResult HaskJoinPointOp::parse(OpAsmParser &parser, OperationState &result) {
+ParseResult HaskJoinPointOp::parse(OpAsmParser &parser,
+                                   OperationState &result) {
   assert(false && "unimplemented");
 };
 void HaskJoinPointOp::print(OpAsmPrinter &p) { p.printGenericOp(*this); };
 
-void HaskJoinPointOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                        int blockIx) {
+void HaskJoinPointOp::build(mlir::OpBuilder &builder,
+                            mlir::OperationState &state, int blockIx) {
   state.addRegion();
   state.addRegion();
   state.addAttribute("value", builder.getI64IntegerAttr(blockIx));
@@ -1104,11 +1137,11 @@ void HaskCaseRetOp::print(OpAsmPrinter &p) { p.printGenericOp(*this); };
 // === HaskCaseIntRetOp ===
 // === HaskCaseIntRetOp ===
 
-ParseResult HaskCaseIntRetOp::parse(OpAsmParser &parser, OperationState &result) {
+ParseResult HaskCaseIntRetOp::parse(OpAsmParser &parser,
+                                    OperationState &result) {
   assert(false && "unimplemented");
 };
 void HaskCaseIntRetOp::print(OpAsmPrinter &p) { p.printGenericOp(*this); };
-
 
 // === REUSE CONSTRUCTOR OP ===
 // === REUSE CONSTRUCTOR OP ===

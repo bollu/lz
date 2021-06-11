@@ -69,7 +69,8 @@ HaskDialect::HaskDialect(mlir::MLIRContext *context)
     , HaskCaseIntRetOp
     , ReuseConstructorOp
     , HaskCallOp
-    , ResetOp>();
+    , ResetOp
+    , HaskLargeIntegerConstOp>();
   addTypes<
     // HaskFnType,
     // ADTType,

@@ -417,6 +417,44 @@ public:
   }
 };
 
+class HaskLargeIntegerConstOpLowering : public ConversionPattern {
+public:
+  // (str: !lz.value) -> (mpz_int: !lz.value)
+  static FuncOp getOrCreateLeanCstrToNat(PatternRewriter &rewriter,
+                                             ModuleOp m) {
+    const std::string name = "lean_cstr_to_nat";
+    if (FuncOp fn = m.lookupSymbol<FuncOp>(name)) {
+      return fn;
+    }
+
+    MLIRContext *context = rewriter.getContext();
+    Type argty = ValueType::get(context);
+    Type retty = ValueType::get(context);
+    FunctionType fnty = rewriter.getFunctionType(argty, retty);
+
+    PatternRewriter::InsertionGuard insertGuard(rewriter);
+    rewriter.setInsertionPointToStart(m.getBody());
+    FuncOp fn = rewriter.create<FuncOp>(m.getLoc(), name, fnty);
+    fn.setPrivate();
+    return fn;
+  }
+
+  explicit HaskLargeIntegerConstOpLowering(TypeConverter &tc,
+                                           MLIRContext *context)
+      : ConversionPattern(HaskLargeIntegerConstOp::getOperationName(), 1, tc,
+                          context) {}
+  LogicalResult
+  matchAndRewrite(Operation *operation, ArrayRef<Value> rands,
+                  ConversionPatternRewriter &rewriter) const override {
+    HaskLargeIntegerConstOp op = cast<HaskLargeIntegerConstOp>(operation);
+    ModuleOp mod = op->getParentOfType<ModuleOp>();
+    FuncOp fn = getOrCreateLeanCstrToNat(rewriter, mod);
+    Value istr = rewriter.create<ptr::PtrStringOp>(rewriter.getUnknownLoc(), op.getValue());
+    rewriter.replaceOpWithNewOp<CallOp>(operation, fn, istr);
+    return success();
+  }
+};
+
 class HaskStringConstOpLowering : public ConversionPattern {
 public:
   // !ptr.void -> !ptr.void
@@ -2132,323 +2170,323 @@ struct LowerLeanPass : public Pass {
 
   }
 
-  void runOnOperation() override {
-    
-    {
+  void runOnOperation() override{
 
-      HaskTypeConverter typeConverter(&getContext());
-      mlir::OwningRewritePatternList patterns(&getContext());
-      ConversionTarget target(getContext());
-      target.addLegalDialect<HaskDialect, ptr::PtrDialect>();
-      target.addLegalDialect<StandardOpsDialect>();
-      target.addLegalDialect<AffineDialect>();
-      target.addLegalDialect<scf::SCFDialect>();
-      target.addLegalDialect<ptr::PtrDialect>();
-      target.addLegalOp<ModuleOp, ModuleTerminatorOp, FuncOp>();
+      {
 
+          HaskTypeConverter typeConverter(&getContext());
+  mlir::OwningRewritePatternList patterns(&getContext());
+  ConversionTarget target(getContext());
+  target.addLegalDialect<HaskDialect, ptr::PtrDialect>();
+  target.addLegalDialect<StandardOpsDialect>();
+  target.addLegalDialect<AffineDialect>();
+  target.addLegalDialect<scf::SCFDialect>();
+  target.addLegalDialect<ptr::PtrDialect>();
+  target.addLegalOp<ModuleOp, ModuleTerminatorOp, FuncOp>();
 
-      target.addIllegalOp<HaskCaseIntRetOp>();
-      target.addIllegalOp<HaskCaseRetOp>();
-      target.addIllegalOp<HaskJoinPointOp>();
-      // target.addIllegalOp<HaskJumpOp>();
+  target.addIllegalOp<HaskCaseIntRetOp>();
+  target.addIllegalOp<HaskCaseRetOp>();
+  target.addIllegalOp<HaskJoinPointOp>();
+  // target.addIllegalOp<HaskJumpOp>();
 
-      // target.addDynamicallyLegalOp<FuncOp>([](FuncOp funcOp) { return isTypeLegal(funcOp.getType()); });
-      // target.addDynamicallyLegalOp<ReturnOp>(isOpArgsAndResultsLegal<ReturnOp>);
-      // target.addDynamicallyLegalOp<BranchOp>(isOpArgsAndResultsLegal<BranchOp>);
-      // target.addDynamicallyLegalOp<ptr::PtrBranchOp>(isOpArgsAndResultsLegal<ptr::PtrBranchOp>);
-      // 
-      patterns.insert<HaskJoinPointOpLowering>(typeConverter, &getContext());
-      patterns.insert<HaskCaseRetOpConversionPattern>(typeConverter, &getContext());
-      patterns.insert<HaskCaseIntRetOpConversionPattern>(typeConverter, &getContext());
-      // patterns.insert<FuncOpLowering>(typeConverter, &getContext());
-      // patterns.insert<ReturnOpLowering>(typeConverter, &getContext());
-      // patterns.insert<BranchOpTypeConversion>(typeConverter, &getContext());
-      // patterns.insert<PtrBranchOpTypeConversion>(typeConverter, &getContext());
-      runPatterns(target, patterns);
-    }
+  // target.addDynamicallyLegalOp<FuncOp>([](FuncOp funcOp) { return
+  // isTypeLegal(funcOp.getType()); });
+  // target.addDynamicallyLegalOp<ReturnOp>(isOpArgsAndResultsLegal<ReturnOp>);
+  // target.addDynamicallyLegalOp<BranchOp>(isOpArgsAndResultsLegal<BranchOp>);
+  // target.addDynamicallyLegalOp<ptr::PtrBranchOp>(isOpArgsAndResultsLegal<ptr::PtrBranchOp>);
+  //
+  patterns.insert<HaskJoinPointOpLowering>(typeConverter, &getContext());
+  patterns.insert<HaskCaseRetOpConversionPattern>(typeConverter, &getContext());
+  patterns.insert<HaskCaseIntRetOpConversionPattern>(typeConverter,
+                                                     &getContext());
+  // patterns.insert<FuncOpLowering>(typeConverter, &getContext());
+  // patterns.insert<ReturnOpLowering>(typeConverter, &getContext());
+  // patterns.insert<BranchOpTypeConversion>(typeConverter, &getContext());
+  // patterns.insert<PtrBranchOpTypeConversion>(typeConverter, &getContext());
+  runPatterns(target, patterns);
+}
 
-    // === control flow has been lowered. lower simple instructions ===/
-    {
+// === control flow has been lowered. lower simple instructions ===/
+{
 
-      HaskTypeConverter typeConverter(&getContext());
-      mlir::OwningRewritePatternList patterns(&getContext());
-      ConversionTarget target(getContext());
-      target.addIllegalDialect<HaskDialect>();
-      target.addLegalDialect<ptr::PtrDialect>();
-      target.addLegalDialect<StandardOpsDialect>();
-      target.addLegalDialect<AffineDialect>();
-      target.addLegalDialect<scf::SCFDialect>();
-      target.addLegalDialect<ptr::PtrDialect>();
-      target.addLegalOp<ModuleOp, ModuleTerminatorOp, FuncOp>();
+  HaskTypeConverter typeConverter(&getContext());
+  mlir::OwningRewritePatternList patterns(&getContext());
+  ConversionTarget target(getContext());
+  target.addIllegalDialect<HaskDialect>();
+  target.addLegalDialect<ptr::PtrDialect>();
+  target.addLegalDialect<StandardOpsDialect>();
+  target.addLegalDialect<AffineDialect>();
+  target.addLegalDialect<scf::SCFDialect>();
+  target.addLegalDialect<ptr::PtrDialect>();
+  target.addLegalOp<ModuleOp, ModuleTerminatorOp, FuncOp>();
 
+  patterns.insert<HaskConstructOpLowering>(typeConverter, &getContext());
+  patterns.insert<ErasedValueOpLowering>(typeConverter, &getContext());
+  patterns.insert<TagGetOpLowering>(typeConverter, &getContext());
+  patterns.insert<PapExtendOpLowering>(typeConverter, &getContext());
+  patterns.insert<PapOpLowering>(typeConverter, &getContext());
+  patterns.insert<HaskStringConstOpLowering>(typeConverter, &getContext());
+  patterns.insert<HaskIntegerConstOpLowering>(typeConverter, &getContext());
+  patterns.insert<HaskLargeIntegerConstOpLowering>(typeConverter,
+                                                   &getContext());
+  patterns.insert<ProjectionOpLowering>(typeConverter, &getContext());
+  patterns.insert<CallOpLowering>(typeConverter, &getContext());
+  patterns.insert<ApOpConversionPattern>(typeConverter, &getContext());
+  patterns.insert<ApEagerOpConversionPattern>(typeConverter, &getContext());
+  patterns.insert<HaskReturnOpConversionPattern>(typeConverter, &getContext());
 
-      patterns.insert<HaskConstructOpLowering>(typeConverter, &getContext());
-      patterns.insert<ErasedValueOpLowering>(typeConverter, &getContext());
-      patterns.insert<TagGetOpLowering>(typeConverter, &getContext());
-      patterns.insert<PapExtendOpLowering>(typeConverter, &getContext());
-      patterns.insert<PapOpLowering>(typeConverter, &getContext());
-      patterns.insert<HaskStringConstOpLowering>(typeConverter, &getContext());
-      patterns.insert<HaskIntegerConstOpLowering>(typeConverter, &getContext());
-      patterns.insert<ProjectionOpLowering>(typeConverter, &getContext());
-      patterns.insert<CallOpLowering>(typeConverter, &getContext());
-      patterns.insert<ApOpConversionPattern>(typeConverter, &getContext());
-      patterns.insert<ApEagerOpConversionPattern>(typeConverter, &getContext());
-      patterns.insert<HaskReturnOpConversionPattern>(typeConverter,
-              &getContext());
+  // patterns.insert<FuncOpLowering>(typeConverter, &getContext());
+  // patterns.insert<ReturnOpLowering>(typeConverter, &getContext());
+  // patterns.insert<BranchOpTypeConversion>(typeConverter, &getContext());
+  runPatterns(target, patterns);
+  return;
+}
 
-      // patterns.insert<FuncOpLowering>(typeConverter, &getContext());
-      // patterns.insert<ReturnOpLowering>(typeConverter, &getContext());
-      // patterns.insert<BranchOpTypeConversion>(typeConverter, &getContext());
-      runPatterns(target, patterns);
-      return;
-    }
+/*
+// LLVMConversionTarget target(getContext());
+HaskTypeConverter typeConverter(&getContext());
+ConversionTarget target(getContext());
+target.addIllegalDialect<HaskDialect>();
+// target.addLegalDialect<HaskDialect>();
+// target.addIllegalOp<HaskConstructOp>();
 
+target.addLegalDialect<StandardOpsDialect>();
+target.addLegalDialect<AffineDialect>();
 
+// target.addLegalDialect<mlir::LLVM::LLVMDialect>();
+target.addLegalDialect<scf::SCFDialect>();
+target.addLegalDialect<ptr::PtrDialect>();
 
-    /*
-    // LLVMConversionTarget target(getContext());
-    HaskTypeConverter typeConverter(&getContext());
-    ConversionTarget target(getContext());
-    target.addIllegalDialect<HaskDialect>();
-    // target.addLegalDialect<HaskDialect>();
-    // target.addIllegalOp<HaskConstructOp>();
+target.addLegalOp<ModuleOp, ModuleTerminatorOp>();
 
-    target.addLegalDialect<StandardOpsDialect>();
-    target.addLegalDialect<AffineDialect>();
+target.addDynamicallyLegalOp<ConstantOp>(
+    [](ConstantOp op) { return isTypeLegal(op.getType()); });
 
-    // target.addLegalDialect<mlir::LLVM::LLVMDialect>();
-    target.addLegalDialect<scf::SCFDialect>();
-    target.addLegalDialect<ptr::PtrDialect>();
+// This is wrong. We need to recursively check if function type
+// is legal.
+target.addDynamicallyLegalOp<FuncOp>(
+    [](FuncOp funcOp) { return isTypeLegal(funcOp.getType()); });
 
-    target.addLegalOp<ModuleOp, ModuleTerminatorOp>();
-
-    target.addDynamicallyLegalOp<ConstantOp>(
-        [](ConstantOp op) { return isTypeLegal(op.getType()); });
-
-    // This is wrong. We need to recursively check if function type
-    // is legal.
-    target.addDynamicallyLegalOp<FuncOp>(
-        [](FuncOp funcOp) { return isTypeLegal(funcOp.getType()); });
-
-    target.addDynamicallyLegalOp<ReturnOp>([](ReturnOp ret) {
-      for (Value arg : ret.getOperands()) {
-        if (!isTypeLegal(arg.getType())) {
-          return false;
-        }
-      }
-      return true;
-    });
-
-
-    target.addDynamicallyLegalOp<CallOp>([](CallOp call) {
-      for (Value arg : call.getOperands()) {
-        if (!isTypeLegal(arg.getType())) {
-          return false;
-        }
-      }
-
-      for (Type t : call.getResultTypes()) {
-        if (!isTypeLegal(t)) {
-          return false;
-        }
-      }
-      return true;
-    });
-
-  // target.addDynamicallyLegalOp<CallIndirectOp>([](CallIndirectOp call) {
-
-  //   llvm::errs() << "===Checking callIndirectOp===\n";
-  //   for (Value arg : call.getOperands()) {
-  //     llvm::errs() << " - " << arg.getType() << "\n";
-  //     if (!isTypeLegal(arg.getType())) {
-  //       return false;
-  //     }
-  //   }
-  //   for (Type t : call.getResultTypes()) {
-  //     llvm::errs() << " - " << t << "\n";
-  //     if (!isTypeLegal(t)) {
-  //       return false;
-  //     }
-  //   }
-  //   llvm::errs() << "\n===\n";
-  //   return true;
-  // });
-
-    target.addDynamicallyLegalOp<memref::AllocOp>(
-        [](memref::AllocOp op) { return isTypeLegal(op.getType()); });
-
-    target.addDynamicallyLegalOp<memref::StoreOp>([](memref::StoreOp store) {
-      return isTypeLegal(store.getMemRefType()) &&
-             isTypeLegal(store.getValueToStore().getType());
-    });
-
-    target.addDynamicallyLegalOp<memref::LoadOp>([](memref::LoadOp load) {
-      return isTypeLegal(load.getMemRefType()) &&
-             isTypeLegal(load.getResult().getType());
-    });
-
-    target.addDynamicallyLegalOp<AffineLoadOp>([](mlir::AffineLoadOp load) {
-      return isTypeLegal(load.getMemRefType()) &&
-             isTypeLegal(load.getResult().getType());
-    });
-
-    target.addDynamicallyLegalOp<AffineStoreOp>([](mlir::AffineStoreOp op) {
-      for (Value arg : op.getOperands()) {
-        if (!isTypeLegal(arg.getType())) {
-          return false;
-        }
-      }
-
-      return true;
-    });
-
-    target.addDynamicallyLegalOp<AffineForOp>([](mlir::AffineForOp op) {
-      for (Value arg : op.getOperands()) {
-        if (!isTypeLegal(arg.getType())) {
-          return false;
-        }
-      }
-
-      for (Type t : op.getResultTypes()) {
-        if (!isTypeLegal(t)) {
-          return false;
-        }
-      }
-      return true;
-    });
-
-    target.addDynamicallyLegalOp<mlir::scf::YieldOp>([](scf::YieldOp yield) {
-      for (Type t : yield.getOperandTypes()) {
-        if (!isTypeLegal(t)) {
-          llvm::errs() << "ILLEGAL scfOperandType: |" << t << "|\n";
-          return false;
-        }
-      }
-      return true;
-    });
-
-    target.addDynamicallyLegalOp<mlir::AffineYieldOp>([](AffineYieldOp yield) {
-      for (Type t : yield.getOperandTypes()) {
-        if (!isTypeLegal(t)) {
-          return false;
-        }
-      }
-      return true;
-    });
-
-    target.addDynamicallyLegalOp<ptr::PtrGlobalOp>(
-        [](ptr::PtrGlobalOp p) { return isTypeLegal(p.getGlobalType()); });
-
-    target.addDynamicallyLegalOp<ptr::PtrLoadGlobalOp>(
-        [](ptr::PtrLoadGlobalOp p) { return isTypeLegal(p.getGlobalType()); });
-
-    target.addDynamicallyLegalOp<ptr::PtrStoreGlobalOp>(
-        [](ptr::PtrStoreGlobalOp p) {
-          return isTypeLegal(p.getOperand().getType());
-        });
-
-    target.addDynamicallyLegalOp<ptr::PtrFnPtrOp>(
-        [](ptr::PtrFnPtrOp p) { return isTypeLegal(p.getGlobalType()); });
-
-    target.addDynamicallyLegalOp<BranchOp>([](BranchOp br) {
-      for (int i = 0; i < (int)br->getNumOperands(); ++i) {
-        if (!isTypeLegal(br.getOperand(i).getType())) {
-          return false;
-        }
-      }
-      return true;
-    });
-
-    target.addDynamicallyLegalOp<ptr::PtrBranchOp>([](ptr::PtrBranchOp br) {
+target.addDynamicallyLegalOp<ReturnOp>([](ReturnOp ret) {
+  for (Value arg : ret.getOperands()) {
+    if (!isTypeLegal(arg.getType())) {
       return false;
-      for (int i = 0; i < (int)br->getNumOperands(); ++i) {
-        if (!isTypeLegal(br.getOperand(i).getType())) {
-          return false;
-        }
-      }
-      return true;
+    }
+  }
+  return true;
+});
+
+
+target.addDynamicallyLegalOp<CallOp>([](CallOp call) {
+  for (Value arg : call.getOperands()) {
+    if (!isTypeLegal(arg.getType())) {
+      return false;
+    }
+  }
+
+  for (Type t : call.getResultTypes()) {
+    if (!isTypeLegal(t)) {
+      return false;
+    }
+  }
+  return true;
+});
+
+// target.addDynamicallyLegalOp<CallIndirectOp>([](CallIndirectOp call) {
+
+//   llvm::errs() << "===Checking callIndirectOp===\n";
+//   for (Value arg : call.getOperands()) {
+//     llvm::errs() << " - " << arg.getType() << "\n";
+//     if (!isTypeLegal(arg.getType())) {
+//       return false;
+//     }
+//   }
+//   for (Type t : call.getResultTypes()) {
+//     llvm::errs() << " - " << t << "\n";
+//     if (!isTypeLegal(t)) {
+//       return false;
+//     }
+//   }
+//   llvm::errs() << "\n===\n";
+//   return true;
+// });
+
+target.addDynamicallyLegalOp<memref::AllocOp>(
+    [](memref::AllocOp op) { return isTypeLegal(op.getType()); });
+
+target.addDynamicallyLegalOp<memref::StoreOp>([](memref::StoreOp store) {
+  return isTypeLegal(store.getMemRefType()) &&
+         isTypeLegal(store.getValueToStore().getType());
+});
+
+target.addDynamicallyLegalOp<memref::LoadOp>([](memref::LoadOp load) {
+  return isTypeLegal(load.getMemRefType()) &&
+         isTypeLegal(load.getResult().getType());
+});
+
+target.addDynamicallyLegalOp<AffineLoadOp>([](mlir::AffineLoadOp load) {
+  return isTypeLegal(load.getMemRefType()) &&
+         isTypeLegal(load.getResult().getType());
+});
+
+target.addDynamicallyLegalOp<AffineStoreOp>([](mlir::AffineStoreOp op) {
+  for (Value arg : op.getOperands()) {
+    if (!isTypeLegal(arg.getType())) {
+      return false;
+    }
+  }
+
+  return true;
+});
+
+target.addDynamicallyLegalOp<AffineForOp>([](mlir::AffineForOp op) {
+  for (Value arg : op.getOperands()) {
+    if (!isTypeLegal(arg.getType())) {
+      return false;
+    }
+  }
+
+  for (Type t : op.getResultTypes()) {
+    if (!isTypeLegal(t)) {
+      return false;
+    }
+  }
+  return true;
+});
+
+target.addDynamicallyLegalOp<mlir::scf::YieldOp>([](scf::YieldOp yield) {
+  for (Type t : yield.getOperandTypes()) {
+    if (!isTypeLegal(t)) {
+      llvm::errs() << "ILLEGAL scfOperandType: |" << t << "|\n";
+      return false;
+    }
+  }
+  return true;
+});
+
+target.addDynamicallyLegalOp<mlir::AffineYieldOp>([](AffineYieldOp yield) {
+  for (Type t : yield.getOperandTypes()) {
+    if (!isTypeLegal(t)) {
+      return false;
+    }
+  }
+  return true;
+});
+
+target.addDynamicallyLegalOp<ptr::PtrGlobalOp>(
+    [](ptr::PtrGlobalOp p) { return isTypeLegal(p.getGlobalType()); });
+
+target.addDynamicallyLegalOp<ptr::PtrLoadGlobalOp>(
+    [](ptr::PtrLoadGlobalOp p) { return isTypeLegal(p.getGlobalType()); });
+
+target.addDynamicallyLegalOp<ptr::PtrStoreGlobalOp>(
+    [](ptr::PtrStoreGlobalOp p) {
+      return isTypeLegal(p.getOperand().getType());
     });
 
-    target.addDynamicallyLegalOp<ReturnOp>([](ReturnOp ret) {
-      for (int i = 0; i < (int)ret->getNumOperands(); ++i) {
-        if (!isTypeLegal(ret.getOperand(i).getType())) {
-          return false;
-        }
-      }
-      return true;
-    });
+target.addDynamicallyLegalOp<ptr::PtrFnPtrOp>(
+    [](ptr::PtrFnPtrOp p) { return isTypeLegal(p.getGlobalType()); });
 
-    
+target.addDynamicallyLegalOp<BranchOp>([](BranchOp br) {
+  for (int i = 0; i < (int)br->getNumOperands(); ++i) {
+    if (!isTypeLegal(br.getOperand(i).getType())) {
+      return false;
+    }
+  }
+  return true;
+});
+
+target.addDynamicallyLegalOp<ptr::PtrBranchOp>([](ptr::PtrBranchOp br) {
+  return false;
+  for (int i = 0; i < (int)br->getNumOperands(); ++i) {
+    if (!isTypeLegal(br.getOperand(i).getType())) {
+      return false;
+    }
+  }
+  return true;
+});
+
+target.addDynamicallyLegalOp<ReturnOp>([](ReturnOp ret) {
+  for (int i = 0; i < (int)ret->getNumOperands(); ++i) {
+    if (!isTypeLegal(ret.getOperand(i).getType())) {
+      return false;
+    }
+  }
+  return true;
+});
 
 
-    mlir::OwningRewritePatternList patterns(&getContext());
 
-    // patterns.insert<ForceOpConversionPattern>(typeConverter, &getContext());
-    patterns.insert<CaseOpConversionPattern>(typeConverter, &getContext());
-    patterns.insert<CaseIntOpConversionPattern>(typeConverter, &getContext());
 
-    patterns.insert<HaskConstructOpLowering>(typeConverter, &getContext());
+mlir::OwningRewritePatternList patterns(&getContext());
 
-    // patterns.insert<ThunkifyOpLowering>(typeConverter,
-    // &getContext());
-    patterns.insert<ErasedValueOpLowering>(typeConverter, &getContext());
-    patterns.insert<TagGetOpLowering>(typeConverter, &getContext());
-    patterns.insert<PapExtendOpLowering>(typeConverter, &getContext());
-    patterns.insert<PapOpLowering>(typeConverter, &getContext());
-    patterns.insert<HaskStringConstOpLowering>(typeConverter, &getContext());
-    patterns.insert<HaskJoinPointOpLowering>(typeConverter, &getContext());
-    // patterns.insert<HaskJumpOpLowering>(typeConverter, &getContext());
+// patterns.insert<ForceOpConversionPattern>(typeConverter, &getContext());
+patterns.insert<CaseOpConversionPattern>(typeConverter, &getContext());
+patterns.insert<CaseIntOpConversionPattern>(typeConverter, &getContext());
 
-    patterns.insert<HaskIntegerConstOpLowering>(typeConverter, &getContext());
-    patterns.insert<ProjectionOpLowering>(typeConverter, &getContext());
+patterns.insert<HaskConstructOpLowering>(typeConverter, &getContext());
 
-    patterns.insert<ConstantOpLowering>(typeConverter, &getContext());
-    patterns.insert<FuncOpLowering>(typeConverter, &getContext());
-    patterns.insert<ReturnOpLowering>(typeConverter, &getContext());
+// patterns.insert<ThunkifyOpLowering>(typeConverter,
+// &getContext());
+patterns.insert<ErasedValueOpLowering>(typeConverter, &getContext());
+patterns.insert<TagGetOpLowering>(typeConverter, &getContext());
+patterns.insert<PapExtendOpLowering>(typeConverter, &getContext());
+patterns.insert<PapOpLowering>(typeConverter, &getContext());
+patterns.insert<HaskStringConstOpLowering>(typeConverter, &getContext());
+patterns.insert<HaskJoinPointOpLowering>(typeConverter, &getContext());
+// patterns.insert<HaskJumpOpLowering>(typeConverter, &getContext());
 
-    patterns.insert<CallOpLowering>(typeConverter, &getContext());
-    //    patterns.insert<CallIndirectOpLowering>(typeConverter, &getContext());
-    patterns.insert<ScfYieldOpLowering>(typeConverter, &getContext());
+patterns.insert<HaskIntegerConstOpLowering>(typeConverter, &getContext());
+patterns.insert<ProjectionOpLowering>(typeConverter, &getContext());
 
-    // patterns.insert<ApOpConversionPattern>(typeConverter, &getContext());
-    // patterns.insert<ApEagerOpConversionPattern>(typeConverter,
-    // &getContext());
-    patterns.insert<HaskReturnOpConversionPattern>(typeConverter,
+patterns.insert<ConstantOpLowering>(typeConverter, &getContext());
+patterns.insert<FuncOpLowering>(typeConverter, &getContext());
+patterns.insert<ReturnOpLowering>(typeConverter, &getContext());
+
+patterns.insert<CallOpLowering>(typeConverter, &getContext());
+//    patterns.insert<CallIndirectOpLowering>(typeConverter, &getContext());
+patterns.insert<ScfYieldOpLowering>(typeConverter, &getContext());
+
+// patterns.insert<ApOpConversionPattern>(typeConverter, &getContext());
+// patterns.insert<ApEagerOpConversionPattern>(typeConverter,
+// &getContext());
+patterns.insert<HaskReturnOpConversionPattern>(typeConverter,
+                                               &getContext());
+
+patterns.insert<AllocOpLowering>(typeConverter, &getContext());
+patterns.insert<StoreOpLowering>(typeConverter, &getContext());
+patterns.insert<LoadOpLowering>(typeConverter, &getContext());
+patterns.insert<AffineLoadOpLowering>(typeConverter, &getContext());
+patterns.insert<AffineStoreOpLowering>(typeConverter, &getContext());
+patterns.insert<AffineYieldOpLowering>(typeConverter, &getContext());
+patterns.insert<HaskCaseRetOpConversionPattern>(typeConverter,
+                                                &getContext());
+patterns.insert<HaskCaseIntRetOpConversionPattern>(typeConverter,
                                                    &getContext());
 
-    patterns.insert<AllocOpLowering>(typeConverter, &getContext());
-    patterns.insert<StoreOpLowering>(typeConverter, &getContext());
-    patterns.insert<LoadOpLowering>(typeConverter, &getContext());
-    patterns.insert<AffineLoadOpLowering>(typeConverter, &getContext());
-    patterns.insert<AffineStoreOpLowering>(typeConverter, &getContext());
-    patterns.insert<AffineYieldOpLowering>(typeConverter, &getContext());
-    patterns.insert<HaskCaseRetOpConversionPattern>(typeConverter,
-                                                    &getContext());
-    patterns.insert<HaskCaseIntRetOpConversionPattern>(typeConverter,
-                                                       &getContext());
+patterns.insert<AffineForOpLowering>(typeConverter, &getContext());
 
-    patterns.insert<AffineForOpLowering>(typeConverter, &getContext());
+patterns.insert<PtrBranchOpTypeConversion>(typeConverter, &getContext());
 
-    patterns.insert<PtrBranchOpTypeConversion>(typeConverter, &getContext());
+patterns.insert<BranchOpTypeConversion>(typeConverter, &getContext());
+patterns.insert<ReturnOpTypeConversion>(typeConverter, &getContext());
 
-    patterns.insert<BranchOpTypeConversion>(typeConverter, &getContext());
-    patterns.insert<ReturnOpTypeConversion>(typeConverter, &getContext());
+patterns.insert<PtrGlobalOpTypeConversion>(typeConverter, &getContext());
+patterns.insert<PtrLoadGlobalOpTypeConversion>(typeConverter,
+                                               &getContext());
+patterns.insert<PtrStoreGlobalOpTypeConversion>(typeConverter,
+                                                &getContext());
+patterns.insert<PtrFnPtrOpTypeConversion>(typeConverter, &getContext());
 
-    patterns.insert<PtrGlobalOpTypeConversion>(typeConverter, &getContext());
-    patterns.insert<PtrLoadGlobalOpTypeConversion>(typeConverter,
-                                                   &getContext());
-    patterns.insert<PtrStoreGlobalOpTypeConversion>(typeConverter,
-                                                    &getContext());
-    patterns.insert<PtrFnPtrOpTypeConversion>(typeConverter, &getContext());
+// this only exists for type conversion reasons. Will be eliminated
+// target.addIllegalOp<mlir::ptr::HaskValueToPtrOp>();
+// patterns.insert<HaskValueToPtrOpTypeConversion>(typeConverter,
+&getContext());
 
-    // this only exists for type conversion reasons. Will be eliminated
-    // target.addIllegalOp<mlir::ptr::HaskValueToPtrOp>();
-    // patterns.insert<HaskValueToPtrOpTypeConversion>(typeConverter, &getContext());
-    
 
-    runPatterns(target, patterns);
-    */
-  };
+runPatterns(target, patterns);
+*/
+}; // namespace
 };
 } // end anonymous namespace.
 

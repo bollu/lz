@@ -537,6 +537,30 @@ public:
                  &effects) {}
 };
 
+class HaskLargeIntegerConstOp
+    : public Op<HaskLargeIntegerConstOp, OpTrait::ZeroOperands,
+                OpTrait::OneResult, OpTrait::ZeroRegion,
+                MemoryEffectOpInterface::Trait> {
+public:
+  using Op::Op;
+  static StringRef getOperationName() { return "lz.largeint"; };
+  static const char *getValueAttrKey() { return "value"; }
+
+  static ParseResult parse(OpAsmParser &parser, OperationState &result);
+  void print(OpAsmPrinter &p);
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                    std::string s);
+  std::string getValue() {
+    return this->getOperation()
+        ->getAttrOfType<StringAttr>(getValueAttrKey())
+        .getValue()
+        .str();
+  }
+  void
+  getEffects(SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+                 &effects) {}
+};
+
 class HaskStringConstOp
     : public Op<HaskStringConstOp, OpTrait::ZeroOperands, OpTrait::OneResult,
                 OpTrait::ZeroRegion, MemoryEffectOpInterface::Trait> {
