@@ -110,6 +110,13 @@ def emitI64 (name : String) (v: Nat) : M String := do
   emitLn  $ "%" ++ lhs ++ " = " ++ "std.constant " ++ (toString v) ++ " : i64";
   return lhs;
 
+def emitString (name : String) (v: String) : M String := do
+  let lhs <- gensym name;
+  emit  $ "%" ++ lhs ++ " = " ++ (escape "ptr.string ()");
+  emitLn $ "{value=\"" ++ (toString v) ++ "\"} : () -> (!lz.value)"
+  return lhs;
+
+
 def emitLns {α : Type} [ToString α] (as : List α) : M Unit :=
   as.forM fun a => emitLn a
 
@@ -350,6 +357,8 @@ def emitPreamble : M Unit := do
   emitLn "func private @lean_alloc_ctor(i64, i64, i64) -> (!lz.value)"
   emitLn "func private @lean_ctor_release(!lz.value, i64) -> ()"
   emitLn "func private @lean_ctor_set_tag(!lz.value, i64) -> ()"
+
+  emitLn "func private @lean_cstr_to_nat(!lz.value) -> (!lz.value)"
   -- emitLn "func private @lean_uint32_eq(i32, i32) -> (i8)"
 
   emitLn "func private @lean_free_object(!lz.value) -> ()"
@@ -921,8 +930,10 @@ def emitNumLit (t : IRType) (v : Nat) : M Unit := do
       emit ": () ->"; emit "(";  emit (toCType t); emit ")"; emit "\n";
       -- emit "lean_unsigned_to_nat("; emit v; emit "u)"
     else
-     panicM "// ERR: lean_cstr_to_nat"
-     -- emit "call @lean_cstr_to_nat("; emit v; emit "\") : (!lz.value) -> !lz.value"
+     -- panicM "// ERR: lean_cstr_to_nat"
+    emit (escape "lz.largeint");
+    emit "(){value="; emit (escape v); emit "}"; 
+    emitLn $ ": () -> (!lz.value)"   
   else
     emit "std.constant "; emit v; emit " : "; emitLn (toCType t);
 
