@@ -22,6 +22,7 @@
 - [supercompiler by evaluation](https://www.microsoft.com/en-us/research/wp-content/uploads/2016/07/supercomp-by-eval.pdf)
 - [GHC grin has benchmark suite](https://github.com/grin-compiler/ghc-grin/tree/master/ghc-grin-benchmark/boquist-grin-bench)
 - [`fast-math` haskell library has some RULES limitations](https://github.com/liyang/fast-math/)
+- [Another example where fusion is bad for `Text`](https://github.com/haskell/text/pull/348)
 
 # Thoughts on writing a new LEAN backend
 - Why only `closureMaxArgs` for `app` and not `pap`?
