@@ -1,9 +1,19 @@
 # Core-MLIR
 
+# Points
+- Experience report on writing a LEAN backend.
+- inline C string is a huge pain.
+- Optimisations that you'd be interested to implement?
+- Upstreaming?
+- Help formalizing the document?
+
+
+
+
+
+
+
 # Priority queue
-- get `render.lean` working!
-- Finish implementing arrays.
-- Make LEAN lazy.
 - Composition of `head . sort` to be lazy.
 - [Real number representations](representation:https://github.com/bollu/fractions/blob/master/potts-phd-exact-real-using-mobius.pdf )
 - Standard data structures examples of how purity without laziness pays a
@@ -71,7 +81,12 @@
 
 # Log:  [newest] to [oldest]
 
+# June 12
+- MLIR: try to use last stable release, and find the delta.
+
+
 # June 11
+
 
 ```
 The following tests FAILED:

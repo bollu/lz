@@ -515,20 +515,21 @@ public:
 class CallOpLowering : public ConversionPattern {
 public:
   explicit CallOpLowering(TypeConverter &tc, MLIRContext *context)
-      : ConversionPattern(CallOp::getOperationName(), 1, tc, context) {}
+      : ConversionPattern(HaskCallOp::getOperationName(), 1, tc, context) {}
 
   LogicalResult
   matchAndRewrite(Operation *operation, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    auto call = cast<CallOp>(operation);
+    auto call = cast<HaskCallOp>(operation);
     SmallVector<Type, 4> resultTypes;
     if (failed(
-            typeConverter->convertTypes(call.getResultTypes(), resultTypes))) {
+            typeConverter->convertTypes(call->getResultTypes(), resultTypes))) {
       return failure();
     }
 
-    rewriter.replaceOpWithNewOp<CallOp>(operation, call.getCallee(),
+    CallOp newcall = rewriter.replaceOpWithNewOp<CallOp>(operation, call.getCallee(),
                                         resultTypes, operands);
+    newcall->setAttr("musttail", rewriter.getStringAttr("true"));
     return success();
   }
 };

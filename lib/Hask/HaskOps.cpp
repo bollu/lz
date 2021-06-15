@@ -1196,6 +1196,14 @@ void ResetOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
 // === HASK CALL OP ===
 // === HASK CALL OP ===
 
+void HaskCallOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                    std::string fnname, mlir::TypeRange resultTys, mlir::ValueRange operands) {
+    state.addAttribute("value", builder.getStringAttr(fnname));
+    state.addOperands(operands);
+    state.addTypes(resultTys);
+}
+
+
 ParseResult HaskCallOp::parse(OpAsmParser &parser, OperationState &result) {
   assert(false && "unimplemented");
 }

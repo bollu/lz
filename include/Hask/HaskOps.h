@@ -714,11 +714,14 @@ class HaskCallOp
 public:
   using Op::Op;
   static const char *getFnNameKey() { return "value"; }
-  const StringRef getFnName() {
+  const StringRef getCallee() {
     return this->getOperation()
         ->getAttrOfType<FlatSymbolRefAttr>("value")
         .getValue();
   }
+
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                    std::string fnname, mlir::TypeRange resultTys, mlir::ValueRange operands);
 
   static StringRef getOperationName() { return "lz.call"; };
   static ParseResult parse(OpAsmParser &parser, OperationState &result);

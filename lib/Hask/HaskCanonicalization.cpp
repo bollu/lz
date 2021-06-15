@@ -109,7 +109,7 @@ struct CanonicalizeHaskCallPattern : public mlir::OpRewritePattern<HaskCallOp> {
   matchAndRewrite(HaskCallOp call,
                   mlir::PatternRewriter &rewriter) const override {
     rewriter.setInsertionPoint(call);
-    StringRef fnname = call.getFnName();
+    StringRef fnname = call.getCallee();
     ModuleOp mod = call->getParentOfType<ModuleOp>();
     ValueType vty = rewriter.getType<ValueType>();
 
@@ -120,8 +120,13 @@ struct CanonicalizeHaskCallPattern : public mlir::OpRewritePattern<HaskCallOp> {
     mlir::SmallVector<mlir::Type, 4> resultTys{vty};
 
     rewriter.setInsertionPointAfter(call);
-    rewriter.replaceOpWithNewOp<CallOp>(call, fnname, resultTys,
+
+    // TODO: think about if I really want to recreate the op.
+    // rewriter.replaceOpWithNewOp<CallOp>(call, fnname, resultTys,
+    //                                     call->getOperands());
+    rewriter.replaceOpWithNewOp<HaskCallOp>(call, fnname.str(), resultTys,
                                         call->getOperands());
+    
     // module has the function.
     if (mod.lookupSymbol<FuncOp>(fnname)) {
       return failure();
