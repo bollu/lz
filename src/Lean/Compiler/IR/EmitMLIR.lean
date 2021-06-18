@@ -33,6 +33,8 @@ inductive OwningBlockType where
 inductive EmitIrrelevant where
   | yes | no
 
+inductive IsTail where 
+  | yes | no
 
 -- def mkModuleInitializationFunctionName (moduleName : Name) : String :=
 def mkModuleInitializationFunctionNameHACK (moduleName : Name) : String :=
@@ -765,7 +767,7 @@ def emitExternCall (f : FunId)
   | _ => throw s!"failed to emit extern application '{f}'"
 
 
-def emitFullApp  (f : FunId) (ys : Array Arg) (tys: HashMap VarId IRType) : M Unit := do
+def emitFullApp  (f : FunId) (ys : Array Arg) (tys: HashMap VarId IRType) (tail: IsTail): M Unit := do
   let decl ← getDecl f
   match decl with
   | Decl.extern _ ps _ extData => do        
@@ -792,11 +794,14 @@ def emitFullApp  (f : FunId) (ys : Array Arg) (tys: HashMap VarId IRType) : M Un
       emitLn "// <== ERR: emitFullApp (pointer)"
       emitLn "";
     else 
-      emit "call "
-      emit "@";
+      emit (escape "lz.call");
       let cname <-  toCName f
-      emit (escape cname)
+      -- emit $ "@" ++ (escape cname) ++ " ";
       emit "("; emitArgs ys; emit ")" 
+      emit $ "{value=@" ++ (escape cname);
+      match tail with 
+       | IsTail.yes => emit ", musttail=\"true\"}";
+       | IsTail.no => emit ", musttail=\"false\"}";
       emit ":"; emit "("; emitArgsOnlyTys ys tys; emit ")"
       emit "->"
       emit "(";  emit (toCType (Decl.resultType decl)); emit ")"
@@ -840,7 +845,7 @@ def emitApp (z : VarId) (f : VarId) (ys : Array Arg) (tys: HashMap VarId IRType)
     -- TODO: what is the difference between pap and papm? In particular,
     -- what are these CLOSURE_MAX_ARGS thing?
     panicM "// ERR: emitApp : ys.size > closureMaxArgs"
-    emitLhs z; emit (escape "lz.papExtendM");
+    emitLhs z; emit (escape "lz.papExtend");
     emit "("; emitArgs ys; emit ")";
     emit ": (";  emitArgsOnlyTys ys tys; emit ") -> !lz.value"
     emitLn "\n";
@@ -967,7 +972,7 @@ def emitVDecl (z : VarId) (t : IRType) (v : Expr)  (tys: HashMap VarId IRType) :
   | Expr.fap c ys       => do
     emitLn "// ERR: Expr.fap";
     emitLhs z; 
-    emitFullApp c ys tys
+    emitFullApp c ys tys IsTail.no
   | Expr.pap c ys       =>  do
       emitLn "// ERR: Expr.pap"
       emitPartialApp z c ys tys
@@ -1032,7 +1037,8 @@ def emitTailCall (v : Expr) (tys: HashMap VarId IRType): M Unit :=
      let decl ← getDecl f
      -- | good old war3 JASS memories...
      let ret <- gensym "retTailCall"
-     emit ("%" ++ ret ++ " = "); emitFullApp f ys tys
+     emit ("%" ++ ret ++ " = ");
+     emitFullApp f ys tys IsTail.yes
      emit $ (escape "lz.return")  ++ "(%" ++ ret ++  ")";
      emit " : ("; emit (toCType decl.resultType); emit ") -> ()"
      emitLn ""
