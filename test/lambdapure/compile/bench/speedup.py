@@ -15,6 +15,7 @@ import json
 import sys
 import subprocess
 import numpy as np
+from scipy.stats import mstats
 
 
 PARSER = argparse.ArgumentParser(description='Speedup b/w MLIR and LEAN')
@@ -174,8 +175,8 @@ def plot():
       N = len(data["theirs-perf"])
       assert N == len(data["ours-perf"])
 
-      theirs = np.average([perf_stat_to_time(data["file"], t) for t in data["theirs-perf"] ])
-      ours = np.average([perf_stat_to_time(data["file"], t) for t in data["ours-perf"] ])
+      theirs = np.median([perf_stat_to_time(data["file"], t) for t in data["theirs-perf"] ])
+      ours = np.median([perf_stat_to_time(data["file"], t) for t in data["ours-perf"] ])
       speedup = float("%4.2f" % (theirs/ours))
       speedups.append(speedup)
       # baselines.append(baseline/baseline)
@@ -183,7 +184,8 @@ def plot():
   print(labels)
   print(baselines)
   print(optims)
-  print("average speedup: %4.2f" % (np.average(speedups)))
+  avg_speedup = mstats.gmean(speedups)
+  print("average speedup: %4.2f" % (avg_speedup, ))
 
   x = np.arange(len(labels))  # the label locations
   width = 0.35  # the width of the bars
@@ -191,6 +193,9 @@ def plot():
   fig, ax = plt.subplots()
   # rects1 = ax.bar(x - width/2, baselines, width, label='Baseline', color = light_blue)
   rects2 = ax.bar(x + width/2, optims, width, label='Optimised', color = dark_blue)
+
+  # straight line
+  plt.axhline(y=avg_speedup, color=light_red, linestyle='-', lw=1, label='Geomean speedup')
 
   # Y-Axis Label
   #
@@ -214,9 +219,13 @@ def plot():
   autolabel(ax, rects2)
 
   fig.tight_layout()
+  filename = os.path.basename(__file__).replace(".py", ".jpg")
+  fig.savefig(filename)
+
   filename = os.path.basename(__file__).replace(".py", ".pdf")
   fig.savefig(filename)
   subprocess.run(["xdg-open",  filename])
+
 
 
 if __name__ == "__main__":
