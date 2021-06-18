@@ -8,19 +8,6 @@
 - Help formalizing the document?
 
 
-
-
-
-
-
-# Priority queue
-- Composition of `head . sort` to be lazy.
-- [Real number representations](representation:https://github.com/bollu/fractions/blob/master/potts-phd-exact-real-using-mobius.pdf )
-- Standard data structures examples of how purity without laziness pays a
-  log(n) cost to simulate memory using a BST; Laziness allows us to regain the
-  right bounds (Okasaki).
-
-
 # Notes on GHC
 
 - smallest size is `32` bit word. Can't pack stuff!
@@ -55,7 +42,6 @@
 - Initialization machinery is confusing. I still don't understand the
   invariants around why certain things are initialized the way they are.
 - Quite minimal and pleasant to work with, all said and done.
-- lean4: tooling doesn't work? (emacs `lean-mode` is just dead)
 - Can tell LLVM about tail calls instead of hand rolling a tail call.
 - Can maybe use TBAA to teach LLVM about different object types, instead of erasing all info
   at the lambdapure level. 
@@ -66,20 +52,13 @@
 - I saw the [bachelor thesis on snake lemma](https://pp.ipd.kit.edu/thesis.php?id=313) (I wanted the snake lemma recently...). 
   [How is homology computed? Can we make it faster?](https://pastel.archives-ouvertes.fr/pastel-00605836/document)
   (sparse linear algebra).
-- Prototype the freeJIT in LEAN, to generate GPU code using free monads from
-  LEAN.  Tensor dialect. 
-- Thunks in LEAN: what do they do and how do they lower?
-- What do we need for MVP? Does just lazification + some optimisation in the LEAN dialect get us there? 
-- `Jump` breaks any and all structured control flow. Better way to lower this?
-- TODO from Leo: Try to lower mutual recursion in a way that gets optimised.
-- Try to encode many many args in the mutual recursion.
 - Which optimisation to do at LEAN level?
 - Can we leverage proofs at the LEAN level?
 - Interactive compliation: write tactics to prove properties about code.
-- Killer app for this infrastructure, using this framework?
-
 
 # Log:  [newest] to [oldest]
+
+# June 18
 
 # June 12
 - MLIR: try to use last stable release, and find the delta.

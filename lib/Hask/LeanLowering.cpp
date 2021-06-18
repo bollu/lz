@@ -527,9 +527,13 @@ public:
       return failure();
     }
 
-    CallOp newcall = rewriter.replaceOpWithNewOp<CallOp>(operation, call.getCallee(),
-                                        resultTypes, operands);
-    newcall->setAttr("musttail", rewriter.getStringAttr("true"));
+    CallOp newcall = rewriter.replaceOpWithNewOp<CallOp>(
+        operation, call.getCallee(), resultTypes, operands);
+
+    StringAttr musttail = call->getAttrOfType<StringAttr>("musttail");
+    if (musttail) {
+      newcall->setAttr("musttail", musttail);
+    }
     return success();
   }
 };
