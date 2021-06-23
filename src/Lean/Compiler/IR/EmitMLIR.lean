@@ -441,21 +441,28 @@ def isIf (alts : Array Alt) : Option (Nat × FnBody × FnBody) :=
 --  emit "("; emit x
 --  if n != 1 then emit ", "; emit n
 
+-- def emitInc (x : VarId) (n : Nat) (checkRef : Bool) : M Unit := do
+--   let nname <- gensym "n"
+--   emitLn $ "%" ++ nname ++ " = std.constant " ++ (toString n) ++ " : i64"
+--   emit "call ";
+--   emit $
+--      if checkRef then "@lean_inc_n"
+--      else  "@lean_inc_ref_n"
+--   emit "("; emit "%"; emit x
+--   emitLn $ ", %" ++ nname ++ ") : (!lz.value, i64) -> ()"
+
 def emitInc (x : VarId) (n : Nat) (checkRef : Bool) : M Unit := do
-  let nname <- gensym "n"
-  emitLn $ "%" ++ nname ++ " = std.constant " ++ (toString n) ++ " : i64"
-  emit "call ";
-  emit $
-     if checkRef then "@lean_inc_n"
-     else  "@lean_inc_ref_n"
-  emit "("; emit "%"; emit x
-  emitLn $ ", %" ++ nname ++ ") : (!lz.value, i64) -> ()"
+  emit $ (escape "lz.inc") ++ "(%"; emit x; emitLn $  ") {value=" ++ (toString n) ++ ", checkref=" ++ (toString checkRef) ++ "} : (!lz.value) -> ()"
+
+
+-- def emitDec (x : VarId) (n : Nat) (checkRef : Bool) : M Unit := do
+--   if n != 1 then panicM "there is no lean_dec for more than 1 parameter"
+--   let nv <- emitI64 "n" n;
+--   emit $ "call " ++ (if checkRef then "@lean_dec" else "@lean_dec_ref");
+--   emit "(%"; emit x; emitLn ") : (!lz.value) -> ()"
 
 def emitDec (x : VarId) (n : Nat) (checkRef : Bool) : M Unit := do
-  if n != 1 then panicM "there is no lean_dec for more than 1 parameter"
-  let nv <- emitI64 "n" n;
-  emit $ "call " ++ (if checkRef then "@lean_dec" else "@lean_dec_ref");
-  emit "(%"; emit x; emitLn ") : (!lz.value) -> ()"
+  emit $ (escape "lz.dec") ++ "(%"; emit x; emitLn $  ") {value=" ++ (toString n) ++ ", ref=" ++ (toString checkRef) ++ "} : (!lz.value) -> ()"
 
 def emitDel (x : VarId) : M Unit := do
   emit "call @lean_free_object(%"; emit x; emitLn ") : (!lz.value) -> ()"
