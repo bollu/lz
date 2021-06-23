@@ -276,6 +276,9 @@ struct HaskInlinerInterface : public DialectInlinerInterface {
   }
 };
 
+std::unique_ptr<mlir::Pass> createFuseRefcountPass();
+void registerFuseRefcountPass();
+
 } // namespace standalone
 } // namespace mlir
 

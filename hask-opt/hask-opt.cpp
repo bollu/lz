@@ -82,6 +82,7 @@ int main(int argc, char **argv) {
   mlir::unif::registerUnifierPass();
   mlir::standalone::registerLowerHaskPass();
   mlir::standalone::registerLowerLeanPass();
+  mlir::standalone::registerFuseRefcountPass();
   mlir::ptr::registerLowerPointerPass();
   registerLZJITPass();
   registerLZDumpLLVMPass();
@@ -94,7 +95,6 @@ int main(int argc, char **argv) {
   mlir::lambdapure::registerReferenceRewriterPattern();
   mlir::lambdapure::registerDestructiveUpdatePattern();
 
-
   mlir::DialectRegistry registry;
   mlir::registerAllDialects(registry);
   registry.insert<mlir::LLVM::LLVMDialect>();
@@ -103,7 +103,6 @@ int main(int argc, char **argv) {
   registry.insert<mlir::lambdapure::LambdapureDialect>();
   registry.insert<mlir::ptr::PtrDialect>();
   registry.insert<mlir::unif::UnificationDialect>();
-
 
   // registry.insert<mlir::StandardOpsDialect>();
   // registry.insert<mlir::AffineDialect>();
@@ -114,6 +113,6 @@ int main(int argc, char **argv) {
   // will be *parsed* by the tool, not the one generated
   // registerAllDialects(registry);
 
-  return failed(mlir::MlirOptMain(argc, argv, "Hask optimizer driver\n",
-                                  registry, true));
+  return failed(
+      mlir::MlirOptMain(argc, argv, "Hask optimizer driver\n", registry, true));
 }
