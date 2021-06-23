@@ -176,12 +176,12 @@ public:
       int c = consume(args, consumes, val);
       if (c >= 1) {
         builder.setInsertionPoint(op);
-        builder.create<mlir::standalone::IncOp>(builder.getUnknownLoc(), val);
+        builder.create<mlir::standalone::IncOp>(builder.getUnknownLoc(), val, 1);
       }
     } else {
       llvm::errs() << "val.getType(): " << val.getType() << "|\n";
       builder.setInsertionPoint(op);
-      builder.create<mlir::standalone::IncOp>(builder.getUnknownLoc(), val);
+      builder.create<mlir::standalone::IncOp>(builder.getUnknownLoc(), val, 1);
     }
   }
 
@@ -213,7 +213,7 @@ public:
           continue;
         }
         builder.create<mlir::standalone::DecOp>(builder.getUnknownLoc(),
-                                                args[i]);
+                                                args[i], 1);
       }
       assert(consumes[i] >= -1);
     }

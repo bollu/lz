@@ -449,7 +449,8 @@ public:
     HaskLargeIntegerConstOp op = cast<HaskLargeIntegerConstOp>(operation);
     ModuleOp mod = op->getParentOfType<ModuleOp>();
     FuncOp fn = getOrCreateLeanCstrToNat(rewriter, mod);
-    Value istr = rewriter.create<ptr::PtrStringOp>(rewriter.getUnknownLoc(), op.getValue());
+    Value istr = rewriter.create<ptr::PtrStringOp>(rewriter.getUnknownLoc(),
+                                                   op.getValue());
     rewriter.replaceOpWithNewOp<CallOp>(operation, fn, istr);
     return success();
   }
@@ -2134,8 +2135,142 @@ public:
 //   }
 // };
 
+struct DecOpLowering : public mlir::ConversionPattern {
+public:
+  explicit DecOpLowering(TypeConverter &tc, MLIRContext *context)
+      : ConversionPattern(DecOp::getOperationName(), 1, tc, context) {}
 
+  static FuncOp getOrCreateLeanDec(PatternRewriter &rewriter, ModuleOp m) {
+    const std::string name = "lean_dec";
+    if (FuncOp fn = m.lookupSymbol<FuncOp>(name)) {
+      return fn;
+    }
 
+    MLIRContext *context = rewriter.getContext();
+    Type argty = ValueType::get(context);
+    FunctionType fnty = rewriter.getFunctionType(argty, {});
+
+    PatternRewriter::InsertionGuard insertGuard(rewriter);
+    rewriter.setInsertionPointToStart(m.getBody());
+    FuncOp fn = rewriter.create<FuncOp>(m.getLoc(), name, fnty);
+    fn.setPrivate();
+    return fn;
+  }
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> rands,
+                  ConversionPatternRewriter &rewriter) const override {
+    DecOp dec = cast<DecOp>(op);
+    assert(dec.getDecCount() == 1 && "cannot decrement more than 1");
+    ModuleOp mod = op->getParentOfType<ModuleOp>();
+    FuncOp f = getOrCreateLeanDec(rewriter, mod);
+    rewriter.replaceOpWithNewOp<CallOp>(dec, f, rands);
+    // rewriter.eraseOp(dec);
+    return success();
+  }
+};
+
+struct IncOpLowering : public mlir::ConversionPattern {
+public:
+  explicit IncOpLowering(TypeConverter &tc, MLIRContext *context)
+      : ConversionPattern(IncOp::getOperationName(), 1, tc, context) {}
+
+  static FuncOp getOrCreateLeanInc(PatternRewriter &rewriter, ModuleOp m) {
+    const std::string name = "lean_inc";
+    if (FuncOp fn = m.lookupSymbol<FuncOp>(name)) {
+      return fn;
+    }
+
+    MLIRContext *context = rewriter.getContext();
+    Type argty = ValueType::get(context);
+    FunctionType fnty = rewriter.getFunctionType(argty, {});
+
+    PatternRewriter::InsertionGuard insertGuard(rewriter);
+    rewriter.setInsertionPointToStart(m.getBody());
+    FuncOp fn = rewriter.create<FuncOp>(m.getLoc(), name, fnty);
+    fn.setPrivate();
+    return fn;
+  }
+
+  static FuncOp getOrCreateLeanIncN(PatternRewriter &rewriter, ModuleOp m) {
+    const std::string name = "lean_inc_n";
+    if (FuncOp fn = m.lookupSymbol<FuncOp>(name)) {
+      return fn;
+    }
+
+    MLIRContext *context = rewriter.getContext();
+    llvm::SmallVector<Type, 2> argty = {ValueType::get(context),
+                                        rewriter.getI64Type()};
+    FunctionType fnty = rewriter.getFunctionType(argty, {});
+
+    PatternRewriter::InsertionGuard insertGuard(rewriter);
+    rewriter.setInsertionPointToStart(m.getBody());
+    FuncOp fn = rewriter.create<FuncOp>(m.getLoc(), name, fnty);
+    fn.setPrivate();
+    return fn;
+  }
+
+  static FuncOp getOrCreateLeanIncRef(PatternRewriter &rewriter, ModuleOp m) {
+    const std::string name = "lean_inc_ref";
+    if (FuncOp fn = m.lookupSymbol<FuncOp>(name)) {
+      return fn;
+    }
+
+    MLIRContext *context = rewriter.getContext();
+    Type argty = ValueType::get(context);
+    FunctionType fnty = rewriter.getFunctionType(argty, {});
+
+    PatternRewriter::InsertionGuard insertGuard(rewriter);
+    rewriter.setInsertionPointToStart(m.getBody());
+    FuncOp fn = rewriter.create<FuncOp>(m.getLoc(), name, fnty);
+    fn.setPrivate();
+    return fn;
+  }
+
+  static FuncOp getOrCreateLeanIncRefN(PatternRewriter &rewriter, ModuleOp m) {
+    const std::string name = "lean_inc_ref_n";
+    if (FuncOp fn = m.lookupSymbol<FuncOp>(name)) {
+      return fn;
+    }
+
+    MLIRContext *context = rewriter.getContext();
+    llvm::SmallVector<Type, 2> argty = {ValueType::get(context),
+                                        rewriter.getI64Type()};
+    FunctionType fnty = rewriter.getFunctionType(argty, {});
+
+    PatternRewriter::InsertionGuard insertGuard(rewriter);
+    rewriter.setInsertionPointToStart(m.getBody());
+    FuncOp fn = rewriter.create<FuncOp>(m.getLoc(), name, fnty);
+    fn.setPrivate();
+    return fn;
+  }
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> rands,
+                  ConversionPatternRewriter &rewriter) const override {
+    assert(rands.size() == 1);
+    IncOp inc = cast<IncOp>(op);
+    ModuleOp mod = op->getParentOfType<ModuleOp>();
+
+    if (inc.getIncCount() == 1) {
+      FuncOp f = inc.isCheckRef() ? getOrCreateLeanInc(rewriter, mod)
+                                  : getOrCreateLeanIncRef(rewriter, mod);
+      llvm::SmallVector<Value, 1> args = {rands[0]};
+      rewriter.replaceOpWithNewOp<CallOp>(inc, f, args);
+    } else {
+      assert(false && "unhandled lean_inc with n > 1");
+      // n > 1
+      FuncOp f = inc.isCheckRef() ? getOrCreateLeanIncN(rewriter, mod)
+                                  : getOrCreateLeanIncRefN(rewriter, mod);
+      const int WIDTH = 64;
+      ConstantIntOp n = rewriter.create<ConstantIntOp>(
+          inc.getLoc(), inc.getIncCount(), WIDTH);
+      llvm::SmallVector<Value, 2> args = {rands[0], n};
+      rewriter.replaceOpWithNewOp<CallOp>(inc, f, args);
+    }
+    return success();
+  }
+};
 
 struct LowerLeanPass : public Pass {
   LowerLeanPass() : Pass(mlir::TypeID::get<LowerLeanPass>()){};
@@ -2155,7 +2290,7 @@ struct LowerLeanPass : public Pass {
     if (failed(mlir::applyPartialConversion(getOperation(), target,
                                             std::move(patterns)))) {
       llvm::errs() << "===Hask lowering failed at Conversion===\n";
-      getOperation()->print(llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
+      // getOperation()->print(llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
       llvm::errs() << "\n===\n";
       signalPassFailure();
       ::llvm::DebugFlag = false;
@@ -2164,7 +2299,7 @@ struct LowerLeanPass : public Pass {
 
     if (failed(mlir::verify(getOperation()))) {
       llvm::errs() << "===Hask lowering failed at Verification===\n";
-      getOperation()->print(llvm::errs());
+      // getOperation()->print(llvm::errs());
       llvm::errs() << "\n===\n";
       signalPassFailure();
       ::llvm::DebugFlag = false;
@@ -2239,6 +2374,8 @@ struct LowerLeanPass : public Pass {
   patterns.insert<ApOpConversionPattern>(typeConverter, &getContext());
   patterns.insert<ApEagerOpConversionPattern>(typeConverter, &getContext());
   patterns.insert<HaskReturnOpConversionPattern>(typeConverter, &getContext());
+  patterns.insert<IncOpLowering>(typeConverter, &getContext());
+  patterns.insert<DecOpLowering>(typeConverter, &getContext());
 
   // patterns.insert<FuncOpLowering>(typeConverter, &getContext());
   // patterns.insert<ReturnOpLowering>(typeConverter, &getContext());

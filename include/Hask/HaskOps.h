@@ -9,6 +9,7 @@
 #ifndef STANDALONE_STANDALONEOPS_H
 #define STANDALONE_STANDALONEOPS_H
 
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
@@ -440,7 +441,9 @@ public:
         .getValue()
         .str();
   }
-  int getFnArity() { return this->getOperation()->getAttrOfType<IntegerAttr>("arity").getInt(); }
+  int getFnArity() {
+    return this->getOperation()->getAttrOfType<IntegerAttr>("arity").getInt();
+  }
   int getNumFnArguments() { return this->getOperation()->getNumOperands(); };
   Value getFnArgument(int i) { return this->getOperation()->getOperand(i); };
 
@@ -592,7 +595,15 @@ public:
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   void print(OpAsmPrinter &p);
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                    mlir::Value v);
+                    mlir::Value v, int count);
+
+  bool isCheckRef() {
+    return this->getOperation()->getAttrOfType<BoolAttr>("checkref").getValue();
+  }
+
+  int getIncCount() {
+    return this->getOperation()->getAttrOfType<IntegerAttr>("value").getInt();
+  }
 };
 
 // This makes me sad, because it has a side effect x(
@@ -605,7 +616,11 @@ public:
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   void print(OpAsmPrinter &p);
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                    mlir::Value v);
+                    mlir::Value v, int count);
+
+  int getDecCount() {
+    return this->getOperation()->getAttrOfType<IntegerAttr>("value").getInt();
+  }
 };
 
 // for lambdapure
@@ -636,11 +651,12 @@ public:
                     int blockIx);
   mlir::Region &getLaterJumpedIntoRegion() { return this->getRegion(0); }
   mlir::Region &getFirstRegionWithJmp() { return this->getRegion(1); }
-  int getJoinPointId() { 
+  int getJoinPointId() {
     return this->getOperation()->getAttrOfType<IntegerAttr>("value").getInt();
   }
   // StringRef getName() {
-  //   return getOperation()->getAttrOfType<FlatSymbolRefAttr>("value").getValue();
+  //   return
+  //   getOperation()->getAttrOfType<FlatSymbolRefAttr>("value").getValue();
   // }
 };
 
@@ -652,16 +668,17 @@ public:
   static StringRef getOperationName() { return "lz.jump"; };
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   void print(OpAsmPrinter &p);
-  int getJoinPointId() { 
+  int getJoinPointId() {
     return this->getOperation()->getAttrOfType<IntegerAttr>("value").getInt();
   }
-  
+
   // StringRef getName() {
-  //   return getOperation()->getAttrOfType<FlatSymbolRefAttr>("value").getValue();
+  //   return
+  //   getOperation()->getAttrOfType<FlatSymbolRefAttr>("value").getValue();
   // }
-  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                    int blockIx,
-                    ValueRange vs); // ?? what is blockIx? I am actually confused.
+  static void
+  build(mlir::OpBuilder &builder, mlir::OperationState &state, int blockIx,
+        ValueRange vs); // ?? what is blockIx? I am actually confused.
 };
 
 // for lambdapure
@@ -674,9 +691,11 @@ public:
   void print(OpAsmPrinter &p);
   Value getScrutinee() { return getOperand(); }
   Optional<int> getAltLHS(int i) {
-    Attribute lhs = this->getOperation()->getAttr("alt" +  std::to_string(i));
+    Attribute lhs = this->getOperation()->getAttr("alt" + std::to_string(i));
     IntegerAttr lhs_int_attr = lhs.dyn_cast<IntegerAttr>();
-    if (!lhs_int_attr) { return {}; }
+    if (!lhs_int_attr) {
+      return {};
+    }
     return {(int)lhs_int_attr.getInt()};
   }
 
@@ -693,17 +712,18 @@ public:
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   void print(OpAsmPrinter &p);
 
-
-   Value getScrutinee() { return this->getOperation()->getOperand(0); }
+  Value getScrutinee() { return this->getOperation()->getOperand(0); }
   int getNumAlts() { return this->getOperation()->getNumRegions(); }
   Region &getAltRHS(int i) {
-     assert(i < getNumAlts());
-     return this->getOperation()->getRegion(i);
+    assert(i < getNumAlts());
+    return this->getOperation()->getRegion(i);
   }
   Optional<int> getAltLHS(int i) {
-    Attribute lhs = this->getOperation()->getAttr("alt" +  std::to_string(i));
+    Attribute lhs = this->getOperation()->getAttr("alt" + std::to_string(i));
     IntegerAttr lhs_int_attr = lhs.dyn_cast<IntegerAttr>();
-    if (!lhs_int_attr) { return {}; }
+    if (!lhs_int_attr) {
+      return {};
+    }
     return {(int)lhs_int_attr.getInt()};
   }
 };
@@ -721,7 +741,8 @@ public:
   }
 
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                    std::string fnname, mlir::TypeRange resultTys, mlir::ValueRange operands);
+                    std::string fnname, mlir::TypeRange resultTys,
+                    mlir::ValueRange operands);
 
   static StringRef getOperationName() { return "lz.call"; };
   static ParseResult parse(OpAsmParser &parser, OperationState &result);

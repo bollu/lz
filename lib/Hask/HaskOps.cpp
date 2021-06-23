@@ -1011,11 +1011,12 @@ void HaskStringConstOp::print(OpAsmPrinter &p) {
 // === INC OP ===
 
 void IncOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                  Value v) {
+                  Value v, int count) {
   // vvv HACK: I have no idea why this is failing.
   // assert(v.getType().isa<standalone::ValueType>() && "incop input must be
   // lz::Value");
   state.addOperands(v);
+  state.addAttribute("value", builder.getI64IntegerAttr(count));
 };
 
 ParseResult IncOp::parse(OpAsmParser &parser, OperationState &result) {
@@ -1040,11 +1041,12 @@ void IncOp::print(OpAsmPrinter &p) {
 // === DEC OP ===
 
 void DecOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                  Value v) {
+                  Value v, int count) {
   // vvv HACK: I have no idea why this is failing.
   // assert(v.getType().isa<standalone::ValueType>() && "decop input must be
   // lz::Value");
   state.addOperands(v);
+  state.addAttribute("value", builder.getI64IntegerAttr(count));
 };
 
 ParseResult DecOp::parse(OpAsmParser &parser, OperationState &result) {
