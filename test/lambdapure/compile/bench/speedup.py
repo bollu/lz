@@ -73,7 +73,7 @@ def run_data():
     for (i, fpath) in enumerate(G_FPATHS):
         datum = {"file": str(fpath) }
         os.system(f"lean {fpath} -c exe-ref.c")
-        os.system(f"leanc exe-ref.c -o exe-ref.out")
+        os.system(f"leanc exe-ref.c -O3 -o exe-ref.out")
         # x = run_with_output("perf stat ./exe-ref.out 1>/dev/null")
         # proc = subprocess.Popen("perf stat ./exe-ref.out", shell=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
         datum["theirs-out"] = []
