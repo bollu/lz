@@ -181,11 +181,18 @@ def plot():
       speedups.append(speedup)
       # baselines.append(baseline/baseline)
       optims.append(speedup)
+
+  avg_speedup = mstats.gmean(speedups)
+  print("average speedup: %4.2f" % (avg_speedup, ))
+  baselines.append(1)
+  optims.append(float("%4.2f" % (avg_speedup)))
+  labels.append("geomean")
+
   print(labels)
   print(baselines)
   print(optims)
-  avg_speedup = mstats.gmean(speedups)
-  print("average speedup: %4.2f" % (avg_speedup, ))
+
+
 
   x = np.arange(len(labels))  # the label locations
   width = 0.35  # the width of the bars
@@ -193,9 +200,12 @@ def plot():
   fig, ax = plt.subplots()
   # rects1 = ax.bar(x - width/2, baselines, width, label='Baseline', color = light_blue)
   rects2 = ax.bar(x + width/2, optims, width, label='Optimised', color = dark_blue)
+  rects2[-1].set_color(light_blue) # color geomean separately.
+
+
 
   # straight line
-  plt.axhline(y=avg_speedup, color=light_red, linestyle='-', lw=1, label='Geomean speedup')
+  # plt.axhline(y=avg_speedup, color=light_red, linestyle='-', lw=1, label='Geomean speedup')
 
   # Y-Axis Label
   #
