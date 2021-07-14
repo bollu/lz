@@ -241,4 +241,5 @@ def plot():
 if __name__ == "__main__":
     if ARGS.data: run_data()
     if ARGS.plot: plot()
+    if not ARGS.data and not ARGS.plot: PARSER.print_help()
 
