@@ -58,6 +58,74 @@
 
 # Log:  [newest] to [oldest]
 
+# Jul 14
+
+- Perf report on `binarytrees.lean`, the file that shows a large delta.
+- It seems like we don't correctly inline some functions like `lean_del`?
+
+```
+# Report, OURS (MLIR/LLVM backend)
+  23.77%  exe.out  exe.out           [.] lean_del                   
+  13.06%  exe.out  exe.out           [.] l_check                    
+  11.77%  exe.out  exe.out           [.] lean_ctor_get              
+  10.32%  exe.out  exe.out           [.] lean_free_small            
+   9.37%  exe.out  exe.out           [.] lean_alloc_ctor            
+   9.28%  exe.out  exe.out           [.] lean_obj_tag               
+   8.88%  exe.out  exe.out           [.] l_make_x27                 
+   4.38%  exe.out  exe.out           [.] lean_alloc_small           
+   4.04%  exe.out  exe.out           [.] lean_ctor_set              
+   1.11%  exe.out  [kernel.vmlinux]  [k] irqentry_exit_to_user_mode 
+   0.80%  exe.out  exe.out           [.] lean_mark_persistent       
+   0.55%  exe.out  ld-2.33.so        [.] strcmp                     
+   0.54%  exe.out  exe.out           [.] lean::allocator::alloc_page
+   0.50%  exe.out  [kernel.vmlinux]  [k] clear_page_erms            
+   0.42%  exe.out  exe.out           [.] lean::mix                  
+   0.29%  exe.out  [kernel.vmlinux]  [k] do_user_addr_fault         
+   0.18%  exe.out  exe.out           [.] l_depth___lambda__1        
+   0.18%  exe.out  [kernel.vmlinux]  [k] unmap_page_range           
+   0.18%  exe.out  [kernel.vmlinux]  [k] error_entry                
+   0.18%  exe.out  [kernel.vmlinux]  [k] __free_one_page            
+   0.18%  exe.out  [kernel.vmlinux]  [k] __mod_memcg_lruvec_state   
+   0.02%  perf     [kernel.vmlinux]  [k] strrchr                    
+   0.00%  perf     [kernel.vmlinux]  [k] intel_pmu_handle_irq       
+   0.00%  perf     [kernel.vmlinux]  [k] native_write_msr
+```
+
+- Versus theirs:
+
+```
+  20.75%  exe-ref.out  exe-ref.out       [.] l_check                    
+  18.29%  exe-ref.out  exe-ref.out       [.] lean_free_small            
+  11.67%  exe-ref.out  exe-ref.out       [.] l_make_x27.part.0          
+   7.74%  exe-ref.out  exe-ref.out       [.] lean_alloc_small           
+   2.13%  exe-ref.out  ld-2.33.so        [.] do_lookup_x                
+   1.16%  exe-ref.out  exe-ref.out       [.] lean_mark_persistent       
+   0.84%  exe-ref.out  [kernel.vmlinux]  [k] try_charge                 
+   0.77%  exe-ref.out  [kernel.vmlinux]  [k] sync_regs                  
+   0.70%  exe-ref.out  [kernel.vmlinux]  [k] filemap_map_pages          
+   0.65%  exe-ref.out  [kernel.vmlinux]  [k] get_page_from_freelist     
+   0.60%  exe-ref.out  [kernel.vmlinux]  [k] unmap_page_range           
+   0.52%  exe-ref.out  [kernel.vmlinux]  [k] memcg_slab_post_alloc_hook 
+   0.47%  exe-ref.out  [kernel.vmlinux]  [k] page_mapping               
+   0.30%  exe-ref.out  [kernel.vmlinux]  [k] __free_one_page            
+   0.29%  exe-ref.out  exe-ref.out       [.] lean::allocator::alloc_page
+   0.22%  exe-ref.out  exe-ref.out       [.] l_depth___lambda__1___boxed
+   0.03%  perf         [kernel.vmlinux]  [k] strlen                     
+   0.00%  perf         [kernel.vmlinux]  [k] intel_pmu_handle_irq       
+   0.00%  perf         [kernel.vmlinux]  [k] native_write_msr           
+```
+
+
+# Jun 25
+
+```
+; not converted to the right call?
+%4 = call i64 bitcast (i32 (%struct.lean_object*)* @lean_obj_tag to i64 (i8*)*)(i8* %0), !dbg !13
+```
+
+Calls like the above are not inlined for whatever reason. Unsure why.
+
+
 # June 18
 
 # June 12
