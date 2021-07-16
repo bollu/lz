@@ -58,6 +58,28 @@
 
 # Log:  [newest] to [oldest]
 
+# Jul 15
+
+```
+23.77%  exe.out  exe.out           [.] lean_del
+```
+
+`lean_del` comes from the lean runtime, so I'm now writing scripts to extract out the runtime
+functions.
+
+After folding in `runtime`, we don't have `lean_del` as topmost for `binarytrees`.
+Rather we have `lean_ctor_get`, which is strange since it comes from `lean.h` that's
+already in `include.ll`. But we still have calls like:
+
+```llvm
+%140 = tail call i8* 
+  bitcast (%struct.lean_object* (%struct.lean_object*, i32)* 
+   @lean_ctor_get to i8* (i8*, i64)*)(i8* nonnull %5, i 64 1), !dbg !439
+```
+
+floating around which I find mysterious, since  wrote a pass to get rid of exactly
+this type of thing! I need to debug more to find out what's happening.
+
 # Jul 14
 
 - Perf report on `binarytrees.lean`, the file that shows a large delta.
