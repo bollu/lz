@@ -58,6 +58,39 @@
 
 # Log:  [newest] to [oldest]
 
+# Jul 20
+
+For a while, I thought I neeeded by own pass. It doesn't look like it, maybe I can just
+generate slightly different IR and get away with it:
+
+
+```
+%struct.lean_object = type { i64 }
+define %struct.lean_object* @cant_inline_1(i8* %0, i32 %1, i32 %2) alwaysinline {
+    unreachable
+}
+
+define %struct.lean_object* @cant_inline_2(i8* %0, i64 %1, i64 %2) alwaysinline {
+    unreachable
+}
+
+define %struct.lean_object* @cant_inline_3(%struct.lean_object* %0, i64 %1, i64 %2) alwaysinline {
+    unreachable
+}
+
+define i1 @main (i8* %in) {
+  ;; %out = tail call i8* bitcast (%struct.lean_object* (i8*, i32, i32)* @cant_inline_1 to i8* (i8*, i64, i64)*)(i8* %in, i64 3, i64 0)
+   %out2 = tail call i8* bitcast (%struct.lean_object* (i8*, i64, i64)* @cant_inline_2 to i8* (i8*, i64, i64)*)(i8* %in, i64 3, i64 0)
+  %out3 = tail call i8* bitcast (%struct.lean_object* (%struct.lean_object*, i64, i64)* @cant_inline_3 to i8* (i8*, i64, i64)*)(i8* %in, i64 3, i64 0)
+  ret i1 1
+}
+
+```
+
+In this program, only `cant_inline_1` fails due to the need to sign truncate the calls of an `i32` function pretending
+to be `i64`.
+
+
 # Jul 15
 
 ```
