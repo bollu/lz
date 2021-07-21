@@ -107,9 +107,9 @@ def getDecl (n : Name) : M Decl := do
 @[inline] def emitLn {α : Type} [ToString α] (a : α) : M Unit := do
   emit a; emit "\n"
 
-def emitI64 (name : String) (v: Nat) : M String := do
+def emitI32 (name : String) (v: Nat) : M String := do
   let lhs <- gensym name;
-  emitLn  $ "%" ++ lhs ++ " = " ++ "std.constant " ++ (toString v) ++ " : i64";
+  emitLn  $ "%" ++ lhs ++ " = " ++ "std.constant " ++ (toString v) ++ " : i32";
   return lhs;
 
 def emitString (name : String) (v: String) : M String := do
@@ -135,8 +135,8 @@ def toCType : IRType → String
   | IRType.uint8      => "i8"
   | IRType.uint16     => "i16"
   | IRType.uint32     => "i32"
-  | IRType.uint64     => "i64"
-  | IRType.usize      => "i64" -- TODO: find some better way to encode size.
+  | IRType.uint64     => "i32"
+  | IRType.usize      => "i32" -- TODO: find some better way to encode size.
   | IRType.object     => "!lz.value" -- "lean_object*"
   | IRType.tobject    => "!lz.value" -- "lean_object*"
   | IRType.irrelevant => "!lz.value" -- "lean_object*"
@@ -312,18 +312,18 @@ def emitPreamble : M Unit := do
   emitLn "func private @lean_unbox_uint8(!lz.value) -> i8"
   emitLn "func private @lean_unbox_uint16(!lz.value) -> i16"
   emitLn "func private @lean_unbox_uint32(!lz.value) -> i32"
-  emitLn "func private @lean_unbox_uint64(!lz.value) -> i64"
-  emitLn "func private @lean_unbox_usize(!lz.value) -> i64"
+  emitLn "func private @lean_unbox_uint64(!lz.value) -> i32"
+  emitLn "func private @lean_unbox_usize(!lz.value) -> i32"
   emitLn "func private @lean_unbox(!lz.value) -> i8"
 
   emitLn "func private @lean_inc(!lz.value) -> ()"
-  emitLn "func private @lean_inc_n(!lz.value, i64) -> ()"
+  emitLn "func private @lean_inc_n(!lz.value, i32) -> ()"
   emitLn "func private @lean_inc_ref(!lz.value) -> ()"
 
-  emitLn "func private @lean_ctor_set(!lz.value, i64, !lz.value) -> ()"
+  emitLn "func private @lean_ctor_set(!lz.value, i32, !lz.value) -> ()"
 
   emitLn "func private @lean_dec(!lz.value) -> ()"
-  emitLn "func private @lean_dec_n(!lz.value, i64) -> ()"
+  emitLn "func private @lean_dec_n(!lz.value, i32) -> ()"
   emitLn "func private @lean_dec_ref(!lz.value) -> ()"
 
   emitLn "func private @lean_is_exclusive(!lz.value) -> (i1)"
@@ -341,24 +341,24 @@ def emitPreamble : M Unit := do
   emitLn "func private @lean_box_uint32(i32) -> (!lz.value)"
   emitLn "func private @lean_box_uint64(i32) -> (!lz.value)"
   emitLn "func private @lean_box_usize(i464) -> (!lz.value)"
-  emitLn "func private @lean_box(i64) -> !lz.value"
+  emitLn "func private @lean_box(i32) -> !lz.value"
 
-  emitLn "func private @lean_ctor_get_float(!lz.value, i64) -> (f64)"
-  emitLn "func private @lean_ctor_get_uint8(!lz.value, i64) -> (i8)"
-  emitLn "func private @lean_ctor_get_uint16(!lz.value, i64) -> (i16)"
-  emitLn "func private @lean_ctor_get_uint32(!lz.value, i64) -> (i32)"
-  emitLn "func private @lean_ctor_get_uint64(!lz.value, i64) -> (i64)"
+  emitLn "func private @lean_ctor_get_float(!lz.value, i32) -> (f64)"
+  emitLn "func private @lean_ctor_get_uint8(!lz.value, i32) -> (i8)"
+  emitLn "func private @lean_ctor_get_uint16(!lz.value, i32) -> (i16)"
+  emitLn "func private @lean_ctor_get_uint32(!lz.value, i32) -> (i32)"
+  emitLn "func private @lean_ctor_get_uint64(!lz.value, i32) -> (i32)"
 
 
-  emitLn "func private @lean_ctor_set_float(!lz.value, i64, f64) -> ()"
-  emitLn "func private @lean_ctor_set_uint8(!lz.value, i64, i8) -> ()"
-  emitLn "func private @lean_ctor_set_uint16(!lz.value, i64, i16) -> ()"
-  emitLn "func private @lean_ctor_set_uint32(!lz.value, i64, i32) -> ()"
-  emitLn "func private @lean_ctor_set_uint64(!lz.value, i64, i64) -> ()"
+  emitLn "func private @lean_ctor_set_float(!lz.value, i32, f64) -> ()"
+  emitLn "func private @lean_ctor_set_uint8(!lz.value, i32, i8) -> ()"
+  emitLn "func private @lean_ctor_set_uint16(!lz.value, i32, i16) -> ()"
+  emitLn "func private @lean_ctor_set_uint32(!lz.value, i32, i32) -> ()"
+  emitLn "func private @lean_ctor_set_uint64(!lz.value, i32, i32) -> ()"
 
-  emitLn "func private @lean_alloc_ctor(i64, i64, i64) -> (!lz.value)"
-  emitLn "func private @lean_ctor_release(!lz.value, i64) -> ()"
-  emitLn "func private @lean_ctor_set_tag(!lz.value, i64) -> ()"
+  emitLn "func private @lean_alloc_ctor(i32, i32, i32) -> (!lz.value)"
+  emitLn "func private @lean_ctor_release(!lz.value, i32) -> ()"
+  emitLn "func private @lean_ctor_set_tag(!lz.value, i32) -> ()"
 
   emitLn "func private @lean_cstr_to_nat(!lz.value) -> (!lz.value)"
   -- emitLn "func private @lean_uint32_eq(i32, i32) -> (i8)"
@@ -443,13 +443,13 @@ def isIf (alts : Array Alt) : Option (Nat × FnBody × FnBody) :=
 
 -- def emitInc (x : VarId) (n : Nat) (checkRef : Bool) : M Unit := do
 --   let nname <- gensym "n"
---   emitLn $ "%" ++ nname ++ " = std.constant " ++ (toString n) ++ " : i64"
+--   emitLn $ "%" ++ nname ++ " = std.constant " ++ (toString n) ++ " : i32"
 --   emit "call ";
 --   emit $
 --      if checkRef then "@lean_inc_n"
 --      else  "@lean_inc_ref_n"
 --   emit "("; emit "%"; emit x
---   emitLn $ ", %" ++ nname ++ ") : (!lz.value, i64) -> ()"
+--   emitLn $ ", %" ++ nname ++ ") : (!lz.value, i32) -> ()"
 
 def emitInc (x : VarId) (n : Nat) (checkRef : Bool) : M Unit := do
   emit $ (escape "lz.inc") ++ "(%"; emit x; emitLn $  ") {value=" ++ (toString n) ++ ", checkref=" ++ (toString checkRef) ++ "} : (!lz.value) -> ()"
@@ -457,7 +457,7 @@ def emitInc (x : VarId) (n : Nat) (checkRef : Bool) : M Unit := do
 
 -- def emitDec (x : VarId) (n : Nat) (checkRef : Bool) : M Unit := do
 --   if n != 1 then panicM "there is no lean_dec for more than 1 parameter"
---   let nv <- emitI64 "n" n;
+--   let nv <- emitI32 "n" n;
 --   emit $ "call " ++ (if checkRef then "@lean_dec" else "@lean_dec_ref");
 --   emit "(%"; emit x; emitLn ") : (!lz.value) -> ()"
 
@@ -468,19 +468,19 @@ def emitDel (x : VarId) : M Unit := do
   emit "call @lean_free_object(%"; emit x; emitLn ") : (!lz.value) -> ()"
 
 def emitSetTag (x : VarId) (i : Nat) : M Unit := do
-  let iv <- emitI64 "i" i;
+  let iv <- emitI32 "i" i;
   emit "call @lean_ctor_set_tag(%"; emit x; emit ", %"; emit iv; emit ")";
-  emitLn $ " : (!lz.value, i64) -> ()"
+  emitLn $ " : (!lz.value, i32) -> ()"
 
 def emitSet (x : VarId) (i : Nat) (y : Arg) : M Unit := do
-  let ix <- emitI64 "ix" i; 
+  let ix <- emitI32 "ix" i; 
   emit "call @lean_ctor_set(%"; emit x; emit ", %"; emit ix;
   emit ", "; emitArg y; emit ")"
-  emitLn $ " : (!lz.value, i64, !lz.value) -> ()"
+  emitLn $ " : (!lz.value, i32, !lz.value) -> ()"
 
 def emitOffset (n : Nat) (offset : Nat) : M String := do
   let SIZEOF_VOIDPTR := 8; -- this is the janky bit.
-  let out <- emitI64 "offset" ((SIZEOF_VOIDPTR*n) + offset)
+  let out <- emitI32 "offset" ((SIZEOF_VOIDPTR*n) + offset)
   emitLn $ " // n=" ++ toString n ++ " | offset=" ++ toString offset 
   return out;
   -- if n > 0 then
@@ -505,11 +505,11 @@ def emitVarTy (v: VarId) (tys: HashMap VarId IRType) : M Unit :=  do
 -- | TODO: what is this for?
 def emitUSet (x : VarId) (n : Nat) (y : VarId) : M Unit := do
   -- let nname <- gensym "n";
-  -- emitLn $  "%" ++ nname ++ " = std.constant " ++ (toString n) ++ " i64"
-  let nv <- emitI64 "n" n
+  -- emitLn $  "%" ++ nname ++ " = std.constant " ++ (toString n) ++ " i32"
+  let nv <- emitI32 "n" n
   emit "@lean_ctor_set_usize(%"; emit x; emit ", "; 
   emit "%"; emit nv; emit ", ";
-  emit "%"; emit y; emitLn ") : (!lz.value, i64, !lz.value) -> ()"
+  emit "%"; emit y; emitLn ") : (!lz.value, i32, !lz.value) -> ()"
 
  /- Store `y : ty` at Position `sizeof(void*)*i + offset` in `x`. `x` must be a Constructor object and `RC(x)` must be 1.
     `ty` must not be `object`, `tobject`, `irrelevant` nor `Usize`.
@@ -527,7 +527,7 @@ def emitSSet (x : VarId) (n : Nat) (offset : Nat) (y : VarId) (t : IRType) (tys:
   | _             => throw $ "invalid SSet (" ++ toString x ++ " : " ++ toString t ++ ")";
   -- emit "("; emit x; emit ", "; emitOffset n offset; emit ", "; emit y; emitLn ");"
   emit "(%"; emit x; emit ", %"; emit ix; emit ", %"; emit y; emit ")";
-  emit " : ("; emitVarTy x tys; emit ", i64, ";  emitVarTy y tys; emitLn ") -> ()"; 
+  emit " : ("; emitVarTy x tys; emit ", i32, ";  emitVarTy y tys; emitLn ") -> ()"; 
 
 -- | emit args with types interleaved
 def emitArgsInterleavedTys (ys: Array Arg) (tys: HashMap VarId IRType) : M Unit :=
@@ -581,20 +581,20 @@ def emitJmp (j : JoinPointId) (xs : Array Arg)
 
 def emitCtorScalarSize (usize : Nat) (ssize : Nat) : M String := do
   let SIZEOF_VOIDPTR := 8; -- dodgy as fuck
-  -- if usize == 0 then emitI64 "scalarSize" ssize;
-  --- else if ssize == 0 then emitI64 "scalarSize" (SIZEOF_VOIDPTR; 
+  -- if usize == 0 then emitI32 "scalarSize" ssize;
+  --- else if ssize == 0 then emitI32 "scalarSize" (SIZEOF_VOIDPTR; 
   -- else 
-  let out <- emitI64 "scalarSize" ((SIZEOF_VOIDPTR * usize) + ssize); 
+  let out <- emitI32 "scalarSize" ((SIZEOF_VOIDPTR * usize) + ssize); 
   emitLn $ "// CtorScalarSize: usize=" ++ (toString usize) ++ " | ssize=" ++ (toString ssize)
   return out;
 
 def emitAllocCtor (c : CtorInfo) (out: String): M Unit := do
-  let idxName <- emitI64 "cidx" c.cidx
-  let csize <- emitI64 "csize" c.size
+  let idxName <- emitI32 "cidx" c.cidx
+  let csize <- emitI32 "csize" c.size
   let scalarSize <- emitCtorScalarSize c.usize c.ssize;
   emit $ "%" ++ out ++ " = "; 
   emit "call @lean_alloc_ctor(%"; emit idxName; emit ", %"; emit csize; emit ", ";
-  emit "%"; emit scalarSize; emitLn ") : (i64, i64, i64) -> !lz.value"
+  emit "%"; emit scalarSize; emitLn ") : (i32, i32, i32) -> !lz.value"
 
 -- def emitCtorSetArgs (z : VarId) (ys : Array Arg) : M Unit :=
 --   ys.size.forM fun i => do
@@ -602,10 +602,10 @@ def emitAllocCtor (c : CtorInfo) (out: String): M Unit := do
 
 def emitCtorSetArgs (z : VarId) (ys : Array Arg) : M Unit := 
   ys.size.forM fun i => do
-    let ix <- emitI64 "ix" i;
+    let ix <- emitI32 "ix" i;
     emit "call @lean_ctor_set(%"; emit z; emit ",";
     emit " %"; emit ix; emit ",";
-    emitArg ys[i]; emitLn ") : (!lz.value, i64, !lz.value) -> ()"
+    emitArg ys[i]; emitLn ") : (!lz.value, i32, !lz.value) -> ()"
 
 -- | this is literally emitCtor
 -- | TODO: raise to a higher abstraction level. Generate !lz.construct()
@@ -621,9 +621,9 @@ def emitExprCtor (z : VarId) (c : CtorInfo) (ys : Array Arg)
   emit "("; emitArgsOnlyTys ys tys; emitLn ") -> (!lz.value)";
   -- if c.size == 0 && c.usize == 0 && c.ssize == 0 then do
   --   let idxName <- gensym "idx";
-  --   emit $ "%" ++ idxName ++ " = " ++ "constant " ++ (format c.cidx) ++ " : i64";
+  --   emit $ "%" ++ idxName ++ " = " ++ "constant " ++ (format c.cidx) ++ " : i32";
   --   emit "call @lean_box("; emit ("%" ++ idxName); emit ");"
-  --   emit " : (i64) -> !lz.value"; emitLn "";
+  --   emit " : (i32) -> !lz.value"; emitLn "";
   -- else do
   --   emitAllocCtor c; emitCtorSetArgs z ys
 
@@ -645,14 +645,14 @@ def emitReset (z : VarId) (n : Nat) (x : VarId) (tys: HashMap VarId IRType): M U
     "call @lean_is_exclusive(%" ++ (toString x) ++ ") : (!lz.value) -> (i1)"
   emitLhs z; emit " scf.if "; emit ("%" ++  excl); emitLn " -> (!lz.value) {";
   n.forM fun i => do
-    let ci <- emitI64 "ix" i
-    emit "call @lean_ctor_release(%"; emit x; emit ", %"; emit ci; emitLn ") : (!lz.value, i64 ) -> ()"
+    let ci <- emitI32 "ix" i
+    emit "call @lean_ctor_release(%"; emit x; emit ", %"; emit ci; emitLn ") : (!lz.value, i32 ) -> ()"
   emitLn $ "scf.yield %" ++ (toString x) ++ " : !lz.value";
   emitLn "} else {";
   emit " call @lean_dec_ref(%"; emit x; emitLn ") : (!lz.value) -> ()";
-  let c0 <- emitI64 "c0" 0
+  let c0 <- emitI32 "c0" 0
   let c0box <- gensym "c0box";
-  emitLn $ "%" ++ c0box ++ " = call @lean_box(%" ++ c0 ++ ") : (i64) -> (!lz.value)"
+  emitLn $ "%" ++ c0box ++ " = call @lean_box(%" ++ c0 ++ ") : (i32) -> (!lz.value)"
   emitLn $ " scf.yield %" ++ c0box ++ " : !lz.value"
   emitLn "}"
 
@@ -680,9 +680,9 @@ def emitReuse (z : VarId) (x : VarId) (c : CtorInfo) (updtHeader : Bool) (ys : A
   -- emit " "; emitLhs z; emit x; emitLn ";";
   -- if updtHeader then emit " lean_ctor_set_tag("; emit z; emit ", "; emit c.cidx; emitLn ");"
   if updtHeader then (do
-    let idx <- emitI64 "idx" c.cidx
+    let idx <- emitI32 "idx" c.cidx
     emit "call @lean_ctor_set_tag(%"; emit x;
-    emit ", %"; emit idx; emitLn ") : (!lz.value, i64) -> ()";)
+    emit ", %"; emit idx; emitLn ") : (!lz.value, i32) -> ()";)
   emit "scf.yield %"; emit x; emitLn ": !lz.value"
   emitLn "}";
   emitCtorSetArgs z ys
@@ -715,7 +715,7 @@ def emitSProj (z : VarId) (t : IRType) (n offset : Nat) (x : VarId) (tys: HashMa
   | IRType.uint64 => emit "@lean_ctor_get_uint64"
   | _             => throw "invalid instruction"
   emit "(%"; emit x; emit ", %"; emit ix; emit ")";
-  emit " : ("; emitVarTy x tys; emit ", i64) -> ("; emit (toCType t); emitLn ")";
+  emit " : ("; emitVarTy x tys; emit ", i32) -> ("; emit (toCType t); emitLn ")";
 
 def toStringArgs (ys : Array Arg) : List String :=
   ys.toList.map argToCString
@@ -1296,8 +1296,8 @@ partial def emitFnBody (b : FnBody) (tys: HashMap VarId IRType)
   -- emitLn "{"
   match irr with
      | EmitIrrelevant.yes => 
-        emitLn $ "%c0_irr = std.constant 0 : i64"
-        emitLn $ "%irrelevant = call @lean_box(%c0_irr) : (i64) -> (!lz.value)"
+        emitLn $ "%c0_irr = std.constant 0 : i32"
+        emitLn $ "%irrelevant = call @lean_box(%c0_irr) : (i32) -> (!lz.value)"
      | EmitIrrelevant.no => pure ()
   let tys <- insertFnBodyArgTypes tys b
   emitBlock b tys
@@ -1347,10 +1347,10 @@ def emitDeclAux (d : Decl) : M Unit := do
          xs.size.forM fun i => do
            let x := xs[i]
            -- emit "lean_object* "; emit x.x; emit " = _args["; emit i; emitLn "];"
-           let ix <- emitI64 "ix" i
+           let ix <- emitI32 "ix" i
            emit $ "%" ++ toString x.x ++ " = ";
            emit $ (escape "ptr.loadarray") ++  "(%_args, %" ++ ix ++ ") : ";
-           emitLn $ "(!ptr.array, i64) -> !lz.value"      
+           emitLn $ "(!ptr.array, i32) -> !lz.value"      
       withReader (fun ctx => { ctx with mainFn := f, mainParams := xs })
                  (emitFnBody b 
                              ((xs.foldl (fun m x => (m.insert x.x x.ty)) {}))
@@ -1464,8 +1464,8 @@ def emitInitFn : M Unit := do
   let decls := getDecls env
   decls.reverse.forM emitDeclInit
     -- emitLns ["return lean_io_result_mk_ok(lean_box(0));", "}"]
-  emitLn "%c0 = constant 0 : i64"
-  emitLn "%box0 = call @lean_box(%c0) : (i64) -> !lz.value"
+  emitLn "%c0 = constant 0 : i32"
+  emitLn "%box0 = call @lean_box(%c0) : (i32) -> !lz.value"
   emitLn "%out = call @lean_io_result_mk_ok(%box0) : (!lz.value) -> !lz.value"
   emitLn "return %out : !lz.value"
   emitLn "}"
