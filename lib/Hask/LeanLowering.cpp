@@ -382,7 +382,7 @@ public:
     }
 
     MLIRContext *context = rewriter.getContext();
-    Type argty = rewriter.getI64Type();
+    Type argty = rewriter.getI32Type();
     Type retty = ValueType::get(context);
     FunctionType fnty = rewriter.getFunctionType(argty, retty);
 
@@ -404,7 +404,7 @@ public:
 
     ModuleOp mod = op->getParentOfType<ModuleOp>();
     FuncOp fn = getOrCreateLeanUnsignedToNat(rewriter, mod);
-    const int width = 64;
+    const int width = 32;
     Value i = rewriter.create<ConstantIntOp>(rewriter.getUnknownLoc(),
                                              op.getValue(), width);
     rewriter.replaceOpWithNewOp<CallOp>(operation, fn, i);
@@ -676,7 +676,7 @@ public:
 
     // constructor, string constructor name
     SmallVector<Type, 4> argtys{ValueType::get(context)};
-    Type retty = rewriter.getI64Type();
+    Type retty = rewriter.getI32Type();
     auto llvmFnType = rewriter.getFunctionType(argtys, retty);
     // Insert the printf function into the body of the parent module.
     PatternRewriter::InsertionGuard insertGuard(rewriter);
@@ -733,7 +733,7 @@ public:
         SmallVector<Value, 4> params{scrutinee};
         CallOp tag = rewriter.create<CallOp>(caseop.getLoc(), fn, params);
         Value lhsConst = rewriter.create<ConstantIntOp>(
-            caseop.getLoc(), order[i], rewriter.getI64Type());
+            caseop.getLoc(), order[i], rewriter.getI32Type());
         CmpIOp isEq = rewriter.create<CmpIOp>(
             caseop.getLoc(), CmpIPredicate::eq, tag.getResult(0), lhsConst);
         return isEq.getResult();
@@ -953,7 +953,7 @@ public:
       return fn;
     }
 
-    SmallVector<mlir::Type, 4> argTys{rewriter.getI64Type()};
+    SmallVector<mlir::Type, 4> argTys{rewriter.getI32Type()};
     mlir::Type retty = ValueType::get(rewriter.getContext());
 
     auto fntype = rewriter.getFunctionType(argTys, retty);
@@ -975,9 +975,9 @@ public:
     }
 
     SmallVector<mlir::Type, 4> argTys;
-    argTys.push_back(rewriter.getI64Type()); // idx
-    argTys.push_back(rewriter.getI64Type()); // size/nargs
-    argTys.push_back(rewriter.getI64Type()); // scalar size
+    argTys.push_back(rewriter.getI32Type()); // idx
+    argTys.push_back(rewriter.getI32Type()); // size/nargs
+    argTys.push_back(rewriter.getI32Type()); // scalar size
 
     mlir::Type retty = ValueType::get(rewriter.getContext());
 
@@ -1001,7 +1001,7 @@ public:
 
     SmallVector<mlir::Type, 4> argTys;
     argTys.push_back(ValueType::get(rewriter.getContext())); // ctor
-    argTys.push_back(rewriter.getI64Type());                        // ix
+    argTys.push_back(rewriter.getI32Type());                        // ix
     argTys.push_back(ValueType::get(rewriter.getContext())); // val
 
     mlir::Type retty = ValueType::get(rewriter.getContext());
@@ -1020,7 +1020,7 @@ public:
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    const int width = 64;
+    const int width = 32;
     ModuleOp mod = op->getParentOfType<ModuleOp>();
     HaskConstructOp cons = cast<HaskConstructOp>(op);
     std::string name = cons.getDataConstructorName().str();
@@ -1083,7 +1083,7 @@ public:
 
     SmallVector<mlir::Type, 4> argTys;
     argTys.push_back(ValueType::get(rewriter.getContext()));
-    argTys.push_back(IntegerType::get(rewriter.getContext(), 64));
+    argTys.push_back(IntegerType::get(rewriter.getContext(), 32));
 
     mlir::Type retty = ValueType::get(rewriter.getContext());
     auto fntype = rewriter.getFunctionType(argTys, retty);
@@ -1109,7 +1109,7 @@ public:
 
     rewriter.setInsertionPoint(proj);
     Value ix = rewriter.create<ConstantIntOp>(
-        rewriter.getUnknownLoc(), proj.getIndex(), rewriter.getI64Type());
+        rewriter.getUnknownLoc(), proj.getIndex(), rewriter.getI32Type());
     SmallVector<Value, 4> args = {proj.getOperand(), ix};
 
     rewriter.replaceOpWithNewOp<CallOp>(proj, fn, args);
@@ -1574,7 +1574,7 @@ public:
     }
 
     MLIRContext *context = rewriter.getContext();
-    Type argty = rewriter.getI64Type();
+    Type argty = rewriter.getI32Type();
     Type retty = ValueType::get(context);
     FunctionType fnty = rewriter.getFunctionType(argty, retty);
 
@@ -1594,7 +1594,7 @@ public:
     ModuleOp mod = op->getParentOfType<ModuleOp>();
     FuncOp leanbox = getOrCreateLeanBox(rewriter, mod);
     Value c0 = rewriter.create<ConstantIntOp>(rewriter.getUnknownLoc(), 0,
-                                              rewriter.getI64Type());
+                                              rewriter.getI32Type());
     rewriter.replaceOpWithNewOp<mlir::CallOp>(op, leanbox, c0);
     return success();
   }
@@ -1616,7 +1616,7 @@ public:
     MLIRContext *context = rewriter.getContext();
     // Type argty = ValueType::get(context);
     Type argty = ValueType::get(context);
-    Type retty = rewriter.getI64Type();
+    Type retty = rewriter.getI32Type();
     FunctionType fnty = rewriter.getFunctionType(argty, retty);
 
     PatternRewriter::InsertionGuard insertGuard(rewriter);
@@ -1701,8 +1701,8 @@ public:
     SmallVector<Type, 4> argtys;
 
     argtys.push_back(ValueType::get(context)); // fn.
-    argtys.push_back(rewriter.getI64Type());   // arity of fn
-    argtys.push_back(rewriter.getI64Type());   // nargs
+    argtys.push_back(rewriter.getI32Type());   // arity of fn
+    argtys.push_back(rewriter.getI32Type());   // nargs
 
     Type retty = ValueType::get(context);
     FunctionType fnty = rewriter.getFunctionType(argtys, retty);
@@ -1723,7 +1723,7 @@ public:
     SmallVector<Type, 4> argtys;
 
     argtys.push_back(ValueType::get(context)); // closure
-    argtys.push_back(rewriter.getI64Type());   // nargs
+    argtys.push_back(rewriter.getI32Type());   // nargs
     argtys.push_back(ValueType::get(context)); // value
 
     FunctionType fnty = rewriter.getFunctionType(argtys, {});
@@ -1766,7 +1766,7 @@ public:
 
     rewriter.setInsertionPoint(pap);
 
-    const int width = 64;
+    const int width = 32;
     // vvvv I don't need the name, I need the fucking function pointer!
     Value fnptr = rewriter.create<ptr::PtrFnPtrOp>(
         pap->getLoc(), pap.getFnName(), calledFn.getType());
@@ -2010,7 +2010,7 @@ public:
 
     // constructor, string constructor name
     SmallVector<Type, 4> argtys{ValueType::get(context)};
-    Type retty = rewriter.getI64Type();
+    Type retty = rewriter.getI32Type();
     auto llvmFnType = rewriter.getFunctionType(argtys, retty);
     // Insert the printf function into the body of the parent module.
     PatternRewriter::InsertionGuard insertGuard(rewriter);
@@ -2049,7 +2049,7 @@ public:
           FuncOp fn = getOrInsertGetObjTag(rewriter, mod);
           SmallVector<Value, 4> params{scrutinee};
           CallOp tag = rewriter.create<CallOp>(caseop.getLoc(), fn, params);
-          Value lhsConst = rewriter.create<ConstantIntOp>(caseop.getLoc(), *lhsIx, rewriter.getI64Type());
+          Value lhsConst = rewriter.create<ConstantIntOp>(caseop.getLoc(), *lhsIx, rewriter.getI32Type());
           CmpIOp isEq = rewriter.create<CmpIOp>(
               caseop.getLoc(), CmpIPredicate::eq, tag.getResult(0), lhsConst);
           return isEq.getResult();
@@ -2200,7 +2200,7 @@ public:
 
     MLIRContext *context = rewriter.getContext();
     llvm::SmallVector<Type, 2> argty = {ValueType::get(context),
-                                        rewriter.getI64Type()};
+                                        rewriter.getI32Type()};
     FunctionType fnty = rewriter.getFunctionType(argty, {});
 
     PatternRewriter::InsertionGuard insertGuard(rewriter);
@@ -2235,7 +2235,7 @@ public:
 
     MLIRContext *context = rewriter.getContext();
     llvm::SmallVector<Type, 2> argty = {ValueType::get(context),
-                                        rewriter.getI64Type()};
+                                        rewriter.getI32Type()};
     FunctionType fnty = rewriter.getFunctionType(argty, {});
 
     PatternRewriter::InsertionGuard insertGuard(rewriter);
@@ -2262,7 +2262,7 @@ public:
       // n > 1
       FuncOp f = inc.isCheckRef() ? getOrCreateLeanIncN(rewriter, mod)
                                   : getOrCreateLeanIncRefN(rewriter, mod);
-      const int WIDTH = 64;
+      const int WIDTH = 32;
       ConstantIntOp n = rewriter.create<ConstantIntOp>(
           inc.getLoc(), inc.getIncCount(), WIDTH);
       llvm::SmallVector<Value, 2> args = {rands[0], n};
