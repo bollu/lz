@@ -58,6 +58,70 @@
 
 # Log:  [newest] to [oldest]
 
+# Jul 23
+
+- Latest perf numbers for `binarytrees.lean`:
+
+```
+MLIR (ours)
+
+  33.64%  exe.out  exe.out           [.] l_check
+  18.24%  exe.out  exe.out           [.] lean_del
+  13.28%  exe.out  exe.out           [.] l_make_x27
+  10.55%  exe.out  exe.out           [.] lean_free_small
+   8.82%  exe.out  exe.out           [.] lean_alloc_ctor_memory
+   7.15%  exe.out  exe.out           [.] lean_alloc_small
+   1.57%  exe.out  libc-2.33.so      [.] __memset_avx2_erms
+   1.15%  exe.out  [kernel.vmlinux]  [k] get_page_from_freelist
+   0.93%  exe.out  ld-2.33.so        [.] _dl_map_object_from_fd
+   0.90%  exe.out  ld-2.33.so        [.] do_lookup_x
+   0.82%  exe.out  exe.out           [.] main
+   0.55%  exe.out  [kernel.vmlinux]  [k] error_entry
+   0.48%  exe.out  [kernel.vmlinux]  [k] irqentry_exit_to_user_mode
+   0.38%  exe.out  [kernel.vmlinux]  [k] __task_pid_nr_ns
+   0.37%  exe.out  [kernel.vmlinux]  [k] __pagevec_lru_add_fn
+   0.29%  exe.out  [kernel.vmlinux]  [k] lock_page_memcg
+   0.29%  exe.out  [kernel.vmlinux]  [k] unmap_page_range
+   0.29%  exe.out  [kernel.vmlinux]  [k] check_preemption_disabled
+   0.29%  exe.out  [kernel.vmlinux]  [k] free_pcppages_bulk
+   0.02%  perf     [kernel.vmlinux]  [k] perf_event_exec
+   0.00%  perf     [kernel.vmlinux]  [k] check_preemption_disabled
+   0.00%  perf     [kernel.vmlinux]  [k] native_write_msr
+
+```
+
+```
+  26.63%  exe-ref.out  exe-ref.out       [.] l_check
+  24.14%  exe-ref.out  exe-ref.out       [.] lean_del
+  16.74%  exe-ref.out  exe-ref.out       [.] l_make_x27.part.0
+  11.81%  exe-ref.out  exe-ref.out       [.] lean_alloc_small
+   9.21%  exe-ref.out  exe-ref.out       [.] lean_free_small
+   2.88%  exe-ref.out  ld-2.33.so        [.] do_lookup_x
+   1.47%  exe-ref.out  exe-ref.out       [.] lean_mark_persistent
+   1.15%  exe-ref.out  exe-ref.out       [.] lean::allocator::alloc_page
+   1.05%  exe-ref.out  [kernel.vmlinux]  [k] __mod_lruvec_state
+   0.96%  exe-ref.out  [kernel.vmlinux]  [k] __pagevec_lru_add_fn
+   0.89%  exe-ref.out  [kernel.vmlinux]  [k] clear_page_erms
+   0.71%  exe-ref.out  [kernel.vmlinux]  [k] copy_page
+   0.69%  exe-ref.out  [kernel.vmlinux]  [k] exc_page_fault
+   0.41%  exe-ref.out  [kernel.vmlinux]  [k] unmap_page_range
+   0.41%  exe-ref.out  [kernel.vmlinux]  [k] native_irq_return_iret
+   0.41%  exe-ref.out  [kernel.vmlinux]  [k] check_preemption_disabled
+   0.41%  exe-ref.out  [kernel.vmlinux]  [k] free_unref_page_list
+   0.04%  perf         [kernel.vmlinux]  [k] memcpy_erms
+   0.00%  perf         [kernel.vmlinux]  [k] intel_pmu_handle_irq
+   0.00%  perf         [kernel.vmlinux]  [k] native_write_msr
+```
+
+
+Places for performance diff:
+
+- I should lower into `case`, not `if` laddder.
+- `i32` vs `i64`?
+- `musttail`? doubtful.
+- Run more rounds of `-O3`? :) 
+- Need to pull more stuff into `runtime`? Currently not all of `-llean` is in `runtime.ll`.
+
 # Jul 20
 
 For a while, I thought I neeeded by own pass. It doesn't look like it, maybe I can just
@@ -88,7 +152,72 @@ define i1 @main (i8* %in) {
 ```
 
 In this program, only `cant_inline_1` fails due to the need to sign truncate the calls of an `i32` function pretending
-to be `i64`.
+to be `i64`. 
+
+Here's the list of functions with a screwed up call blocked by bitcasts (found by using sed):
+
+```
+cat exe-linked-o3.ll| sed -r -n "s/.*call.*bitcast.*(@.* ).*/\1/p"
+```
+
+The list:
+
+```
+@l_make_x27_match__1___rarg___boxed to i8*), i64 3, i64 0), !dbg 
+@lean_alloc_ctor to i8* (i64, i64, i64)*)(i64 1, i64 2, i64 2), !dbg 
+@lean_ctor_set to void (i8*, i64, i8*)*)(i8* %1, i64 0, i8* nonnull inttoptr (i64 1 to i8*)), !dbg 
+@lean_ctor_set to void (i8*, i64, i8*)*)(i8* %1, i64 1, i8* nonnull inttoptr (i64 1 to i8*)), !dbg 
+@lean_alloc_ctor to i8* (i64, i64, i64)*)(i64 1, i64 2, i64 2), !dbg 
+@lean_ctor_set to void (i8*, i64, i8*)*)(i8* %8, i64 0, i8* %5), !dbg 
+@lean_ctor_set to void (i8*, i64, i8*)*)(i8* %8, i64 1, i8* %7), !dbg 
+@lean_obj_tag to i64 (i8*)*)(i8* %0), !dbg 
+@l_check_match__1___rarg to i8*), i64 3, i64 0), !dbg 
+@lean_obj_tag to i64 (i8*)*)(i8* %0), !dbg 
+@lean_obj_tag to i64 (i8*)*)(i8* %8), !dbg 
+@l_sumT_match__1___rarg___boxed to i8*), i64 4, i64 0), !dbg 
+@l_depth_match__1___rarg to i8*), i64 3, i64 0), !dbg 
+@l_depth___lambda__1___boxed to i8*), i64 3, i64 2), !dbg 
+@lean_closure_set to void (i8*, i64, i8*)*)(i8* %14, i64 0, i8* %0), !dbg 
+@lean_closure_set to void (i8*, i64, i8*)*)(i8* %14, i64 1, i8* %13), !dbg 
+@lean_alloc_ctor to i8* (i64, i64, i64)*)(i64 0, i64 2, i64 2), !dbg 
+@lean_ctor_set to void (i8*, i64, i8*)*)(i8* %19, i64 0, i8* %0), !dbg 
+@lean_ctor_set to void (i8*, i64, i8*)*)(i8* %19, i64 1, i8* %18), !dbg 
+@lean_alloc_ctor to i8* (i64, i64, i64)*)(i64 0, i64 2, i64 2), !dbg 
+@lean_ctor_set to void (i8*, i64, i8*)*)(i8* %20, i64 0, i8* %13), !dbg 
+@lean_ctor_set to void (i8*, i64, i8*)*)(i8* %20, i64 1, i8* %19), !dbg 
+@lean_alloc_ctor to i8* (i64, i64, i64)*)(i64 1, i64 2, i64 2), !dbg 
+@lean_ctor_set to void (i8*, i64, i8*)*)(i8* %24, i64 0, i8* %20), !dbg 
+@lean_ctor_set to void (i8*, i64, i8*)*)(i8* %24, i64 1, i8* %23), !dbg 
+@l_main_match__1___rarg to i8*), i64 2, i64 0), !dbg 
+@lean_obj_tag to i64 (i8*)*)(i8* %0), !dbg 
+@lean_alloc_ctor to i8* (i64, i64, i64)*)(i64 0, i64 2, i64 2), !dbg 
+@lean_ctor_set to void (i8*, i64, i8*)*)(i8* %6, i64 0, i8* nonnull inttoptr (i64 1 to i8*)), !dbg 
+@lean_ctor_set to void (i8*, i64, i8*)*)(i8* %6, i64 1, i8* %.tr1.lcssa), !dbg 
+@lean_obj_tag to i64 (i8*)*)(i8* %36), !dbg 
+@lean_obj_tag to i64 (i8*)*)(i8* %39), !dbg 
+@lean_alloc_ctor to i8* (i64, i64, i64)*)(i64 1, i64 2, i64 2), !dbg 
+@lean_ctor_set to void (i8*, i64, i8*)*)(i8* %54, i64 0, i8* %51), !dbg 
+@lean_ctor_set to void (i8*, i64, i8*)*)(i8* %54, i64 1, i8* %53), !dbg 
+@lean_obj_tag to i64 (i8*)*)(i8* %5), !dbg 
+@lean_obj_tag to i64 (i8*)*)(i8* %13), !dbg 
+@lean_alloc_ctor to i8* (i64, i64, i64)*)(i64 1, i64 2, i64 2), !dbg 
+@lean_ctor_set to void (i8*, i64, i8*)*)(i8* %34, i64 0, i8* %31), !dbg 
+@lean_ctor_set to void (i8*, i64, i8*)*)(i8* %34, i64 1, i8* %33), !dbg 
+@lean_alloc_ctor to i8* (i64, i64, i64)*)(i64 1, i64 2, i64 2), !dbg 
+@lean_ctor_set to void (i8*, i64, i8*)*)(i8* %40, i64 0, i8* %37), !dbg 
+@lean_ctor_set to void (i8*, i64, i8*)*)(i8* %40, i64 1, i8* %39), !dbg 
+@lean_alloc_ctor to i8* (i64, i64, i64)*)(i64 1, i64 2, i64 2), !dbg 
+@lean_ctor_set to void (i8*, i64, i8*)*)(i8* %4, i64 0, i8* nonnull inttoptr (i64 1 to i8*)), !dbg 
+@lean_ctor_set to void (i8*, i64, i8*)*)(i8* %4, i64 1, i8* nonnull inttoptr (i64 1 to i8*)), !dbg 
+@__dso_handle) 
+@__dso_handle) 
+@__dso_handle) 
+@__dso_handle) 
+@_ZN4lean9throwableD2Ev to i8*)) 
+@_ZN4lean9throwableD2Ev to i8*)) 
+@_ZN4lean9throwableD2Ev to i8*)) 
+@_ZN4lean9throwableD2Ev to i8*)) 
+```
 
 
 # Jul 15

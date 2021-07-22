@@ -1577,7 +1577,7 @@ public:
     }
 
     MLIRContext *context = rewriter.getContext();
-    Type argty = rewriter.getI64Type();
+    Type argty = rewriter.getI32Type();
     Type retty = ValueType::get(context);
     FunctionType fnty = rewriter.getFunctionType(argty, retty);
 
