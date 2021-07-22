@@ -553,7 +553,7 @@ public:
     }
 
     SmallVector<Type, 4> argsTy{ValueType::get(context),
-                                rewriter.getI64Type()};
+                                rewriter.getI32Type()};
     Type retty = ValueType::get(context);
     FunctionType fnty = rewriter.getFunctionType(argsTy, retty);
 
@@ -586,7 +586,7 @@ public:
                               ConversionPatternRewriter &rewriter) {
     FuncOp fn = getOrInsertExtractConstructorArg(rewriter, mod);
     Value argixv = rewriter.create<ConstantIntOp>(rewriter.getUnknownLoc(),
-                                                  argix, rewriter.getI64Type());
+                                                  argix, rewriter.getI32Type());
     // Value argixv = rewriter.create<LLVM::ConstantOp>(
     //     rewriter.getUnknownLoc(),
     //     LLVM::LLVMType::getInt64Ty(rewriter.getContext()),
@@ -1251,7 +1251,7 @@ public:
     }
 
     MLIRContext *context = rewriter.getContext();
-    Type argty = rewriter.getI64Type();
+    Type argty = rewriter.getI32Type();
     Type retty = ValueType::get(context);
     FunctionType fnty = rewriter.getFunctionType(argty, retty);
 
@@ -1271,7 +1271,7 @@ public:
     ModuleOp mod = op->getParentOfType<ModuleOp>();
     FuncOp leanbox = getOrCreateLeanBox(rewriter, mod);
     Value c0 = rewriter.create<ConstantIntOp>(rewriter.getUnknownLoc(), 0,
-                                              rewriter.getI64Type());
+                                              rewriter.getI32Type());
     rewriter.replaceOpWithNewOp<mlir::CallOp>(op, leanbox, c0);
     return success();
   }
@@ -1292,7 +1292,7 @@ public:
 
     MLIRContext *context = rewriter.getContext();
     Type argty = ValueType::get(context);
-    Type retty = rewriter.getI64Type();
+    Type retty = rewriter.getI32Type();
     FunctionType fnty = rewriter.getFunctionType(argty, retty);
 
     PatternRewriter::InsertionGuard insertGuard(rewriter);
@@ -1330,7 +1330,7 @@ public:
       argtys.push_back(ValueType::get(context));
     }
 
-    Type retty = rewriter.getI64Type();
+    Type retty = rewriter.getI32Type();
     FunctionType fnty = rewriter.getFunctionType(argtys, retty);
 
     PatternRewriter::InsertionGuard insertGuard(rewriter);

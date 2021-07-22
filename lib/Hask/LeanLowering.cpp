@@ -51,6 +51,9 @@
 #define DEBUG_TYPE "hask-ops"
 #include "llvm/Support/Debug.h"
 
+// library.ll 
+// define nonnull %struct.lean_object* @lean_box(i64 %0) local_unnamed_addr #0 {
+
 // https://github.com/llvm/llvm-project/blob/a048e2fa1d0285a3582bd224d5652dbf1dc91cb4/mlir/examples/toy/Ch6/mlir/LowerToLLVM.cpp
 // https://github.com/llvm/llvm-project/blob/706d992cedaf2ca3190e4445015da62faf2db544/mlir/lib/Conversion/StandardToLLVM/StandardToLLVM.cpp
 
@@ -1574,7 +1577,7 @@ public:
     }
 
     MLIRContext *context = rewriter.getContext();
-    Type argty = rewriter.getI32Type();
+    Type argty = rewriter.getI64Type();
     Type retty = ValueType::get(context);
     FunctionType fnty = rewriter.getFunctionType(argty, retty);
 
