@@ -14,11 +14,12 @@ lean $1 -c exe-ref.c
 leanc -O3 exe-ref.c -o exe-ref.out
 clang++ -D LEAN_MULTI_THREAD -I/home/bollu/work/lean4/build/stage1/include \
    -O3 -S  -emit-llvm  exe-ref.c -o exe-ref.ll
-rm out-ref.txt || true
+rm ref.txt || true
 ./exe-ref.out > ref.txt 
 
-rm out-ours.txt || true
-$SCRIPTDIR/run-lean.sh $1 > ours.txt 
+rm ours.txt || true
+$SCRIPTDIR/compile-lean.sh $1
+./exe.out > ours.txt 
 diff ref.txt ours.txt
 
 time ./exe-ref.out

@@ -86,7 +86,13 @@ def run_data():
         os.system(f"lean {fpath} -m exe.mlir")
         os.system("hask-opt exe.mlir --convert-scf-to-std --lean-lower --ptr-lower | \
                 mlir-translate --mlir-to-llvmir -o exe.ll")
-        os.system("llvm-link exe.ll /home/bollu/work/lz/lean-linking-incantations/lib-includes/library.ll -S | opt -O3 -S -o exe-linked.ll")
+        os.system("llvm-link " + 
+                  "exe.ll " + 
+                  "/home/bollu/work/lz/lean-linking-incantations/lib-includes/library.ll " + 
+                  "/home/bollu/work/lz/lean-linking-incantations/lib-runtime/runtime.ll " +
+                  "| opt -passes=bitcast-call-converter  | opt --always-inline -O3 -S -o exe-linked.ll")
+        print("@@@ HACK: converting muttail to tail because of llc miscompile@@@")
+        os.system("sed -i s/musttail/tail/g exe-linked.ll")
         os.system("llc -O3 -march=x86-64 -filetype=obj exe-linked.ll -o exe.o")
         os.system(f"c++ -D LEAN_MULTI_THREAD -I/home/bollu/work/lean4/build/stage1/include \
             exe.o \

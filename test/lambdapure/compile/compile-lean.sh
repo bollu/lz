@@ -20,9 +20,12 @@ llvm-link exe.ll \
   /home/bollu/work/lz/lean-linking-incantations/lean-shell.ll \
   -S -o exe-linked.ll
 opt exe-linked.ll -passes=bitcast-call-converter -S -o exe-linked-nobitcast.ll
-opt -always-inline -O3 exe-linked-nobitcast.ll -S -o exe-linked-o3.ll
-# opt exe-linked.ll  --always-inline -O3 -S -o exe-linked-o3.ll
-llc -filetype=obj exe-linked-o3.ll -o exe.o
+# opt exe-linked.ll  -S -o exe-linked-nobitcast.ll
+opt -always-inline -O3 exe-linked-nobitcast.ll -S  -o exe-linked-o3.ll
+opt -verify exe-linked-o3.ll
+echo "@@@@HACK: REMOVING TAIL ANNOTATIONS!"
+sed -i "s/musttail/tail/g" exe-linked-o3.ll
+llc -O3 -march=x86-64 -filetype=obj exe-linked-o3.ll -o exe.o
 
 # leancpp: apply2, etc
 
