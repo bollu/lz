@@ -36,10 +36,6 @@ G_FPATHS.append("const_fold.lean")
 G_FPATHS.append("deriv.lean")
 G_FPATHS.append("filter.lean")
 G_FPATHS.append("qsort.lean")
-# G_FPATHS.append("rbmap2.lean")
-# G_FPATHS.append("rbmap3.lean")
-# G_FPATHS.append("rbmap4.lean")
-# G_FPATHS.append("rbmap500k.lean")
 G_FPATHS.append("rbmap_checkpoint.lean")
 G_FPATHS.append("unionfind.lean")
 G_NFILES = len(G_FPATHS)
@@ -59,7 +55,7 @@ dark_red = "#e31a1c"
 def log(*ARGS, **kwargs):
     print(*ARGS, file=sys.stderr, **kwargs)
 
-def run_with_output(path):
+def os_system_synch(path):
     return subprocess.check_output(path, shell=True)
 
 def sh(path):
@@ -68,12 +64,13 @@ def sh(path):
     err = proc.stderr.read()
     return (output.decode(), err.decode())
 
+
 def run_data():
     ds = []
     for (i, fpath) in enumerate(G_FPATHS):
         datum = {"file": str(fpath) }
-        os.system(f"lean {fpath} -c exe-ref.c")
-        os.system(f"leanc exe-ref.c -O3 -o exe-ref.out")
+        os_system_synch(f"lean {fpath} -c exe-ref.c")
+        os_system_synch(f"leanc exe-ref.c -O3 -o exe-ref.out")
         # x = run_with_output("perf stat ./exe-ref.out 1>/dev/null")
         # proc = subprocess.Popen("perf stat ./exe-ref.out", shell=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
         datum["theirs-out"] = []
@@ -83,18 +80,21 @@ def run_data():
           datum["theirs-out"].append(out)
           datum["theirs-perf"].append(perf)
 
-        os.system(f"lean {fpath} -m exe.mlir")
-        os.system("hask-opt exe.mlir --convert-scf-to-std --lean-lower --ptr-lower | \
+        os_system_synch(f"lean {fpath} -m exe.mlir")
+        os_system_synch("hask-opt exe.mlir --convert-scf-to-std --lean-lower --ptr-lower | \
                 mlir-translate --mlir-to-llvmir -o exe.ll")
-        os.system("llvm-link " + 
+        os_system_synch("llvm-link " + 
                   "exe.ll " + 
                   "/home/bollu/work/lz/lean-linking-incantations/lib-includes/library.ll " + 
                   "/home/bollu/work/lz/lean-linking-incantations/lib-runtime/runtime.ll " +
                   "| opt -passes=bitcast-call-converter  | opt --always-inline -O3 -S -o exe-linked.ll")
+        os_system_synch("sed -i s/musttail/tail/g exe-linked.ll")
+        os_system_synch("opt -O3 exe-linked.ll -o exe-linked-o3.ll")
+        os_system_synch("mv exe-linked-o3.ll exe-linked.ll")
         print("@@@ HACK: converting muttail to tail because of llc miscompile@@@")
-        os.system("sed -i s/musttail/tail/g exe-linked.ll")
-        os.system("llc -O3 -march=x86-64 -filetype=obj exe-linked.ll -o exe.o")
-        os.system(f"c++ -D LEAN_MULTI_THREAD -I/home/bollu/work/lean4/build/stage1/include \
+        os_system_synch("sed -i s/musttail/tail/g exe-linked.ll")
+        os_system_synch("llc -O3 -march=x86-64 -filetype=obj exe-linked.ll -o exe.o")
+        os_system_synch(f"c++ -O3 -D LEAN_MULTI_THREAD -I/home/bollu/work/lean4/build/stage1/include \
             exe.o \
             /home/bollu/work/lz/lean-linking-incantations/lean-shell.o \
             -no-pie -Wl,--start-group -lleancpp -lInit -lStd -lLean -Wl,--end-group \
