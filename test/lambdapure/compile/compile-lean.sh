@@ -21,18 +21,21 @@ llvm-link exe.ll \
   -S -o exe-linked.ll
 opt exe-linked.ll -passes=bitcast-call-converter -S -o exe-linked-nobitcast.ll
 # opt exe-linked.ll  -S -o exe-linked-nobitcast.ll
-opt -always-inline -O3 exe-linked-nobitcast.ll -S  -o exe-linked-o3.ll
+opt -always-inline -O3  exe-linked-nobitcast.ll -S  -o exe-linked-o3.ll
+opt -always-inline -O3  exe-linked-o3.ll -S  -o exe-linked-o3-2.ll
+mv exe-linked-o3-2.ll exe-linked-o3.ll
 opt -verify exe-linked-o3.ll
 echo "@@@@HACK: REMOVING TAIL ANNOTATIONS!"
 sed -i "s/musttail/tail/g" exe-linked-o3.ll
-llc -O3 -march=x86-64 -filetype=obj exe-linked-o3.ll -o exe.o
+llc --relocation-model=static -O3 -march=x86-64 -filetype=obj exe-linked-o3.ll -o exe.o
 
-# leancpp: apply2, etc
+# leancpp: undefined reference to lean_name_eq
+# `l_Lean_Syntax_isOfKind':
 
-# suspect #1: the lean-shell.o
+# Lean: lean_name_hash 
 c++ -O3 -D LEAN_MULTI_THREAD -I/home/bollu/work/lean4/build/stage1/include \
     exe.o \
-    -no-pie -Wl,--start-group -lleancpp -lInit -lStd -lLean -Wl,--end-group \
+    -no-pie -Wl,--start-group  -lleancpp -lInit -lStd -lLean -Wl,--end-group \
     -L/home/bollu/work/lean4/build/stage1/lib/lean -lgmp -ldl -pthread \
     -Wno-unused-command-line-argument -o exe.out
 

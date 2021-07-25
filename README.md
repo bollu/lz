@@ -58,6 +58,151 @@
 
 # Log:  [newest] to [oldest]
 
+# Jul 24
+
+- binarytrees.lean:
+
+```
+(theirs)
+  30.09%  exe-ref.out  exe-ref.out       [.] l_check
+  20.28%  exe-ref.out  exe-ref.out       [.] l_make_x27.part.0
+  18.12%  exe-ref.out  exe-ref.out       [.] lean_del
+  11.48%  exe-ref.out  exe-ref.out       [.] lean_alloc_small
+  10.27%  exe-ref.out  exe-ref.out       [.] lean_free_small
+   2.63%  exe-ref.out  [kernel.vmlinux]  [k] clear_page_erms
+   1.40%  exe-ref.out  ld-2.33.so        [.] _dl_relocate_object
+   1.03%  exe-ref.out  [kernel.vmlinux]  [k] irqentry_exit_to_user_mode
+   0.95%  exe-ref.out  exe-ref.out       [.] initialize_Init_Data_ByteArray_Basic
+   0.82%  exe-ref.out  exe-ref.out       [.] lean_mark_persistent
+   0.64%  exe-ref.out  [kernel.vmlinux]  [k] __memcg_kmem_charge_page
+   0.64%  exe-ref.out  exe-ref.out       [.] lean::allocator::alloc_page
+   0.41%  exe-ref.out  [kernel.vmlinux]  [k] unmap_page_range
+   0.41%  exe-ref.out  [kernel.vmlinux]  [k] kmem_cache_alloc
+   0.40%  exe-ref.out  [kernel.vmlinux]  [k] free_pcp_prepare
+   0.40%  exe-ref.out  [kernel.vmlinux]  [k] free_unref_page_commit
+   0.03%  perf         [kernel.vmlinux]  [k] perf_event_exec
+   0.00%  perf         [kernel.vmlinux]  [k] intel_bts_enable_local
+   0.00%  perf         [kernel.vmlinux]  [k] native_write_msr
+```
+
+```
+(ours)
+  31.02%  exe.out  exe.out           [.] l_check
+  17.97%  exe.out  exe.out           [.] lean_del
+  16.39%  exe.out  exe.out           [.] l_make_x27
+  10.70%  exe.out  exe.out           [.] lean_alloc_small
+   9.51%  exe.out  exe.out           [.] lean_alloc_ctor_memory
+   6.81%  exe.out  exe.out           [.] lean_free_small
+   1.49%  exe.out  libc-2.33.so      [.] __memset_avx2_erms
+   1.05%  exe.out  [kernel.vmlinux]  [k] prep_new_page
+   1.00%  exe.out  ld-2.33.so        [.] do_lookup_x
+   0.94%  exe.out  exe.out           [.] main
+   0.74%  exe.out  [kernel.vmlinux]  [k] clear_page_erms
+   0.58%  exe.out  [kernel.vmlinux]  [k] unmap_page_range
+   0.46%  exe.out  [kernel.vmlinux]  [k] __this_cpu_preempt_check
+   0.43%  exe.out  [kernel.vmlinux]  [k] try_charge
+   0.29%  exe.out  [kernel.vmlinux]  [k] native_irq_return_iret
+   0.29%  exe.out  [kernel.vmlinux]  [k] __mod_node_page_state
+   0.29%  exe.out  [kernel.vmlinux]  [k] __free_one_page
+   0.03%  perf     [kernel.vmlinux]  [k] strrchr
+   0.00%  perf     [kernel.vmlinux]  [k] native_sched_clock
+   0.00%  perf     [kernel.vmlinux]  [k] native_write_msr
+
+```
+
+- binary-trees-int.lean
+
+```
+  16.74%  exe-ref.out  [kernel.vmlinux]  [k] swapgs_restore_regs_and_return_to_usermode
+  14.09%  exe-ref.out  [kernel.vmlinux]  [k] clear_page_erms
+  11.31%  exe-ref.out  [kernel.vmlinux]  [k] vma_interval_tree_insert
+  11.19%  exe-ref.out  ld-2.33.so        [.] check_match
+   9.33%  exe-ref.out  ld-2.33.so        [.] lookup_malloc_symbol
+   7.63%  exe-ref.out  [kernel.vmlinux]  [k] handle_mm_fault
+   6.56%  exe-ref.out  exe-ref.out       [.] initialize_Init_Data_Format_Basic
+   6.29%  exe-ref.out  [kernel.vmlinux]  [k] page_remove_rmap
+   5.88%  exe-ref.out  [kernel.vmlinux]  [k] lru_add_drain_cpu
+   5.68%  exe-ref.out  [kernel.vmlinux]  [k] free_pages_and_swap_cache
+   5.03%  exe-ref.out  [kernel.vmlinux]  [k] _find_next_bit.constprop.0
+   0.24%  perf         [kernel.vmlinux]  [k] native_write_msr
+   0.01%  perf         [kernel.vmlinux]  [k] intel_bts_enable_local
+```
+
+```
+  16.43%  exe.out  [kernel.vmlinux]  [k] __split_vma
+  15.66%  exe.out  ld-2.33.so        [.] _dl_lookup_symbol_x
+  14.31%  exe.out  libc-2.33.so      [.] __memset_avx2_erms
+  13.09%  exe.out  [kernel.vmlinux]  [k] release_pages
+  12.04%  exe.out  [kernel.vmlinux]  [k] native_irq_return_iret
+  10.37%  exe.out  exe.out           [.] lean_mark_persistent
+   9.57%  exe.out  [kernel.vmlinux]  [k] unlink_file_vma
+   8.05%  exe.out  [kernel.vmlinux]  [k] perf_event_mmap_output
+   0.44%  perf     [kernel.vmlinux]  [k] perf_event_exec
+   0.02%  perf     [kernel.vmlinux]  [k] native_sched_clock
+   0.00%  perf     [kernel.vmlinux]  [k] native_write_msr
+```
+
+Try batshit insane options to get performance --- disable all stack
+related stuff, inline everything, try to expose maximum information
+to the compiler. no dice!
+
+```sh
+# compile_lean.sh
+
+#!/usr/bin/env bash
+
+set -e
+set -o xtrace
+
+rm $1-exe.out || true
+
+# lean -c fails if relative path walks upward. eg. lean -c ../exe.c -o foo
+(lean $1 -c exe-ref.c && clang -I /home/bollu/work/lean4/build/stage0/include  -O2 -S  -emit-llvm exe-ref.c -o exe-lean-ref.ll) || true
+
+# compile MLIR file
+lean $1 -m exe.mlir
+hask-opt exe.mlir | \
+  hask-opt  --convert-scf-to-std | hask-opt --lean-lower  | hask-opt --ptr-lower | \
+  mlir-translate --mlir-to-llvmir -o exe.ll
+# | opt -S -O3 | llc -filetype=obj -o exe.o
+llvm-link exe.ll \
+  /home/bollu/work/lz/lean-linking-incantations/lib-includes/library.ll \
+  /home/bollu/work/lz/lean-linking-incantations/lib-runtime/runtime.ll \
+  /home/bollu/work/lz/lean-linking-incantations/lean-shell.ll \
+  -S -o exe-linked.ll
+opt exe-linked.ll -passes=bitcast-call-converter -S -o exe-linked-nobitcast.ll
+# opt exe-linked.ll  -S -o exe-linked-nobitcast.ll
+opt -always-inline -O3  exe-linked-nobitcast.ll -S  -o exe-linked-o3.ll
+sed -i "s/attributes \(.*\) = { \(.*\) }/attributes \1 = { alwaysinline \2 }/" exe-linked-o3.ll
+sed -i "s/nounwind/nounwind alwaysinline /g" exe-linked-o3.ll
+sed -i "s/safestack//g" exe-linked-o3.ll
+sed -i "s/sspstrong//g" exe-linked-o3.ll
+sed -i "s/ssp//g" exe-linked-o3.ll
+sed -i "s/sspreq//g" exe-linked-o3.ll
+# v remove empty attributes
+sed -i "s/attributes .*= {[ ]*}$//g" exe-linked-o3.ll
+opt exe-linked-o3.ll -passes=bitcast-call-converter | opt -always-inline -O3  -S  -o exe-linked-o3-2.ll
+cp exe-linked-o3-2.ll exe-linked-o3.ll
+opt -verify exe-linked-o3.ll
+echo "@@@@HACK: REMOVING TAIL ANNOTATIONS!"
+sed -i "s/musttail/tail/g" exe-linked-o3.ll
+llc --relocation-model=static -O3 -march=x86-64 -filetype=obj exe-linked-o3.ll -o exe.o
+
+# leancpp: undefined reference to lean_name_eq
+# `l_Lean_Syntax_isOfKind':
+
+# Lean: lean_name_hash 
+c++ -O3 -D LEAN_MULTI_THREAD -I/home/bollu/work/lean4/build/stage1/include \
+    exe.o \
+    -no-pie -Wl,--start-group  -lleancpp -lInit -lStd -lLean -Wl,--end-group \
+    -L/home/bollu/work/lean4/build/stage1/lib/lean -lgmp -ldl -pthread \
+    -Wno-unused-command-line-argument -o exe.out
+```
+
+I actually don't get what's happening. The [extracted LLVM file](https://gist.github.com/bollu/d67fa754f82e5982bfcf4c87316202ac)
+should be able to inline `lean_del`, but it doesn't even though `lean_del` has the `alwaysinline` attribute.
+I'm unsure what's going on.
+
 # Jul 23
 
 - Latest perf numbers for `binarytrees.lean`:
