@@ -8,4 +8,5 @@ foo.sh
 *.cpp # generated from running
 *.lambdapure # generated from testing.
 *.c# generated from running
-
+vgcore.*
+*.out# geneated from testing
