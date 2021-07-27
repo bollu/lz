@@ -28,9 +28,7 @@ PARSER.add_argument('--nruns', type=int,
                     help='number of runs to average', default=10)
 ARGS = PARSER.parse_args()
 
-G_BASELINE = "../baseline-lean.sh"
-G_OURS = "../run-lean.sh"
-FPATH="filter-tail-test.lean"
+FPATH="evenodd.lean"
 
 # Color palette
 light_gray = "#cacaca"
@@ -166,7 +164,6 @@ def plot():
   ours = []
   for i, data in enumerate(datapoints):
       # mark = "Y" if data['success'] else 'n'
-      log(f"[{i+1:3}/{len(datapoints)}]|{data['problem_size']:80}|")
       # if data["success"] == False:
       #     continue
       labels.append(data["problem_size"])
@@ -197,7 +194,7 @@ def plot():
   # Y-Axis Label
   #
   # Use a horizontal label for improved readability.
-  ax.set_ylabel('log2(peak # stack frames) [filter]', rotation='horizontal', position = (1, 1.1),
+  ax.set_ylabel('log2(peak # stack frames) [evenodd]', rotation='horizontal', position = (1, 1.1),
       horizontalalignment='left', verticalalignment='bottom', fontsize=8)
 
   # Add some text for labels, title and custom x-axis tick labels, etc.
