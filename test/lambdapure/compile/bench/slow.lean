@@ -1,0 +1,54 @@
+-- RUN: ../validate-lean.sh %s
+
+-- STATUS: can be round-tripped, DOES NOT interpret.
+-- STATUS: DOES NOT interpret because it needs support for tasks.
+
+-- CHECK: func @main
+
+set_option trace.compiler.ir.init true
+
+inductive Tree
+| Nil
+| Node (l r : Tree) : Tree
+open Tree
+instance : Inhabited Tree := ⟨Nil⟩
+
+-- This Function has an extra argument to suppress the
+-- common sub-expression elimination optimization
+partial def make' : UInt32 -> UInt32 -> Tree
+| n, d =>
+  if d = 0 then Node Nil Nil
+  else Node (make' n (d - 1)) (make' (n + 1) (d - 1))
+
+-- build a tree
+def make (d : UInt32) := make' d d
+
+def check : Tree → UInt32
+| Nil => 0
+| Node l r   => 1 + check l + check r
+
+def minN := 4
+
+def out (s : String) (n : Nat) (t : UInt32) : IO Unit :=
+IO.println (s ++ " of depth " ++ toString n ++ "\t check: " ++ toString t)
+
+-- allocate and check lots of trees
+partial def sumT : UInt32 -> UInt32 -> UInt32 -> UInt32
+| d, i, t =>
+  if i = 0 then t
+  else
+    let a := check (make d);
+    sumT d (i-1) (t + a)
+
+-- generate many trees
+partial def depth : Nat -> Nat -> List (Nat × Nat × UInt32)
+| d, m => if d ≤ m then
+    let n := 2 ^ (m - d + minN);
+    (n, d, (sumT (UInt32.ofNat d) (UInt32.ofNat n) 0)) :: depth (d+2) m
+  else []
+
+def main : IO Unit := do
+  let n := 20;
+  let maxN := Nat.max (minN + 2) n;
+  let vs := (depth minN maxN); -- `using` (parList $ evalTuple3 r0 r0 rseq)
+  vs.forM (fun (m, d, i) => out (toString m ++ "\t trees") d i);

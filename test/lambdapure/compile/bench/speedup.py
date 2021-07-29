@@ -135,22 +135,22 @@ def perf_stat_to_time(file, o):
     # 1 " Performance counter stats for './exe-mlir.out':",
     # 2 '',
     # 3 '             10.35 msec task-clock:u              #    0.931 CPUs utilized          ',
-    #   '                 0      context-switches:u        #    0.000 K/sec                  ',
-    #   '                 0      cpu-migrations:u          #    0.000 K/sec                  ',
-    #   '             1,236      page-faults:u             #    0.119 M/sec                  ',
-    #   '         76,05,059      cycles:u                  #    0.735 GHz                    ',
-    #   '       1,04,08,658      instructions:u            #    1.37  insn per cycle         ',
-    #   '         19,34,949      branches:u                #  186.950 M/sec                  ',
-    #   '            31,181      branch-misses:u           #    1.61% of all branches        ',
-    #   '',
-    #   '       0.011116120 seconds time elapsed',
+    # 4 '                 0      context-switches:u        #    0.000 K/sec                  ',
+    # 5 '                 0      cpu-migrations:u          #    0.000 K/sec                  ',
+    # 6 '             1,236      page-faults:u             #    0.119 M/sec                  ',
+    # 7 '         76,05,059      cycles:u                  #    0.735 GHz                    ',
+    # 8 '       1,04,08,658      instructions:u            #    1.37  insn per cycle         ',
+    # 9 '         19,34,949      branches:u                #  186.950 M/sec                  ',
+    # 10 '            31,181      branch-misses:u           #    1.61% of all branches        ',
+    # 11 '',
+    # 12 '       0.011116120 seconds time elapsed',
     #   '',
     #   '       0.002787000 seconds user',
     #   '       0.008270000 seconds sys',
     #   '',
     #   '']
     # 1,559.42 msec
-    return float(o.splitlines()[3].split()[0].replace(',',''))
+    return float(o.splitlines()[12].split()[0].replace(',',''))
 
 def autolabel(ax, rects):
     """Attach a text label above each bar in *rects*, displaying its height."""

@@ -1,3 +1,4 @@
+
 -- RUN: ../validate-lean.sh %s
 
 -- STATUS: can be round-tripped, DOES NOT interpret.
@@ -71,7 +72,7 @@ partial def depth : Nat -> Nat -> List (Nat × Nat × Task UInt32)
 -- | _ => pure 1
 
 def main : IO Unit := do
-  let n := 15;
+  let n := 20;
   let maxN := Nat.max (minN + 2) n;
   let stretchN := maxN + 1;
 
