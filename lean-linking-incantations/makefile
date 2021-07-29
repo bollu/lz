@@ -3,11 +3,15 @@
 # compiler flags stolen from `which leanc` and then `cat /path/to/leanc`.
 #
 .PHONY: all clean
-all: handlink.out main-print.out lean-shell.o use-lean-shell.o
+all: handlink.out main-print.out lean-shell.o use-lean-shell.o lean-shell.ll
 
 
 lean-shell.o: lean-shell.c
 	gcc -I/home/bollu/work/lean4/build/stage0/include/ -c lean-shell.c  -o lean-shell.o
+
+lean-shell.ll: lean-shell.c
+	clang -O3 -I/home/bollu/work/lean4/build/stage0/include/ -c lean-shell.c  -S -emit-llvm -o lean-shell.ll
+
 
 use-lean-shell.o: use-lean-shell.c
 	gcc -I/home/bollu/work/lean4/build/stage0/include/ -c use-lean-shell.c  -o use-lean-shell.o
