@@ -1,10 +1,12 @@
 #include "RgnDialect.h"
+#include "mlir/IR/Block.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/Region.h"
+#include "mlir/IR/Value.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/Passes.h"
@@ -13,9 +15,11 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/ScopedHashTable.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/RecyclingAllocator.h"
+#include <set>
 #include <deque>
 
 using namespace mlir;
@@ -32,18 +36,19 @@ struct SimpleOperationInfo : public llvm::DenseMapInfo<Operation *> {
     //   op->getName(), op->getAttrDictionary(), op->getResultTypes());
     llvm::hash_code rollingHash(42);
     for (Operation &inst : rgn.getBlocks().front()) {
-      llvm::hash_code curhash = computeOpHash(&inst);
+      llvm::hash_code curhash = computeOpHashToplevel(&inst);
       rollingHash = llvm::hash_combine(rollingHash, curhash);
     }
     return rollingHash;
   }
 
-  static llvm::hash_code computeOpHash(const Operation *opC) {
+
+  static llvm::hash_code computeOpHashToplevel(const Operation *opC) {
     Operation *op = const_cast<Operation *>(opC);
     RgnValOp rgnval = dyn_cast<RgnValOp>(op);
     if (!rgnval) {
       // dispatch to regular hash function.
-      return OperationEquivalence::computeHash(op);
+      return OperationEquivalence::computeHash(op); 
     }
       // assert(false && "hashing rgn");
     Region &rgn = rgnval.getRegion();
@@ -51,7 +56,7 @@ struct SimpleOperationInfo : public llvm::DenseMapInfo<Operation *> {
   };
 
   static unsigned getHashValue(const Operation *opC) {
-    return computeOpHash(opC);
+    return computeOpHashToplevel(opC);
     // return OperationEquivalence::computeHash(const_cast<Operation *>(opC));
   }
 
@@ -85,10 +90,11 @@ struct RgnCSE : public mlir::Pass {
 
   /// Represents a single entry in the depth first traversal of a CFG.
   struct CFGStackNode {
-    CFGStackNode(ScopedMapTy &knownValues, DominanceInfoNode *node)
-        : scope(knownValues), node(node), childIterator(node->begin()),
+    CFGStackNode(std::set<RgnValOp> seen, ScopedMapTy &knownValues, DominanceInfoNode *node)
+        : seen(seen), scope(knownValues), node(node), childIterator(node->begin()),
           processed(false) {}
 
+    std::set<RgnValOp> seen;
     /// Scope for the known values.
     ScopedMapTy::ScopeTy scope;
 
@@ -99,20 +105,20 @@ struct RgnCSE : public mlir::Pass {
     bool processed;
   };
 
+
   RgnCSE() : Pass(mlir::TypeID::get<RgnCSE>()){};
 
   RgnCSE(const RgnCSE &other) : Pass(::mlir::TypeID::get<RgnCSE>()) {}
 
-  LogicalResult simplifyRgnVal(ScopedMapTy &knownValues, DominanceInfo &domInfo,
-                               RgnValOp &rgnval);
   /// Attempt to eliminate a redundant operation. Returns success if the
   /// operation was marked for removal, failure otherwise.
-  LogicalResult simplifyOperation(ScopedMapTy &knownValues,
-                                  DominanceInfo &domInfo, Operation *op);
+  LogicalResult simplifyOperation(std::set<RgnValOp >&seen, ScopedMapTy &knownValues, DominanceInfo &domInfo, Operation *op);
 
-  void simplifyBlock(ScopedMapTy &knownValues, DominanceInfo &domInfo,
+  bool isRgnValOpEqual(ScopedMapTy &knownValues, RgnValOp us, RgnValOp other);
+
+  void simplifyBlock(std::set<RgnValOp >&seen, ScopedMapTy &knownValues, DominanceInfo &domInfo,
                      Block *bb);
-  void simplifyRegion(ScopedMapTy &knownValues, DominanceInfo &domInfo,
+  void simplifyRegion(std::set<RgnValOp >&seen, ScopedMapTy &knownValues, DominanceInfo &domInfo,
                       Region &region);
   StringRef getName() const override { return "rgn-cse"; };
 
@@ -131,25 +137,78 @@ private:
 };
 } // end anonymous namespace
 
-LogicalResult RgnCSE::simplifyRgnVal(ScopedMapTy &knownValues,
-                                     DominanceInfo &domInfo, RgnValOp &rgnval) {
-  Region &rgn = rgnval.getRegion();
-  simplifyRegion(knownValues, domInfo, rgn);
-  // don't bother with regions of > 1 bb or no bb.
-  if (rgn.getBlocks().size() == 0 || rgn.getBlocks().size() > 1) {
-    return success();
-  }
-  assert(rgn.getBlocks().size() == 1);
-  for (mlir::Operation &op : rgn.getBlocks().front()) {
+llvm::hash_code rgnValHashOp(RgnCSE::ScopedMapTy &knownValues, Operation *op) {
+    Operation *v = knownValues.lookup(op);
+    if(v) { return llvm::hash_value(v); }
+    llvm::hash_code h = llvm::hash_combine(
+      op->getName(), op->getAttrDictionary(), op->getResultTypes());
 
-    (void)op;
+    SmallVector<llvm::hash_code, 4> operandHashes;
+    for(Value rand : op->getOperands()) {
+      if (Operation *randOp = rand.getDefiningOp()) {
+        operandHashes.push_back(rgnValHashOp(knownValues, randOp));
+      } else {
+        BlockArgument randArg = rand.cast<BlockArgument>();
+        // block argument is uniqued by BB and arg index.
+        operandHashes.push_back(llvm::hash_combine(randArg.getOwner(), randArg.getArgNumber()));
+      }
+    }
+    // TODO: Allow commutative operations to have different ordering.
+    h = llvm::hash_combine(
+        h, llvm::hash_combine_range(operandHashes.begin(), operandHashes.end()));
+    return h;
+
+}
+bool RgnCSE::isRgnValOpEqual(ScopedMapTy &knownValues, RgnValOp us, RgnValOp other) {
+  ScopedMapTy::ScopeTy scope(knownValues);
+
+  llvm::errs() << "comparing region vals\n";
+
+  Region &r = us.getRegion();
+  Region &s = other.getRegion();
+  assert(r.getBlocks().size() == 1);
+  assert(s.getBlocks().size() == 1);
+  Block &b = r.getBlocks().front();
+  Block &c = s.getBlocks().front();
+  Block::iterator it = b.begin();
+  Block::iterator it2 = c.begin();
+
+  while(it != b.end() && it2 !=c.end()) {
+    llvm::errs() << "\tcomparing: " << *it << " =?= " << *it2 << "\n";
+    // llvm::errs() << "\t\trepr1: " << repr1 << " | repr2: " << repr2 << "\n";
+    if (rgnValHashOp(knownValues, &*it) != rgnValHashOp(knownValues, &*it2)) { 
+        llvm::errs() << "\t\tNOT EQUAL!\n";
+        // assert(false);
+        return false;
+    }
+    it++;
+    it2++;
   }
-  return success();
+  // didn't reach end
+  if (it != b.end() || it2 !=c.end()) { 
+    if (it == b.end()) {
+      llvm::errs() << "\tRAN OUT of 1st!.\n";
+    } else {
+      llvm::errs() << "\tRAN OUT of 2nd!.\n";
+    }
+    return false;
+  }
+
+  // reached end.
+  llvm::errs() << "\tEQUAL!\n";
+  return true;
 }
 
+
+
 /// Attempt to eliminate a redundant operation.
-LogicalResult RgnCSE::simplifyOperation(ScopedMapTy &knownValues,
+LogicalResult RgnCSE::simplifyOperation(std::set<RgnValOp >&seen,
+  ScopedMapTy &knownValues,
                                         DominanceInfo &domInfo, Operation *op) {
+  llvm::errs() << "op:\n===\n"; 
+  llvm::errs() << *op; 
+  llvm::errs() << "\n\thash: " << SimpleOperationInfo::computeOpHashToplevel(op) << "\n\n";
+
   // Don't simplify terminator operations.
   if (op->hasTrait<OpTrait::IsTerminator>())
     return failure();
@@ -174,9 +233,16 @@ LogicalResult RgnCSE::simplifyOperation(ScopedMapTy &knownValues,
       assert(false && "found illegal rgn val op");
       return failure();
     }
-    llvm::errs() << "rgn:\n===\n";
-    llvm::errs() << rgnval; 
-    llvm::errs() << "\n\thash: " << SimpleOperationInfo::computeOpHash(rgnval) << "\n\n";
+
+    for(RgnValOp other: seen) {
+      if (isRgnValOpEqual(knownValues, rgnval, other)) {
+        rgnval->replaceAllUsesWith(other);
+        opsToErase.push_back(rgnval);
+        return success();
+      }
+    }
+    seen.insert(rgnval);
+    return failure();
   }
 
   // TODO: We currently only eliminate non side-effecting
@@ -208,24 +274,26 @@ LogicalResult RgnCSE::simplifyOperation(ScopedMapTy &knownValues,
   return failure();
 }
 
-void RgnCSE::simplifyBlock(ScopedMapTy &knownValues, DominanceInfo &domInfo,
+void RgnCSE::simplifyBlock(std::set<RgnValOp >&seen,
+  ScopedMapTy &knownValues, DominanceInfo &domInfo,
                            Block *bb) {
   for (auto &inst : *bb) {
-    auto _ = simplifyOperation(knownValues, domInfo, &inst);
+    auto _ = simplifyOperation(seen, knownValues, domInfo, &inst);
 
     // If this operation is isolated above, we can't process nested regions with
     // the given 'knownValues' map. This would cause the insertion of implicit
     // captures in explicit capture only regions.
     if (inst.mightHaveTrait<OpTrait::IsIsolatedFromAbove>()) {
       ScopedMapTy nestedKnownValues;
+      std::set<RgnValOp> nestedSeen;
       for (auto &region : inst.getRegions())
-        simplifyRegion(nestedKnownValues, domInfo, region);
+        simplifyRegion(nestedSeen, nestedKnownValues, domInfo, region);
       continue;
     }
 
     // Otherwise, process nested regions normally.
     for (auto &region : inst.getRegions()) {
-      simplifyRegion(knownValues, domInfo, region);
+      simplifyRegion(seen, knownValues, domInfo, region);
     }
 
 
@@ -233,7 +301,8 @@ void RgnCSE::simplifyBlock(ScopedMapTy &knownValues, DominanceInfo &domInfo,
   }
 }
 
-void RgnCSE::simplifyRegion(ScopedMapTy &knownValues, DominanceInfo &domInfo,
+void RgnCSE::simplifyRegion(std::set<RgnValOp >&seen,
+    ScopedMapTy &knownValues, DominanceInfo &domInfo,
                             Region &region) {
   // If the region is empty there is nothing to do.
   if (region.empty())
@@ -242,7 +311,7 @@ void RgnCSE::simplifyRegion(ScopedMapTy &knownValues, DominanceInfo &domInfo,
   // If the region only contains one block, then simplify it directly.
   if (std::next(region.begin()) == region.end()) {
     ScopedMapTy::ScopeTy scope(knownValues);
-    simplifyBlock(knownValues, domInfo, &region.front());
+    simplifyBlock(seen, knownValues, domInfo, &region.front());
     return;
   }
 
@@ -262,7 +331,7 @@ void RgnCSE::simplifyRegion(ScopedMapTy &knownValues, DominanceInfo &domInfo,
 
   // Process the nodes of the dom tree for this region.
   stack.emplace_back(std::make_unique<CFGStackNode>(
-      knownValues, domInfo.getRootNode(&region)));
+      seen, knownValues, domInfo.getRootNode(&region)));
 
   while (!stack.empty()) {
     auto &currentNode = stack.back();
@@ -270,14 +339,14 @@ void RgnCSE::simplifyRegion(ScopedMapTy &knownValues, DominanceInfo &domInfo,
     // Check to see if we need to process this node.
     if (!currentNode->processed) {
       currentNode->processed = true;
-      simplifyBlock(knownValues, domInfo, currentNode->node->getBlock());
+      simplifyBlock(seen, knownValues, domInfo, currentNode->node->getBlock());
     }
 
     // Otherwise, check to see if we need to process a child node.
     if (currentNode->childIterator != currentNode->node->end()) {
       auto *childNode = *(currentNode->childIterator++);
       stack.emplace_back(
-          std::make_unique<CFGStackNode>(knownValues, childNode));
+          std::make_unique<CFGStackNode>(seen, knownValues, childNode));
     } else {
       // Finally, if the node and all of its children have been processed
       // then we delete the node.
@@ -289,10 +358,10 @@ void RgnCSE::simplifyRegion(ScopedMapTy &knownValues, DominanceInfo &domInfo,
 void RgnCSE::runOnOperation() {
   /// A scoped hash table of defining operations within a region.
   ScopedMapTy knownValues;
-
+  std::set<RgnValOp > seen;
   DominanceInfo &domInfo = getAnalysis<DominanceInfo>();
   for (Region &region : getOperation()->getRegions())
-    simplifyRegion(knownValues, domInfo, region);
+    simplifyRegion(seen, knownValues, domInfo, region);
 
   // If no operations were erased, then we mark all analyses as preserved.
   if (opsToErase.empty())
