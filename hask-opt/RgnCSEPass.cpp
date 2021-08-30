@@ -35,7 +35,7 @@ struct SimpleOperationInfo : public llvm::DenseMapInfo<Operation *> {
 namespace {
 /// Simple common sub-expression elimination.
 // struct CSE : public CSEBase<CSE> {
-struct CSE : public mlir::Pass {
+struct RgnCSE : public mlir::Pass {
   /// Shared implementation of operation elimination and scoped map definitions.
   using AllocatorTy = llvm::RecyclingAllocator<
       llvm::BumpPtrAllocator,
@@ -59,10 +59,10 @@ struct CSE : public mlir::Pass {
     bool processed;
   };
 
-  CSE() : Pass(mlir::TypeID::get<CSE>()){};
+  RgnCSE() : Pass(mlir::TypeID::get<RgnCSE>()){};
 
-  CSE(const CSE &other)
-      : Pass(::mlir::TypeID::get<CSE>()) {}
+  RgnCSE(const RgnCSE &other)
+      : Pass(::mlir::TypeID::get<RgnCSE>()) {}
 
 
   /// Attempt to eliminate a redundant operation. Returns success if the
@@ -80,8 +80,8 @@ struct CSE : public mlir::Pass {
 
   std::unique_ptr<Pass> clonePass() const override {
     // https://github.com/llvm/llvm-project/blob/5d613e42d3761e106e5dd8d1731517f410605144/mlir/tools/mlir-tblgen/PassGen.cpp#L90
-    auto pass = std::make_unique<CSE>(
-        *static_cast<const CSE *>(this));
+    auto pass = std::make_unique<RgnCSE>(
+        *static_cast<const RgnCSE *>(this));
     pass->copyOptionValuesFrom(this);
     return pass;
   }
@@ -95,7 +95,7 @@ private:
 } // end anonymous namespace
 
 /// Attempt to eliminate a redundant operation.
-LogicalResult CSE::simplifyOperation(ScopedMapTy &knownValues, Operation *op) {
+LogicalResult RgnCSE::simplifyOperation(ScopedMapTy &knownValues, Operation *op) {
   // Don't simplify terminator operations.
   if (op->hasTrait<OpTrait::IsTerminator>())
     return failure();
@@ -142,7 +142,7 @@ LogicalResult CSE::simplifyOperation(ScopedMapTy &knownValues, Operation *op) {
   return failure();
 }
 
-void CSE::simplifyBlock(ScopedMapTy &knownValues, DominanceInfo &domInfo,
+void RgnCSE::simplifyBlock(ScopedMapTy &knownValues, DominanceInfo &domInfo,
                         Block *bb) {
   for (auto &inst : *bb) {
     // If the operation is simplified, we don't process any held regions.
@@ -165,7 +165,7 @@ void CSE::simplifyBlock(ScopedMapTy &knownValues, DominanceInfo &domInfo,
   }
 }
 
-void CSE::simplifyRegion(ScopedMapTy &knownValues, DominanceInfo &domInfo,
+void RgnCSE::simplifyRegion(ScopedMapTy &knownValues, DominanceInfo &domInfo,
                          Region &region) {
   // If the region is empty there is nothing to do.
   if (region.empty())
@@ -218,7 +218,7 @@ void CSE::simplifyRegion(ScopedMapTy &knownValues, DominanceInfo &domInfo,
   }
 }
 
-void CSE::runOnOperation() {
+void RgnCSE::runOnOperation() {
   /// A scoped hash table of defining operations within a region.
   ScopedMapTy knownValues;
 
@@ -241,7 +241,7 @@ void CSE::runOnOperation() {
 }
 
 
-std::unique_ptr<Pass> createRgnCSEPass() { return std::make_unique<CSE>(); }
+std::unique_ptr<Pass> createRgnCSEPass() { return std::make_unique<RgnCSE>(); }
 void registerRgnCSEPass() {
     ::mlir::registerPass(
       "rgn-cse", "CSE rgn",
