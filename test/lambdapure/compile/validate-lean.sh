@@ -12,7 +12,8 @@ set -o xtrace
 # For whatever reason this does not work with relative paths.
 lean $1 -c exe-ref.c
 leanc -O3 exe-ref.c -o exe-ref.out
-clang++ -D LEAN_MULTI_THREAD -I/home/bollu/work/lean4/build/stage1/include \
+leanc -O3 exe-ref.c -S -emit-llvm -o exe-ref-leanc.ll
+clang++ -U LEAN_MULTI_THREAD -I/home/bollu/work/lean4/build/stage1/include \
    -O3 -S  -emit-llvm  exe-ref.c -o exe-ref.ll
 rm ref.txt || true
 ./exe-ref.out > ref.txt 

@@ -39,8 +39,9 @@ int main(int argc, char **argv) {
   lean_object *in;
   lean_object *res;
   lean_initialize_runtime_module();
-  res = init_lean_custom_entrypoint_hack(lean_io_mk_world());
+  // lean_init_task_manager();
 
+  res = init_lean_custom_entrypoint_hack(lean_io_mk_world());
   lean_io_mark_end_initialization();
   if (lean_io_result_is_ok(res)) {
     lean_dec_ref(res);

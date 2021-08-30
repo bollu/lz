@@ -33,7 +33,7 @@ llc --relocation-model=static -O3 -march=x86-64 -filetype=obj exe-linked-o3.ll -
 # `l_Lean_Syntax_isOfKind':
 
 # Lean: lean_name_hash 
-c++ -O3 -D LEAN_MULTI_THREAD -I/home/bollu/work/lean4/build/stage1/include \
+c++ -O3 -U LEAN_MULTI_THREAD -I/home/bollu/work/lean4/build/stage1/include \
     exe.o \
     -no-pie -Wl,--start-group  -lleancpp -lInit -lStd -lLean -Wl,--end-group \
     -L/home/bollu/work/lean4/build/stage1/lib/lean -lgmp -ldl -pthread \

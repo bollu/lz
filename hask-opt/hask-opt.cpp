@@ -21,6 +21,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/SourceMgr.h"
+#include "SCFToRGN.h"
 #include "llvm/Support/ToolOutputFile.h"
 
 // https://github.com/llvm/llvm-project/blob/80d7ac3bc7c04975fd444e9f2806e4db224f2416/mlir/examples/toy/Ch3/toyc.cpp
@@ -95,9 +96,9 @@ int main(int argc, char **argv) {
   mlir::lambdapure::registerLambdapureToLeanLowering();
   mlir::lambdapure::registerReferenceRewriterPattern();
   mlir::lambdapure::registerDestructiveUpdatePattern();
-  
+
   registerRgnOptPass();
-  
+  mlir::registerScfToRgnPass();  
 
   mlir::DialectRegistry registry;
   mlir::registerAllDialects(registry);
