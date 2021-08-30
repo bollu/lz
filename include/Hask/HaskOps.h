@@ -68,8 +68,7 @@ public:
     }
     return args;
   }
-  void
-  getEffects(SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+  void getEffects(SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
                  &effects) {}
 
   // NOTE: the return type should be the return type of the *function*. The ApOp

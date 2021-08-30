@@ -58,6 +58,249 @@
 
 # Log:  [newest] to [oldest]
 
+# Aug 08
+
+- Bump allocator should obey stack discipline!
+
+# Jul 29
+
+- `slow.lean`: minimal version of `binarytrees.lean` without parallelism.
+
+```
+  36.16%  exe.out  exe.out           [.] l_check
+  20.60%  exe.out  exe.out           [.] lean_del
+  13.17%  exe.out  exe.out           [.] l_make_x27
+  12.07%  exe.out  exe.out           [.] lean_alloc_ctor_memory
+   9.89%  exe.out  exe.out           [.] lean_free_small
+   7.32%  exe.out  exe.out           [.] lean_alloc_small
+   0.08%  exe.out  libc-2.33.so      [.] __memset_avx2_erms
+   0.06%  exe.out  exe.out           [.] l_depth
+   0.05%  exe.out  [kernel.vmlinux]  [k] check_preemption_disabled
+```
+
+```
+  34.46%  exe-ref.out  exe-ref.out       [.] l_check
+  24.58%  exe-ref.out  exe-ref.out       [.] lean_del
+  16.53%  exe-ref.out  exe-ref.out       [.] l_make_x27.part.0
+  12.46%  exe-ref.out  exe-ref.out       [.] lean_free_small
+  10.69%  exe-ref.out  exe-ref.out       [.] lean_alloc_small
+   0.45%  exe-ref.out  exe-ref.out       [.] l_sumT
+   0.18%  exe-ref.out  exe-ref.out       [.] lean::allocator::alloc_page
+   0.08%  exe-ref.out  [kernel.vmlinux]  [k] irqentry_exit_to_user_mode
+   0.04%  exe-ref.out  ld-2.33.so        [.] _dl_lookup_symbol_x
+   0.04%  exe-ref.out  [kernel.vmlinux]  [k] get_page_from_freelist
+   0.04%  exe-ref.out  [kernel.vmlinux]  [k] free_unref_page_list
+```
+
+- From `exe-ref.ll`
+
+```ll
+define dso_local %struct.lean_object* @l_make(i32 %0) local_unnamed_addr #0 {
+  %2 = tail call %struct.lean_object* @l_make_x27(i32 %0, i32 %0)
+  ret %struct.lean_object* %2
+}
+```
+
+- On the other hand, `exe.ll`:
+
+```ll
+define i8* @l_make(i32 %0) !dbg !67 {
+  %2 = call i8* @lean_box(i32 0), !dbg !68
+  %3 = call i8* @l_make_x27(i32 %0, i32 %0), !dbg !70
+  ret i8* %3, !dbg !71
+}
+```
+
+
+- I fixed the random `lean_box` being generated due to my handling of irrelevant args. The new perf data:
+
+```
+(ours)
+  36.84%  exe.out  exe.out           [.] l_check
+  18.98%  exe.out  exe.out           [.] lean_del
+  13.57%  exe.out  exe.out           [.] l_make_x27
+  11.43%  exe.out  exe.out           [.] lean_alloc_ctor_memory
+   9.66%  exe.out  exe.out           [.] lean_free_small
+   7.11%  exe.out  exe.out           [.] lean_alloc_small
+   0.70%  exe.out  exe.out           [.] main
+   0.37%  exe.out  libc-2.33.so      [.] __memset_avx2_erms
+   0.17%  exe.out  [kernel.vmlinux]  [k] irqentry_exit_to_user_mode
+   0.16%  exe.out  [kernel.vmlinux]  [k] check_preemption_disabled
+   0.11%  exe.out  exe.out           [.] l_depth___lambda__1
+   0.09%  exe.out  [kernel.vmlinux]  [k] clear_page_erms
+   0.07%  exe.out  [kernel.vmlinux]  [k] native_irq_return_iret
+   0.07%  exe.out  [kernel.vmlinux]  [k] error_entry
+   0.05%  exe.out  [kernel.vmlinux]  [k] swapgs_restore_regs_and_return_to_usermode
+   0.04%  exe.out  [kernel.vmlinux]  [k] get_page_from_freelist
+   0.04%  exe.out  [kernel.vmlinux]  [k] __mod_memcg_state.part.0
+   0.03%  exe.out  [kernel.vmlinux]  [k] handle_mm_fault
+   0.03%  exe.out  [kernel.vmlinux]  [k] __mod_node_page_state
+   0.03%  exe.out  [kernel.vmlinux]  [k] __mod_memcg_lruvec_state
+   0.02%  exe.out  [kernel.vmlinux]  [k] __mod_lruvec_state
+   0.02%  exe.out  [kernel.vmlinux]  [k] __free_one_page
+   0.02%  exe.out  [kernel.vmlinux]  [k] sync_regs
+   0.02%  exe.out  [kernel.vmlinux]  [k] mem_cgroup_charge
+   0.02%  exe.out  [kernel.vmlinux]  [k] prep_new_page
+   0.02%  exe.out  [kernel.vmlinux]  [k] __this_cpu_preempt_check
+   0.02%  exe.out  [kernel.vmlinux]  [k] unmap_page_range
+```
+
+
+```
+(theirs)
+  34.81%  exe-ref.out  exe-ref.out         [.] l_check
+  24.03%  exe-ref.out  exe-ref.out         [.] lean_del
+  15.56%  exe-ref.out  exe-ref.out         [.] l_make_x27.part.0
+  11.24%  exe-ref.out  exe-ref.out         [.] lean_free_small
+  10.79%  exe-ref.out  exe-ref.out         [.] lean_alloc_small
+   0.85%  exe-ref.out  exe-ref.out         [.] lean_mark_persistent
+   0.47%  exe-ref.out  exe-ref.out         [.] l_depth___lambda__1___boxed
+   0.41%  exe-ref.out  exe-ref.out         [.] lean::allocator::alloc_page
+   0.17%  exe-ref.out  [kernel.vmlinux]    [k] check_preemption_disabled
+   0.16%  exe-ref.out  [kernel.vmlinux]    [k] clear_page_erms
+   0.15%  exe-ref.out  [kernel.vmlinux]    [k] irqentry_exit_to_user_mode
+   0.08%  exe-ref.out  [kernel.vmlinux]    [k] error_entry
+   0.07%  exe-ref.out  [kernel.vmlinux]    [k] try_charge
+   0.07%  exe-ref.out  [kernel.vmlinux]    [k] native_irq_return_iret
+   0.07%  exe-ref.out  [kernel.vmlinux]    [k] swapgs_restore_regs_and_return_to_usermode
+   0.06%  exe-ref.out  [kernel.vmlinux]    [k] handle_mm_fault
+   0.06%  exe-ref.out  [kernel.vmlinux]    [k] __mod_node_page_state
+   0.05%  exe-ref.out  [kernel.vmlinux]    [k] __pagevec_lru_add_fn
+   0.05%  exe-ref.out  [kernel.vmlinux]    [k] __free_one_page
+   0.05%  exe-ref.out  [kernel.vmlinux]    [k] release_pages
+   0.05%  exe-ref.out  [kernel.vmlinux]    [k] page_remove_rmap
+   0.04%  exe-ref.out  [kernel.vmlinux]    [k] __mod_memcg_lruvec_state
+   0.04%  exe-ref.out  [kernel.vmlinux]    [k] unmap_page_range
+   0.03%  exe-ref.out  [kernel.vmlinux]    [k] kernel_init_free_pages
+   0.03%  exe-ref.out  [kernel.vmlinux]    [k] __rcu_read_unlock
+   0.03%  exe-ref.out  [kernel.vmlinux]    [k] get_page_from_freelist
+   0.03%  exe-ref.out  [kernel.vmlinux]    [k] __mod_zone_page_state
+   0.03%  exe-ref.out  [kernel.vmlinux]    [k] free_pages_and_swap_cache
+   0.03%  exe-ref.out  [kernel.vmlinux]    [k] free_unref_page_list
+```
+
+- If we now look at `l_make`:
+
+```ll
+(ours)
+; Function Attrs: nounwind sspstrong
+define i8* @l_make_x27(i32 %0, i32 %1) local_unnamed_addr #2 !dbg !74 {
+  %.not = icmp eq i32 %1, 0, !dbg !75
+  br i1 %.not, label %14, label %lean_ctor_set.exit1, !dbg !77
+
+lean_ctor_set.exit1:                              ; preds = %2
+  %3 = add i32 %1, -1, !dbg !78
+  %4 = tail call i8* @l_make_x27(i32 %0, i32 %3), !dbg !79
+  %5 = add i32 %0, 1, !dbg !80
+  %6 = tail call i8* @l_make_x27(i32 %5, i32 %3), !dbg !81
+  ;; SLOW ALLOCATOR
+  %7 = tail call %struct.lean_object* @lean_alloc_ctor_memory(i32 26) #3, !dbg !82
+  ;; SLOW ALLOCATOR
+  %8 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %7, i64 0, i32 0, !dbg !82
+  store i64 72620543991349249, i64* %8, align 8, !dbg !82, !tbaa !46
+  %9 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %7, i64 1, !dbg !83
+  %10 = bitcast %struct.lean_object* %9 to i8**, !dbg !83
+  store i8* %4, i8** %10, align 8, !dbg !83, !tbaa !71
+  %11 = bitcast %struct.lean_object* %7 to i8*, !dbg !82
+  %12 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %7, i64 2, !dbg !84
+  %13 = bitcast %struct.lean_object* %12 to i8**, !dbg !84
+  store i8* %6, i8** %13, align 8, !dbg !84, !tbaa !71
+  ret i8* %11, !dbg !85
+
+14:                                               ; preds = %2
+  %15 = load i8*, i8** @l_make_x27___closed__1, align 8, !dbg !86
+  ret i8* %15, !dbg !87
+}
+```
+
+- versus:
+
+```ll
+(theirs)
+define dso_local %struct.lean_object* @l_make_x27(i32 %0, i32 %1) local_unnamed_addr #0 {
+  %3 = icmp eq i32 %1, 0
+  br i1 %3, label %16, label %4
+
+4:                                                ; preds = %2
+  %5 = add i32 %1, -1
+  %6 = tail call %struct.lean_object* @l_make_x27(i32 %0, i32 %5)
+  %7 = add i32 %0, 1
+  %8 = tail call %struct.lean_object* @l_make_x27(i32 %7, i32 %5)
+  ;; BETTER ALLOC
+  %9 = tail call i8* @lean_alloc_small(i32 24, i32 2) #3 <- BETTER ALLOC
+  ;; BETTER ALLOC
+  %10 = bitcast i8* %9 to %struct.lean_object*
+  %11 = bitcast i8* %9 to i64*
+  store i64 72620543991349249, i64* %11, align 8, !tbaa !4
+  %12 = getelementptr inbounds i8, i8* %9, i64 8
+  %13 = bitcast i8* %12 to %struct.lean_object**
+  store %struct.lean_object* %6, %struct.lean_object** %13, align 8, !tbaa !17
+  %14 = getelementptr inbounds i8, i8* %9, i64 16
+  %15 = bitcast i8* %14 to %struct.lean_object**
+  store %struct.lean_object* %8, %struct.lean_object** %15, align 8, !tbaa !17
+  br label %18
+
+16:                                               ; preds = %2
+  %17 = load %struct.lean_object*, %struct.lean_object** @l_make_x27___closed__1, align 8, !tbaa !17
+  br label %18
+
+18:                                               ; preds = %16, %4
+  %19 = phi %struct.lean_object* [ %10, %4 ], [ %17, %16 ]
+  ret %struct.lean_object* %19
+}
+```
+
+
+# Jul 28
+
+Here's the LLVM:
+
+```
+https://gist.github.com/bollu/89b4b6f412433305022fbbbccd82614b
+define i8* @l_even(i8* %0) local_unnamed_addr !dbg !7 {
+  ...
+  %9 = tail call i8* @l_odd(i8* %8), !dbg !19
+  ...
+}
+
+define i8* @l_odd(i8* %0) local_unnamed_addr !dbg !23 {
+  ...
+  %9 = tail call i8* @l_even(i8* %8), !dbg !32
+  ...  
+}
+```
+
+Here's the LLC:
+
+```
+56      in /home/bollu/work/lz/test/lambdapure/compile/<stdin>
+(gdb) bt
+#0  l_even () at /home/bollu/work/lz/test/lambdapure/compile/<stdin>:56
+#1  0x0000000000406612 in l_odd () at /home/bollu/work/lz/test/lambdapure/compile/<stdin>:95
+#2  0x000000000040659e in l_even () at /home/bollu/work/lz/test/lambdapure/compile/<stdin>:69
+#3  0x0000000000406612 in l_odd () at /home/bollu/work/lz/test/lambdapure/compile/<stdin>:95
+#4  0x000000000040659e in l_even () at /home/bollu/work/lz/test/lambdapure/compile/<stdin>:69
+#5  0x0000000000406612 in l_odd () at /home/bollu/work/lz/test/lambdapure/compile/<stdin>:95
+#6  0x000000000040659e in l_even () at /home/bollu/work/lz/test/lambdapure/compile/<stdin>:69
+#7  0x0000000000406612 in l_odd () at /home/bollu/work/lz/test/lambdapure/compile/<stdin>:95
+#8  0x000000000040659e in l_even () at /home/bollu/work/lz/test/lambdapure/compile/<stdin>:69
+#9  0x000000000040685e in main_lean_custom_entrypoint_hack () at /home/bollu/work/lz/test/lambdapure/compile/<stdin>:223
+#10 0x0000000000432d86 in main ()
+(gdb)  
+```
+    
+so I don't actually understand the guarantees provided by `tail call`. I presume the point is the call
+can't be tailed, since it's followed by more code:
+
+```lvm
+define i8* @l_even(i8* %0) local_unnamed_addr !dbg !7 {
+  ...
+  %9 = tail call i8* @l_odd(i8* %8), !dbg !19
+  tail call void bitcast (void (%struct.lean_object*)* @lean_dec to void (i8*)*)(i8* %8), !dbg !20
+  ret i8* %9, !dbg !21
+}
+```
+
 # Jul 24
 
 - binarytrees.lean:

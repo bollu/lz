@@ -2,6 +2,13 @@
 #include "./Runtime.h"
 #include "Hask/HaskDialect.h"
 #include "Hask/HaskOps.h"
+#include "mlir/IR/Dialect.h"
+#include "mlir/Pass/Pass.h"
+#include "mlir/Transforms/InliningUtils.h"
+#include <llvm/ADT/ArrayRef.h>
+#include <assert.h>
+#include <vector>
+#include <string>
 
 struct InterpValue;
 
@@ -42,7 +49,8 @@ template <typename T> struct MemRefT {
     llvm::Optional<T> ov = mem[_idx(key)];
 
     if (!ov) {
-      llvm::errs() << "ERROR: trying to load from flattened index: |" << _idx(key) << "| which has not been stored to.\n";
+      llvm::errs() << "ERROR: trying to load from flattened index: |"
+                   << _idx(key) << "| which has not been stored to.\n";
     }
 
     assert(ov && "trying to load from index that has not been stored to!");
@@ -66,7 +74,6 @@ template <typename T> struct MemRefT {
     assert((int)mem.size() == dims[0]);
     mem.push_back({v});
     dims[0] = mem.size();
-
   }
 
 private:
@@ -304,8 +311,9 @@ struct InterpValue {
   std::string s_;
   mlir::standalone::HaskLambdaOp lam; // ugh
   int refcount_;
+
 private:
-  InterpValue(InterpValueType type) : type(type), refcount_(0) {};
+  InterpValue(InterpValueType type) : type(type), refcount_(0){};
 };
 
 struct InterpStats {
@@ -321,7 +329,8 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &o, const InterpStats &s);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &o, const InterpValue &v);
 
 // interpret a module, and interpret the result as an integer. print it out.
-std::pair<InterpValue, InterpStats> interpretModule(mlir::ModuleOp module, std::string entrypoint);
+std::pair<InterpValue, InterpStats> interpretModule(mlir::ModuleOp module,
+                                                    std::string entrypoint);
 
 std::unique_ptr<mlir::Pass> createLzInterpretPass();
 void registerLzInterpretPass();

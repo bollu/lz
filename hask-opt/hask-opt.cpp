@@ -14,6 +14,7 @@
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Support/FileUtilities.h"
 #include "mlir/Support/MlirOptMain.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Mangler.h"
@@ -46,7 +47,7 @@
 #include "lambdapure/Passes.h"
 
 #include "LZJIT/LZJIT.h"
-
+#include "RgnDialect.h"
 // conversion
 // https://github.com/llvm/llvm-project/blob/80d7ac3bc7c04975fd444e9f2806e4db224f2416/mlir/examples/toy/Ch6/toyc.cpp
 // #include "mlir/Target/LLVMIR.h"
@@ -94,6 +95,9 @@ int main(int argc, char **argv) {
   mlir::lambdapure::registerLambdapureToLeanLowering();
   mlir::lambdapure::registerReferenceRewriterPattern();
   mlir::lambdapure::registerDestructiveUpdatePattern();
+  
+  registerRgnOptPass();
+  
 
   mlir::DialectRegistry registry;
   mlir::registerAllDialects(registry);
@@ -103,6 +107,7 @@ int main(int argc, char **argv) {
   registry.insert<mlir::lambdapure::LambdapureDialect>();
   registry.insert<mlir::ptr::PtrDialect>();
   registry.insert<mlir::unif::UnificationDialect>();
+  registry.insert<RgnDialect>();
 
   // registry.insert<mlir::StandardOpsDialect>();
   // registry.insert<mlir::AffineDialect>();
