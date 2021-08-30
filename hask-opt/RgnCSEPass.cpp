@@ -1,24 +1,60 @@
 #include "RgnDialect.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Dominance.h"
+#include "mlir/IR/OpDefinition.h"
+#include "mlir/IR/Operation.h"
+#include "mlir/IR/OperationSupport.h"
+#include "mlir/IR/Region.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/Passes.h"
 #include "mlir/Transforms/Utils.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/ScopedHashTable.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/RecyclingAllocator.h"
 #include <deque>
-
 
 using namespace mlir;
 
 namespace {
 struct SimpleOperationInfo : public llvm::DenseMapInfo<Operation *> {
-  static unsigned getHashValue(const Operation *opC) {
-    return OperationEquivalence::computeHash(const_cast<Operation *>(opC));
+
+  static llvm::hash_code computeRegionHash(Region &rgn) {
+    if (rgn.getBlocks().size() == 0 || rgn.getBlocks().size() > 1) {
+      assert(false && "should never reach this case!");
+    }
+
+    // llvm::hash_code hash = llvm::hash_combine(
+    //   op->getName(), op->getAttrDictionary(), op->getResultTypes());
+    llvm::hash_code rollingHash(42);
+    for (Operation &inst : rgn.getBlocks().front()) {
+      llvm::hash_code curhash = computeOpHash(&inst);
+      rollingHash = llvm::hash_combine(rollingHash, curhash);
+    }
+    return rollingHash;
   }
+
+  static llvm::hash_code computeOpHash(const Operation *opC) {
+    Operation *op = const_cast<Operation *>(opC);
+    RgnValOp rgnval = dyn_cast<RgnValOp>(op);
+    if (!rgnval) {
+      // dispatch to regular hash function.
+      return OperationEquivalence::computeHash(op);
+    }
+      // assert(false && "hashing rgn");
+    Region &rgn = rgnval.getRegion();
+    return computeRegionHash(rgn);
+  };
+
+  static unsigned getHashValue(const Operation *opC) {
+    return computeOpHash(opC);
+    // return OperationEquivalence::computeHash(const_cast<Operation *>(opC));
+  }
+
   static bool isEqual(const Operation *lhsC, const Operation *rhsC) {
     auto *lhs = const_cast<Operation *>(lhsC);
     auto *rhs = const_cast<Operation *>(rhsC);
@@ -27,6 +63,9 @@ struct SimpleOperationInfo : public llvm::DenseMapInfo<Operation *> {
     if (lhs == getTombstoneKey() || lhs == getEmptyKey() ||
         rhs == getTombstoneKey() || rhs == getEmptyKey())
       return false;
+    if (isa<RgnValOp>(lhs) && isa<RgnValOp>(rhs)) {
+      assert(false  && "comparing regions");
+    }
     return OperationEquivalence::isEquivalentTo(const_cast<Operation *>(lhsC),
                                                 const_cast<Operation *>(rhsC));
   }
@@ -62,32 +101,29 @@ struct RgnCSE : public mlir::Pass {
 
   RgnCSE() : Pass(mlir::TypeID::get<RgnCSE>()){};
 
-  RgnCSE(const RgnCSE &other)
-      : Pass(::mlir::TypeID::get<RgnCSE>()) {}
+  RgnCSE(const RgnCSE &other) : Pass(::mlir::TypeID::get<RgnCSE>()) {}
 
-
+  LogicalResult simplifyRgnVal(ScopedMapTy &knownValues, DominanceInfo &domInfo,
+                               RgnValOp &rgnval);
   /// Attempt to eliminate a redundant operation. Returns success if the
   /// operation was marked for removal, failure otherwise.
-  LogicalResult simplifyOperation(ScopedMapTy &knownValues, Operation *op);
+  LogicalResult simplifyOperation(ScopedMapTy &knownValues,
+                                  DominanceInfo &domInfo, Operation *op);
 
   void simplifyBlock(ScopedMapTy &knownValues, DominanceInfo &domInfo,
                      Block *bb);
   void simplifyRegion(ScopedMapTy &knownValues, DominanceInfo &domInfo,
                       Region &region);
-  StringRef getName() const override {
-    return "rgn-cse";
-  };
-
+  StringRef getName() const override { return "rgn-cse"; };
 
   std::unique_ptr<Pass> clonePass() const override {
     // https://github.com/llvm/llvm-project/blob/5d613e42d3761e106e5dd8d1731517f410605144/mlir/tools/mlir-tblgen/PassGen.cpp#L90
-    auto pass = std::make_unique<RgnCSE>(
-        *static_cast<const RgnCSE *>(this));
+    auto pass = std::make_unique<RgnCSE>(*static_cast<const RgnCSE *>(this));
     pass->copyOptionValuesFrom(this);
     return pass;
   }
 
-  void runOnOperation() override ;
+  void runOnOperation() override;
 
 private:
   /// Operations marked as dead and to be erased.
@@ -95,8 +131,25 @@ private:
 };
 } // end anonymous namespace
 
+LogicalResult RgnCSE::simplifyRgnVal(ScopedMapTy &knownValues,
+                                     DominanceInfo &domInfo, RgnValOp &rgnval) {
+  Region &rgn = rgnval.getRegion();
+  simplifyRegion(knownValues, domInfo, rgn);
+  // don't bother with regions of > 1 bb or no bb.
+  if (rgn.getBlocks().size() == 0 || rgn.getBlocks().size() > 1) {
+    return success();
+  }
+  assert(rgn.getBlocks().size() == 1);
+  for (mlir::Operation &op : rgn.getBlocks().front()) {
+
+    (void)op;
+  }
+  return success();
+}
+
 /// Attempt to eliminate a redundant operation.
-LogicalResult RgnCSE::simplifyOperation(ScopedMapTy &knownValues, Operation *op) {
+LogicalResult RgnCSE::simplifyOperation(ScopedMapTy &knownValues,
+                                        DominanceInfo &domInfo, Operation *op) {
   // Don't simplify terminator operations.
   if (op->hasTrait<OpTrait::IsTerminator>())
     return failure();
@@ -113,6 +166,17 @@ LogicalResult RgnCSE::simplifyOperation(ScopedMapTy &knownValues, Operation *op)
   // whether we would want to CSE such operations.
   if ((op->getNumRegions() != 0) && !isa<RgnValOp>(op)) {
     return failure();
+  }
+
+  if (RgnValOp rgnval = dyn_cast<RgnValOp>(op)) {
+    Region &rgn = rgnval.getRegion();
+    if (rgn.getBlocks().size() == 0 || rgn.getBlocks().size() > 2) {
+      assert(false && "found illegal rgn val op");
+      return failure();
+    }
+    llvm::errs() << "rgn:\n===\n";
+    llvm::errs() << rgnval; 
+    llvm::errs() << "\n\thash: " << SimpleOperationInfo::computeOpHash(rgnval) << "\n\n";
   }
 
   // TODO: We currently only eliminate non side-effecting
@@ -145,11 +209,9 @@ LogicalResult RgnCSE::simplifyOperation(ScopedMapTy &knownValues, Operation *op)
 }
 
 void RgnCSE::simplifyBlock(ScopedMapTy &knownValues, DominanceInfo &domInfo,
-                        Block *bb) {
+                           Block *bb) {
   for (auto &inst : *bb) {
-    // If the operation is simplified, we don't process any held regions.
-    if (succeeded(simplifyOperation(knownValues, &inst)))
-      continue;
+    auto _ = simplifyOperation(knownValues, domInfo, &inst);
 
     // If this operation is isolated above, we can't process nested regions with
     // the given 'knownValues' map. This would cause the insertion of implicit
@@ -162,13 +224,17 @@ void RgnCSE::simplifyBlock(ScopedMapTy &knownValues, DominanceInfo &domInfo,
     }
 
     // Otherwise, process nested regions normally.
-    for (auto &region : inst.getRegions())
+    for (auto &region : inst.getRegions()) {
       simplifyRegion(knownValues, domInfo, region);
+    }
+
+
+
   }
 }
 
 void RgnCSE::simplifyRegion(ScopedMapTy &knownValues, DominanceInfo &domInfo,
-                         Region &region) {
+                            Region &region) {
   // If the region is empty there is nothing to do.
   if (region.empty())
     return;
@@ -242,11 +308,9 @@ void RgnCSE::runOnOperation() {
   markAnalysesPreserved<DominanceInfo, PostDominanceInfo>();
 }
 
-
 std::unique_ptr<Pass> createRgnCSEPass() { return std::make_unique<RgnCSE>(); }
 void registerRgnCSEPass() {
-    ::mlir::registerPass(
+  ::mlir::registerPass(
       "rgn-cse", "CSE rgn",
       []() -> std::unique_ptr<::mlir::Pass> { return createRgnCSEPass(); });
-
 }
