@@ -26,7 +26,7 @@ using namespace mlir;
 
 namespace {
 struct SimpleOperationInfo : public llvm::DenseMapInfo<Operation *> {
-
+  /*
   static llvm::hash_code computeRegionHash(Region &rgn) {
     if (rgn.getBlocks().size() == 0 || rgn.getBlocks().size() > 1) {
       assert(false && "should never reach this case!");
@@ -56,9 +56,10 @@ struct SimpleOperationInfo : public llvm::DenseMapInfo<Operation *> {
   };
 
   static unsigned getHashValue(const Operation *opC) {
-    return computeOpHashToplevel(opC);
-    // return OperationEquivalence::computeHash(const_cast<Operation *>(opC));
+    // return computeOpHashToplevel(opC);
+    return OperationEquivalence::computeHash(const_cast<Operation *>(opC));
   }
+  */
 
   static bool isEqual(const Operation *lhsC, const Operation *rhsC) {
     auto *lhs = const_cast<Operation *>(lhsC);
