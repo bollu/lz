@@ -25,7 +25,7 @@
 --   lz.return %0 : !lz.value
 -- }
 
-set_option trace.compiler.ir.init true
+set_option trace.compiler.ir true
 
 mutual 
   partial def even (a : Nat) : Nat := if a == 0 then 1 else odd (a - 1)

@@ -1,11 +1,4 @@
-out.txt
-ours.txt
-ref.txt
-exe.c
-exe-ref.c
+Output/
+*.ll
+*.c
 exe.mlir
-foo.sh
-*.cpp # generated from running
-*.lambdapure # generated from testing.
-*.c# generated from running
-
