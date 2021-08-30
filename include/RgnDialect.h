@@ -250,3 +250,6 @@ public:
 
 std::unique_ptr<mlir::Pass> createRgnOptPass();
 void registerRgnOptPass();
+
+std::unique_ptr<mlir::Pass> createRgnCSEPass();
+void registerRgnCSEPass();
