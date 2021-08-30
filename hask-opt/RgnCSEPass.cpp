@@ -1,3 +1,4 @@
+#include "RgnDialect.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/Pass/Pass.h"
@@ -110,8 +111,9 @@ LogicalResult RgnCSE::simplifyOperation(ScopedMapTy &knownValues, Operation *op)
   // Don't simplify operations with nested blocks. We don't currently model
   // equality comparisons correctly among other things. It is also unclear
   // whether we would want to CSE such operations.
-  if (op->getNumRegions() != 0)
+  if ((op->getNumRegions() != 0) && !isa<RgnValOp>(op)) {
     return failure();
+  }
 
   // TODO: We currently only eliminate non side-effecting
   // operations.

@@ -74,6 +74,7 @@ int main(int argc, char **argv) {
   // mlir::registerInlinerPass();
   // mlir::registerCanonicalizerPass();
   mlir::registerCSEPass();
+  registerRgnCSEPass();
   // mlir::registerAffinePasses();
   // mlir::registerAffineLoopFusionPass();
   // mlir::registerConvertStandardToLLVMPass();
