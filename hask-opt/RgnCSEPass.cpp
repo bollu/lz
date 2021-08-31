@@ -177,10 +177,16 @@ bool RgnCSE::isRgnValOpEqual(ScopedMapTy &knownValues, RgnValOp us, RgnValOp oth
   while(it != b.end() && it2 !=c.end()) {
     llvm::errs() << "\tcomparing: " << *it << " =?= " << *it2 << "\n";
     // llvm::errs() << "\t\trepr1: " << repr1 << " | repr2: " << repr2 << "\n";
-    if (rgnValHashOp(knownValues, &*it) != rgnValHashOp(knownValues, &*it2)) { 
+    llvm::hash_code hash1 = rgnValHashOp(knownValues, &*it); 
+    llvm::hash_code hash2 = rgnValHashOp(knownValues, &*it2);
+    if (hash1 != hash2) { 
         llvm::errs() << "\t\tNOT EQUAL!\n";
         // assert(false);
         return false;
+    } else {
+      // map both to same value.
+      knownValues.insert(&*it, &*it);
+      knownValues.insert(&*it2, &*it);
     }
     it++;
     it2++;
@@ -206,9 +212,9 @@ bool RgnCSE::isRgnValOpEqual(ScopedMapTy &knownValues, RgnValOp us, RgnValOp oth
 LogicalResult RgnCSE::simplifyOperation(std::set<RgnValOp >&seen,
   ScopedMapTy &knownValues,
                                         DominanceInfo &domInfo, Operation *op) {
-  llvm::errs() << "op:\n===\n"; 
-  llvm::errs() << *op; 
-  llvm::errs() << "\n\thash: " << SimpleOperationInfo::computeOpHashToplevel(op) << "\n\n";
+  // llvm::errs() << "op:\n===\n"; 
+  // llvm::errs() << *op; 
+  // llvm::errs() << "\n\thash: " << SimpleOperationInfo::computeOpHashToplevel(op) << "\n\n";
 
   // Don't simplify terminator operations.
   if (op->hasTrait<OpTrait::IsTerminator>())
