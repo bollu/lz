@@ -1905,11 +1905,7 @@ public:
   explicit HaskCaseIntRetOpConversionPattern(HaskTypeConverter &tc,
                                              MLIRContext *context)
       : ConversionPattern(HaskCaseIntRetOp::getOperationName(), 1, tc,
-                          context) {
-    setHasBoundedRewriteRecursion();
-
-        
-      }
+                          context) {}
 
   // fill the region `out` with the ith RHS of the caseop.
   // void genCaseAltRHS(Block *out, HaskCaseIntRetOp caseop, int i,

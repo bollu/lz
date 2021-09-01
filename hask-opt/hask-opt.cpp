@@ -92,6 +92,7 @@ int main(int argc, char **argv) {
   registerLZDumpLLVMPass();
   registerLzInterpretPass();
   registerLzLazifyPass();
+  registerLowerRgnPass();
   mlir::standalone::registerHaskCanonicalizePass();
   mlir::standalone::registerWrapperWorkerPass();
 

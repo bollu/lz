@@ -11,7 +11,7 @@ rm $1-exe.out || true
 # compile MLIR file
 lean $1 -m exe.mlir
 hask-opt exe.mlir | \
-  hask-opt  --convert-scf-to-std | hask-opt --lean-lower  | hask-opt --ptr-lower | \
+  hask-opt  --convert-scf-to-std | hask-opt --lean-lower-rgn  | hask-opt --convert-rgn-to-std | hask-opt --ptr-lower | \
   mlir-translate --mlir-to-llvmir -o exe.ll
 # | opt -S -O3 | llc -filetype=obj -o exe.o
 llvm-link exe.ll \

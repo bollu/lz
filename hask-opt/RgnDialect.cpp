@@ -52,8 +52,7 @@ RgnDialect::RgnDialect(mlir::MLIRContext *context)
   // clang-format off
     // addOperations<RgnReturnOp, RgnSymOp, RgnValOp, RgnCallSymOp, RgnCallValOp, RgnJumpSymOp, RgnJumpValOp
     // >();
-    addOperations<RgnReturnOp, RgnSymOp, RgnValOp, RgnCallSymOp
-    , RgnCallValOp, RgnJumpSymOp, RgnJumpValOp, RgnEndOp, RgnSelectOp>();
+    addOperations<RgnReturnOp, RgnValOp, RgnJumpValOp, RgnEndOp, RgnSelectOp>();
 
     // addAttributes<DataConstructorAttr>();
     // addInterfaces<HaskInlinerInterface>();
@@ -146,58 +145,6 @@ void RgnValOp::getSuccessorRegions(
   return;
 }
 
-// RGN OPS::RgnSymOp
-// RGN OPS::RgnSymOp
-// RGN OPS::RgnSymOp
-// RGN OPS::RgnSymOp
-// RGN OPS::RgnSymOp
-
-mlir::ParseResult RgnSymOp::parse(mlir::OpAsmParser &parser,
-                                  mlir::OperationState &result) {
-  assert(false && "unimplemented");
-}
-
-void RgnSymOp::print(mlir::OpAsmPrinter &p) {
-  p.printGenericOp(this->getOperation());
-}
-
-// RGN OPS::RgnCallValOp
-// RGN OPS::RgnCallValOp
-// RGN OPS::RgnCallValOp
-// RGN OPS::RgnCallValOp
-// RGN OPS::RgnCallValOp
-// template <typename ValsT, typename TypesT>
-// void RgnCallValOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
-//                          mlir::Value rgn, ValsT args, TypesT resultTypes) {
-//   state.addOperands(rgn);
-//   state.addOperands(args);
-//   state.addTypes(resultTypes);
-// }
-
-mlir::ParseResult RgnCallValOp::parse(mlir::OpAsmParser &parser,
-                                      mlir::OperationState &result) {
-  assert(false && "unimplemented");
-}
-
-void RgnCallValOp::print(mlir::OpAsmPrinter &p) {
-  p.printGenericOp(this->getOperation());
-}
-
-// RGN OPS::RgnCallSymOp
-// RGN OPS::RgnCallSymOp
-// RGN OPS::RgnCallSymOp
-// RGN OPS::RgnCallSymOp
-// RGN OPS::RgnCallSymOp
-
-mlir::ParseResult RgnCallSymOp::parse(mlir::OpAsmParser &parser,
-                                      mlir::OperationState &result) {
-  assert(false && "unimplemented");
-}
-
-void RgnCallSymOp::print(mlir::OpAsmPrinter &p) {
-  p.printGenericOp(this->getOperation());
-}
-
 // RGN OPS::RgnJumpValOp
 // RGN OPS::RgnJumpValOp
 // RGN OPS::RgnJumpValOp
@@ -213,82 +160,136 @@ void RgnJumpValOp::print(mlir::OpAsmPrinter &p) {
   p.printGenericOp(this->getOperation());
 }
 
-// RGN OPS::RgnJumpSymOp
-// RGN OPS::RgnJumpSymOp
-// RGN OPS::RgnJumpSymOp
-// RGN OPS::RgnJumpSymOp
-// RGN OPS::RgnJumpSymOp
 
-mlir::ParseResult RgnJumpSymOp::parse(mlir::OpAsmParser &parser,
-                                      mlir::OperationState &result) {
-  assert(false && "unimplemented");
-}
+// // RGN OPS::RgnSymOp
+// // RGN OPS::RgnSymOp
+// // RGN OPS::RgnSymOp
+// // RGN OPS::RgnSymOp
+// // RGN OPS::RgnSymOp
 
-void RgnJumpSymOp::print(mlir::OpAsmPrinter &p) {
-  p.printGenericOp(this->getOperation());
-}
+// mlir::ParseResult RgnSymOp::parse(mlir::OpAsmParser &parser,
+//                                   mlir::OperationState &result) {
+//   assert(false && "unimplemented");
+// }
 
-// ===== HELPERS ====== //
+// void RgnSymOp::print(mlir::OpAsmPrinter &p) {
+//   p.printGenericOp(this->getOperation());
+// }
 
-// ==== REGION OPTIMIZATION ====
-// ==== REGION OPTIMIZATION ====
-// ==== REGION OPTIMIZATION ====
-// ==== REGION OPTIMIZATION ====
-// ==== REGION OPTIMIZATION ====
+// // RGN OPS::RgnCallValOp
+// // RGN OPS::RgnCallValOp
+// // RGN OPS::RgnCallValOp
+// // RGN OPS::RgnCallValOp
+// // RGN OPS::RgnCallValOp
+// // template <typename ValsT, typename TypesT>
+// // void RgnCallValOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
+// //                          mlir::Value rgn, ValsT args, TypesT resultTypes) {
+// //   state.addOperands(rgn);
+// //   state.addOperands(args);
+// //   state.addTypes(resultTypes);
+// // }
 
-struct PatternCallValKnownRegion : public mlir::OpRewritePattern<RgnCallValOp> {
-  /// We register this pattern to match every toy.transpose in the IR.
-  /// The "benefit" is used by the framework to order the patterns and process
-  /// them in order of profitability.
-  PatternCallValKnownRegion(mlir::MLIRContext *context)
-      : OpRewritePattern<RgnCallValOp>(context, /*benefit=*/1) {}
+// mlir::ParseResult RgnCallValOp::parse(mlir::OpAsmParser &parser,
+//                                       mlir::OperationState &result) {
+//   assert(false && "unimplemented");
+// }
 
-  mlir::LogicalResult
-  matchAndRewrite(RgnCallValOp call,
-                  mlir::PatternRewriter &rewriter) const override {
-    RgnValOp rgnval = call.getFn().getDefiningOp<RgnValOp>();
-    if (!rgnval) {
-      return mlir::failure();
-    }
+// void RgnCallValOp::print(mlir::OpAsmPrinter &p) {
+//   p.printGenericOp(this->getOperation());
+// }
 
-    // code from:
-    // https://github.com/llvm/llvm-project/blob/9a11c70c1856f4e801d0863c552c754f28110237/mlir/lib/Conversion/SCFToStandard/SCFToStandard.cpp#L411
-    auto loc = call.getLoc();
-    auto *condBlock = rewriter.getInsertionBlock();
-    auto opPosition = rewriter.getInsertionPoint();
-    auto *remainingOpsBlock = rewriter.splitBlock(condBlock, opPosition);
+// // RGN OPS::RgnCallSymOp
+// // RGN OPS::RgnCallSymOp
+// // RGN OPS::RgnCallSymOp
+// // RGN OPS::RgnCallSymOp
+// // RGN OPS::RgnCallSymOp
 
-    auto &region = rgnval.getRegion();
-    rewriter.setInsertionPointToEnd(condBlock);
-    rewriter.create<mlir::BranchOp>(loc, &region.front());
+// mlir::ParseResult RgnCallSymOp::parse(mlir::OpAsmParser &parser,
+//                                       mlir::OperationState &result) {
+//   assert(false && "unimplemented");
+// }
 
-    for (mlir::Block &block : region) {
-      if (auto terminator =
-              mlir::dyn_cast<mlir::scf::YieldOp>(block.getTerminator())) {
-        mlir::ValueRange terminatorOperands = terminator->getOperands();
-        rewriter.setInsertionPointToEnd(&block);
-        rewriter.create<mlir::BranchOp>(loc, remainingOpsBlock,
-                                        terminatorOperands);
-        rewriter.eraseOp(terminator);
-      }
-    }
+// void RgnCallSymOp::print(mlir::OpAsmPrinter &p) {
+//   p.printGenericOp(this->getOperation());
+// }
 
-    rewriter.inlineRegionBefore(region, remainingOpsBlock);
 
-    mlir::SmallVector<mlir::Value> vals;
-    for (auto arg : remainingOpsBlock->addArguments(call->getResultTypes())) {
-      vals.push_back(arg);
-    }
-    rewriter.replaceOp(call, vals);
-    return mlir::success();
+// // RGN OPS::RgnJumpSymOp
+// // RGN OPS::RgnJumpSymOp
+// // RGN OPS::RgnJumpSymOp
+// // RGN OPS::RgnJumpSymOp
+// // RGN OPS::RgnJumpSymOp
 
-    // rewriter.cloneRegionBefore(call->getParentRegion(), rgnval.getRegion(),
-    // call->getIterator(), mapping);
-    // TODO: need to replace with |scf.execute_region|.
-    assert(false && "TODO: implement.");
-    return mlir::success();
-  }
-};
+// mlir::ParseResult RgnJumpSymOp::parse(mlir::OpAsmParser &parser,
+//                                       mlir::OperationState &result) {
+//   assert(false && "unimplemented");
+// }
+
+// void RgnJumpSymOp::print(mlir::OpAsmPrinter &p) {
+//   p.printGenericOp(this->getOperation());
+// }
+
+// // ===== HELPERS ====== //
+
+// // ==== REGION OPTIMIZATION ====
+// // ==== REGION OPTIMIZATION ====
+// // ==== REGION OPTIMIZATION ====
+// // ==== REGION OPTIMIZATION ====
+// // ==== REGION OPTIMIZATION ====
+
+// struct PatternCallValKnownRegion : public mlir::OpRewritePattern<RgnCallValOp> {
+//   /// We register this pattern to match every toy.transpose in the IR.
+//   /// The "benefit" is used by the framework to order the patterns and process
+//   /// them in order of profitability.
+//   PatternCallValKnownRegion(mlir::MLIRContext *context)
+//       : OpRewritePattern<RgnCallValOp>(context, /*benefit=*/1) {}
+
+//   mlir::LogicalResult
+//   matchAndRewrite(RgnCallValOp call,
+//                   mlir::PatternRewriter &rewriter) const override {
+//     RgnValOp rgnval = call.getFn().getDefiningOp<RgnValOp>();
+//     if (!rgnval) {
+//       return mlir::failure();
+//     }
+
+//     // code from:
+//     // https://github.com/llvm/llvm-project/blob/9a11c70c1856f4e801d0863c552c754f28110237/mlir/lib/Conversion/SCFToStandard/SCFToStandard.cpp#L411
+//     auto loc = call.getLoc();
+//     auto *condBlock = rewriter.getInsertionBlock();
+//     auto opPosition = rewriter.getInsertionPoint();
+//     auto *remainingOpsBlock = rewriter.splitBlock(condBlock, opPosition);
+
+//     auto &region = rgnval.getRegion();
+//     rewriter.setInsertionPointToEnd(condBlock);
+//     rewriter.create<mlir::BranchOp>(loc, &region.front());
+
+//     for (mlir::Block &block : region) {
+//       if (auto terminator =
+//               mlir::dyn_cast<mlir::scf::YieldOp>(block.getTerminator())) {
+//         mlir::ValueRange terminatorOperands = terminator->getOperands();
+//         rewriter.setInsertionPointToEnd(&block);
+//         rewriter.create<mlir::BranchOp>(loc, remainingOpsBlock,
+//                                         terminatorOperands);
+//         rewriter.eraseOp(terminator);
+//       }
+//     }
+
+//     rewriter.inlineRegionBefore(region, remainingOpsBlock);
+
+//     mlir::SmallVector<mlir::Value> vals;
+//     for (auto arg : remainingOpsBlock->addArguments(call->getResultTypes())) {
+//       vals.push_back(arg);
+//     }
+//     rewriter.replaceOp(call, vals);
+//     return mlir::success();
+
+//     // rewriter.cloneRegionBefore(call->getParentRegion(), rgnval.getRegion(),
+//     // call->getIterator(), mapping);
+//     // TODO: need to replace with |scf.execute_region|.
+//     assert(false && "TODO: implement.");
+//     return mlir::success();
+//   }
+// };
 
 struct RgnOptPass : public mlir::Pass {
   RgnOptPass() : mlir::Pass(mlir::TypeID::get<RgnOptPass>()){};
@@ -310,7 +311,7 @@ struct RgnOptPass : public mlir::Pass {
     mlir::ModuleOp mod(getOperation());
     mlir::OpBuilder builder(mod);
     mlir::OwningRewritePatternList patterns(&getContext());
-    patterns.insert<PatternCallValKnownRegion>(&getContext());
+    // patterns.insert<PatternCallValKnownRegion>(&getContext());
 
     if (DEBUG) {
       ::llvm::DebugFlag = true;

@@ -21,6 +21,7 @@ add_llvm_executable(hask-opt
     RgnDialect.cpp
     SCFToRGN.cpp
     RgnCSEPass.cpp
+    RgnToStd.cpp
     ../lib/LZJIT/LZJIT.cpp)
 
 llvm_update_compile_flags(hask-opt)

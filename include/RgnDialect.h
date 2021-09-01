@@ -22,7 +22,8 @@ public:
 
 class RgnSelectOp
     : public mlir::Op<RgnSelectOp, mlir::OpTrait::VariadicOperands,
-                      mlir::OpTrait::OneResult, mlir::OpTrait::ZeroRegion> {
+                      mlir::OpTrait::OneResult, mlir::OpTrait::ZeroRegion,
+                      mlir::MemoryEffectOpInterface::Trait> {
 public:
   using Op::Op;
   static llvm::StringRef getOperationName() { return "rgn.select"; };
@@ -43,6 +44,11 @@ public:
           builder.getI64IntegerAttr(is[i]));
     }
   }
+
+  void getEffects(mlir::SmallVectorImpl<mlir::SideEffects::EffectInstance<
+                      mlir::MemoryEffects::Effect>> &effects) {}
+
+
 
   void print(mlir::OpAsmPrinter &p);
 };
@@ -136,6 +142,45 @@ public:
                       mlir::SmallVectorImpl<mlir::RegionSuccessor> &regions);
 };
 
+class RgnJumpValOp
+    : public mlir::Op<RgnJumpValOp, mlir::OpTrait::VariadicOperands,
+                      mlir::OpTrait::ZeroResult, mlir::OpTrait::IsTerminator> {
+public:
+  using Op::Op;
+  static llvm::StringRef getOperationName() { return "rgn.jumpval"; };
+
+  mlir::Value getFn() { return this->getOperation()->getOperand(0); };
+
+  int getNumFnArguments() {
+    return this->getOperation()->getNumOperands() - 1;
+  };
+
+  mlir::Value getFnArgument(int i) {
+    return this->getOperation()->getOperand(i + 1);
+  };
+
+  llvm::SmallVector<mlir::Value, 4> getFnArguments() {
+    llvm::SmallVector<mlir::Value, 4> args;
+    for (int i = 0; i < getNumFnArguments(); ++i) {
+      args.push_back(getFnArgument(i));
+    }
+    return args;
+  }
+
+  static mlir::ParseResult parse(mlir::OpAsmParser &parser,
+                                 mlir::OperationState &result);
+
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                    mlir::Value rgn) {
+    state.addOperands(rgn);
+  }
+
+
+  void print(mlir::OpAsmPrinter &p);
+};
+
+
+/*
 class RgnSymOp
     : public mlir::Op<RgnSymOp, mlir::OpTrait::ZeroOperands,
                       mlir::OpTrait::OneResult, mlir::OpTrait::OneRegion> {
@@ -228,43 +273,6 @@ public:
 
 };
 
-// jump a symbol.
-class RgnJumpValOp
-    : public mlir::Op<RgnJumpValOp, mlir::OpTrait::VariadicOperands,
-                      mlir::OpTrait::ZeroResult, mlir::OpTrait::IsTerminator> {
-public:
-  using Op::Op;
-  static llvm::StringRef getOperationName() { return "rgn.jumpval"; };
-
-  mlir::Value getFn() { return this->getOperation()->getOperand(0); };
-
-  int getNumFnArguments() {
-    return this->getOperation()->getNumOperands() - 1;
-  };
-
-  mlir::Value getFnArgument(int i) {
-    return this->getOperation()->getOperand(i + 1);
-  };
-
-  llvm::SmallVector<mlir::Value, 4> getFnArguments() {
-    llvm::SmallVector<mlir::Value, 4> args;
-    for (int i = 0; i < getNumFnArguments(); ++i) {
-      args.push_back(getFnArgument(i));
-    }
-    return args;
-  }
-
-  static mlir::ParseResult parse(mlir::OpAsmParser &parser,
-                                 mlir::OperationState &result);
-
-  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                    mlir::Value rgn) {
-    state.addOperands(rgn);
-  }
-
-
-  void print(mlir::OpAsmPrinter &p);
-};
 
 // jump a symbol.
 class RgnJumpSymOp
@@ -292,7 +300,7 @@ public:
 
   void print(mlir::OpAsmPrinter &p);
 };
-
+*/
 // create interface for call/jmp
 // https://mlir.llvm.org/docs/Interfaces/#attributeoperationtype-interfaces
 
@@ -301,3 +309,4 @@ void registerRgnOptPass();
 
 std::unique_ptr<mlir::Pass> createRgnCSEPass();
 void registerRgnCSEPass();
+void registerLowerRgnPass();
