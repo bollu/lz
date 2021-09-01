@@ -1,5 +1,5 @@
 // Check that rgn can be CSE'd.
-// RUN: hask-opt -allow-unregistered-dialect --rgn-opt %s  | FileCheck %s
+// RUN: hask-opt -allow-unregistered-dialect --rgn-cse %s  | FileCheck %s
 // This tests CSE on regions.
 // Should not CSE.
 // CHECK: "block.block"(%0, %1) : (i32, i32) -> ()

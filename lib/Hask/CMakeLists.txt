@@ -3,6 +3,7 @@ add_mlir_dialect_library(MLIRHask
         HaskDialect.cpp
         HaskOps.cpp
         LeanLowering.cpp
+        LeanRgnLowering.cpp
         WorkerWrapperPass.cpp
         HaskLowering.cpp
         HaskLazify.cpp

@@ -85,6 +85,7 @@ int main(int argc, char **argv) {
   mlir::unif::registerUnifierPass();
   mlir::standalone::registerLowerHaskPass();
   mlir::standalone::registerLowerLeanPass();
+  mlir::standalone::registerLowerLeanRgnPass();
   mlir::standalone::registerFuseRefcountPass();
   mlir::ptr::registerLowerPointerPass();
   registerLZJITPass();

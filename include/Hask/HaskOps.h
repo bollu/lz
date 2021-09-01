@@ -770,6 +770,7 @@ std::unique_ptr<mlir::Pass> createWorkerWrapperPass();
 std::unique_ptr<mlir::Pass> createWrapperWorkerPass();
 std::unique_ptr<mlir::Pass> createHaskCanonicalizePass();
 
+void registerLowerLeanRgnPass();
 void registerLowerLeanPass();
 void registerLowerHaskPass();
 void registerHaskCanonicalizePass();
