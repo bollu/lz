@@ -17,6 +17,7 @@
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/Types.h"
+#include "mlir/IR/Value.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
@@ -49,6 +50,8 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/IR/Instructions.h"
 
 #define DEBUG_TYPE "hask-ops"
 #include "llvm/Support/Debug.h"
@@ -84,7 +87,39 @@ struct RgnJumpValOpConversionPattern
   mlir::LogicalResult
   matchAndRewrite(RgnJumpValOp call,
                   mlir::PatternRewriter &rewriter) const override {
-    assert(false);
+
+    if (RgnValOp val = call.getFn().getDefiningOp<RgnValOp>()) {
+      rewriter.create<BranchOp>(call.getLoc(), &val.getRegion().getBlocks().front(), call.getFnArguments());
+      rewriter.inlineRegionBefore(val.getRegion(), call->getBlock());
+      rewriter.eraseOp(call);
+      return success();
+    }
+
+    if (RgnSelectOp select = call.getFn().getDefiningOp<RgnSelectOp>()) {
+      Block *defaultbb = nullptr;
+      SmallVector<int, 4> caseValues;
+      SmallVector<Block *, 4> caseDestinations;
+
+      for(int i = 0; i < select.getNumBranches(); ++i) {
+        std::pair<int, mlir::Value> branch = select.getBranch(i);
+        RgnValOp val = branch.second.getDefiningOp<RgnValOp>();
+        assert(val && "expected select of val"); 
+          
+        if (branch.first == -42) {
+          assert(defaultbb != nullptr && "can't have two defaults!");
+          defaultbb = &val.getRegion().getBlocks().front();
+        } else {
+          caseValues.push_back(branch.first);
+          caseDestinations.push_back(&val.getRegion().getBlocks().front());
+        }        
+      }
+
+      SmallVector<Value, 1> emptyArgs;
+      rewriter.replaceOpWithNewOp<SwitchOp>(call, select.getSwitcher(), defaultbb, emptyArgs,
+        caseValues, caseDestinations);
+      return success();
+    }
+    assert(false && "expected argument to call to be a val or a select.");
   }
 };
 

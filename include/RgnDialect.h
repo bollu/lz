@@ -12,6 +12,7 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include <string>
 
 class RgnDialect : public mlir::Dialect {
 public:
@@ -29,6 +30,23 @@ public:
   static llvm::StringRef getOperationName() { return "rgn.select"; };
   static mlir::ParseResult parse(mlir::OpAsmParser &parser,
                                  mlir::OperationState &result);
+
+  mlir::Value getSwitcher() {
+    return this->getOperand(0);
+  }
+
+  int getNumBranches() {
+    int ans = this->getNumOperands() - 1; 
+    assert(ans > 0);
+    return ans;
+  }
+
+  std::pair<int, mlir::Value> getBranch(int i) {
+    assert(i + 1 < (int)this->getOperands().size());
+    mlir::IntegerAttr lhs = this->getOperation()->getAttrOfType<mlir::IntegerAttr>("case" + std::to_string(i));
+    mlir::Value rhs = this->getOperand(i + 1);
+    return { lhs.getInt(), rhs };
+  }
 
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
                     mlir::Value switcher,
