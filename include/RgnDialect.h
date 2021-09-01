@@ -259,7 +259,7 @@ public:
 
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
                     mlir::Value rgn) {
-    // state.addOperands(rgn);
+    state.addOperands(rgn);
   }
 
 
