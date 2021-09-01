@@ -31,17 +31,17 @@ public:
 
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
                     mlir::Value switcher,
-                    mlir::SmallVectorImpl<int> &is, mlir::SmallVectorImpl<mlir::Value> &vs) {
-    // state.addOperands(switcher);
-    // for(mlir::Value v : vs) {
-    //   state.addOperands(v);
-    // }
+                    mlir::SmallVectorImpl<int> &is, mlir::ValueRange vs) {
+    state.addOperands(switcher);
+    for(mlir::Value v : vs) {
+      state.addOperands(v);
+    }
     state.addTypes(builder.getIntegerType(42));
-    // assert(vs.size() == is.size());
-    // for(int i = 0; i < is.size(); ++i) {
-    //   state.addAttribute("case" + std::to_string(i),
-    //       builder.getI64IntegerAttr(is[i]));
-    // }
+    assert(vs.size() == is.size());
+    for(int i = 0; i < (int)is.size(); ++i) {
+      state.addAttribute("case" + std::to_string(i),
+          builder.getI64IntegerAttr(is[i]));
+    }
   }
 
   void print(mlir::OpAsmPrinter &p);
