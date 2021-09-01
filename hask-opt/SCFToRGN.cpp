@@ -76,23 +76,25 @@ struct ScfIfToRgn : public OpConversionPattern<scf::IfOp> {
                mlir::ConversionPatternRewriter &rewriter) const final {
     rewriter.setInsertionPointAfter(IfOp);
 
-    RgnValOp ThenRgn =
-        rewriter.create<RgnValOp>(IfOp.getLoc(), IfOp->getResultTypes());
-    rewriter.cloneRegionBefore(IfOp.thenRegion(), ThenRgn.getRegion(),
-                               ThenRgn.getRegion().end());
+    assert(false && "killed region val creator");
+    
+    // RgnValOp ThenRgn =
+    //     rewriter.create<RgnValOp>(IfOp.getLoc(), IfOp->getResultTypes());
+    // rewriter.cloneRegionBefore(IfOp.thenRegion(), ThenRgn.getRegion(),
+    //                            ThenRgn.getRegion().end());
 
-    RgnValOp ElseRgn =
-        rewriter.create<RgnValOp>(IfOp.getLoc(), IfOp->getResultTypes());
-    rewriter.cloneRegionBefore(IfOp.elseRegion(), ElseRgn.getRegion(),
-                               ElseRgn.getRegion().end());
+    // RgnValOp ElseRgn =
+    //     rewriter.create<RgnValOp>(IfOp.getLoc(), IfOp->getResultTypes());
+    // rewriter.cloneRegionBefore(IfOp.elseRegion(), ElseRgn.getRegion(),
+    //                            ElseRgn.getRegion().end());
 
-    mlir::SelectOp SelectRgn = rewriter.create<mlir::SelectOp>(
-        IfOp.getLoc(), IfOp.condition(), ThenRgn, ElseRgn);
+    // mlir::SelectOp SelectRgn = rewriter.create<mlir::SelectOp>(
+    //     IfOp.getLoc(), IfOp.condition(), ThenRgn, ElseRgn);
 
-    RgnCallValOp Call = rewriter.create<RgnCallValOp>(
-        IfOp.getLoc(), SelectRgn, mlir::ArrayRef<mlir::Value>(),
-        IfOp->getResultTypes());
-    rewriter.replaceOp(IfOp, Call.getResults());
+    // RgnCallValOp Call = rewriter.create<RgnCallValOp>(
+    //     IfOp.getLoc(), SelectRgn, mlir::ArrayRef<mlir::Value>(),
+    //     IfOp->getResultTypes());
+    // rewriter.replaceOp(IfOp, Call.getResults());
   }
 };
 

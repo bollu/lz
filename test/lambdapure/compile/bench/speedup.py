@@ -86,7 +86,7 @@ def run_data():
         os_system_synch(f"rm exe-linked.ll")
         os_system_synch(f"rm exe.o")
         os_system_synch(f"lean {fpath} -m exe.mlir")
-        os_system_synch("hask-opt exe.mlir --convert-scf-to-std --lean-lower --ptr-lower | \
+        os_system_synch("hask-opt exe.mlir --convert-scf-to-std --lean-lower-rgn --ptr-lower | \
                 mlir-translate --mlir-to-llvmir -o exe.ll")
         os_system_synch("llvm-link " + 
                   "exe.ll " + 

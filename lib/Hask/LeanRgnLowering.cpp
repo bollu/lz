@@ -9,6 +9,7 @@
 #include "Hask/HaskDialect.h"
 #include "Hask/HaskOps.h"
 #include "Pointer/PointerDialect.h"
+#include "RgnDialect.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Block.h"
 #include "mlir/IR/BlockAndValueMapping.h"
@@ -51,7 +52,7 @@
 #define DEBUG_TYPE "hask-ops"
 #include "llvm/Support/Debug.h"
 
-// library.ll 
+// library.ll
 // define nonnull %struct.lean_object* @lean_box(i64 %0) local_unnamed_addr #0 {
 
 // https://github.com/llvm/llvm-project/blob/a048e2fa1d0285a3582bd224d5652dbf1dc91cb4/mlir/examples/toy/Ch6/mlir/LowerToLLVM.cpp
@@ -85,167 +86,9 @@ public:
   using TypeConverter::convertType;
 
   HaskTypeConverter(MLIRContext *ctx) {
-    // Convert ThunkType to I8PtrTy.
-    // addConversion([](ThunkType type) -> Type {
-    //   return LLVM::LLVMType::getInt8PtrTy(type.getContext());
-    // });
 
     addConversion([](Type type) { return type; });
-
-    // lz.value -> ptr.void
-    // addConversion([](ValueType type) -> Type {
-    //   return ptr::VoidPtrType::get(type.getContext());
-    // });
-
-    // // lz.thunk -> ptr.void
-    // addConversion([](ThunkType type) -> Type {
-    //   return ptr::VoidPtrType::get(type.getContext());
-    // });
-
-    // addConversion([&](FunctionType fnty) -> Type {
-    //   SmallVector<Type, 4> argtys;
-    //   for (Type t : fnty.getInputs()) {
-    //     argtys.push_back(this->convertType(t));
-    //   }
-    //   SmallVector<Type, 4> rettys;
-    //   for (Type t : fnty.getResults()) {
-    //     rettys.push_back(this->convertType(t));
-    //   }
-    //   return mlir::FunctionType::get(fnty.getContext(), argtys, rettys);
-    // });
-
-    // addConversion([&](mlir::MemRefType memref) -> Type {
-    //   return mlir::MemRefType::get(memref.getShape(),
-    //                                this->convertType(memref.getElementType()),
-    //                                memref.getAffineMaps());
-    // });
-
-    // lz.value -> !ptr.void
-    /*
-    addTargetMaterialization([&](OpBuilder &rewriter, ptr::VoidPtrType resultty,
-                                 ValueRange vals,
-                                 Location loc) -> Optional<Value> {
-      llvm::errs() << "materializing * -> !ptr.void: |" << vals[0] << "|\n";
-      if (vals.size() != 1) {
-        return {};
-      }
-      if (!vals[0].getType().isa<ValueType>()) {
-        return {};
-      }
-      return {rewriter.create<ptr::HaskValueToPtrOp>(loc, vals[0])};
-    });
-    */
-    
-
-    // int->!ptr.void
-    /*
-    addConversion([](IntegerType type) -> Type {
-      return ptr::VoidPtrType::get(type.getContext());
-    });
-    */
-
-    // !ptr.void -> !int
-    /*
-    addConversion([](ptr::VoidPtrType type) -> Type {
-      return IntegerType::get(64, type.getContext());
-    });
-    */
-
-    // int -> !ptr.void
-    /*
-    addTargetMaterialization([&](OpBuilder &rewriter, ptr::VoidPtrType resultty,
-                                 ValueRange vals,
-                                 Location loc) -> Optional<Value> {
-      if (vals.size() != 1 || !vals[0].getType().isa<IntegerType>()) {
-        return {};
-      }
-
-      ptr::IntToPtrOp op = rewriter.create<ptr::IntToPtrOp>(loc, vals[0]);
-      llvm::SmallPtrSet<Operation *, 1> exceptions;
-      exceptions.insert(op);
-
-      // vvv HACK/MLIRBUG: isn't this a hack? why do I need this?
-      // vals[0].replaceAllUsesExcept(op.getResult(), exceptions);
-      return op.getResult();
-    });
-    */
-
-    // !ptr.void -> int
-    /*
-    addSourceMaterialization([&](OpBuilder &rewriter, IntegerType resultty,
-                                 ValueRange vals,
-                                 Location loc) -> Optional<Value> {
-      if (vals.size() != 1 || !vals[0].getType().isa<ptr::VoidPtrType>()) {
-        return {};
-      }
-
-      ptr::PtrToIntOp op =
-          rewriter.create<ptr::PtrToIntOp>(loc, vals[0], resultty);
-
-      llvm::errs() << "op: ";
-      op.dump();
-      llvm::errs() << "\n";
-      return op.getResult();
-    });
-    */
   };
-
-  // convert a thing to a void pointer.
-  // Value toVoidPointer(OpBuilder &builder, Value src) {
-  //   if (src.getType().isa<ptr::VoidPtrType>()) {
-  //     return src;
-  //   }
-  //   if (src.getType().isa<IntegerType>()) {
-  //     ptr::IntToPtrOp op =
-  //         builder.create<ptr::IntToPtrOp>(builder.getUnknownLoc(), src);
-  //     return op;
-  //   }
-  //   if (src.getType().isa<FunctionType>()) {
-  //     return builder.create<ptr::FnToVoidPtrOp>(builder.getUnknownLoc(), src);
-  //   }
-  //   if (src.getType().isa<MemRefType>()) {
-  //     ptr::MemrefToVoidPtrOp op =
-  //         builder.create<ptr::MemrefToVoidPtrOp>(builder.getUnknownLoc(), src);
-  //     return op;
-  //   }
-  //   if (src.getType().isa<FloatType>()) {
-  //     ptr::DoubleToPtrOp op =
-  //         builder.create<ptr::DoubleToPtrOp>(builder.getUnknownLoc(), src);
-  //     return op;
-  //   }
-  //   llvm::errs() << "ERROR: unknown type: |" << src.getType() << "|\n";
-  //   assert(false && "unknown type to convert to void pointer");
-  // };
-
-  // // convert to `retty` from a void pointer.
-  // Value fromVoidPointer(OpBuilder &builder, Value src, Type retty) {
-  //   if (retty.isa<ptr::VoidPtrType>()) {
-  //     return src;
-  //   }
-  //   if (IntegerType it = retty.dyn_cast<IntegerType>()) {
-  //     ptr::PtrToIntOp op =
-  //         builder.create<ptr::PtrToIntOp>(builder.getUnknownLoc(), src, it);
-  //     return op;
-  //   }
-  //   if (MemRefType mr = retty.dyn_cast<MemRefType>()) {
-  //     ptr::PtrToMemrefOp op =
-  //         builder.create<ptr::PtrToMemrefOp>(builder.getUnknownLoc(), src, mr);
-  //     return op;
-  //   }
-  //   if (ValueType val = retty.dyn_cast<ValueType>()) {
-  //     return src;
-  //     //    ptr::PtrToHaskValueOp op =
-  //     //      builder.create<ptr::PtrToHaskValueOp>(builder.getUnknownLoc(),
-  //     //      src);
-  //     //  return op;
-  //   }
-  //   if (FloatType ft = retty.dyn_cast<FloatType>()) {
-  //     return builder.create<ptr::PtrToFloatOp>(builder.getUnknownLoc(), src,
-  //                                              ft);
-  //   }
-  //   llvm::errs() << "ERROR: unknown type: |" << retty << "|\n";
-  //   assert(false && "unknown type to convert from void pointer");
-  // };
 };
 
 class ConstantOpLowering : public ConversionPattern {
@@ -344,8 +187,6 @@ public:
   }
 };
 
-
-
 class ScfYieldOpLowering : public ConversionPattern {
 public:
   explicit ScfYieldOpLowering(TypeConverter &tc, MLIRContext *context)
@@ -424,7 +265,7 @@ class HaskLargeIntegerConstOpLowering : public ConversionPattern {
 public:
   // (str: !lz.value) -> (mpz_int: !lz.value)
   static FuncOp getOrCreateLeanCstrToNat(PatternRewriter &rewriter,
-                                             ModuleOp m) {
+                                         ModuleOp m) {
     const std::string name = "lean_cstr_to_nat";
     if (FuncOp fn = m.lookupSymbol<FuncOp>(name)) {
       return fn;
@@ -498,22 +339,6 @@ public:
     return success();
   }
 };
-//
-// class HaskIntegerConstOpLowering : public ConversionPattern {
-// public:
-//  explicit HaskIntegerConstOpLowering(TypeConverter &tc, MLIRContext *context)
-//  : ConversionPattern(HaskIntegerConstOp::getOperationName(), 1, tc, context)
-//  {}
-//
-//  LogicalResult
-//  matchAndRewrite(Operation *operation, ArrayRef<Value> operands,
-//                  ConversionPatternRewriter &rewriter) const override {
-////    HaskIntegerConstOp op = cast<HaskIntegerConstOp>(operation);
-////    const int width = 64;
-////    rewriter.replaceOpWithNewOp<ConstantIntOp>(operation, op.getValue(),
-/// width);
-//    return success();
-//};
 
 // I don't understand why I need this.
 class CallOpLowering : public ConversionPattern {
@@ -563,31 +388,6 @@ public:
   }
 };
 
-// static Value getOrCreateGlobalString(Location loc, OpBuilder &builder,
-//                                      StringRef name, StringRef value,
-//                                      ModuleOp module) {
-//   // Create the global at the entry of the module.
-//   LLVM::GlobalOp global;
-//   if (!(global = module.lookupSymbol<LLVM::GlobalOp>(name))) {
-//     OpBuilder::InsertionGuard insertGuard(builder);
-//     builder.setInsertionPointToStart(module.getBody());
-//     auto type = LLVM::LLVMType::getArrayTy(
-//         LLVM::LLVMType::getInt8Ty(builder.getContext()), value.size());
-//     global = builder.create<LLVM::GlobalOp>(loc, type,true,
-//                                             LLVM::Linkage::Internal, name,
-//                                             builder.getStringAttr(value));
-//   }
-//
-//   // Get the pointer to the first character in the global string.
-//   Value globalPtr = builder.create<LLVM::AddressOfOp>(loc, global);
-//   Value cst0 = builder.create<LLVM::ConstantOp>(
-//       loc, LLVM::LLVMType::getInt64Ty(builder.getContext()),
-//       builder.getIntegerAttr(builder.getIndexType(), 0));
-//   return builder.create<LLVM::GEPOp>(
-//       loc, LLVM::LLVMType::getInt8PtrTy(builder.getContext()), globalPtr,
-//       ArrayRef<Value>({cst0, cst0}));
-// }
-//
 struct ForceOpConversionPattern : public mlir::ConversionPattern {
   explicit ForceOpConversionPattern(HaskTypeConverter &tc, MLIRContext *context)
       : ConversionPattern(ForceOp::getOperationName(), 1, tc, context), tc(tc) {
@@ -627,317 +427,18 @@ struct ForceOpConversionPattern : public mlir::ConversionPattern {
     //    SmallVector<Value, 4> args(rands.begin(), rands.end());
     rewriter.setInsertionPointAfter(op);
     // Value toForce = tc.toVoidPointer(rewriter, rands[0]);
-    Value toForce; assert(false && "why is force in LEAN?");
+    Value toForce;
+    assert(false && "why is force in LEAN?");
     CallOp call = rewriter.create<CallOp>(op->getLoc(), evalClosure, toForce);
     rewriter.setInsertionPointAfter(call);
     // Value out = tc.fromVoidPointer(rewriter, call.getResult(0),
     //                                force.getResult().getType());
-    Value out; assert(false && "why is force in LEAN?");
+    Value out;
+    assert(false && "why is force in LEAN?");
     rewriter.replaceOp(op, out);
     llvm::errs() << "vvvv--after-force---vvv\n";
     parent.print(llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
     llvm::errs() << "^^^^^^^\n";
-    return success();
-  }
-};
-
-// legalize a region that has been inlined into an scf.if by converting
-// all lz.return() s into scf.yield() s
-/*
-void convertReturnsToYields(mlir::Region *r, mlir::PatternRewriter &rewriter) {
-  for (Block &b : r->getBlocks()) {
-    if (b.empty()) {
-      continue;
-    }
-    HaskReturnOp ret = mlir::dyn_cast<HaskReturnOp>(b.back());
-    if (!ret) {
-      continue;
-    }
-    rewriter.setInsertionPointAfter(ret);
-    rewriter.replaceOpWithNewOp<mlir::scf::YieldOp>(ret.getOperation(),
-                                                    ret.getOperand());
-  }
-}
-*/
-
-struct CaseOpConversionPattern : public mlir::ConversionPattern {
-private:
-  HaskTypeConverter &tc;
-
-public:
-  explicit CaseOpConversionPattern(HaskTypeConverter &tc, MLIRContext *context)
-      : ConversionPattern(CaseOp::getOperationName(), 1, tc, context), tc(tc) {}
-
-  static FuncOp getOrInsertGetObjTag(PatternRewriter &rewriter,
-                                     ModuleOp module) {
-    // emit "lean_obj_tag("; emit x; emit ")";
-    MLIRContext *context = rewriter.getContext();
-    const std::string name = "lean_obj_tag";
-    if (mlir::FuncOp fn = module.lookupSymbol<FuncOp>(name)) {
-      return fn;
-    }
-
-    // constructor, string constructor name
-    SmallVector<Type, 4> argtys{ValueType::get(context)};
-    Type retty = rewriter.getI32Type();
-    auto llvmFnType = rewriter.getFunctionType(argtys, retty);
-    // Insert the printf function into the body of the parent module.
-    PatternRewriter::InsertionGuard insertGuard(rewriter);
-    rewriter.setInsertionPointToStart(module.getBody());
-    FuncOp fn = rewriter.create<FuncOp>(module.getLoc(), name, llvmFnType);
-    fn.setPrivate();
-    return fn;
-  };
-
-  // return the order in which we should generate case alts.
-  static std::vector<int> getAltGenerationOrder(CaseOp caseop) {
-    std::vector<int> ixs;
-    llvm::Optional<int> defaultix = caseop.getDefaultAltIndex();
-    for (int i = 0; i < caseop.getNumAlts(); ++i) {
-      if (defaultix && *defaultix == i) {
-        continue;
-      }
-      ixs.push_back(i);
-    }
-    if (defaultix) {
-      ixs.push_back(*defaultix);
-    }
-    return ixs;
-  }
-
-  // fill the region `out` with the ith RHS of the caseop.
-  void genCaseAltRHS(Region *out, CaseOp caseop, Value scrutinee, int i,
-                     ConversionPatternRewriter &rewriter) const {
-    assert(out->args_empty());
-    assert(out->getBlocks().size() == 1);
-    llvm::SmallVector<Value, 4> rhsVals;
-
-    assert(caseop.getAltRHS(i).getNumArguments() == 0);
-    Block *caseEntryBB = &caseop.getAltRHS(i).front();
-    assert(caseEntryBB);
-    rewriter.inlineRegionBefore(caseop.getAltRHS(i), *out, out->end());
-    rewriter.mergeBlocks(caseEntryBB, &out->getBlocks().front(), rhsVals);
-  }
-
-  // generate the order[i]th case alt of caseop, We need this `order` thing to
-  // make sure we generate the default case last. I guess we don't need it if we
-  // are sure that people always write the default case last? whatever.
-  scf::IfOp genCaseAlt(mlir::standalone::CaseOp caseop, Value scrutinee, int i,
-                       const std::vector<int> &order,
-                       ConversionPatternRewriter &rewriter) const {
-    ModuleOp mod = caseop->getParentOfType<ModuleOp>();
-
-    // check if equal
-    const bool hasNext = (i + 1 < (int)order.size());
-
-    Value condition = [&]() {
-      if (hasNext) {
-        FuncOp fn = getOrInsertGetObjTag(rewriter, mod);
-        SmallVector<Value, 4> params{scrutinee};
-        CallOp tag = rewriter.create<CallOp>(caseop.getLoc(), fn, params);
-        Value lhsConst = rewriter.create<ConstantIntOp>(
-            caseop.getLoc(), order[i], rewriter.getI32Type());
-        CmpIOp isEq = rewriter.create<CmpIOp>(
-            caseop.getLoc(), CmpIPredicate::eq, tag.getResult(0), lhsConst);
-        return isEq.getResult();
-      } else {
-        Value True = rewriter.create<ConstantOp>(
-            rewriter.getUnknownLoc(),
-            rewriter.getIntegerAttr(rewriter.getI1Type(), 1));
-        return True;
-      }
-    }();
-
-    scf::IfOp ite = rewriter.create<mlir::scf::IfOp>(
-        caseop.getLoc(),
-        /*return types=*/
-        typeConverter->convertType(caseop.getResult().getType()),
-        /*cond=*/condition,
-        /* createelse=*/true);
-    rewriter.startRootUpdate(ite);
-
-    // THEN
-    rewriter.setInsertionPointToStart(&ite.thenRegion().front());
-    genCaseAltRHS(&ite.thenRegion(), caseop, scrutinee, order[i], rewriter);
-
-    // ELSE
-    rewriter.setInsertionPointToStart(&ite.elseRegion().front());
-    if (hasNext) {
-      scf::IfOp caseladder =
-          genCaseAlt(caseop, scrutinee, i + 1, order, rewriter);
-
-      rewriter.setInsertionPointAfter(caseladder);
-      rewriter.create<scf::YieldOp>(rewriter.getUnknownLoc(),
-                                    caseladder.getResults());
-
-    } else {
-      rewriter.create<ptr::PtrUnreachableOp>(rewriter.getUnknownLoc());
-      // auto undef = rewriter.create<ptr::PtrUndefOp>(
-      //     rewriter.getUnknownLoc(),
-      //     typeConverter->convertType(caseop.getResult().getType()));
-      // rewriter.create<scf::YieldOp>(rewriter.getUnknownLoc(),
-      //                               undef.getResult());
-    }
-    rewriter.finalizeRootUpdate(ite);
-    return ite;
-  }
-
-  LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> rands,
-                  ConversionPatternRewriter &rewriter) const override {
-    auto caseop = cast<CaseOp>(op);
-
-    assert(rands.size() == 1);
-
-    rewriter.setInsertionPointAfter(op);
-    const std::vector<int> order = getAltGenerationOrder(caseop);
-    scf::IfOp caseladder = genCaseAlt(caseop, rands[0], 0, order, rewriter);
-    llvm::errs() << "vvvvvvcase op (before)vvvvvv\n";
-    caseop.dump();
-    llvm::errs() << "======case op (after)======\n";
-    caseladder.print(llvm::errs(),
-                     mlir::OpPrintingFlags().printGenericOpForm());
-    llvm::errs() << "\n^^^^^^^^^caseop[before/after]^^^^^^^^^\n";
-
-    // caseop.getResult().replaceAllUsesWith(caseladder.getResult(0));
-    // rewriter.eraseOp(caseop);
-    rewriter.replaceOp(caseop, caseladder.getResults());
-
-    llvm::errs() << "\nvvvvvvcase op module [after inline]vvvvvv\n";
-    caseladder->getParentOfType<ModuleOp>().print(
-        llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
-    llvm::errs() << "\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
-
-    return success();
-  }
-};
-
-struct CaseIntOpConversionPattern : public mlir::ConversionPattern {
-public:
-  explicit CaseIntOpConversionPattern(HaskTypeConverter &tc,
-                                      MLIRContext *context)
-      : ConversionPattern(CaseIntOp::getOperationName(), 1, tc, context) {}
-
-  // return the order in which we should generate case alts.
-  static std::vector<int> getAltGenerationOrder(CaseIntOp caseop) {
-    std::vector<int> ixs;
-    llvm::Optional<int> defaultix = caseop.getDefaultAltIndex();
-    for (int i = 0; i < caseop.getNumAlts(); ++i) {
-      if (defaultix && *defaultix == i) {
-        continue;
-      }
-      ixs.push_back(i);
-    }
-    if (defaultix) {
-      ixs.push_back(*defaultix);
-    }
-    return ixs;
-  }
-
-  // fill the region `out` with the ith RHS of the caseop.
-  void genCaseAltRHS(Region *out, CaseIntOp caseop, int i,
-                     ConversionPatternRewriter &rewriter) const {
-    assert(out->args_empty());
-    assert(out->getBlocks().size() == 1);
-    llvm::SmallVector<Value, 4> rhsVals;
-
-    assert(caseop.getAltRHS(i).getNumArguments() == 0);
-    Block *caseEntryBB = &caseop.getAltRHS(i).front();
-    assert(caseEntryBB);
-    rewriter.inlineRegionBefore(caseop.getAltRHS(i), *out, out->end());
-    rewriter.mergeBlocks(caseEntryBB, &out->getBlocks().front(), rhsVals);
-  }
-
-  // generate the order[i]th case alt of caseop, We need this `order` thing
-  // to make sure we generate the default case last. I guess we don't need it if
-  // we are sure that people always write the default case last? whatever.
-  scf::IfOp genCaseAlt(mlir::standalone::CaseIntOp caseop, Value scrutinee,
-                       int i, const std::vector<int> &order,
-                       ConversionPatternRewriter &rewriter) const {
-
-    // check if equal
-    const bool hasNext = (i + 1 < (int)order.size());
-
-    Value condition = [&]() {
-      if (hasNext) {
-        llvm::errs() << "caseInt | i: " << i << "\n";
-        IntegerType ity = scrutinee.getType().cast<IntegerType>();
-        int64_t lhsint = caseop.getAltLHS(order[i])->getInt();
-        llvm::errs() << "caseInt | i: " << i << " |lhsint: " << lhsint << "\n";
-        Value lhsConst =
-            rewriter.create<ConstantIntOp>(caseop.getLoc(), lhsint, ity);
-
-        CmpIOp isEq = rewriter.create<CmpIOp>(
-            caseop.getLoc(), CmpIPredicate::eq, scrutinee, lhsConst);
-        return isEq.getResult();
-      } else {
-        Value True = rewriter.create<ConstantOp>(
-            rewriter.getUnknownLoc(),
-            rewriter.getIntegerAttr(rewriter.getI1Type(), 1));
-        return True;
-      }
-    }();
-
-    scf::IfOp ite = rewriter.create<mlir::scf::IfOp>(
-        caseop.getLoc(),
-        /*return types=*/
-        typeConverter->convertType(caseop.getResult().getType()),
-        /*cond=*/condition,
-        /* createelse=*/true);
-    rewriter.startRootUpdate(ite);
-
-    // THEN
-    rewriter.setInsertionPointToStart(&ite.thenRegion().front());
-    genCaseAltRHS(&ite.thenRegion(), caseop, order[i], rewriter);
-
-    // ELSE
-    rewriter.setInsertionPointToStart(&ite.elseRegion().front());
-    if (hasNext) {
-      scf::IfOp caseladder =
-          genCaseAlt(caseop, scrutinee, i + 1, order, rewriter);
-
-      rewriter.setInsertionPointAfter(caseladder);
-      rewriter.create<scf::YieldOp>(rewriter.getUnknownLoc(),
-                                    caseladder.getResults());
-
-    } else {
-      rewriter.create<ptr::PtrUnreachableOp>(rewriter.getUnknownLoc());
-      // auto undef = rewriter.create<ptr::PtrUndefOp>(
-      //     rewriter.getUnknownLoc(),
-      //     typeConverter->convertType(caseop.getResult().getType()));
-      // rewriter.create<scf::YieldOp>(rewriter.getUnknownLoc(),
-      //                               undef.getResult());
-    }
-    rewriter.finalizeRootUpdate(ite);
-    return ite;
-  }
-
-  LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> rands,
-                  ConversionPatternRewriter &rewriter) const override {
-    CaseIntOp caseop = cast<CaseIntOp>(op);
-
-    assert(rands.size() == 1);
-
-    rewriter.setInsertionPointAfter(op);
-    const std::vector<int> order = getAltGenerationOrder(caseop);
-    scf::IfOp caseladder = genCaseAlt(caseop, rands[0], 0, order, rewriter);
-    llvm::errs() << "vvvvvvcase int op (before)vvvvvv\n";
-    caseop.dump();
-    llvm::errs() << "======case int op (after)======\n";
-    caseladder.print(llvm::errs(),
-                     mlir::OpPrintingFlags().printGenericOpForm());
-    llvm::errs() << "\n^^^^^^^^^caseIntop[before/after]^^^^^^^^^\n";
-
-    // caseop.getResult().replaceAllUsesWith(caseladder.getResult(0));
-    // rewriter.eraseOp(caseop);
-    rewriter.replaceOp(caseop, caseladder.getResults());
-
-    llvm::errs() << "\nvvvvvvcase op module [after inline]vvvvvv\n";
-    caseladder->getParentOfType<ModuleOp>().print(
-        llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
-    llvm::errs() << "\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
-
     return success();
   }
 };
@@ -1004,7 +505,7 @@ public:
 
     SmallVector<mlir::Type, 4> argTys;
     argTys.push_back(ValueType::get(rewriter.getContext())); // ctor
-    argTys.push_back(rewriter.getI32Type());                        // ix
+    argTys.push_back(rewriter.getI32Type());                 // ix
     argTys.push_back(ValueType::get(rewriter.getContext())); // val
 
     mlir::Type retty = ValueType::get(rewriter.getContext());
@@ -1176,7 +677,7 @@ public:
       return fn;
     }
     MLIRContext *ctx = rewriter.getContext();
-    
+
     // auto I8PtrTy = LLVM::LLVMType::getInt8PtrTy(rewriter.getContext());
     // llvm::SmallVector<LLVM::LLVMType, 4> argTys(n + 1, I8PtrTy);
     // auto llvmFnType = LLVM::LLVMType::getFunctionTy(I8PtrTy, argTys,
@@ -1264,8 +765,8 @@ struct HaskReturnOpConversionPattern : public mlir::ConversionPattern {
 
     rewriter.setInsertionPointAfter(ret);
     // rewriter.replaceOpWithNewOp<scf::YieldOp>(ret, operands);
-    rewriter.replaceOpWithNewOp<::mlir::ReturnOp>(ret, operands);
-
+    // rewriter.replaceOpWithNewOp<::mlir::ReturnOp>(ret, operands);
+    rewriter.replaceOpWithNewOp<RgnReturnOp>(ret, operands);
     return success();
   }
 };
@@ -1277,31 +778,36 @@ private:
 public:
   explicit HaskJoinPointOpLowering(HaskTypeConverter &tc, MLIRContext *context)
       : ConversionPattern(HaskJoinPointOp::getOperationName(), 1, tc, context),
-        tc(tc) {}
+        tc(tc) {
+    setHasBoundedRewriteRecursion();
+
+
+        }
 
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> rands,
                   ConversionPatternRewriter &rewriter) const override {
-    llvm::errs() << __FUNCTION__ << ":" << __LINE__ << "\n";
 
     HaskJoinPointOp jpOp = cast<HaskJoinPointOp>(op);
-
-    llvm::errs() << __FUNCTION__ << ":" << __LINE__ << "\n";
+    assert(false && "lowering join point");
 
     // TODO: replace only if name matches jump names.
 
     jpOp.getFirstRegionWithJmp().walk([&](HaskJumpOp jmp) {
       rewriter.setInsertionPoint(jmp);
-      if (jmp.getJoinPointId() != jpOp.getJoinPointId()) { return WalkResult::advance(); }
+      if (jmp.getJoinPointId() != jpOp.getJoinPointId()) {
+        return WalkResult::advance();
+      }
 
       // assert(false && "lowering join point");
       Block *jumpTarget = &jpOp.getLaterJumpedIntoRegion().front();
       // vvv this needs to go through type converter x(
       rewriter.setInsertionPointAfter(jmp);
-      // rewriter.replaceOpWithNewOp<BranchOp>(jmp, jumpTarget, jmp.getOperand());
-      // llvm::errs() << "creating a branch op: branch(" << jumpTarget << ", " << jmp.getOperand() << ")\n";
-      // getchar();
-      // rewriter.create<ptr::PtrBranchOp>(jmp.getLoc(),  jumpTarget, jmp.getOperand());
+      // rewriter.replaceOpWithNewOp<BranchOp>(jmp, jumpTarget,
+      // jmp.getOperand()); llvm::errs() << "creating a branch op: branch(" <<
+      // jumpTarget << ", " << jmp.getOperand() << ")\n"; getchar();
+      // rewriter.create<ptr::PtrBranchOp>(jmp.getLoc(),  jumpTarget,
+      // jmp.getOperand());
       rewriter.create<BranchOp>(jmp.getLoc(), jumpTarget, jmp.getOperands());
       rewriter.eraseOp(jmp);
 
@@ -1310,22 +816,24 @@ public:
 
     llvm::errs() << __FUNCTION__ << ":" << __LINE__ << "\n";
 
-
     // begin --> fstRegion
     rewriter.setInsertionPointToEnd(jpOp->getBlock());
-    rewriter.create<mlir::BranchOp>(jpOp->getLoc(), &jpOp.getFirstRegionWithJmp().front());
+    rewriter.create<mlir::BranchOp>(jpOp->getLoc(),
+                                    &jpOp.getFirstRegionWithJmp().front());
 
     // mlir::SmallVector<mlir::Value, 0> noArgs;
     llvm::errs() << __FUNCTION__ << ":" << __LINE__ << "\n";
 
     // inline fstRegion at (begin ---> fstRegion)
-    rewriter.inlineRegionBefore(jpOp.getFirstRegionWithJmp(), 
-      *jpOp->getParentRegion(), jpOp->getParentRegion()->end());
+    rewriter.inlineRegionBefore(jpOp.getFirstRegionWithJmp(),
+                                *jpOp->getParentRegion(),
+                                jpOp->getParentRegion()->end());
 
     llvm::errs() << __FUNCTION__ << ":" << __LINE__ << "\n";
 
-    rewriter.inlineRegionBefore(jpOp.getLaterJumpedIntoRegion(), 
-      *jpOp->getParentRegion(), jpOp->getParentRegion()->end());
+    rewriter.inlineRegionBefore(jpOp.getLaterJumpedIntoRegion(),
+                                *jpOp->getParentRegion(),
+                                jpOp->getParentRegion()->end());
 
     llvm::errs() << __FUNCTION__ << ":" << __LINE__ << "\n";
 
@@ -1547,22 +1055,21 @@ bool isTypeLegal(Type t) {
   return true;
 }
 
-
-template<typename T>
+template <typename T>
 // bool isOpArgsAndResultsLegal(Operation op) {
 bool isOpArgsAndResultsLegal(T op) {
-    for (Value arg : op->getOperands()) {
-        if (!isTypeLegal(arg.getType())) {
-            return false;
-        }
+  for (Value arg : op->getOperands()) {
+    if (!isTypeLegal(arg.getType())) {
+      return false;
     }
+  }
 
-    for (Value arg : op->getResults()) {
-        if (!isTypeLegal(arg.getType())) {
-            return false;
-        }
+  for (Value arg : op->getResults()) {
+    if (!isTypeLegal(arg.getType())) {
+      return false;
     }
-    return true;
+  }
+  return true;
 }
 
 // I don't know why, but OpConversionPattern just dies.
@@ -1635,7 +1142,8 @@ public:
     TagGetOp tagget = cast<TagGetOp>(op);
     ModuleOp mod = op->getParentOfType<ModuleOp>();
     FuncOp f = getOrCreateLeanTag(rewriter, mod);
-    rewriter.replaceOpWithNewOp<mlir::CallOp>(op, f, tagget.getOperand());
+    // rewriter.replaceOpWithNewOp<mlir::CallOp>(op, f, tagget.getOperand());
+    rewriter.replaceOpWithNewOp<mlir::CallOp>(op, f, rands);
     return success();
   }
 };
@@ -1686,8 +1194,7 @@ public:
     FuncOp f = getOrCreateLeanApply(papext.getNumFnArguments(), rewriter, mod);
     // rewriter.replaceOpWithNewOp<mlir::CallOp>(op, f, papext->getOperands());
     rewriter.replaceOpWithNewOp<mlir::CallOp>(op, f, rands);
-    
-    
+
     return success();
   }
 };
@@ -1776,11 +1283,13 @@ public:
     //    Value name = rewriter.create<ptr::PtrStringOp>(pap->getLoc(),
     //    pap.getFnName());
 
-    // const int LEAN_CLOSURE_MAX_ARGS = 16; // this is just asking for trouble. Unfortunately, I don't know a better way to coordinate this.
-    // const int arityint = calledFn.getNumArguments() > LEAN_CLOSURE_MAX_ARGS ? 1 : calledFn.getNumArguments();
-    // const int arityint = calledFn.getNumArguments();
-    Value arity = rewriter.create<ConstantIntOp>(
-        pap->getLoc(), pap.getFnArity(), width);
+    // const int LEAN_CLOSURE_MAX_ARGS = 16; // this is just asking for trouble.
+    // Unfortunately, I don't know a better way to coordinate this. const int
+    // arityint = calledFn.getNumArguments() > LEAN_CLOSURE_MAX_ARGS ? 1 :
+    // calledFn.getNumArguments(); const int arityint =
+    // calledFn.getNumArguments();
+    Value arity =
+        rewriter.create<ConstantIntOp>(pap->getLoc(), pap.getFnArity(), width);
     Value nargs = rewriter.create<ConstantIntOp>(
         pap->getLoc(), pap.getNumFnArguments(), width);
     mlir::SmallVector<Value, 4> allocArgs{fnptr, arity, nargs};
@@ -1879,7 +1388,8 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     assert(false);
     BranchOp br = cast<BranchOp>(op);
-    // rewriter.replaceOpWithNewOp<BranchOp>(br, br.getDest(), br->getOperands());
+    // rewriter.replaceOpWithNewOp<BranchOp>(br, br.getDest(),
+    // br->getOperands());
     rewriter.replaceOpWithNewOp<BranchOp>(br, br.getDest(), rands);
     return success();
   }
@@ -1905,93 +1415,60 @@ public:
   explicit HaskCaseIntRetOpConversionPattern(HaskTypeConverter &tc,
                                              MLIRContext *context)
       : ConversionPattern(HaskCaseIntRetOp::getOperationName(), 1, tc,
-                          context) {}
+                          context) {
+    setHasBoundedRewriteRecursion();
 
-  // fill the region `out` with the ith RHS of the caseop.
-  // void genCaseAltRHS(Block *out, HaskCaseIntRetOp caseop, int i,
-  //                    ConversionPatternRewriter &rewriter) const {
-  //   assert(out->args_empty());
-  //   assert(out->getBlocks().size() == 1);
 
-  //   llvm::SmallVector<Value, 4> rhsVals;
-  //   assert(caseop.getAltRHS(i).getNumArguments() == 0);
-
-  //   Block *caseEntryBB = &caseop.getAltRHS(i).front();
-  //   assert(caseEntryBB);
-  //   rewriter.inlineRegionBefore(caseop.getAltRHS(i), out);
-  //   // rewriter.mergeBlocks(caseEntryBB, &out->getBlocks().front(), rhsVals);
-  // }
+      }
 
   // generate the order[i]th case alt of caseop, We need this `order` thing
   // to make sure we generate the default case last. I guess we don't need it if
   // we are sure that people always write the default case last? whatever.
-  Block *genCaseAlt(mlir::standalone::HaskCaseIntRetOp caseop,
-                       Value scrutinee, int i, int n,
-                       ConversionPatternRewriter &rewriter) const {
+  RgnValOp genCaseAlt(HaskCaseIntRetOp caseop, Value scrutinee, int i, int n,
+                      ConversionPatternRewriter &rewriter) const {
 
-    // check if equal
-    Value condition = [&]() {
-      IntegerType ity = scrutinee.getType().cast<IntegerType>();
-      Optional<int> lhsint = caseop.getAltLHS(i);
-
-      if (!lhsint) {
-          ConstantIntOp out =  rewriter.create<ConstantIntOp>(caseop.getLoc(), /*value=*/1, /*width=*/1);
-          return out.getResult();
-        } else {
-        Value lhsConst =
-            rewriter.create<ConstantIntOp>(caseop.getLoc(), *lhsint, ity);
-        CmpIOp isEq = rewriter.create<CmpIOp>(caseop.getLoc(), 
-            CmpIPredicate::eq, scrutinee, lhsConst);
-          return isEq.getResult();
-      }
-    }();
-
-   
-    Block *falseBB =  [&]() {
-      // createBlock moves the insetion point x(
-      OpBuilder::InsertionGuard guard(rewriter);
-      return rewriter.createBlock(caseop->getParentRegion(), 
-        caseop->getParentRegion()->end(), {});
-    }();
-
-
-    rewriter.create<mlir::CondBranchOp>(caseop.getLoc(), condition,
-      &caseop.getAltRHS(i).front(), falseBB);
-    // this is because LEAN never uses arguments, it chooses to extract arguments
-    // by using intrincics from a case scrutinee.   
     assert(caseop.getAltRHS(i).getNumArguments() == 0);
-    // v This assert is no longer true, since we now use `scf`, so on lowering `scf`
-    // we can get more than one block inside a case.
-    // assert(caseop.getAltRHS(i).getBlocks().size() == 1);
-    
-    rewriter.inlineRegionBefore(caseop.getAltRHS(i), falseBB);
-    return falseBB;
+    RgnValOp rv = rewriter.create<RgnValOp>(caseop.getLoc());
+    rewriter.inlineRegionBefore(caseop.getAltRHS(i), rv.getRegion(),
+                               rv.getRegion().end());
+
+    return rv;
   }
 
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> rands,
                   ConversionPatternRewriter &rewriter) const override {
-    HaskCaseIntRetOp caseop = cast<HaskCaseIntRetOp>(op);
+    auto caseop = cast<HaskCaseIntRetOp>(op);
+    ModuleOp mod = caseop->getParentOfType<ModuleOp>();
 
     assert(rands.size() == 1);
-
     rewriter.setInsertionPoint(caseop);
+
+    SmallVector<Value, 4> rhss;
+    SmallVector<int, 4> lhss;
     for (int i = 0; i < caseop.getNumAlts(); ++i) {
-      Block *falsebb = genCaseAlt(caseop, rands[0], i, caseop.getNumAlts(), rewriter);
-      rewriter.setInsertionPointToStart(falsebb);
+      rhss.push_back(
+          genCaseAlt(caseop, rands[0], i, caseop.getNumAlts(), rewriter));
+      Optional<int> lhs = caseop.getAltLHS(i);
+      lhss.push_back(
+          lhs ? *lhs
+              : -42); // HACK HACK HACK: use "-42" to denote default case.
     }
 
-    // HACK! Assume that we always return a !lz.value
-    rewriter.create<ptr::PtrUnreachableOp>(rewriter.getUnknownLoc());
-    // auto undef = rewriter.create<ptr::PtrUndefOp>(
-    //     rewriter.getUnknownLoc(),
-    //     typeConverter->convertType(ValueType::get(rewriter.getContext())));
-    // rewriter.create<ReturnOp>(rewriter.getUnknownLoc(), undef.getResult());
+    assert(rhss.size() > 0);
+
+    assert(rands.size() > 0);
+    Value tag = rands[0];
+    // TODO: actually pick a value using a rgn.switch.
+    llvm::errs() << "creating select...\n";
+    RgnSelectOp to_execute =
+        rewriter.create<RgnSelectOp>(caseop.getLoc(), tag, lhss, rhss);
+    rewriter.create<RgnJumpValOp>(caseop.getLoc(), to_execute);
     rewriter.eraseOp(caseop);
+
     return success();
   }
-
-}; // HaskCaseIntRetOp end
+};
 
 struct HaskCaseRetOpConversionPattern : public mlir::ConversionPattern {
 private:
@@ -2001,7 +1478,11 @@ public:
   explicit HaskCaseRetOpConversionPattern(HaskTypeConverter &tc,
                                           MLIRContext *context)
       : ConversionPattern(HaskCaseRetOp::getOperationName(), 1, tc, context),
-        tc(tc) {}
+        tc(tc) {
+    setHasBoundedRewriteRecursion();
+
+
+        }
   static FuncOp getOrInsertGetObjTag(PatternRewriter &rewriter,
                                      ModuleOp module) {
     // emit "lean_obj_tag("; emit x; emit ")";
@@ -2037,78 +1518,95 @@ public:
     rewriter.mergeBlocks(caseEntryBB, &out->getBlocks().front(), rhsVals);
   }
 
-  Block *genCaseAlt(HaskCaseRetOp caseop, Value scrutinee, int i, int n,
-                       ConversionPatternRewriter &rewriter) const {
-    ModuleOp mod = caseop->getParentOfType<ModuleOp>();
+  RgnValOp genCaseAlt(HaskCaseRetOp caseop, Value scrutinee, int i, int n,
+                      ConversionPatternRewriter &rewriter) const {
+    // ModuleOp mod = caseop->getParentOfType<ModuleOp>();
 
+    // Value condition = [&]() {
+    //     Optional<int> lhsIx = caseop.getAltLHS(i);
+    //     if (!lhsIx) {
+    //       ConstantIntOp out =
+    //       rewriter.create<ConstantIntOp>(caseop.getLoc(), /*value=*/1,
+    //       /*width=*/1); return out.getResult();
+    //     } else {
+    //       FuncOp fn = getOrInsertGetObjTag(rewriter, mod);
+    //       SmallVector<Value, 4> params{scrutinee};
+    //       CallOp tag = rewriter.create<CallOp>(caseop.getLoc(), fn,
+    //       params); Value lhsConst =
+    //       rewriter.create<ConstantIntOp>(caseop.getLoc(), *lhsIx,
+    //       rewriter.getI32Type()); CmpIOp isEq = rewriter.create<CmpIOp>(
+    //           caseop.getLoc(), CmpIPredicate::eq, tag.getResult(0),
+    //           lhsConst);
+    //       return isEq.getResult();
+    //     }
+    // }();
 
+    // Block *falseBB =  [&]() {
+    //   // createBlock moves the insetion point x(
+    //   OpBuilder::InsertionGuard guard(rewriter);
+    //   return rewriter.createBlock(caseop->getParentRegion(),
+    //     caseop->getParentRegion()->end(), {});
+    // }();
 
-    Value condition = [&]() {
-        Optional<int> lhsIx = caseop.getAltLHS(i);
-        if (!lhsIx) {
-          ConstantIntOp out =  rewriter.create<ConstantIntOp>(caseop.getLoc(), /*value=*/1, /*width=*/1);
-          return out.getResult();
-        } else {
-          FuncOp fn = getOrInsertGetObjTag(rewriter, mod);
-          SmallVector<Value, 4> params{scrutinee};
-          CallOp tag = rewriter.create<CallOp>(caseop.getLoc(), fn, params);
-          Value lhsConst = rewriter.create<ConstantIntOp>(caseop.getLoc(), *lhsIx, rewriter.getI32Type());
-          CmpIOp isEq = rewriter.create<CmpIOp>(
-              caseop.getLoc(), CmpIPredicate::eq, tag.getResult(0), lhsConst);
-          return isEq.getResult();
-        }
-    }();
-
-
-    Block *falseBB =  [&]() {
-      // createBlock moves the insetion point x(
-      OpBuilder::InsertionGuard guard(rewriter);
-      return rewriter.createBlock(caseop->getParentRegion(), 
-        caseop->getParentRegion()->end(), {});
-    }();
-
-    rewriter.create<mlir::CondBranchOp>(caseop.getLoc(), condition,
-      &caseop.getAltRHS(i).front(), falseBB);
-
-    // this is because LEAN never uses arguments, it chooses to extract arguments
-    // by using intrincics from a case scrutinee.
-    // v This assert is no longer true, since we now use `scf`, so on lowering `scf`
-    // we can get more than one block inside a case.
-    // assert(caseop.getAltRHS(i).getBlocks().size() == 1);
+    // rewriter.create<mlir::CondBranchOp>(caseop.getLoc(), condition,
+    //   &caseop.getAltRHS(i).front(), falseBB);
     assert(caseop.getAltRHS(i).getNumArguments() == 0);
+    RgnValOp rv = rewriter.create<RgnValOp>(caseop.getLoc());
+    rewriter.inlineRegionBefore(caseop.getAltRHS(i), rv.getRegion(),
+                               rv.getRegion().end());
 
-    rewriter.inlineRegionBefore(caseop.getAltRHS(i), falseBB);
-    return falseBB;
+    // this is because LEAN never uses arguments, it chooses to extract
+    // arguments by using intrincics from a case scrutinee. v This assert is
+    // no longer true, since we now use `scf`, so on lowering `scf` we can
+    // get more than one block inside a case.
+    // assert(caseop.getAltRHS(i).getBlocks().size() == 1);
+    return rv;
   }
 
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> rands,
                   ConversionPatternRewriter &rewriter) const override {
     auto caseop = cast<HaskCaseRetOp>(op);
+    ModuleOp mod = caseop->getParentOfType<ModuleOp>();
 
     assert(rands.size() == 1);
     rewriter.setInsertionPoint(caseop);
-    
+
+    SmallVector<Value, 4> rhss;
+    SmallVector<int, 4> lhss;
     for (int i = 0; i < caseop.getNumAlts(); ++i) {
-      Block *falsebb = genCaseAlt(caseop, rands[0], i, caseop.getNumAlts(), rewriter);
-      rewriter.setInsertionPointToStart(falsebb);
+      rhss.push_back(
+          genCaseAlt(caseop, rands[0], i, caseop.getNumAlts(), rewriter));
+      lhss.push_back(i);
     }
-    rewriter.create<ptr::PtrUnreachableOp>(rewriter.getUnknownLoc());
-    // auto undef = rewriter.create<ptr::PtrUndefOp>(
-    // rewriter.getUnknownLoc(),
-    // ValueType::get(rewriter.getContext()));
-    // rewriter.create<ReturnOp>(rewriter.getUnknownLoc(), undef.getResult());
+
+    assert(rhss.size() > 0);
+
+    FuncOp fn = getOrInsertGetObjTag(rewriter, mod);
+    // HACK, TODO: change this to a real switch case. Order of appearance
+    // of arguments is not the same order as that of values.
+    assert(rands.size() > 0);
+    Value scrutinee = rands[0];
+
+    CallOp tag =
+        rewriter.create<CallOp>(caseop.getLoc(), fn, scrutinee);
+
+    // TODO: actually pick a value using a rgn.switch.
+    Value to_execute =
+        rewriter.create<RgnSelectOp>(caseop.getLoc(), tag.getResult(0), lhss, rhss);
+    rewriter.create<RgnJumpValOp>(caseop.getLoc(), to_execute);
     rewriter.eraseOp(caseop);
 
     return success();
   }
-}; // end HASK CASE RET OP.
+};
 
 /*
 class HaskValueToPtrOpTypeConversion : public ConversionPattern {
 public:
-  explicit HaskValueToPtrOpTypeConversion(TypeConverter &tc, MLIRContext *context)
-      : ConversionPattern(ptr::HaskValueToPtrOp::getOperationName(), 1, tc, context) {
+  explicit HaskValueToPtrOpTypeConversion(TypeConverter &tc, MLIRContext
+*context) : ConversionPattern(ptr::HaskValueToPtrOp::getOperationName(), 1,
+tc, context) {
   }
 
   LogicalResult
@@ -2124,17 +1622,19 @@ public:
 
 // class PtrBranchOpTypeConversion : public ConversionPattern {
 // public:
-//   explicit PtrBranchOpTypeConversion(TypeConverter &tc, MLIRContext *context)
-//       : ConversionPattern(ptr::PtrBranchOp::getOperationName(), 1, tc, context) {}
-// 
+//   explicit PtrBranchOpTypeConversion(TypeConverter &tc, MLIRContext
+//   *context)
+//       : ConversionPattern(ptr::PtrBranchOp::getOperationName(), 1, tc,
+//       context) {}
+//
 //   LogicalResult
 //   matchAndRewrite(Operation *op, ArrayRef<Value> rands,
 //                   ConversionPatternRewriter &rewriter) const override {
 //     assert(false && "legalizing ptr branch op");
 //     ptr::PtrBranchOp br = cast<ptr::PtrBranchOp>(op);
-//     // rewriter.replaceOpWithNewOp<BranchOp>(br, br.getDest(), br->getOperands());
-//     rewriter.replaceOpWithNewOp<ptr::PtrBranchOp>(br, br.getSuccessor(), rands);
-//     return success();
+//     // rewriter.replaceOpWithNewOp<BranchOp>(br, br.getDest(),
+//     br->getOperands()); rewriter.replaceOpWithNewOp<ptr::PtrBranchOp>(br,
+//     br.getSuccessor(), rands); return success();
 //   }
 // };
 
@@ -2286,14 +1786,16 @@ struct LowerLeanRgnPass : public Pass {
     return newInst;
   }
 
-  void runPatterns(ConversionTarget &target, mlir::OwningRewritePatternList &patterns) {
-    
+  void runPatterns(ConversionTarget &target,
+                   mlir::OwningRewritePatternList &patterns) {
+
     // ::llvm::DebugFlag = true;
 
     if (failed(mlir::applyPartialConversion(getOperation(), target,
                                             std::move(patterns)))) {
       llvm::errs() << "===Hask lowering failed at Conversion===\n";
-      // getOperation()->print(llvm::errs(), mlir::OpPrintingFlags().printGenericOpForm());
+      // getOperation()->print(llvm::errs(),
+      // mlir::OpPrintingFlags().printGenericOpForm());
       llvm::errs() << "\n===\n";
       signalPassFailure();
       ::llvm::DebugFlag = false;
@@ -2310,340 +1812,99 @@ struct LowerLeanRgnPass : public Pass {
     }
 
     ::llvm::DebugFlag = false;
-
   }
 
-  void runOnOperation() override{
+  void runOnOperation() override {
 
-      {
+    {
 
-          HaskTypeConverter typeConverter(&getContext());
-  mlir::OwningRewritePatternList patterns(&getContext());
-  ConversionTarget target(getContext());
-  target.addLegalDialect<HaskDialect, ptr::PtrDialect>();
-  target.addLegalDialect<StandardOpsDialect>();
-  target.addLegalDialect<AffineDialect>();
-  target.addLegalDialect<scf::SCFDialect>();
-  target.addLegalDialect<ptr::PtrDialect>();
-  target.addLegalOp<ModuleOp, ModuleTerminatorOp, FuncOp>();
+      HaskTypeConverter typeConverter(&getContext());
+      mlir::OwningRewritePatternList patterns(&getContext());
+      ConversionTarget target(getContext());
+      target.addIllegalDialect<scf::SCFDialect>();
 
-  target.addIllegalOp<HaskCaseIntRetOp>();
-  target.addIllegalOp<HaskCaseRetOp>();
-  target.addIllegalOp<HaskJoinPointOp>();
-  // target.addIllegalOp<HaskJumpOp>();
+      target.addLegalDialect<HaskDialect, ptr::PtrDialect>();
+      target.addLegalDialect<StandardOpsDialect>();
+      target.addLegalDialect<AffineDialect>();
+      target.addLegalDialect<RgnDialect>();
 
-  // target.addDynamicallyLegalOp<FuncOp>([](FuncOp funcOp) { return
-  // isTypeLegal(funcOp.getType()); });
-  // target.addDynamicallyLegalOp<ReturnOp>(isOpArgsAndResultsLegal<ReturnOp>);
-  // target.addDynamicallyLegalOp<BranchOp>(isOpArgsAndResultsLegal<BranchOp>);
-  // target.addDynamicallyLegalOp<ptr::PtrBranchOp>(isOpArgsAndResultsLegal<ptr::PtrBranchOp>);
-  //
-  patterns.insert<HaskJoinPointOpLowering>(typeConverter, &getContext());
-  patterns.insert<HaskCaseRetOpConversionPattern>(typeConverter, &getContext());
-  patterns.insert<HaskCaseIntRetOpConversionPattern>(typeConverter,
+      target.addLegalDialect<ptr::PtrDialect>();
+      target.addLegalOp<ModuleOp, ModuleTerminatorOp, FuncOp>();
+
+      target.addIllegalOp<HaskCaseIntRetOp>();
+      target.addIllegalOp<HaskCaseRetOp>();
+      target.addIllegalOp<HaskJoinPointOp>();
+      patterns.insert<HaskJoinPointOpLowering>(typeConverter, &getContext());
+      patterns.insert<HaskCaseRetOpConversionPattern>(typeConverter,
+                                                      &getContext());
+      patterns.insert<HaskCaseIntRetOpConversionPattern>(typeConverter,
+                                                         &getContext());
+      // patterns.insert<FuncOpLowering>(typeConverter, &getContext());
+      // patterns.insert<ReturnOpLowering>(typeConverter, &getContext());
+      // patterns.insert<BranchOpTypeConversion>(typeConverter, &getContext());
+      // patterns.insert<PtrBranchOpTypeConversion>(typeConverter,
+      // &getContext());
+      runPatterns(target, patterns);
+    }
+
+    // === control flow has been lowered. lower simple instructions ===/
+    {
+
+      HaskTypeConverter typeConverter(&getContext());
+      mlir::OwningRewritePatternList patterns(&getContext());
+      ConversionTarget target(getContext());
+      target.addIllegalDialect<HaskDialect>();
+      target.addLegalDialect<ptr::PtrDialect>();
+      target.addLegalDialect<StandardOpsDialect>();
+      target.addLegalDialect<AffineDialect>();
+      target.addLegalDialect<RgnDialect>();
+      target.addIllegalDialect<scf::SCFDialect>();
+      // target.addLegalDialect<scf::SCFDialect>();
+      target.addLegalDialect<ptr::PtrDialect>();
+      target.addLegalOp<ModuleOp, ModuleTerminatorOp, FuncOp>();
+
+      patterns.insert<HaskConstructOpLowering>(typeConverter, &getContext());
+      patterns.insert<ErasedValueOpLowering>(typeConverter, &getContext());
+      patterns.insert<TagGetOpLowering>(typeConverter, &getContext());
+      patterns.insert<PapExtendOpLowering>(typeConverter, &getContext());
+      patterns.insert<PapOpLowering>(typeConverter, &getContext());
+      patterns.insert<HaskStringConstOpLowering>(typeConverter, &getContext());
+      patterns.insert<HaskIntegerConstOpLowering>(typeConverter, &getContext());
+      patterns.insert<HaskLargeIntegerConstOpLowering>(typeConverter,
+                                                       &getContext());
+      patterns.insert<ProjectionOpLowering>(typeConverter, &getContext());
+      patterns.insert<CallOpLowering>(typeConverter, &getContext());
+      patterns.insert<ApOpConversionPattern>(typeConverter, &getContext());
+      patterns.insert<ApEagerOpConversionPattern>(typeConverter, &getContext());
+      patterns.insert<HaskReturnOpConversionPattern>(typeConverter,
                                                      &getContext());
-  // patterns.insert<FuncOpLowering>(typeConverter, &getContext());
-  // patterns.insert<ReturnOpLowering>(typeConverter, &getContext());
-  // patterns.insert<BranchOpTypeConversion>(typeConverter, &getContext());
-  // patterns.insert<PtrBranchOpTypeConversion>(typeConverter, &getContext());
-  runPatterns(target, patterns);
-}
+      patterns.insert<IncOpLowering>(typeConverter, &getContext());
+      patterns.insert<DecOpLowering>(typeConverter, &getContext());
 
-// === control flow has been lowered. lower simple instructions ===/
-{
-
-  HaskTypeConverter typeConverter(&getContext());
-  mlir::OwningRewritePatternList patterns(&getContext());
-  ConversionTarget target(getContext());
-  target.addIllegalDialect<HaskDialect>();
-  target.addLegalDialect<ptr::PtrDialect>();
-  target.addLegalDialect<StandardOpsDialect>();
-  target.addLegalDialect<AffineDialect>();
-  target.addLegalDialect<scf::SCFDialect>();
-  target.addLegalDialect<ptr::PtrDialect>();
-  target.addLegalOp<ModuleOp, ModuleTerminatorOp, FuncOp>();
-
-  patterns.insert<HaskConstructOpLowering>(typeConverter, &getContext());
-  patterns.insert<ErasedValueOpLowering>(typeConverter, &getContext());
-  patterns.insert<TagGetOpLowering>(typeConverter, &getContext());
-  patterns.insert<PapExtendOpLowering>(typeConverter, &getContext());
-  patterns.insert<PapOpLowering>(typeConverter, &getContext());
-  patterns.insert<HaskStringConstOpLowering>(typeConverter, &getContext());
-  patterns.insert<HaskIntegerConstOpLowering>(typeConverter, &getContext());
-  patterns.insert<HaskLargeIntegerConstOpLowering>(typeConverter,
-                                                   &getContext());
-  patterns.insert<ProjectionOpLowering>(typeConverter, &getContext());
-  patterns.insert<CallOpLowering>(typeConverter, &getContext());
-  patterns.insert<ApOpConversionPattern>(typeConverter, &getContext());
-  patterns.insert<ApEagerOpConversionPattern>(typeConverter, &getContext());
-  patterns.insert<HaskReturnOpConversionPattern>(typeConverter, &getContext());
-  patterns.insert<IncOpLowering>(typeConverter, &getContext());
-  patterns.insert<DecOpLowering>(typeConverter, &getContext());
-
-  // patterns.insert<FuncOpLowering>(typeConverter, &getContext());
-  // patterns.insert<ReturnOpLowering>(typeConverter, &getContext());
-  // patterns.insert<BranchOpTypeConversion>(typeConverter, &getContext());
-  runPatterns(target, patterns);
-  return;
-}
-
-/*
-// LLVMConversionTarget target(getContext());
-HaskTypeConverter typeConverter(&getContext());
-ConversionTarget target(getContext());
-target.addIllegalDialect<HaskDialect>();
-// target.addLegalDialect<HaskDialect>();
-// target.addIllegalOp<HaskConstructOp>();
-
-target.addLegalDialect<StandardOpsDialect>();
-target.addLegalDialect<AffineDialect>();
-
-// target.addLegalDialect<mlir::LLVM::LLVMDialect>();
-target.addLegalDialect<scf::SCFDialect>();
-target.addLegalDialect<ptr::PtrDialect>();
-
-target.addLegalOp<ModuleOp, ModuleTerminatorOp>();
-
-target.addDynamicallyLegalOp<ConstantOp>(
-    [](ConstantOp op) { return isTypeLegal(op.getType()); });
-
-// This is wrong. We need to recursively check if function type
-// is legal.
-target.addDynamicallyLegalOp<FuncOp>(
-    [](FuncOp funcOp) { return isTypeLegal(funcOp.getType()); });
-
-target.addDynamicallyLegalOp<ReturnOp>([](ReturnOp ret) {
-  for (Value arg : ret.getOperands()) {
-    if (!isTypeLegal(arg.getType())) {
-      return false;
+      // patterns.insert<FuncOpLowering>(typeConverter, &getContext());
+      // patterns.insert<ReturnOpLowering>(typeConverter, &getContext());
+      // patterns.insert<BranchOpTypeConversion>(typeConverter, &getContext());
+      runPatterns(target, patterns);
+      return;
     }
   }
-  return true;
-});
-
-
-target.addDynamicallyLegalOp<CallOp>([](CallOp call) {
-  for (Value arg : call.getOperands()) {
-    if (!isTypeLegal(arg.getType())) {
-      return false;
-    }
-  }
-
-  for (Type t : call.getResultTypes()) {
-    if (!isTypeLegal(t)) {
-      return false;
-    }
-  }
-  return true;
-});
-
-// target.addDynamicallyLegalOp<CallIndirectOp>([](CallIndirectOp call) {
-
-//   llvm::errs() << "===Checking callIndirectOp===\n";
-//   for (Value arg : call.getOperands()) {
-//     llvm::errs() << " - " << arg.getType() << "\n";
-//     if (!isTypeLegal(arg.getType())) {
-//       return false;
-//     }
-//   }
-//   for (Type t : call.getResultTypes()) {
-//     llvm::errs() << " - " << t << "\n";
-//     if (!isTypeLegal(t)) {
-//       return false;
-//     }
-//   }
-//   llvm::errs() << "\n===\n";
-//   return true;
-// });
-
-target.addDynamicallyLegalOp<memref::AllocOp>(
-    [](memref::AllocOp op) { return isTypeLegal(op.getType()); });
-
-target.addDynamicallyLegalOp<memref::StoreOp>([](memref::StoreOp store) {
-  return isTypeLegal(store.getMemRefType()) &&
-         isTypeLegal(store.getValueToStore().getType());
-});
-
-target.addDynamicallyLegalOp<memref::LoadOp>([](memref::LoadOp load) {
-  return isTypeLegal(load.getMemRefType()) &&
-         isTypeLegal(load.getResult().getType());
-});
-
-target.addDynamicallyLegalOp<AffineLoadOp>([](mlir::AffineLoadOp load) {
-  return isTypeLegal(load.getMemRefType()) &&
-         isTypeLegal(load.getResult().getType());
-});
-
-target.addDynamicallyLegalOp<AffineStoreOp>([](mlir::AffineStoreOp op) {
-  for (Value arg : op.getOperands()) {
-    if (!isTypeLegal(arg.getType())) {
-      return false;
-    }
-  }
-
-  return true;
-});
-
-target.addDynamicallyLegalOp<AffineForOp>([](mlir::AffineForOp op) {
-  for (Value arg : op.getOperands()) {
-    if (!isTypeLegal(arg.getType())) {
-      return false;
-    }
-  }
-
-  for (Type t : op.getResultTypes()) {
-    if (!isTypeLegal(t)) {
-      return false;
-    }
-  }
-  return true;
-});
-
-target.addDynamicallyLegalOp<mlir::scf::YieldOp>([](scf::YieldOp yield) {
-  for (Type t : yield.getOperandTypes()) {
-    if (!isTypeLegal(t)) {
-      llvm::errs() << "ILLEGAL scfOperandType: |" << t << "|\n";
-      return false;
-    }
-  }
-  return true;
-});
-
-target.addDynamicallyLegalOp<mlir::AffineYieldOp>([](AffineYieldOp yield) {
-  for (Type t : yield.getOperandTypes()) {
-    if (!isTypeLegal(t)) {
-      return false;
-    }
-  }
-  return true;
-});
-
-target.addDynamicallyLegalOp<ptr::PtrGlobalOp>(
-    [](ptr::PtrGlobalOp p) { return isTypeLegal(p.getGlobalType()); });
-
-target.addDynamicallyLegalOp<ptr::PtrLoadGlobalOp>(
-    [](ptr::PtrLoadGlobalOp p) { return isTypeLegal(p.getGlobalType()); });
-
-target.addDynamicallyLegalOp<ptr::PtrStoreGlobalOp>(
-    [](ptr::PtrStoreGlobalOp p) {
-      return isTypeLegal(p.getOperand().getType());
-    });
-
-target.addDynamicallyLegalOp<ptr::PtrFnPtrOp>(
-    [](ptr::PtrFnPtrOp p) { return isTypeLegal(p.getGlobalType()); });
-
-target.addDynamicallyLegalOp<BranchOp>([](BranchOp br) {
-  for (int i = 0; i < (int)br->getNumOperands(); ++i) {
-    if (!isTypeLegal(br.getOperand(i).getType())) {
-      return false;
-    }
-  }
-  return true;
-});
-
-target.addDynamicallyLegalOp<ptr::PtrBranchOp>([](ptr::PtrBranchOp br) {
-  return false;
-  for (int i = 0; i < (int)br->getNumOperands(); ++i) {
-    if (!isTypeLegal(br.getOperand(i).getType())) {
-      return false;
-    }
-  }
-  return true;
-});
-
-target.addDynamicallyLegalOp<ReturnOp>([](ReturnOp ret) {
-  for (int i = 0; i < (int)ret->getNumOperands(); ++i) {
-    if (!isTypeLegal(ret.getOperand(i).getType())) {
-      return false;
-    }
-  }
-  return true;
-});
-
-
-
-
-mlir::OwningRewritePatternList patterns(&getContext());
-
-// patterns.insert<ForceOpConversionPattern>(typeConverter, &getContext());
-patterns.insert<CaseOpConversionPattern>(typeConverter, &getContext());
-patterns.insert<CaseIntOpConversionPattern>(typeConverter, &getContext());
-
-patterns.insert<HaskConstructOpLowering>(typeConverter, &getContext());
-
-// patterns.insert<ThunkifyOpLowering>(typeConverter,
-// &getContext());
-patterns.insert<ErasedValueOpLowering>(typeConverter, &getContext());
-patterns.insert<TagGetOpLowering>(typeConverter, &getContext());
-patterns.insert<PapExtendOpLowering>(typeConverter, &getContext());
-patterns.insert<PapOpLowering>(typeConverter, &getContext());
-patterns.insert<HaskStringConstOpLowering>(typeConverter, &getContext());
-patterns.insert<HaskJoinPointOpLowering>(typeConverter, &getContext());
-// patterns.insert<HaskJumpOpLowering>(typeConverter, &getContext());
-
-patterns.insert<HaskIntegerConstOpLowering>(typeConverter, &getContext());
-patterns.insert<ProjectionOpLowering>(typeConverter, &getContext());
-
-patterns.insert<ConstantOpLowering>(typeConverter, &getContext());
-patterns.insert<FuncOpLowering>(typeConverter, &getContext());
-patterns.insert<ReturnOpLowering>(typeConverter, &getContext());
-
-patterns.insert<CallOpLowering>(typeConverter, &getContext());
-//    patterns.insert<CallIndirectOpLowering>(typeConverter, &getContext());
-patterns.insert<ScfYieldOpLowering>(typeConverter, &getContext());
-
-// patterns.insert<ApOpConversionPattern>(typeConverter, &getContext());
-// patterns.insert<ApEagerOpConversionPattern>(typeConverter,
-// &getContext());
-patterns.insert<HaskReturnOpConversionPattern>(typeConverter,
-                                               &getContext());
-
-patterns.insert<AllocOpLowering>(typeConverter, &getContext());
-patterns.insert<StoreOpLowering>(typeConverter, &getContext());
-patterns.insert<LoadOpLowering>(typeConverter, &getContext());
-patterns.insert<AffineLoadOpLowering>(typeConverter, &getContext());
-patterns.insert<AffineStoreOpLowering>(typeConverter, &getContext());
-patterns.insert<AffineYieldOpLowering>(typeConverter, &getContext());
-patterns.insert<HaskCaseRetOpConversionPattern>(typeConverter,
-                                                &getContext());
-patterns.insert<HaskCaseIntRetOpConversionPattern>(typeConverter,
-                                                   &getContext());
-
-patterns.insert<AffineForOpLowering>(typeConverter, &getContext());
-
-patterns.insert<PtrBranchOpTypeConversion>(typeConverter, &getContext());
-
-patterns.insert<BranchOpTypeConversion>(typeConverter, &getContext());
-patterns.insert<ReturnOpTypeConversion>(typeConverter, &getContext());
-
-patterns.insert<PtrGlobalOpTypeConversion>(typeConverter, &getContext());
-patterns.insert<PtrLoadGlobalOpTypeConversion>(typeConverter,
-                                               &getContext());
-patterns.insert<PtrStoreGlobalOpTypeConversion>(typeConverter,
-                                                &getContext());
-patterns.insert<PtrFnPtrOpTypeConversion>(typeConverter, &getContext());
-
-// this only exists for type conversion reasons. Will be eliminated
-// target.addIllegalOp<mlir::ptr::HaskValueToPtrOp>();
-// patterns.insert<HaskValueToPtrOpTypeConversion>(typeConverter,
-&getContext());
-
-
-runPatterns(target, patterns);
-*/
-}; // namespace
 };
-} // end anonymous namespace.
+
+} // namespace
 
 std::unique_ptr<mlir::Pass> createLowerLeanRgnPass() {
   return std::make_unique<LowerLeanRgnPass>();
 }
 
 void registerLowerLeanRgnPass() {
-  ::mlir::registerPass(
-      "lean-lower-rgn", "Perform lowering from LEAN-lz to std+rgn+ptr",
-      []() -> std::unique_ptr<::mlir::Pass> { return createLowerLeanRgnPass(); });
+  ::mlir::registerPass("lean-lower-rgn",
+                       "Perform lowering from LEAN-lz to std+rgn+ptr",
+                       []() -> std::unique_ptr<::mlir::Pass> {
+                         return createLowerLeanRgnPass();
+                       });
 }
+
+
 
 } // namespace standalone
 } // namespace mlir

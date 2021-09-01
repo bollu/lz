@@ -53,15 +53,32 @@ RgnDialect::RgnDialect(mlir::MLIRContext *context)
     // addOperations<RgnReturnOp, RgnSymOp, RgnValOp, RgnCallSymOp, RgnCallValOp, RgnJumpSymOp, RgnJumpValOp
     // >();
     addOperations<RgnReturnOp, RgnSymOp, RgnValOp, RgnCallSymOp
-    , RgnCallValOp, RgnJumpSymOp, RgnJumpValOp, RgnEndOp>();
+    , RgnCallValOp, RgnJumpSymOp, RgnJumpValOp, RgnEndOp, RgnSelectOp>();
 
     // addAttributes<DataConstructorAttr>();
     // addInterfaces<HaskInlinerInterface>();
   // clang-format on
 }
 
-// bool HaskDialect::isFunctionRecursive(FuncOp funcOp) {
-// }
+
+// RGN OPS::RgnSelectOp
+// RGN OPS::RgnSelectOp
+// RGN OPS::RgnSelectOp
+// RGN OPS::RgnSelectOp
+// RGN OPS::RgnSelectOp
+
+
+mlir::ParseResult RgnSelectOp::parse(mlir::OpAsmParser &parser,
+                                     mlir::OperationState &result) {
+  assert(false && "unimplemented");
+}
+
+void RgnSelectOp::print(mlir::OpAsmPrinter &p) {
+  p.printGenericOp(this->getOperation());
+}
+
+
+
 
 // RGN OPS::RgnReturnOp
 // RGN OPS::RgnReturnOp

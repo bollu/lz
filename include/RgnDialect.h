@@ -1,11 +1,17 @@
 #pragma once
 #include "mlir/IR/BlockAndValueMapping.h"
+#include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/IR/OperationSupport.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Support/LLVM.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 
 class RgnDialect : public mlir::Dialect {
 public:
@@ -13,6 +19,35 @@ public:
 
   static llvm::StringRef getDialectNamespace() { return "rgn"; }
 };
+
+class RgnSelectOp
+    : public mlir::Op<RgnSelectOp, mlir::OpTrait::VariadicOperands,
+                      mlir::OpTrait::OneResult, mlir::OpTrait::ZeroRegion> {
+public:
+  using Op::Op;
+  static llvm::StringRef getOperationName() { return "rgn.select"; };
+  static mlir::ParseResult parse(mlir::OpAsmParser &parser,
+                                 mlir::OperationState &result);
+
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                    mlir::Value switcher,
+                    mlir::SmallVectorImpl<int> &is, mlir::SmallVectorImpl<mlir::Value> &vs) {
+    // state.addOperands(switcher);
+    // for(mlir::Value v : vs) {
+    //   state.addOperands(v);
+    // }
+    state.addTypes(builder.getIntegerType(42));
+    // assert(vs.size() == is.size());
+    // for(int i = 0; i < is.size(); ++i) {
+    //   state.addAttribute("case" + std::to_string(i),
+    //       builder.getI64IntegerAttr(is[i]));
+    // }
+  }
+
+  void print(mlir::OpAsmPrinter &p);
+};
+
+
 
 class RgnReturnOp
     : public mlir::Op<RgnReturnOp, mlir::OpTrait::ZeroResult,
@@ -26,9 +61,8 @@ public:
   static mlir::ParseResult parse(mlir::OpAsmParser &parser,
                                  mlir::OperationState &result);
 
-  template <typename ValsT>
   static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                    ValsT vs) {
+                    mlir::ValueRange vs) {
     state.addOperands(vs);
   }
 
@@ -79,14 +113,20 @@ public:
   void getEffects(mlir::SmallVectorImpl<mlir::SideEffects::EffectInstance<
                       mlir::MemoryEffects::Effect>> &effects) {}
 
-  template <typename RangeT>
-  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                    RangeT ts) {
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state) {
     mlir::Region *rnew = state.addRegion();
-    mlir::BlockAndValueMapping mapping;
-    //  r->cloneInto(rnew, mapping);
-    state.addTypes(ts);
+    state.addTypes(builder.getIntegerType(42));
   }
+
+
+  // template <typename RangeT>
+  // static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
+  //                   RangeT ts) {
+  //   mlir::Region *rnew = state.addRegion();
+  //   mlir::BlockAndValueMapping mapping;
+  //   //  r->cloneInto(rnew, mapping);
+  //   state.addTypes(ts);
+  // }
 
   mlir::Region *region();
 
@@ -184,6 +224,8 @@ public:
                                  mlir::OperationState &result);
 
   void print(mlir::OpAsmPrinter &p);
+
+
 };
 
 // jump a symbol.
@@ -214,6 +256,12 @@ public:
 
   static mlir::ParseResult parse(mlir::OpAsmParser &parser,
                                  mlir::OperationState &result);
+
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                    mlir::Value rgn) {
+    // state.addOperands(rgn);
+  }
+
 
   void print(mlir::OpAsmPrinter &p);
 };
