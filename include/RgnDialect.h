@@ -106,7 +106,7 @@ public:
   static mlir::ParseResult parse(mlir::OpAsmParser &parser,
                                  mlir::OperationState &result);
 
-  static void build(mlir::OpBuilder &builder, mlir::OperationState &state);
+  static void build(mlir::OpBuilder &builder, mlir::OperationState &state) {}
   void print(mlir::OpAsmPrinter &p);
 };
 

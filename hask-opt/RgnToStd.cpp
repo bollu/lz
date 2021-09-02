@@ -98,42 +98,50 @@ struct RgnJumpValOpConversionPattern
     }
 
     if (RgnSelectOp select = call.getFn().getDefiningOp<RgnSelectOp>()) {
-      Block *defaultbb = nullptr;
-      SmallVector<int32_t> caseValues;
-      SmallVector<Block *> caseDestinations;
-      SmallVector<RgnValOp> toErase;
+
+      // Block *defaultbb = nullptr;
+      SmallVector<std::pair<int, RgnValOp>> vals;
 
       for(int i = 0; i < select.getNumBranches(); ++i) {
         std::pair<int, mlir::Value> branch = select.getBranch(i);
         RgnValOp val = branch.second.getDefiningOp<RgnValOp>();
+        vals.push_back({branch.first, val});
+      };
 
-        if (branch.first == -42) {
-          assert(defaultbb == nullptr && "can't have two defaults!");
-          defaultbb = &val.getRegion().getBlocks().front();
-        } else {
-          caseValues.push_back(branch.first);
-          caseDestinations.push_back(&val.getRegion().getBlocks().front());
-        }        
-        toErase.push_back(val);
-        rewriter.inlineRegionBefore(val.getRegion(), call->getBlock());
+      Block *defaultBB =  [&]() {
+        // createBlock moves the insetion point x(
+        OpBuilder::InsertionGuard guard(rewriter);
+        Block *b = rewriter.createBlock(call->getParentRegion(), 
+          call->getParentRegion()->end(), {});
+        rewriter.setInsertionPointToStart(b);        
+        rewriter.create<ptr::PtrUnreachableOp>(rewriter.getUnknownLoc());
+        return b;
+      }();
 
-      }
-      if (!defaultbb) {
-        assert(caseDestinations.size());
-        defaultbb = caseDestinations[0];
-      }
-      assert(defaultbb);
 
-      SmallVector<Value, 1> emptyArgs;
-      assert(call->getUsers().empty());
-      rewriter.replaceOpWithNewOp<LLVM::SwitchOp>(call, select.getSwitcher(), defaultbb,
-        /*default operands*/emptyArgs,
-        caseValues, caseDestinations);
-      rewriter.eraseOp(select);
-      for(RgnValOp v: toErase) { rewriter.eraseOp(v); }
-        
-      // rewriter.create<RgnEndOp>(call.getLoc());
+      SmallVector<int32_t> caseValues;
+      SmallVector<Block *> caseDestinations;
+      SmallVector<mlir::Value> defaultOperands;
+      Value switchval = rewriter.create<LLVM::SExtOp>(call.getLoc(), rewriter.getIntegerType(32), select.getSwitcher());
+
+      rewriter.setInsertionPointAfter(call);
+      rewriter.replaceOpWithNewOp<LLVM::SwitchOp>(call, switchval, defaultBB,
+          /*default operands*/ defaultOperands,
+        /*case switch LHss*/caseValues,
+        /*case switch RHSs*/caseDestinations);
       // rewriter.eraseOp(call);
+
+      // SmallVector<Value, 1> emptyArgs;
+      // assert(call->getUsers().empty());
+      // // rewriter.replaceOpWithNewOp<LLVM::SwitchOp>(call, select.getSwitcher(), defaultbb,
+      // //   /*default operands*/emptyArgs,
+      //   // caseValues, caseDestinations);
+      // rewriter.eraseOp(call);
+      // rewriter.eraseOp(select);
+      // for(RgnValOp v: toErase) { rewriter.eraseOp(v); }
+
+      // // rewriter.create<RgnEndOp>(call.getLoc());
+      // // rewriter.eraseOp(call);
       return success();
     }
     assert(false && "expected argument to call to be a val or a select.");
