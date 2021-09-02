@@ -14,6 +14,8 @@
 #include "llvm/BinaryFormat/Dwarf.h"
 #include <string>
 
+static const int RGN_DIALECT_DEFAULT_CASE_MAGIC = 42;
+
 class RgnDialect : public mlir::Dialect {
 public:
   explicit RgnDialect(mlir::MLIRContext *ctx);

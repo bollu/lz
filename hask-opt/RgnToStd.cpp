@@ -68,7 +68,6 @@
 namespace {
 using namespace mlir;
 
-
 struct LowerRgnPass : public Pass {
   LowerRgnPass() : Pass(mlir::TypeID::get<LowerRgnPass>()){};
   StringRef getName() const override { return "LowerRgnPass"; }
@@ -81,41 +80,53 @@ struct LowerRgnPass : public Pass {
   }
 
   void
-  rewriteJump(RgnJumpValOp jump, mlir::IRRewriter &rewriter, 
+  rewriteJump(RgnJumpValOp jump, mlir::IRRewriter &rewriter,
               std::vector<std::pair<RgnValOp, Block *>> &inlineVals) const {
 
     static std::set<RgnValOp> seen;
+    static std::set<RgnJumpValOp> jumps;
+    assert(!jumps.count(jump));
+    jumps.insert(jump);
 
     if (RgnValOp val = jump.getFn().getDefiningOp<RgnValOp>()) {
+      llvm::errs() << "\n===jump(rgn)===\n";
+      llvm::errs() << "rgnval:\n\t" << val << "\n";
+      llvm::errs() << "parent:\n\t" << jump << "\n";
+      llvm::errs() << "\n===\n";
+
+      assert(!seen.count(val));
+      seen.insert(val);
+
+      llvm::errs() << __FILE__ << ":" << __LINE__ << "\n";
       rewriter.setInsertionPointAfter(jump);
+      assert(val.getRegion().getBlocks().size() > 0);
       rewriter.create<BranchOp>(jump.getLoc(),
                                 &val.getRegion().getBlocks().front(),
                                 jump.getFnArguments());
-      rewriter.inlineRegionBefore(val.getRegion(), 
-        *jump->getParentRegion(), jump->getParentRegion()->end());
+      rewriter.inlineRegionBefore(val.getRegion(), *jump->getParentRegion(),
+                                  jump->getParentRegion()->end());
       rewriter.eraseOp(jump);
+      llvm::errs() << __FILE__ << ":" << __LINE__ << "\n";
       return;
     }
 
     if (RgnSelectOp select = jump.getFn().getDefiningOp<RgnSelectOp>()) {
-
 
       Block *defaultBB = nullptr;
       SmallVector<int32_t> caseLhss;
       SmallVector<Block *> caseRhss;
       SmallVector<mlir::Value> defaultOperands;
 
-
-    llvm::errs() << __FILE__ << ":" << __LINE__ << "\n";
+      llvm::errs() << __FILE__ << ":" << __LINE__ << "\n";
       for (int i = 0; i < (int)select.getNumBranches(); ++i) {
         std::pair<int, mlir::Value> branch = select.getBranch(i);
         RgnValOp v = branch.second.getDefiningOp<RgnValOp>();
         assert(v && "expected select(rgnval)");
 
-        llvm::errs() << "\n===\n";
-        llvm::errs() << "rgnval:\n\t"  << v << "\n";
-        llvm::errs() << "select:\n\t"  << select << "\n";
-        llvm::errs() << "parent:\n\t"  << jump << "\n";
+        llvm::errs() << "\n===jump(select(rgn))===\n";
+        llvm::errs() << "rgnval:\n\t" << v << "\n";
+        llvm::errs() << "select:\n\t" << select << "\n";
+        llvm::errs() << "parent:\n\t" << jump << "\n";
         llvm::errs() << "\n===\n";
         assert(!seen.count(v));
         seen.insert(v);
@@ -123,21 +134,26 @@ struct LowerRgnPass : public Pass {
         Region *parent = jump->getParentRegion();
         llvm::errs() << __FILE__ << ":" << __LINE__ << "\n";
 
-        if (branch.first == 42) {
+        if (branch.first == RGN_DIALECT_DEFAULT_CASE_MAGIC) {
+          llvm::errs() << __FILE__ << ":" << __LINE__ << "\n";
           assert(i == (int)select.getNumBranches() - 1);
           assert(!defaultBB && "can't have two default blocks");
           Region &r = v.getRegion();
           defaultBB = &r.front();
           rewriter.inlineRegionBefore(r, *parent, parent->end());
+          llvm::errs() << __FILE__ << ":" << __LINE__ << "\n";
 
         } else {
+          llvm::errs() << __FILE__ << ":" << __LINE__ << "\n";
           Region &r = v.getRegion();
           assert(r.getBlocks().size() > 0);
           caseLhss.push_back(abs(branch.first));
           caseRhss.push_back(&r.getBlocks().front());
           rewriter.inlineRegionBefore(r, *parent, parent->end());
+          llvm::errs() << __FILE__ << ":" << __LINE__ << "\n";
         }
       }
+      llvm::errs() << __FILE__ << ":" << __LINE__ << "\n";
 
       if (!defaultBB) {
         defaultBB = [&]() {
@@ -149,8 +165,8 @@ struct LowerRgnPass : public Pass {
           rewriter.create<ptr::PtrUnreachableOp>(rewriter.getUnknownLoc());
           return b;
         }();
-
       }
+      llvm::errs() << __FILE__ << ":" << __LINE__ << "\n";
 
       rewriter.setInsertionPointAfter(jump);
       Value switchval = rewriter.create<LLVM::SExtOp>(
@@ -159,14 +175,16 @@ struct LowerRgnPass : public Pass {
       //                                 /*default operands*/ defaultOperands,
       //                                 /*case switch LHss*/ caseLhss,
       //                                 /*case switch RHSs*/ caseRhss);
-     llvm::errs() << __FILE__ << ":" << __LINE__ << "\n";
+      llvm::errs() << __FILE__ << ":" << __LINE__ << "\n";
 
-      rewriter.replaceOpWithNewOp<LLVM::SwitchOp>(jump, switchval, defaultBB,
+      rewriter.replaceOpWithNewOp<LLVM::SwitchOp>(
+          jump, switchval, defaultBB,
           /*default-operands*/ defaultOperands,
-        /*case switch LHss*/caseLhss,
-        /*case switch RHSs*/caseRhss);
+          /*case switch LHss*/ caseLhss,
+          /*case switch RHSs*/ caseRhss);
       // rewriter.eraseOp(jump);
 
+      llvm::errs() << __FILE__ << ":" << __LINE__ << "\n";
       return;
     };
     assert(false && "expected argument to call to be a val or a select.");
@@ -186,7 +204,6 @@ struct LowerRgnPass : public Pass {
       return WalkResult::advance();
     });
 
-
     llvm::errs() << __FILE__ << ":" << __LINE__ << "\n";
 
     // std::set<RgnValOp> toDelete;
@@ -196,7 +213,7 @@ struct LowerRgnPass : public Pass {
     //   // toDelete.insert(inlineVals[i].first);
     // }
 
-   llvm::errs() << __FILE__ << ":" << __LINE__ << "\n";
+    llvm::errs() << __FILE__ << ":" << __LINE__ << "\n";
     getOperation()->walk([&](RgnJumpValOp v) {
       if (!v.use_empty()) {
         llvm::errs() << "region val has use: |" << v << "|\n";
@@ -205,7 +222,7 @@ struct LowerRgnPass : public Pass {
       rewriter.eraseOp(v);
     });
 
-     llvm::errs() << __FILE__ << ":" << __LINE__ << "\n";
+    llvm::errs() << __FILE__ << ":" << __LINE__ << "\n";
     getOperation()->walk([&](RgnSelectOp v) {
       if (!v.use_empty()) {
         llvm::errs() << "region val has use: |" << v << "|\n";
@@ -214,7 +231,7 @@ struct LowerRgnPass : public Pass {
       rewriter.eraseOp(v);
     });
 
-   llvm::errs() << __FILE__ << ":" << __LINE__ << "\n";
+    llvm::errs() << __FILE__ << ":" << __LINE__ << "\n";
     getOperation()->walk([&](RgnValOp v) {
       if (!v.use_empty()) {
         llvm::errs() << "region val has use: |" << v << "|\n";
@@ -223,8 +240,7 @@ struct LowerRgnPass : public Pass {
       rewriter.eraseOp(v);
     });
 
-   llvm::errs() << __FILE__ << ":" << __LINE__ << "\n";
-
+    llvm::errs() << __FILE__ << ":" << __LINE__ << "\n";
 
     // llvm::outs() << "// ===rewritten===\n";
     // llvm::outs() << *getOperation();

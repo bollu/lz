@@ -1434,7 +1434,7 @@ public:
       Optional<int> lhs = caseop.getAltLHS(i);
       lhss.push_back(
           lhs ? *lhs
-              : 42); // HACK HACK HACK: use "-42" to denote default case.
+              : RGN_DIALECT_DEFAULT_CASE_MAGIC); // HACK HACK HACK: use "-42" to denote default case.
     }
 
     assert(rhss.size() > 0);
@@ -1560,7 +1560,7 @@ public:
       rhss.push_back(
           genCaseAlt(caseop, rands[0], i, caseop.getNumAlts(), rewriter));
       Optional<int> lhs = caseop.getAltLHS(i);
-      lhss.push_back(lhs ? *lhs : 42);
+      lhss.push_back(lhs ? *lhs : RGN_DIALECT_DEFAULT_CASE_MAGIC);
     }
 
     assert(rhss.size() > 0);
