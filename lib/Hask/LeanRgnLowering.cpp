@@ -810,9 +810,9 @@ public:
       return WalkResult::advance();
     });
 
-        rewriter.inlineRegionBefore(jpOp.getLaterJumpedIntoRegion(),
-                                *jpOp->getParentRegion(),
-                                jpOp->getParentRegion()->end());
+    rewriter.inlineRegionBefore(jpOp.getLaterJumpedIntoRegion(),
+                            *jpOp->getParentRegion(),
+                            jpOp->getParentRegion()->end());
 
     // begin --> fstRegion
     rewriter.setInsertionPointToEnd(jpOp->getBlock());
@@ -1559,7 +1559,8 @@ public:
     for (int i = 0; i < caseop.getNumAlts(); ++i) {
       rhss.push_back(
           genCaseAlt(caseop, rands[0], i, caseop.getNumAlts(), rewriter));
-      lhss.push_back(i);
+      Optional<int> lhs = caseop.getAltLHS(i);
+      lhss.push_back(lhs ? *lhs : 42);
     }
 
     assert(rhss.size() > 0);

@@ -123,7 +123,7 @@ struct LowerRgnPass : public Pass {
         Region *parent = jump->getParentRegion();
         llvm::errs() << __FILE__ << ":" << __LINE__ << "\n";
 
-        if (branch.first == -42) {
+        if (branch.first == 42) {
           assert(i == (int)select.getNumBranches() - 1);
           assert(!defaultBB && "can't have two default blocks");
           Region &r = v.getRegion();
