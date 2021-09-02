@@ -19,10 +19,13 @@
 #include "mlir/IR/Types.h"
 #include "mlir/IR/Value.h"
 #include "mlir/IR/Verifier.h"
+#include "mlir/IR/Visitors.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
 
+#include <ios>
 #include <mlir/Parser.h>
+#include <set>
 #include <sstream>
 
 // Standard dialect
@@ -90,7 +93,9 @@ struct RgnJumpValOpConversionPattern
 
     if (RgnValOp val = call.getFn().getDefiningOp<RgnValOp>()) {
       assert(false && "screwing up region");
-      rewriter.create<BranchOp>(call.getLoc(), &val.getRegion().getBlocks().front(), call.getFnArguments());
+      rewriter.create<BranchOp>(call.getLoc(),
+                                &val.getRegion().getBlocks().front(),
+                                call.getFnArguments());
       rewriter.inlineRegionBefore(val.getRegion(), call->getBlock());
       rewriter.eraseOp(call);
       assert(false);
@@ -100,40 +105,55 @@ struct RgnJumpValOpConversionPattern
     if (RgnSelectOp select = call.getFn().getDefiningOp<RgnSelectOp>()) {
 
       // Block *defaultbb = nullptr;
-      SmallVector<std::pair<int, RgnValOp>> vals;
+      SmallVector<std::pair<int, RgnValOp>> branches;
 
-      for(int i = 0; i < select.getNumBranches(); ++i) {
+      for (int i = 0; i < select.getNumBranches(); ++i) {
         std::pair<int, mlir::Value> branch = select.getBranch(i);
         RgnValOp val = branch.second.getDefiningOp<RgnValOp>();
-        vals.push_back({branch.first, val});
+        branches.push_back({branch.first, val});
       };
 
-      Block *defaultBB =  [&]() {
+      Block *defaultBB = [&]() {
         // createBlock moves the insetion point x(
         OpBuilder::InsertionGuard guard(rewriter);
-        Block *b = rewriter.createBlock(call->getParentRegion(), 
-          call->getParentRegion()->end(), {});
-        rewriter.setInsertionPointToStart(b);        
+        Block *b = rewriter.createBlock(call->getParentRegion(),
+                                        call->getParentRegion()->end(), {});
+        rewriter.setInsertionPointToStart(b);
         rewriter.create<ptr::PtrUnreachableOp>(rewriter.getUnknownLoc());
         return b;
       }();
 
-
-      SmallVector<int32_t> caseValues;
-      SmallVector<Block *> caseDestinations;
+      SmallVector<int32_t> caseLhss;
+      SmallVector<Block *> caseRhss;
       SmallVector<mlir::Value> defaultOperands;
-      Value switchval = rewriter.create<LLVM::SExtOp>(call.getLoc(), rewriter.getIntegerType(32), select.getSwitcher());
+      Value switchval = rewriter.create<LLVM::SExtOp>(
+          call.getLoc(), rewriter.getIntegerType(32), select.getSwitcher());
+
+      for (int i = 0; i < (int)branches.size(); ++i) {
+        caseLhss.push_back(branches[i].first);
+        // caseRhss.push_back(&branches[i].second.getRegion().front());
+        caseRhss.push_back(defaultBB);
+      }
 
       rewriter.setInsertionPointAfter(call);
-      rewriter.replaceOpWithNewOp<LLVM::SwitchOp>(call, switchval, defaultBB,
-          /*default operands*/ defaultOperands,
-        /*case switch LHss*/caseValues,
-        /*case switch RHSs*/caseDestinations);
-      // rewriter.eraseOp(call);
+      rewriter.create<LLVM::SwitchOp>(call.getLoc(), switchval, defaultBB,
+                                      /*default operands*/ defaultOperands,
+                                      /*case switch LHss*/ caseLhss,
+                                      /*case switch RHSs*/ caseRhss);
 
+      // rewriter.replaceOpWithNewOp<LLVM::SwitchOp>(call, switchval, defaultBB,
+      //     default operands defaultOperands,
+      //   /*case switch LHss*/caseLhss,
+      //   /*case switch RHSs*/caseRhss);
+      rewriter.eraseOp(call);
+
+      // for (int i = 0; i < (int)branches.size(); ++i) {
+      //   rewriter.eraseOp(branches[i].second);
+      // }
       // SmallVector<Value, 1> emptyArgs;
       // assert(call->getUsers().empty());
-      // // rewriter.replaceOpWithNewOp<LLVM::SwitchOp>(call, select.getSwitcher(), defaultbb,
+      // // rewriter.replaceOpWithNewOp<LLVM::SwitchOp>(call,
+      // select.getSwitcher(), defaultbb,
       // //   /*default operands*/emptyArgs,
       //   // caseValues, caseDestinations);
       // rewriter.eraseOp(call);
@@ -159,21 +179,149 @@ struct LowerRgnPass : public Pass {
     return newInst;
   }
 
-  void runPatterns(mlir::OwningRewritePatternList &patterns) {
+  void
+  rewriteJump(RgnJumpValOp jump, mlir::IRRewriter &rewriter, 
+              std::vector<std::pair<RgnValOp, Block *>> &inlineVals) const {
 
-    ::llvm::DebugFlag = true;
+    static std::set<RgnValOp> seen;
 
-    if (failed(mlir::applyPatternsAndFoldGreedily(getOperation(),
-                                                  std::move(patterns)))) {
-      llvm::errs() << "===Hask lowering failed at Conversion===\n";
-      // getOperation()->print(llvm::errs(),
-      // mlir::OpPrintingFlags().printGenericOpForm());
-      llvm::errs() << "\n===\n";
-      signalPassFailure();
-      ::llvm::DebugFlag = false;
+    if (RgnValOp val = jump.getFn().getDefiningOp<RgnValOp>()) {
+      assert(false && "screwing up region");
+      rewriter.create<BranchOp>(jump.getLoc(),
+                                &val.getRegion().getBlocks().front(),
+                                jump.getFnArguments());
+      rewriter.inlineRegionBefore(val.getRegion(), jump->getBlock());
+      rewriter.eraseOp(jump);
+      assert(false);
+      return;
+    }
+
+    if (RgnSelectOp select = jump.getFn().getDefiningOp<RgnSelectOp>()) {
+
+
+      Block *defaultBB = nullptr;
+      SmallVector<int32_t> caseLhss;
+      SmallVector<Block *> caseRhss;
+      SmallVector<mlir::Value> defaultOperands;
+
+
+    llvm::errs() << __FILE__ << ":" << __LINE__ << "\n";
+      for (int i = 0; i < (int)select.getNumBranches(); ++i) {
+        std::pair<int, mlir::Value> branch = select.getBranch(i);
+        RgnValOp v = branch.second.getDefiningOp<RgnValOp>();
+        assert(v && "expected select(rgnval)");
+
+        llvm::errs() << "\n===\n";
+        llvm::errs() << "rgnval:\n\t"  << v << "\n";
+        llvm::errs() << "select:\n\t"  << select << "\n";
+        llvm::errs() << "parent:\n\t"  << jump << "\n";
+        llvm::errs() << "\n===\n";
+        assert(!seen.count(v));
+        seen.insert(v);
+
+        Region *parent = jump->getParentRegion();
+        llvm::errs() << __FILE__ << ":" << __LINE__ << "\n";
+
+        if (branch.first == -42) {
+          assert(i == (int)select.getNumBranches() - 1);
+          assert(!defaultBB && "can't have two default blocks");
+          Region &r = v.getRegion();
+          defaultBB = &r.front();
+          rewriter.inlineRegionBefore(r, *parent, parent->end());
+
+        } else {
+          Region &r = v.getRegion();
+          assert(r.getBlocks().size() > 0);
+          caseLhss.push_back(abs(branch.first));
+          caseRhss.push_back(&r.getBlocks().front());
+          rewriter.inlineRegionBefore(r, *parent, parent->end());
+        }
+      }
+
+      if (!defaultBB) {
+        defaultBB = [&]() {
+          // createBlock moves the insetion point x(
+          OpBuilder::InsertionGuard guard(rewriter);
+          Block *b = rewriter.createBlock(jump->getParentRegion(),
+                                          jump->getParentRegion()->end(), {});
+          rewriter.setInsertionPointToStart(b);
+          rewriter.create<ptr::PtrUnreachableOp>(rewriter.getUnknownLoc());
+          return b;
+        }();
+
+      }
+
+      rewriter.setInsertionPointAfter(jump);
+      Value switchval = rewriter.create<LLVM::SExtOp>(
+          jump.getLoc(), rewriter.getIntegerType(32), select.getSwitcher());
+      // rewriter.create<LLVM::SwitchOp>(jump.getLoc(), switchval, defaultBB,
+      //                                 /*default operands*/ defaultOperands,
+      //                                 /*case switch LHss*/ caseLhss,
+      //                                 /*case switch RHSs*/ caseRhss);
+     llvm::errs() << __FILE__ << ":" << __LINE__ << "\n";
+
+      rewriter.replaceOpWithNewOp<LLVM::SwitchOp>(jump, switchval, defaultBB,
+          /*default-operands*/ defaultOperands,
+        /*case switch LHss*/caseLhss,
+        /*case switch RHSs*/caseRhss);
+      // rewriter.eraseOp(jump);
+
       return;
     };
+    assert(false && "expected argument to call to be a val or a select.");
+  }
 
+  void runOnOperation() override {
+    std::vector<std::pair<RgnValOp, Block *>> inlineVals;
+    mlir::IRRewriter rewriter(getOperation()->getContext());
+    getOperation()->walk([&](RgnJumpValOp jmp) {
+      this->rewriteJump(jmp, rewriter, inlineVals);
+      return WalkResult::advance();
+    });
+
+    llvm::errs() << __FILE__ << ":" << __LINE__ << "\n";
+
+    // std::set<RgnValOp> toDelete;
+    // for (int i = 0; i < (int)inlineVals.size(); ++i) {
+    //   rewriter.inlineRegionBefore(inlineVals[i].first.getRegion(),
+    //                               inlineVals[i].second);
+    //   // toDelete.insert(inlineVals[i].first);
+    // }
+
+   llvm::errs() << __FILE__ << ":" << __LINE__ << "\n";
+    getOperation()->walk([&](RgnJumpValOp v) {
+      if (!v.use_empty()) {
+        llvm::errs() << "region val has use: |" << v << "|\n";
+        assert(false);
+      }
+      rewriter.eraseOp(v);
+    });
+
+     llvm::errs() << __FILE__ << ":" << __LINE__ << "\n";
+    getOperation()->walk([&](RgnSelectOp v) {
+      if (!v.use_empty()) {
+        llvm::errs() << "region val has use: |" << v << "|\n";
+        assert(false);
+      }
+      rewriter.eraseOp(v);
+    });
+
+   llvm::errs() << __FILE__ << ":" << __LINE__ << "\n";
+    getOperation()->walk([&](RgnValOp v) {
+      if (!v.use_empty()) {
+        llvm::errs() << "region val has use: |" << v << "|\n";
+        assert(false);
+      }
+      rewriter.eraseOp(v);
+    });
+
+   llvm::errs() << __FILE__ << ":" << __LINE__ << "\n";
+
+
+    llvm::outs() << "// ===rewritten===\n";
+    llvm::outs() << *getOperation();
+
+    ::llvm::DebugFlag = true;
     if (failed(mlir::verify(getOperation()))) {
       llvm::errs() << "===Hask lowering failed at Verification===\n";
       // getOperation()->print(llvm::errs());
@@ -184,61 +332,50 @@ struct LowerRgnPass : public Pass {
     }
 
     ::llvm::DebugFlag = false;
-  }
 
-  void runOnOperation() override{
+    // // === control flow has been lowered. lower simple instructions ===/
+    // {
 
-      {
+    //   RgnTypeConverter typeConverter(&getContext());
+    //   mlir::OwningRewritePatternList patterns(&getContext());
+    //   ConversionTarget target(getContext());
+    //   target.addIllegalDialect<HaskDialect>();
+    //   target.addLegalDialect<ptr::PtrDialect>();
+    //   target.addLegalDialect<StandardOpsDialect>();
+    //   target.addLegalDialect<AffineDialect>();
+    //   target.addLegalDialect<scf::SCFDialect>();
+    //   target.addLegalDialect<ptr::PtrDialect>();
+    //   target.addLegalOp<ModuleOp, ModuleTerminatorOp, FuncOp>();
 
-          RgnTypeConverter typeConverter(&getContext());
-  mlir::OwningRewritePatternList patterns(&getContext());
+    //   patterns.insert<HaskConstructOpLowering>(typeConverter, &getContext());
+    //   patterns.insert<ErasedValueOpLowering>(typeConverter, &getContext());
+    //   patterns.insert<TagGetOpLowering>(typeConverter, &getContext());
+    //   patterns.insert<PapExtendOpLowering>(typeConverter, &getContext());
+    //   patterns.insert<PapOpLowering>(typeConverter, &getContext());
+    //   patterns.insert<HaskStringConstOpLowering>(typeConverter,
+    //   &getContext());
+    //   patterns.insert<HaskIntegerConstOpLowering>(typeConverter,
+    //   &getContext());
+    //   patterns.insert<HaskLargeIntegerConstOpLowering>(typeConverter,
+    //                                                    &getContext());
+    //   patterns.insert<ProjectionOpLowering>(typeConverter, &getContext());
+    //   patterns.insert<CallOpLowering>(typeConverter, &getContext());
+    //   patterns.insert<ApOpConversionPattern>(typeConverter, &getContext());
+    //   patterns.insert<ApEagerOpConversionPattern>(typeConverter,
+    //   &getContext());
+    //   patterns.insert<HaskReturnOpConversionPattern>(typeConverter,
+    //   &getContext()); patterns.insert<IncOpLowering>(typeConverter,
+    //   &getContext()); patterns.insert<DecOpLowering>(typeConverter,
+    //   &getContext());
 
-  patterns.insert<RgnJumpValOpConversionPattern>(&getContext());
-  runPatterns(patterns);
-}
+    //   // patterns.insert<FuncOpLowering>(typeConverter, &getContext());
+    //   // patterns.insert<ReturnOpLowering>(typeConverter, &getContext());
+    //   // patterns.insert<BranchOpTypeConversion>(typeConverter,
+    //   &getContext()); runPatterns(target, patterns); return;
+    // }
 
-// // === control flow has been lowered. lower simple instructions ===/
-// {
-
-//   RgnTypeConverter typeConverter(&getContext());
-//   mlir::OwningRewritePatternList patterns(&getContext());
-//   ConversionTarget target(getContext());
-//   target.addIllegalDialect<HaskDialect>();
-//   target.addLegalDialect<ptr::PtrDialect>();
-//   target.addLegalDialect<StandardOpsDialect>();
-//   target.addLegalDialect<AffineDialect>();
-//   target.addLegalDialect<scf::SCFDialect>();
-//   target.addLegalDialect<ptr::PtrDialect>();
-//   target.addLegalOp<ModuleOp, ModuleTerminatorOp, FuncOp>();
-
-//   patterns.insert<HaskConstructOpLowering>(typeConverter, &getContext());
-//   patterns.insert<ErasedValueOpLowering>(typeConverter, &getContext());
-//   patterns.insert<TagGetOpLowering>(typeConverter, &getContext());
-//   patterns.insert<PapExtendOpLowering>(typeConverter, &getContext());
-//   patterns.insert<PapOpLowering>(typeConverter, &getContext());
-//   patterns.insert<HaskStringConstOpLowering>(typeConverter, &getContext());
-//   patterns.insert<HaskIntegerConstOpLowering>(typeConverter, &getContext());
-//   patterns.insert<HaskLargeIntegerConstOpLowering>(typeConverter,
-//                                                    &getContext());
-//   patterns.insert<ProjectionOpLowering>(typeConverter, &getContext());
-//   patterns.insert<CallOpLowering>(typeConverter, &getContext());
-//   patterns.insert<ApOpConversionPattern>(typeConverter, &getContext());
-//   patterns.insert<ApEagerOpConversionPattern>(typeConverter, &getContext());
-//   patterns.insert<HaskReturnOpConversionPattern>(typeConverter,
-//   &getContext()); patterns.insert<IncOpLowering>(typeConverter,
-//   &getContext()); patterns.insert<DecOpLowering>(typeConverter,
-//   &getContext());
-
-//   // patterns.insert<FuncOpLowering>(typeConverter, &getContext());
-//   // patterns.insert<ReturnOpLowering>(typeConverter, &getContext());
-//   // patterns.insert<BranchOpTypeConversion>(typeConverter, &getContext());
-//   runPatterns(target, patterns);
-//   return;
-// }
-
-}; // namespace
-}
-;
+  }; // namespace
+};
 } // end anonymous namespace.
 
 std::unique_ptr<mlir::Pass> createLowerRgnPass() {
