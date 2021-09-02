@@ -85,7 +85,7 @@ struct LowerRgnPass : public Pass {
 
     static std::set<RgnValOp> seen;
     static std::set<RgnJumpValOp> jumps;
-    assert(!jumps.count(jump));
+    assert(true || !jumps.count(jump));
     jumps.insert(jump);
 
     if (RgnValOp val = jump.getFn().getDefiningOp<RgnValOp>()) {
@@ -94,17 +94,18 @@ struct LowerRgnPass : public Pass {
       llvm::errs() << "parent:\n\t" << jump << "\n";
       llvm::errs() << "\n===\n";
 
-      assert(!seen.count(val));
+      assert(true || !seen.count(val));
       seen.insert(val);
 
       llvm::errs() << __FILE__ << ":" << __LINE__ << "\n";
       rewriter.setInsertionPointAfter(jump);
       assert(val.getRegion().getBlocks().size() > 0);
-      rewriter.create<BranchOp>(jump.getLoc(),
-                                &val.getRegion().getBlocks().front(),
-                                jump.getFnArguments());
-      rewriter.inlineRegionBefore(val.getRegion(), *jump->getParentRegion(),
+      Block *newEntry = rewriter.cloneRegionBeforeAndReturnEntry(val.getRegion(), *jump->getParentRegion(),
                                   jump->getParentRegion()->end());
+
+      rewriter.create<BranchOp>(jump.getLoc(),
+                                newEntry,
+                                jump.getFnArguments());
       rewriter.eraseOp(jump);
       llvm::errs() << __FILE__ << ":" << __LINE__ << "\n";
       return;
@@ -128,7 +129,7 @@ struct LowerRgnPass : public Pass {
         llvm::errs() << "select:\n\t" << select << "\n";
         llvm::errs() << "parent:\n\t" << jump << "\n";
         llvm::errs() << "\n===\n";
-        assert(!seen.count(v));
+        assert(true || !seen.count(v));
         seen.insert(v);
 
         Region *parent = jump->getParentRegion();
@@ -139,8 +140,9 @@ struct LowerRgnPass : public Pass {
           assert(i == (int)select.getNumBranches() - 1);
           assert(!defaultBB && "can't have two default blocks");
           Region &r = v.getRegion();
-          defaultBB = &r.front();
-          rewriter.inlineRegionBefore(r, *parent, parent->end());
+          // defaultBB = &r.front();
+          defaultBB = rewriter.cloneRegionBeforeAndReturnEntry(r, *parent, parent->end());
+          // rewriter.inlineRegionBefore(r, *parent, parent->end());
           llvm::errs() << __FILE__ << ":" << __LINE__ << "\n";
 
         } else {
@@ -148,8 +150,11 @@ struct LowerRgnPass : public Pass {
           Region &r = v.getRegion();
           assert(r.getBlocks().size() > 0);
           caseLhss.push_back(abs(branch.first));
-          caseRhss.push_back(&r.getBlocks().front());
-          rewriter.inlineRegionBefore(r, *parent, parent->end());
+          llvm::errs() << __FILE__ << ":" << __LINE__ << "\n";
+          Block *newEntry = rewriter.cloneRegionBeforeAndReturnEntry(r, *parent, parent->end());
+          llvm::errs() << __FILE__ << ":" << __LINE__ << "\n";
+
+          caseRhss.push_back(newEntry);
           llvm::errs() << __FILE__ << ":" << __LINE__ << "\n";
         }
       }
