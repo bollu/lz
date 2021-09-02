@@ -89,34 +89,51 @@ struct RgnJumpValOpConversionPattern
                   mlir::PatternRewriter &rewriter) const override {
 
     if (RgnValOp val = call.getFn().getDefiningOp<RgnValOp>()) {
+      assert(false && "screwing up region");
       rewriter.create<BranchOp>(call.getLoc(), &val.getRegion().getBlocks().front(), call.getFnArguments());
       rewriter.inlineRegionBefore(val.getRegion(), call->getBlock());
       rewriter.eraseOp(call);
+      assert(false);
       return success();
     }
 
     if (RgnSelectOp select = call.getFn().getDefiningOp<RgnSelectOp>()) {
       Block *defaultbb = nullptr;
-      SmallVector<int, 4> caseValues;
-      SmallVector<Block *, 4> caseDestinations;
+      SmallVector<int32_t> caseValues;
+      SmallVector<Block *> caseDestinations;
+      SmallVector<RgnValOp> toErase;
 
       for(int i = 0; i < select.getNumBranches(); ++i) {
         std::pair<int, mlir::Value> branch = select.getBranch(i);
         RgnValOp val = branch.second.getDefiningOp<RgnValOp>();
-        assert(val && "expected select of val"); 
-          
+
         if (branch.first == -42) {
-          assert(defaultbb != nullptr && "can't have two defaults!");
+          assert(defaultbb == nullptr && "can't have two defaults!");
           defaultbb = &val.getRegion().getBlocks().front();
         } else {
           caseValues.push_back(branch.first);
           caseDestinations.push_back(&val.getRegion().getBlocks().front());
         }        
+        toErase.push_back(val);
+        rewriter.inlineRegionBefore(val.getRegion(), call->getBlock());
+
       }
+      if (!defaultbb) {
+        assert(caseDestinations.size());
+        defaultbb = caseDestinations[0];
+      }
+      assert(defaultbb);
 
       SmallVector<Value, 1> emptyArgs;
-      rewriter.replaceOpWithNewOp<SwitchOp>(call, select.getSwitcher(), defaultbb, emptyArgs,
+      assert(call->getUsers().empty());
+      rewriter.replaceOpWithNewOp<LLVM::SwitchOp>(call, select.getSwitcher(), defaultbb,
+        /*default operands*/emptyArgs,
         caseValues, caseDestinations);
+      rewriter.eraseOp(select);
+      for(RgnValOp v: toErase) { rewriter.eraseOp(v); }
+        
+      // rewriter.create<RgnEndOp>(call.getLoc());
+      // rewriter.eraseOp(call);
       return success();
     }
     assert(false && "expected argument to call to be a val or a select.");
@@ -136,7 +153,7 @@ struct LowerRgnPass : public Pass {
 
   void runPatterns(mlir::OwningRewritePatternList &patterns) {
 
-    // ::llvm::DebugFlag = true;
+    ::llvm::DebugFlag = true;
 
     if (failed(mlir::applyPatternsAndFoldGreedily(getOperation(),
                                                   std::move(patterns)))) {
