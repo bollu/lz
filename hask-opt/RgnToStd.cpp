@@ -68,105 +68,6 @@
 namespace {
 using namespace mlir;
 
-class RgnTypeConverter : public mlir::TypeConverter {
-public:
-  // using LLVMTypeConverter::LLVMTypeConverter;
-  using TypeConverter::convertType;
-
-  RgnTypeConverter(MLIRContext *ctx) {
-
-    addConversion([](Type type) { return type; });
-  };
-};
-
-struct RgnJumpValOpConversionPattern
-    : public mlir::OpRewritePattern<RgnJumpValOp> {
-  /// We register this pattern to match every toy.transpose in the IR.
-  /// The "benefit" is used by the framework to order the patterns and process
-  /// them in order of profitability.
-  RgnJumpValOpConversionPattern(mlir::MLIRContext *context)
-      : OpRewritePattern<RgnJumpValOp>(context, /*benefit=*/1) {}
-
-  mlir::LogicalResult
-  matchAndRewrite(RgnJumpValOp call,
-                  mlir::PatternRewriter &rewriter) const override {
-
-    if (RgnValOp val = call.getFn().getDefiningOp<RgnValOp>()) {
-      assert(false && "screwing up region");
-      rewriter.create<BranchOp>(call.getLoc(),
-                                &val.getRegion().getBlocks().front(),
-                                call.getFnArguments());
-      rewriter.inlineRegionBefore(val.getRegion(), call->getBlock());
-      rewriter.eraseOp(call);
-      assert(false);
-      return success();
-    }
-
-    if (RgnSelectOp select = call.getFn().getDefiningOp<RgnSelectOp>()) {
-
-      // Block *defaultbb = nullptr;
-      SmallVector<std::pair<int, RgnValOp>> branches;
-
-      for (int i = 0; i < select.getNumBranches(); ++i) {
-        std::pair<int, mlir::Value> branch = select.getBranch(i);
-        RgnValOp val = branch.second.getDefiningOp<RgnValOp>();
-        branches.push_back({branch.first, val});
-      };
-
-      Block *defaultBB = [&]() {
-        // createBlock moves the insetion point x(
-        OpBuilder::InsertionGuard guard(rewriter);
-        Block *b = rewriter.createBlock(call->getParentRegion(),
-                                        call->getParentRegion()->end(), {});
-        rewriter.setInsertionPointToStart(b);
-        rewriter.create<ptr::PtrUnreachableOp>(rewriter.getUnknownLoc());
-        return b;
-      }();
-
-      SmallVector<int32_t> caseLhss;
-      SmallVector<Block *> caseRhss;
-      SmallVector<mlir::Value> defaultOperands;
-      Value switchval = rewriter.create<LLVM::SExtOp>(
-          call.getLoc(), rewriter.getIntegerType(32), select.getSwitcher());
-
-      for (int i = 0; i < (int)branches.size(); ++i) {
-        caseLhss.push_back(branches[i].first);
-        // caseRhss.push_back(&branches[i].second.getRegion().front());
-        caseRhss.push_back(defaultBB);
-      }
-
-      rewriter.setInsertionPointAfter(call);
-      rewriter.create<LLVM::SwitchOp>(call.getLoc(), switchval, defaultBB,
-                                      /*default operands*/ defaultOperands,
-                                      /*case switch LHss*/ caseLhss,
-                                      /*case switch RHSs*/ caseRhss);
-
-      // rewriter.replaceOpWithNewOp<LLVM::SwitchOp>(call, switchval, defaultBB,
-      //     default operands defaultOperands,
-      //   /*case switch LHss*/caseLhss,
-      //   /*case switch RHSs*/caseRhss);
-      rewriter.eraseOp(call);
-
-      // for (int i = 0; i < (int)branches.size(); ++i) {
-      //   rewriter.eraseOp(branches[i].second);
-      // }
-      // SmallVector<Value, 1> emptyArgs;
-      // assert(call->getUsers().empty());
-      // // rewriter.replaceOpWithNewOp<LLVM::SwitchOp>(call,
-      // select.getSwitcher(), defaultbb,
-      // //   /*default operands*/emptyArgs,
-      //   // caseValues, caseDestinations);
-      // rewriter.eraseOp(call);
-      // rewriter.eraseOp(select);
-      // for(RgnValOp v: toErase) { rewriter.eraseOp(v); }
-
-      // // rewriter.create<RgnEndOp>(call.getLoc());
-      // // rewriter.eraseOp(call);
-      return success();
-    }
-    assert(false && "expected argument to call to be a val or a select.");
-  }
-};
 
 struct LowerRgnPass : public Pass {
   LowerRgnPass() : Pass(mlir::TypeID::get<LowerRgnPass>()){};
@@ -186,13 +87,13 @@ struct LowerRgnPass : public Pass {
     static std::set<RgnValOp> seen;
 
     if (RgnValOp val = jump.getFn().getDefiningOp<RgnValOp>()) {
-      assert(false && "screwing up region");
+      rewriter.setInsertionPointAfter(jump);
       rewriter.create<BranchOp>(jump.getLoc(),
                                 &val.getRegion().getBlocks().front(),
                                 jump.getFnArguments());
-      rewriter.inlineRegionBefore(val.getRegion(), jump->getBlock());
+      rewriter.inlineRegionBefore(val.getRegion(), 
+        *jump->getParentRegion(), jump->getParentRegion()->end());
       rewriter.eraseOp(jump);
-      assert(false);
       return;
     }
 
@@ -279,6 +180,13 @@ struct LowerRgnPass : public Pass {
       return WalkResult::advance();
     });
 
+    getOperation()->walk([&](RgnReturnOp ret) {
+      rewriter.setInsertionPoint(ret);
+      rewriter.replaceOpWithNewOp<ReturnOp>(ret, ret.getOperand());
+      return WalkResult::advance();
+    });
+
+
     llvm::errs() << __FILE__ << ":" << __LINE__ << "\n";
 
     // std::set<RgnValOp> toDelete;
@@ -318,8 +226,8 @@ struct LowerRgnPass : public Pass {
    llvm::errs() << __FILE__ << ":" << __LINE__ << "\n";
 
 
-    llvm::outs() << "// ===rewritten===\n";
-    llvm::outs() << *getOperation();
+    // llvm::outs() << "// ===rewritten===\n";
+    // llvm::outs() << *getOperation();
 
     ::llvm::DebugFlag = true;
     if (failed(mlir::verify(getOperation()))) {

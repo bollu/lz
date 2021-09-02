@@ -93,6 +93,7 @@ int main(int argc, char **argv) {
   registerLzInterpretPass();
   registerLzLazifyPass();
   registerLowerRgnPass();
+  registerOptimizeRgnPass();
   mlir::standalone::registerHaskCanonicalizePass();
   mlir::standalone::registerWrapperWorkerPass();
 
@@ -100,7 +101,6 @@ int main(int argc, char **argv) {
   mlir::lambdapure::registerReferenceRewriterPattern();
   mlir::lambdapure::registerDestructiveUpdatePattern();
 
-  registerRgnOptPass();
   mlir::registerScfToRgnPass();  
 
   mlir::DialectRegistry registry;

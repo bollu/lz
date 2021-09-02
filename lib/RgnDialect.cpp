@@ -219,107 +219,107 @@ void RgnJumpSymOp::print(mlir::OpAsmPrinter &p) {
 // ==== REGION OPTIMIZATION ====
 // ==== REGION OPTIMIZATION ====
 
-struct PatternCallValKnownRegion : public mlir::OpRewritePattern<RgnCallValOp> {
-  /// We register this pattern to match every toy.transpose in the IR.
-  /// The "benefit" is used by the framework to order the patterns and process
-  /// them in order of profitability.
-  PatternCallValKnownRegion(mlir::MLIRContext *context)
-      : OpRewritePattern<RgnCallValOp>(context, /*benefit=*/1) {}
+// struct PatternCallValKnownRegion : public mlir::OpRewritePattern<RgnCallValOp> {
+//   /// We register this pattern to match every toy.transpose in the IR.
+//   /// The "benefit" is used by the framework to order the patterns and process
+//   /// them in order of profitability.
+//   PatternCallValKnownRegion(mlir::MLIRContext *context)
+//       : OpRewritePattern<RgnCallValOp>(context, /*benefit=*/1) {}
 
-  mlir::LogicalResult
-  matchAndRewrite(RgnCallValOp call,
-                  mlir::PatternRewriter &rewriter) const override {
-    RgnValOp rgnval = call.getFn().getDefiningOp<RgnValOp>();
-    if (!rgnval) {
-      return mlir::failure();
-    }
+//   mlir::LogicalResult
+//   matchAndRewrite(RgnCallValOp call,
+//                   mlir::PatternRewriter &rewriter) const override {
+//     RgnValOp rgnval = call.getFn().getDefiningOp<RgnValOp>();
+//     if (!rgnval) {
+//       return mlir::failure();
+//     }
 
-    // code from:
-    // https://github.com/llvm/llvm-project/blob/9a11c70c1856f4e801d0863c552c754f28110237/mlir/lib/Conversion/SCFToStandard/SCFToStandard.cpp#L411
-    auto loc = call.getLoc();
-    auto *condBlock = rewriter.getInsertionBlock();
-    auto opPosition = rewriter.getInsertionPoint();
-    auto *remainingOpsBlock = rewriter.splitBlock(condBlock, opPosition);
+//     // code from:
+//     // https://github.com/llvm/llvm-project/blob/9a11c70c1856f4e801d0863c552c754f28110237/mlir/lib/Conversion/SCFToStandard/SCFToStandard.cpp#L411
+//     auto loc = call.getLoc();
+//     auto *condBlock = rewriter.getInsertionBlock();
+//     auto opPosition = rewriter.getInsertionPoint();
+//     auto *remainingOpsBlock = rewriter.splitBlock(condBlock, opPosition);
 
-    auto &region = rgnval.getRegion();
-    rewriter.setInsertionPointToEnd(condBlock);
-    rewriter.create<mlir::BranchOp>(loc, &region.front());
+//     auto &region = rgnval.getRegion();
+//     rewriter.setInsertionPointToEnd(condBlock);
+//     rewriter.create<mlir::BranchOp>(loc, &region.front());
 
-    for (mlir::Block &block : region) {
-      if (auto terminator =
-              mlir::dyn_cast<mlir::scf::YieldOp>(block.getTerminator())) {
-        mlir::ValueRange terminatorOperands = terminator->getOperands();
-        rewriter.setInsertionPointToEnd(&block);
-        rewriter.create<mlir::BranchOp>(loc, remainingOpsBlock,
-                                        terminatorOperands);
-        rewriter.eraseOp(terminator);
-      }
-    }
+//     for (mlir::Block &block : region) {
+//       if (auto terminator =
+//               mlir::dyn_cast<mlir::scf::YieldOp>(block.getTerminator())) {
+//         mlir::ValueRange terminatorOperands = terminator->getOperands();
+//         rewriter.setInsertionPointToEnd(&block);
+//         rewriter.create<mlir::BranchOp>(loc, remainingOpsBlock,
+//                                         terminatorOperands);
+//         rewriter.eraseOp(terminator);
+//       }
+//     }
 
-    rewriter.inlineRegionBefore(region, remainingOpsBlock);
+//     rewriter.inlineRegionBefore(region, remainingOpsBlock);
 
-    mlir::SmallVector<mlir::Value> vals;
-    for (auto arg : remainingOpsBlock->addArguments(call->getResultTypes())) {
-      vals.push_back(arg);
-    }
-    rewriter.replaceOp(call, vals);
-    return mlir::success();
+//     mlir::SmallVector<mlir::Value> vals;
+//     for (auto arg : remainingOpsBlock->addArguments(call->getResultTypes())) {
+//       vals.push_back(arg);
+//     }
+//     rewriter.replaceOp(call, vals);
+//     return mlir::success();
 
-    // rewriter.cloneRegionBefore(call->getParentRegion(), rgnval.getRegion(),
-    // call->getIterator(), mapping);
-    // TODO: need to replace with |scf.execute_region|.
-    assert(false && "TODO: implement.");
-    return mlir::success();
-  }
-};
+//     // rewriter.cloneRegionBefore(call->getParentRegion(), rgnval.getRegion(),
+//     // call->getIterator(), mapping);
+//     // TODO: need to replace with |scf.execute_region|.
+//     assert(false && "TODO: implement.");
+//     return mlir::success();
+//   }
+// };
 
-struct RgnOptPass : public mlir::Pass {
-  RgnOptPass() : mlir::Pass(mlir::TypeID::get<RgnOptPass>()){};
+// struct RgnOptPass : public mlir::Pass {
+//   RgnOptPass() : mlir::Pass(mlir::TypeID::get<RgnOptPass>()){};
 
-  llvm::StringRef getName() const override { return "RgnOptPass"; }
+//   llvm::StringRef getName() const override { return "RgnOptPass"; }
 
-  RgnOptPass(const RgnOptPass &other)
-      : mlir::Pass(::mlir::TypeID::get<RgnOptPass>()) {}
+//   RgnOptPass(const RgnOptPass &other)
+//       : mlir::Pass(::mlir::TypeID::get<RgnOptPass>()) {}
 
-  std::unique_ptr<mlir::Pass> clonePass() const override {
-    // https://github.com/llvm/llvm-project/blob/5d613e42d3761e106e5dd8d1731517f410605144/mlir/tools/mlir-tblgen/PassGen.cpp#L90
-    auto newInst =
-        std::make_unique<RgnOptPass>(*static_cast<const RgnOptPass *>(this));
-    newInst->copyOptionValuesFrom(this);
-    return newInst;
-  }
+//   std::unique_ptr<mlir::Pass> clonePass() const override {
+//     // https://github.com/llvm/llvm-project/blob/5d613e42d3761e106e5dd8d1731517f410605144/mlir/tools/mlir-tblgen/PassGen.cpp#L90
+//     auto newInst =
+//         std::make_unique<RgnOptPass>(*static_cast<const RgnOptPass *>(this));
+//     newInst->copyOptionValuesFrom(this);
+//     return newInst;
+//   }
 
-  void runOnOperation() override {
-    mlir::ModuleOp mod(getOperation());
-    mlir::OpBuilder builder(mod);
-    mlir::OwningRewritePatternList patterns(&getContext());
-    patterns.insert<PatternCallValKnownRegion>(&getContext());
+//   void runOnOperation() override {
+//     mlir::ModuleOp mod(getOperation());
+//     mlir::OpBuilder builder(mod);
+//     mlir::OwningRewritePatternList patterns(&getContext());
+//     patterns.insert<PatternCallValKnownRegion>(&getContext());
 
-    if (DEBUG) {
-      ::llvm::DebugFlag = true;
-    }
+//     if (DEBUG) {
+//       ::llvm::DebugFlag = true;
+//     }
 
-    if (failed(mlir::applyPatternsAndFoldGreedily(getOperation(),
-                                                  std::move(patterns)))) {
-      llvm::errs() << "\n==Cannonicalization Failed===\n";
-      getOperation()->print(llvm::errs());
-      llvm::errs() << "\n===\n";
-      signalPassFailure();
-    } else {
-      //      llvm::errs() << "==Cannonicalization Succeeded===\n";
-      //      getOperation()->print(llvm::errs());
-      //      llvm::errs() << "\n===\n";
-    }
-    ::llvm::DebugFlag = false;
-  }
-};
+//     if (failed(mlir::applyPatternsAndFoldGreedily(getOperation(),
+//                                                   std::move(patterns)))) {
+//       llvm::errs() << "\n==Cannonicalization Failed===\n";
+//       getOperation()->print(llvm::errs());
+//       llvm::errs() << "\n===\n";
+//       signalPassFailure();
+//     } else {
+//       //      llvm::errs() << "==Cannonicalization Succeeded===\n";
+//       //      getOperation()->print(llvm::errs());
+//       //      llvm::errs() << "\n===\n";
+//     }
+//     ::llvm::DebugFlag = false;
+//   }
+// };
 
-std::unique_ptr<mlir::Pass> createRgnOptPass() {
-  return std::make_unique<RgnOptPass>();
-}
+// std::unique_ptr<mlir::Pass> createRgnOptPass() {
+//   return std::make_unique<RgnOptPass>();
+// }
 
-void registerRgnOptPass() {
-  ::mlir::registerPass(
-      "rgn-opt", "optimize rgn",
-      []() -> std::unique_ptr<::mlir::Pass> { return createRgnOptPass(); });
-}
+// void registerRgnOptPass() {
+//   ::mlir::registerPass(
+//       "rgn-opt", "optimize rgn",
+//       []() -> std::unique_ptr<::mlir::Pass> { return createRgnOptPass(); });
+// }

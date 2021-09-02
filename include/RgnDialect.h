@@ -193,6 +193,13 @@ public:
     state.addOperands(rgn);
   }
 
+    static void build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                    mlir::Value rgn, mlir::ValueRange operands) {
+    state.addOperands(rgn);
+    state.addOperands(operands);
+  }
+
+
 
   void print(mlir::OpAsmPrinter &p);
 };
@@ -322,9 +329,8 @@ public:
 // create interface for call/jmp
 // https://mlir.llvm.org/docs/Interfaces/#attributeoperationtype-interfaces
 
-std::unique_ptr<mlir::Pass> createRgnOptPass();
-void registerRgnOptPass();
 
 std::unique_ptr<mlir::Pass> createRgnCSEPass();
 void registerRgnCSEPass();
 void registerLowerRgnPass();
+void registerOptimizeRgnPass();

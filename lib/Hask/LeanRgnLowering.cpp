@@ -789,9 +789,11 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
 
     HaskJoinPointOp jpOp = cast<HaskJoinPointOp>(op);
-    assert(false && "lowering join point");
 
-    // TODO: replace only if name matches jump names.
+    rewriter.setInsertionPointAfter(jpOp);
+    RgnValOp rgnval = rewriter.create<RgnValOp>(jpOp.getLoc());
+    rewriter.inlineRegionBefore(jpOp.getLaterJumpedIntoRegion(),
+      rgnval.getRegion(), rgnval.getRegion().end());
 
     jpOp.getFirstRegionWithJmp().walk([&](HaskJumpOp jmp) {
       rewriter.setInsertionPoint(jmp);
@@ -799,51 +801,31 @@ public:
         return WalkResult::advance();
       }
 
-      // assert(false && "lowering join point");
-      Block *jumpTarget = &jpOp.getLaterJumpedIntoRegion().front();
-      // vvv this needs to go through type converter x(
+      // Block *jumpTarget = &jpOp.getLaterJumpedIntoRegion().front();
       rewriter.setInsertionPointAfter(jmp);
-      // rewriter.replaceOpWithNewOp<BranchOp>(jmp, jumpTarget,
-      // jmp.getOperand()); llvm::errs() << "creating a branch op: branch(" <<
-      // jumpTarget << ", " << jmp.getOperand() << ")\n"; getchar();
-      // rewriter.create<ptr::PtrBranchOp>(jmp.getLoc(),  jumpTarget,
-      // jmp.getOperand());
-      rewriter.create<BranchOp>(jmp.getLoc(), jumpTarget, jmp.getOperands());
+      rewriter.create<RgnJumpValOp>(jmp.getLoc(), rgnval, jmp.getOperands());
+      // rewriter.create<BranchOp>(jmp.getLoc(), jumpTarget, jmp.getOperands());
       rewriter.eraseOp(jmp);
 
       return WalkResult::advance();
     });
 
-    llvm::errs() << __FUNCTION__ << ":" << __LINE__ << "\n";
+        rewriter.inlineRegionBefore(jpOp.getLaterJumpedIntoRegion(),
+                                *jpOp->getParentRegion(),
+                                jpOp->getParentRegion()->end());
 
     // begin --> fstRegion
     rewriter.setInsertionPointToEnd(jpOp->getBlock());
-    rewriter.create<mlir::BranchOp>(jpOp->getLoc(),
-                                    &jpOp.getFirstRegionWithJmp().front());
-
-    // mlir::SmallVector<mlir::Value, 0> noArgs;
-    llvm::errs() << __FUNCTION__ << ":" << __LINE__ << "\n";
+    rewriter.create<mlir::BranchOp>(jpOp->getLoc(), &jpOp.getFirstRegionWithJmp().front());
 
     // inline fstRegion at (begin ---> fstRegion)
-    rewriter.inlineRegionBefore(jpOp.getFirstRegionWithJmp(),
-                                *jpOp->getParentRegion(),
-                                jpOp->getParentRegion()->end());
+    rewriter.inlineRegionBefore(jpOp.getFirstRegionWithJmp(), 
+      *jpOp->getParentRegion(), jpOp->getParentRegion()->end());
 
-    llvm::errs() << __FUNCTION__ << ":" << __LINE__ << "\n";
 
-    rewriter.inlineRegionBefore(jpOp.getLaterJumpedIntoRegion(),
-                                *jpOp->getParentRegion(),
-                                jpOp->getParentRegion()->end());
-
-    llvm::errs() << __FUNCTION__ << ":" << __LINE__ << "\n";
-
-    // rewriter.replaceOpWithNewOp<BranchOp>(jpOp, noArgs,
-    //                           &jpOp.getFirstRegionWithJmp().front());
-
-    llvm::errs() << __FUNCTION__ << ":" << __LINE__ << "\n";
     rewriter.eraseOp(jpOp);
-
     return success();
+
   }
 };
 
@@ -1452,7 +1434,7 @@ public:
       Optional<int> lhs = caseop.getAltLHS(i);
       lhss.push_back(
           lhs ? *lhs
-              : -42); // HACK HACK HACK: use "-42" to denote default case.
+              : 42); // HACK HACK HACK: use "-42" to denote default case.
     }
 
     assert(rhss.size() > 0);
