@@ -89,10 +89,10 @@ struct LowerRgnPass : public Pass {
     jumps.insert(jump);
 
     if (RgnValOp val = jump.getFn().getDefiningOp<RgnValOp>()) {
-      llvm::errs() << "\n===jump(rgn)===\n";
-      llvm::errs() << "rgnval:\n\t" << val << "\n";
-      llvm::errs() << "parent:\n\t" << jump << "\n";
-      llvm::errs() << "\n===\n";
+      // llvm::errs() << "\n===jump(rgn)===\n";
+      // llvm::errs() << "rgnval:\n\t" << val << "\n";
+      // llvm::errs() << "parent:\n\t" << jump << "\n";
+      // llvm::errs() << "\n===\n";
 
       assert(true || !seen.count(val));
       seen.insert(val);
@@ -124,11 +124,11 @@ struct LowerRgnPass : public Pass {
         RgnValOp v = branch.second.getDefiningOp<RgnValOp>();
         assert(v && "expected select(rgnval)");
 
-        llvm::errs() << "\n===jump(select(rgn))===\n";
-        llvm::errs() << "rgnval:\n\t" << v << "\n";
-        llvm::errs() << "select:\n\t" << select << "\n";
-        llvm::errs() << "parent:\n\t" << jump << "\n";
-        llvm::errs() << "\n===\n";
+        // llvm::errs() << "\n===jump(select(rgn))===\n";
+        // llvm::errs() << "rgnval:\n\t" << v << "\n";
+        // llvm::errs() << "select:\n\t" << select << "\n";
+        // llvm::errs() << "parent:\n\t" << jump << "\n";
+        // llvm::errs() << "\n===\n";
         assert(true || !seen.count(v));
         seen.insert(v);
 

@@ -1,5 +1,7 @@
 # Core-MLIR
 
+- add API to clone region with entry handle.
+
 # Points
 - Experience report on writing a LEAN backend.
 - inline C string is a huge pain.
