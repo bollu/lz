@@ -224,7 +224,7 @@ def plot():
   # Y-Axis Label
   #
   # Use a horizontal label for improved readability.
-  ax.set_ylabel('Speedup over leanc', rotation='horizontal', position = (1, 1.1),
+  ax.set_ylabel('Speedup over leanc (via regions for optimization)', rotation='horizontal', position = (1, 1.1),
       horizontalalignment='left', verticalalignment='bottom', fontsize=8)
 
   # Add some text for labels, title and custom x-axis tick labels, etc.
