@@ -69,11 +69,11 @@ def run_data():
     ds = []
     for (i, fpath) in enumerate(G_FPATHS):
         datum = {"file": str(fpath) }
-        LEANPATH="/home/bollu/work/lean4-contrib/build/stage1/bin/lean"
-        LEANCPATH="/home/bollu/work/lean4-contrib/build/stage1/bin/leanc"
+        LEAN_OPTIMIZED_PATH="/home/bollu/work/lean4-contrib/build/stage1/bin/lean"
+        LEANC_OPTIMIZED_PATH="/home/bollu/work/lean4-contrib/build/stage1/bin/leanc"
         os_system_synch(f"rm exe-ref.out || true")
-        os_system_synch(f"{LEANPATH} {fpath} -c exe-ref.c")
-        os_system_synch(f"{LEANCPATH} exe-ref.c -O3 -o exe-ref.out")
+        os_system_synch(f"{LEAN_OPTIMIZED_PATH} {fpath} -c exe-ref.c")
+        os_system_synch(f"{LEANC_OPTIMIZED_PATH} exe-ref.c -O3 -o exe-ref.out")
         # x = run_with_output("perf stat ./exe-ref.out 1>/dev/null")
         # proc = subprocess.Popen("perf stat ./exe-ref.out", shell=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
         datum["theirs-out"] = []
@@ -87,7 +87,8 @@ def run_data():
         os_system_synch(f"rm exe.ll  || true")
         os_system_synch(f"rm exe-linked.ll  || true")
         os_system_synch(f"rm exe.o  || true")
-        os_system_synch(f"lean {fpath} -m exe.mlir")
+        LEAN_NOOPTIMIZE_PATH="/home/bollu/work/lean4/build/stage1/bin/lean"
+        os_system_synch(f"{LEAN_NOOPTIMIZE_PATH} {fpath} -m exe.mlir")
         os_system_synch("hask-opt exe.mlir --convert-scf-to-std --lean-lower-rgn --convert-rgn-to-std --convert-std-to-llvm --ptr-lower | \
                 mlir-translate --mlir-to-llvmir -o exe.ll")
         os_system_synch("llvm-link " + 

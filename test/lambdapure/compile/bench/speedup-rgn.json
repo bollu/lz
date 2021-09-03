@@ -1,0 +1,122 @@
+[
+  {
+    "file": "binarytrees-int.lean",
+    "theirs-out": [
+      "stretch tree of depth 7\t check: 255\n64\t trees of depth 4\t check: 1984\n16\t trees of depth 6\t check: 2032\nlong lived tree of depth 6\t check: 127\n"
+    ],
+    "theirs-perf": [
+      "\n Performance counter stats for './exe-ref.out':\n\n              5.39 msec task-clock                #    0.907 CPUs utilized          \n                 1      context-switches          #    0.186 K/sec                  \n                 0      cpu-migrations            #    0.000 K/sec                  \n             1,237      page-faults               #    0.230 M/sec                  \n        13,059,094      cycles                    #    2.423 GHz                    \n        13,859,576      instructions              #    1.06  insn per cycle         \n         2,473,551      branches                  #  458.984 M/sec                  \n            38,840      branch-misses             #    1.57% of all branches        \n\n       0.005939664 seconds time elapsed\n\n       0.005940000 seconds user\n       0.000000000 seconds sys\n\n\n"
+    ],
+    "ours-out": [
+      "stretch tree of depth 7\t check: 255\n64\t trees of depth 4\t check: 1984\n16\t trees of depth 6\t check: 2032\nlong lived tree of depth 6\t check: 127\n"
+    ],
+    "ours-perf": [
+      "\n Performance counter stats for './exe-mlir.out':\n\n              4.41 msec task-clock                #    0.922 CPUs utilized          \n                 0      context-switches          #    0.000 K/sec                  \n                 0      cpu-migrations            #    0.000 K/sec                  \n             1,239      page-faults               #    0.281 M/sec                  \n        13,289,263      cycles                    #    3.015 GHz                    \n        13,880,631      instructions              #    1.04  insn per cycle         \n         2,481,998      branches                  #  563.055 M/sec                  \n            38,294      branch-misses             #    1.54% of all branches        \n\n       0.004779009 seconds time elapsed\n\n       0.000000000 seconds user\n       0.004832000 seconds sys\n\n\n"
+    ]
+  },
+  {
+    "file": "binarytrees.lean",
+    "theirs-out": [
+      "stretch tree of depth 21\t check: 4194303\n1048576\t trees of depth 4\t check: 32505856\n262144\t trees of depth 6\t check: 33292288\n65536\t trees of depth 8\t check: 33488896\n16384\t trees of depth 10\t check: 33538048\n4096\t trees of depth 12\t check: 33550336\n1024\t trees of depth 14\t check: 33553408\n256\t trees of depth 16\t check: 33554176\n64\t trees of depth 18\t check: 33554368\n16\t trees of depth 20\t check: 33554416\nlong lived tree of depth 20\t check: 2097151\n"
+    ],
+    "theirs-perf": [
+      "\n Performance counter stats for './exe-ref.out':\n\n          2,881.63 msec task-clock                #    1.000 CPUs utilized          \n                 7      context-switches          #    0.002 K/sec                  \n                 0      cpu-migrations            #    0.000 K/sec                  \n            25,995      page-faults               #    0.009 M/sec                  \n     9,694,729,775      cycles                    #    3.364 GHz                    \n    26,164,005,725      instructions              #    2.70  insn per cycle         \n     5,791,434,341      branches                  # 2009.777 M/sec                  \n        22,653,198      branch-misses             #    0.39% of all branches        \n\n       2.881966008 seconds time elapsed\n\n       2.832483000 seconds user\n       0.046472000 seconds sys\n\n\n"
+    ],
+    "ours-out": [
+      "stretch tree of depth 21\t check: 4194303\n1048576\t trees of depth 4\t check: 32505856\n262144\t trees of depth 6\t check: 33292288\n65536\t trees of depth 8\t check: 33488896\n16384\t trees of depth 10\t check: 33538048\n4096\t trees of depth 12\t check: 33550336\n1024\t trees of depth 14\t check: 33553408\n256\t trees of depth 16\t check: 33554176\n64\t trees of depth 18\t check: 33554368\n16\t trees of depth 20\t check: 33554416\nlong lived tree of depth 20\t check: 2097151\n"
+    ],
+    "ours-perf": [
+      "\n Performance counter stats for './exe-mlir.out':\n\n          4,279.53 msec task-clock                #    1.000 CPUs utilized          \n                10      context-switches          #    0.002 K/sec                  \n                 0      cpu-migrations            #    0.000 K/sec                  \n            34,280      page-faults               #    0.008 M/sec                  \n    14,391,993,048      cycles                    #    3.363 GHz                    \n    38,361,611,649      instructions              #    2.67  insn per cycle         \n     8,006,452,796      branches                  # 1870.871 M/sec                  \n        38,240,593      branch-misses             #    0.48% of all branches        \n\n       4.279915514 seconds time elapsed\n\n       4.225228000 seconds user\n       0.049877000 seconds sys\n\n\n"
+    ]
+  },
+  {
+    "file": "const_fold.lean",
+    "theirs-out": [
+      "2386  2386\n"
+    ],
+    "theirs-perf": [
+      "\n Performance counter stats for './exe-ref.out':\n\n              4.92 msec task-clock                #    0.909 CPUs utilized          \n                 1      context-switches          #    0.203 K/sec                  \n                 0      cpu-migrations            #    0.000 K/sec                  \n             1,289      page-faults               #    0.262 M/sec                  \n        13,610,061      cycles                    #    2.767 GHz                    \n        14,113,601      instructions              #    1.04  insn per cycle         \n         2,569,635      branches                  #  522.403 M/sec                  \n            40,581      branch-misses             #    1.58% of all branches        \n\n       0.005411998 seconds time elapsed\n\n       0.005399000 seconds user\n       0.000000000 seconds sys\n\n\n"
+    ],
+    "ours-out": [
+      "2386  2386\n"
+    ],
+    "ours-perf": [
+      "\n Performance counter stats for './exe-mlir.out':\n\n              4.93 msec task-clock                #    0.905 CPUs utilized          \n                 0      context-switches          #    0.000 K/sec                  \n                 0      cpu-migrations            #    0.000 K/sec                  \n             1,276      page-faults               #    0.259 M/sec                  \n        13,761,088      cycles                    #    2.789 GHz                    \n        14,211,942      instructions              #    1.03  insn per cycle         \n         2,592,282      branches                  #  525.387 M/sec                  \n            40,278      branch-misses             #    1.55% of all branches        \n\n       0.005449158 seconds time elapsed\n\n       0.000000000 seconds user\n       0.005471000 seconds sys\n\n\n"
+    ]
+  },
+  {
+    "file": "deriv.lean",
+    "theirs-out": [
+      "1 count: 6\n2 count: 22\n3 count: 90\n4 count: 420\n"
+    ],
+    "theirs-perf": [
+      "\n Performance counter stats for './exe-ref.out':\n\n              4.62 msec task-clock                #    0.901 CPUs utilized          \n                 0      context-switches          #    0.000 K/sec                  \n                 0      cpu-migrations            #    0.000 K/sec                  \n             1,240      page-faults               #    0.269 M/sec                  \n        13,076,707      cycles                    #    2.832 GHz                    \n        13,207,779      instructions              #    1.01  insn per cycle         \n         2,343,369      branches                  #  507.422 M/sec                  \n            39,245      branch-misses             #    1.67% of all branches        \n\n       0.005125482 seconds time elapsed\n\n       0.005127000 seconds user\n       0.000000000 seconds sys\n\n\n"
+    ],
+    "ours-out": [
+      "1 count: 6\n2 count: 22\n3 count: 90\n4 count: 420\n"
+    ],
+    "ours-perf": [
+      "\n Performance counter stats for './exe-mlir.out':\n\n              4.50 msec task-clock                #    0.902 CPUs utilized          \n                 0      context-switches          #    0.000 K/sec                  \n                 0      cpu-migrations            #    0.000 K/sec                  \n             1,249      page-faults               #    0.277 M/sec                  \n        13,495,377      cycles                    #    2.998 GHz                    \n        13,471,730      instructions              #    1.00  insn per cycle         \n         2,400,456      branches                  #  533.295 M/sec                  \n            39,305      branch-misses             #    1.64% of all branches        \n\n       0.004989941 seconds time elapsed\n\n       0.005042000 seconds user\n       0.000000000 seconds sys\n\n\n"
+    ]
+  },
+  {
+    "file": "filter.lean",
+    "theirs-out": [
+      "6\n"
+    ],
+    "theirs-perf": [
+      "\n Performance counter stats for './exe-ref.out':\n\n              8.03 msec task-clock                #    0.957 CPUs utilized          \n                 0      context-switches          #    0.000 K/sec                  \n                 0      cpu-migrations            #    0.000 K/sec                  \n             2,537      page-faults               #    0.316 M/sec                  \n        25,307,861      cycles                    #    3.152 GHz                    \n        28,647,655      instructions              #    1.13  insn per cycle         \n         5,681,759      branches                  #  707.708 M/sec                  \n            93,710      branch-misses             #    1.65% of all branches        \n\n       0.008387270 seconds time elapsed\n\n       0.002797000 seconds user\n       0.005548000 seconds sys\n\n\n"
+    ],
+    "ours-out": [
+      "6\n"
+    ],
+    "ours-perf": [
+      "\n Performance counter stats for './exe-mlir.out':\n\n              8.67 msec task-clock                #    0.957 CPUs utilized          \n                 0      context-switches          #    0.000 K/sec                  \n                 0      cpu-migrations            #    0.000 K/sec                  \n             2,442      page-faults               #    0.282 M/sec                  \n        25,925,495      cycles                    #    2.989 GHz                    \n        29,433,874      instructions              #    1.14  insn per cycle         \n         5,809,368      branches                  #  669.811 M/sec                  \n            92,916      branch-misses             #    1.60% of all branches        \n\n       0.009065683 seconds time elapsed\n\n       0.003051000 seconds user\n       0.006044000 seconds sys\n\n\n"
+    ]
+  },
+  {
+    "file": "qsort.lean",
+    "theirs-out": [
+      ""
+    ],
+    "theirs-perf": [
+      "\n Performance counter stats for './exe-ref.out':\n\n             51.28 msec task-clock                #    0.991 CPUs utilized          \n                 0      context-switches          #    0.000 K/sec                  \n                 0      cpu-migrations            #    0.000 K/sec                  \n             1,233      page-faults               #    0.024 M/sec                  \n       159,614,980      cycles                    #    3.112 GHz                    \n       360,447,311      instructions              #    2.26  insn per cycle         \n        83,783,594      branches                  # 1633.723 M/sec                  \n         2,153,888      branch-misses             #    2.57% of all branches        \n\n       0.051751632 seconds time elapsed\n\n       0.048349000 seconds user\n       0.003377000 seconds sys\n\n\n"
+    ],
+    "ours-out": [
+      ""
+    ],
+    "ours-perf": [
+      "\n Performance counter stats for './exe-mlir.out':\n\n             60.85 msec task-clock                #    0.993 CPUs utilized          \n                 0      context-switches          #    0.000 K/sec                  \n                 0      cpu-migrations            #    0.000 K/sec                  \n             1,237      page-faults               #    0.020 M/sec                  \n       199,116,293      cycles                    #    3.273 GHz                    \n       423,876,544      instructions              #    2.13  insn per cycle         \n       113,547,989      branches                  # 1866.178 M/sec                  \n         1,867,498      branch-misses             #    1.64% of all branches        \n\n       0.061248552 seconds time elapsed\n\n       0.061235000 seconds user\n       0.000000000 seconds sys\n\n\n"
+    ]
+  },
+  {
+    "file": "rbmap_checkpoint.lean",
+    "theirs-out": [
+      "20001 40000\n"
+    ],
+    "theirs-perf": [
+      "\n Performance counter stats for './exe-ref.out':\n\n            279.19 msec task-clock                #    0.998 CPUs utilized          \n                 0      context-switches          #    0.000 K/sec                  \n                 0      cpu-migrations            #    0.000 K/sec                  \n            10,288      page-faults               #    0.037 M/sec                  \n       915,341,585      cycles                    #    3.279 GHz                    \n     1,848,574,111      instructions              #    2.02  insn per cycle         \n       577,094,334      branches                  # 2067.055 M/sec                  \n         5,983,272      branch-misses             #    1.04% of all branches        \n\n       0.279704247 seconds time elapsed\n\n       0.259632000 seconds user\n       0.019896000 seconds sys\n\n\n"
+    ],
+    "ours-out": [
+      "20001 40000\n"
+    ],
+    "ours-perf": [
+      "\n Performance counter stats for './exe-mlir.out':\n\n            196.66 msec task-clock                #    0.997 CPUs utilized          \n                 0      context-switches          #    0.000 K/sec                  \n                 0      cpu-migrations            #    0.000 K/sec                  \n            10,334      page-faults               #    0.053 M/sec                  \n       654,986,721      cycles                    #    3.331 GHz                    \n     1,443,347,289      instructions              #    2.20  insn per cycle         \n       397,962,559      branches                  # 2023.579 M/sec                  \n         5,532,463      branch-misses             #    1.39% of all branches        \n\n       0.197181348 seconds time elapsed\n\n       0.180279000 seconds user\n       0.016631000 seconds sys\n\n\n"
+    ]
+  },
+  {
+    "file": "unionfind.lean",
+    "theirs-out": [
+      "ok 99000\n"
+    ],
+    "theirs-perf": [
+      "\n Performance counter stats for './exe-ref.out':\n\n            116.52 msec task-clock                #    0.995 CPUs utilized          \n                 0      context-switches          #    0.000 K/sec                  \n                 0      cpu-migrations            #    0.000 K/sec                  \n             2,725      page-faults               #    0.023 M/sec                  \n       386,030,382      cycles                    #    3.313 GHz                    \n     1,065,573,235      instructions              #    2.76  insn per cycle         \n       284,295,543      branches                  # 2439.842 M/sec                  \n           100,581      branch-misses             #    0.04% of all branches        \n\n       0.117049029 seconds time elapsed\n\n       0.106998000 seconds user\n       0.009945000 seconds sys\n\n\n"
+    ],
+    "ours-out": [
+      "ok 99000\n"
+    ],
+    "ours-perf": [
+      "\n Performance counter stats for './exe-mlir.out':\n\n            104.10 msec task-clock                #    0.996 CPUs utilized          \n                 0      context-switches          #    0.000 K/sec                  \n                 0      cpu-migrations            #    0.000 K/sec                  \n             3,202      page-faults               #    0.031 M/sec                  \n       343,324,881      cycles                    #    3.298 GHz                    \n     1,063,296,240      instructions              #    3.10  insn per cycle         \n       239,021,108      branches                  # 2296.091 M/sec                  \n            64,047      branch-misses             #    0.03% of all branches        \n\n       0.104513298 seconds time elapsed\n\n       0.097791000 seconds user\n       0.006667000 seconds sys\n\n\n"
+    ]
+  }
+]
