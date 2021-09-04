@@ -93,7 +93,8 @@ int main(int argc, char **argv) {
   registerLzInterpretPass();
   registerLzLazifyPass();
   registerLowerRgnPass();
-  registerOptimizeRgnPass();
+  registerOptimizeLeanPass();
+  registerLeanPipelinePass();
   mlir::standalone::registerHaskCanonicalizePass();
   mlir::standalone::registerWrapperWorkerPass();
 

@@ -7,7 +7,7 @@
 
 #include "Hask/HaskDialect.h"
 #include "Hask/HaskOps.h"
-
+#include "RgnDialect.h"
 // includes
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
@@ -213,7 +213,12 @@ void HaskInlinerInterface::handleTerminator(
     valuesToRepl[0].replaceAllUsesWith(returnOp.getOperand());
     return;
   }
+  if (auto returnOp = mlir::dyn_cast<RgnReturnOp>(op)) {
+    valuesToRepl[0].replaceAllUsesWith(returnOp.getOperand());
+    return;
+  }
 
+  llvm::errs() << "UNKNOWN RETURN: |" << *op << "|\n";
   assert(false && "unknown return operation");
 }
 

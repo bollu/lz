@@ -64,80 +64,100 @@ namespace standalone {
 
 namespace {
 
-
-struct OptimizeRgnPass : public Pass {
-  OptimizeRgnPass() : Pass(mlir::TypeID::get<OptimizeRgnPass>()){};
-  StringRef getName() const override { return "OptimizeRgnPass"; }
+struct OptimizeLeanPass : public Pass {
+  OptimizeLeanPass() : Pass(mlir::TypeID::get<OptimizeLeanPass>()){};
+  StringRef getName() const override { return "OptimizeLeanPass"; }
 
   std::unique_ptr<Pass> clonePass() const override {
-    auto newInst = std::make_unique<OptimizeRgnPass>(
-        *static_cast<const OptimizeRgnPass *>(this));
+    auto newInst = std::make_unique<OptimizeLeanPass>(
+        *static_cast<const OptimizeLeanPass *>(this));
     newInst->copyOptionValuesFrom(this);
     return newInst;
   }
 
-  void runPatterns(ConversionTarget &target,
-                   mlir::OwningRewritePatternList &patterns) {
-
-    // ::llvm::DebugFlag = true;
-
-    if (failed(mlir::applyPartialConversion(getOperation(), target,
-                                            std::move(patterns)))) {
-      llvm::errs() << "===Hask lowering failed at Conversion===\n";
-      // getOperation()->print(llvm::errs(),
-      // mlir::OpPrintingFlags().printGenericOpForm());
-      llvm::errs() << "\n===\n";
-      signalPassFailure();
-      ::llvm::DebugFlag = false;
-      return;
-    };
-
-    if (failed(mlir::verify(getOperation()))) {
-      llvm::errs() << "===Hask lowering failed at Verification===\n";
-      // getOperation()->print(llvm::errs());
-      llvm::errs() << "\n===\n";
-      signalPassFailure();
-      ::llvm::DebugFlag = false;
-      return;
-    }
-
-    ::llvm::DebugFlag = false;
-  }
-
   void runOnOperation() override {
+    
+    mlir::IRRewriter rewriter(getOperation()->getContext());
     int known_constructors = 0;
     getOperation()->walk([&](ProjectionOp proj) {
-        HaskConstructOp cons = proj.getOperand().getDefiningOp<HaskConstructOp>();
-        if (!cons) { return WalkResult::advance(); }
-        llvm::errs() << "#optimizable constructs |" << ++known_constructors << "|\n";
-        assert(false);
+      HaskConstructOp cons = proj.getOperand().getDefiningOp<HaskConstructOp>();
+      if (!cons) {
         return WalkResult::advance();
+      }
+      llvm::errs() << "#optimizable constructs |" << ++known_constructors
+                   << "|\n";
+      return WalkResult::advance();
+      assert(false);
     });
 
-    getOperation()->walk([&](RgnSelectOp select) {
+    // rgn return surrounded by parent function can be std.return to help
+    // inliner.
+    // rgn return surrounded by parent function can be std.return to help
+    // inliner.
+    getOperation()->walk([&](RgnReturnOp ret) {
+      FuncOp parent = dyn_cast<FuncOp>(ret->getParentOp());
+      if (!parent) {
         return WalkResult::advance();
+      }
+      rewriter.setInsertionPointAfter(ret);
+      rewriter.replaceOpWithNewOp<ReturnOp>(ret, ret.getOperand());
+
+      return WalkResult::advance();
     });
 
+    // inliner
+    getOperation()->walk([&](HaskCallOp call) {
+      FuncOp parent = call->getParentOfType<FuncOp>();
+      ModuleOp mod = call->getParentOfType<ModuleOp>();
 
+      if (parent.getName() == call.getCallee()) {
+        return WalkResult::advance();
+      }
+
+      FuncOp called = mod.lookupSymbol<FuncOp>(call.getCallee());
+      assert(called && "unable to find called function.");
+
+      InlinerInterface inliner(rewriter.getContext());
+      LogicalResult result =
+          inlineRegion(inliner, &called.getBody(), call, call.getOperands(),
+                       call.getResult());
+      static int nInlines = 0;
+      if (succeeded(result)) {
+        nInlines++; 
+            llvm::errs() << "successful-inlines |" << nInlines << "|\n";
+      }
+      return WalkResult::advance();
+    });
+
+    getOperation()->walk([&](HaskCaseIntRetOp caseint) {
+      // caseint(lean_dec_eq)
+      ConstantOp ci = caseint.getScrutinee().getDefiningOp<ConstantOp>();
+      if (!ci) {
+        return WalkResult::advance();
+      }
+      llvm::errs() << "optimizable-constructs |" << ++known_constructors
+                   << "|\n";
+      assert(false);
+      return WalkResult::advance();
+    });
+
+    getOperation()->walk(
+        [&](RgnSelectOp select) { return WalkResult::advance(); });
   }
 };
 
 } // namespace
 
-std::unique_ptr<mlir::Pass> createOptimizeRegionPass() {
-  return std::make_unique<OptimizeRgnPass>();
+std::unique_ptr<mlir::Pass> createOptimizeLeanPass() {
+  return std::make_unique<OptimizeLeanPass>();
 }
-
-
 
 } // namespace standalone
 } // namespace mlir
 
-void registerOptimizeRgnPass() {
-  ::mlir::registerPass("rgn-opt",
-                       "Perform peephole rewrites on regions",
+void registerOptimizeLeanPass() {
+  ::mlir::registerPass("lean-opt", "Perform peephole rewrites on regions",
                        []() -> std::unique_ptr<::mlir::Pass> {
-                         return mlir::standalone::createOptimizeRegionPass();
+                         return mlir::standalone::createOptimizeLeanPass();
                        });
 }
-

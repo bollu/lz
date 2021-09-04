@@ -19,7 +19,8 @@ add_llvm_executable(hask-opt
     Interpreter.cpp
     Runtime.cpp
     RgnDialect.cpp
-    RgnOptimization.cpp
+    LeanOptimization.cpp
+    LeanPipeline.cpp
     SCFToRGN.cpp
     RgnCSEPass.cpp
     RgnToStd.cpp

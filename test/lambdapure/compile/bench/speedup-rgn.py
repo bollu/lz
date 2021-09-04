@@ -16,7 +16,7 @@ import sys
 import subprocess
 import numpy as np
 from scipy.stats import mstats
-
+import tikzplotlib
 
 PARSER = argparse.ArgumentParser(description='Speedup b/w MLIR and LEAN')
 PARSER.add_argument("--data", help="regenerate plotting data", action="store_true")
@@ -43,14 +43,15 @@ G_NFILES = len(G_FPATHS)
 
 # Color palette
 light_gray = "#cacaca"
-dark_gray = "#827b7b"
+# dark_gray = "#827b7b"
+dark_gray = "#9E9E9E"
 light_blue = "#a6cee3"
 dark_blue = "#1f78b4"
 light_green = "#b2df8a"
 dark_green = "#33a02c"
 light_red = "#fb9a99"
-dark_red = "#e31a1c"
-
+# dark_red = "#e31a1c"
+dark_red = "#D81B60"
 
 def log(*ARGS, **kwargs):
     print(*ARGS, file=sys.stderr, **kwargs)
@@ -65,17 +66,33 @@ def sh(path):
     return (output.decode(), err.decode())
 
 
+
 def run_data():
     ds = []
     for (i, fpath) in enumerate(G_FPATHS):
+        # with simpcase: 850fd84e43407ed647837652b6442e143199abb0
         datum = {"file": str(fpath) }
-        LEAN_OPTIMIZED_PATH="/home/bollu/work/lean4-contrib/build/stage1/bin/lean"
-        LEANC_OPTIMIZED_PATH="/home/bollu/work/lean4-contrib/build/stage1/bin/leanc"
-        os_system_synch(f"rm exe-ref.out || true")
-        os_system_synch(f"{LEAN_OPTIMIZED_PATH} {fpath} -c exe-ref.c")
-        os_system_synch(f"{LEANC_OPTIMIZED_PATH} exe-ref.c -O3 -o exe-ref.out")
-        # x = run_with_output("perf stat ./exe-ref.out 1>/dev/null")
-        # proc = subprocess.Popen("perf stat ./exe-ref.out", shell=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+        LEAN_ENABLE_SIMPCASE_PATH="/home/bollu/work/lean4-contrib/build/stage1/bin/lean"
+        os_system_synch(f"{LEAN_ENABLE_SIMPCASE_PATH} {fpath} -m exe.mlir")
+        os_system_synch("hask-opt exe.mlir --convert-scf-to-std --lean-lower-rgn --convert-rgn-to-std --convert-std-to-llvm --ptr-lower | \
+                mlir-translate --mlir-to-llvmir -o exe.ll")
+        os_system_synch("llvm-link " + 
+                  "exe.ll " + 
+                  "/home/bollu/work/lz/lean-linking-incantations/lib-includes/library.ll " + 
+                  "/home/bollu/work/lz/lean-linking-incantations/lib-runtime/runtime.ll " +
+                  "| opt -passes=bitcast-call-converter  | opt --always-inline -O3 -S -o exe-linked.ll")
+        os_system_synch("sed -i s/musttail/tail/g exe-linked.ll")
+        os_system_synch("opt -O3 exe-linked.ll -o exe-linked-o3.ll")
+        os_system_synch("mv exe-linked-o3.ll exe-linked.ll")
+        print("@@@ HACK: converting muttail to tail because of llc miscompile@@@")
+        os_system_synch("sed -i s/musttail/tail/g exe-linked.ll")
+        os_system_synch("llc -O3 -march=x86-64 -filetype=obj exe-linked.ll -o exe.o")
+        os_system_synch(f"c++ -O3 -D LEAN_MULTI_THREAD -I/home/bollu/work/lean4/build/stage1/include \
+            exe.o \
+            /home/bollu/work/lz/lean-linking-incantations/lean-shell.o \
+            -no-pie -Wl,--start-group -lleancpp -lInit -lStd -lLean -Wl,--end-group \
+            -L/home/bollu/work/lean4/build/stage1/lib/lean -lgmp -ldl -pthread \
+            -Wno-unused-command-line-argument -o exe-ref.out")
         datum["theirs-out"] = []
         datum["theirs-perf"] = []
         for _ in range(ARGS.nruns):
@@ -83,14 +100,18 @@ def run_data():
           datum["theirs-out"].append(out)
           datum["theirs-perf"].append(perf)
 
+        # disabled simpcase + MLIR.rgn optimization passes: 55a63f500b23b8c0c180e43108c5f844839a693f
         os_system_synch(f"rm exe-mlir.out || true")
         os_system_synch(f"rm exe.ll  || true")
         os_system_synch(f"rm exe-linked.ll  || true")
         os_system_synch(f"rm exe.o  || true")
-        LEAN_NOOPTIMIZE_PATH="/home/bollu/work/lean4/build/stage1/bin/lean"
-        os_system_synch(f"{LEAN_NOOPTIMIZE_PATH} {fpath} -m exe.mlir")
-        os_system_synch("hask-opt exe.mlir --convert-scf-to-std --lean-lower-rgn --convert-rgn-to-std --convert-std-to-llvm --ptr-lower | \
+        LEAN_DISABLE_SIMPCASE_PATH="/home/bollu/work/lean4/build/stage1/bin/lean"
+        os_system_synch(f"{LEAN_DISABLE_SIMPCASE_PATH} {fpath} -m exe.mlir")
+        # os_system_synch("hask-opt exe.mlir --convert-scf-to-std --lean-lower-rgn  --rgn-cse --cse --convert-rgn-to-std --convert-std-to-llvm --ptr-lower | \
+        #        mlir-translate --mlir-to-llvmir -o exe.ll")
+        os_system_synch("hask-opt exe.mlir --convert-scf-to-std --lean-lower-rgn --cse --convert-rgn-to-std --convert-std-to-llvm --ptr-lower | \
                 mlir-translate --mlir-to-llvmir -o exe.ll")
+
         os_system_synch("llvm-link " + 
                   "exe.ll " + 
                   "/home/bollu/work/lz/lean-linking-incantations/lib-includes/library.ll " + 
@@ -114,6 +135,42 @@ def run_data():
            out, perf = sh("perf stat ./exe-mlir.out")
            datum["ours-out"].append(out)
            datum["ours-perf"].append(perf)
+
+        # disabled simpcase and no MLIR.rgn optimization either: 55a63f500b23b8c0c180e43108c5f844839a693f
+        os_system_synch(f"rm exe-mlir.out || true")
+        os_system_synch(f"rm exe.ll  || true")
+        os_system_synch(f"rm exe-linked.ll  || true")
+        os_system_synch(f"rm exe.o  || true")
+        LEAN_DISABLE_SIMPCASE_PATH="/home/bollu/work/lean4/build/stage1/bin/lean"
+        os_system_synch(f"{LEAN_DISABLE_SIMPCASE_PATH} {fpath} -m exe.mlir")
+        # os_system_synch("hask-opt exe.mlir --convert-scf-to-std --lean-lower-rgn  --rgn-cse --cse --convert-rgn-to-std --convert-std-to-llvm --ptr-lower | \
+        #        mlir-translate --mlir-to-llvmir -o exe.ll")
+        os_system_synch("hask-opt exe.mlir --convert-scf-to-std --lean-lower-rgn --convert-rgn-to-std --convert-std-to-llvm --ptr-lower | \
+                mlir-translate --mlir-to-llvmir -o exe.ll")
+
+        os_system_synch("llvm-link " + 
+                  "exe.ll " + 
+                  "/home/bollu/work/lz/lean-linking-incantations/lib-includes/library.ll " + 
+                  "/home/bollu/work/lz/lean-linking-incantations/lib-runtime/runtime.ll " +
+                  "| opt -passes=bitcast-call-converter  | opt --always-inline -O3 -S -o exe-linked.ll")
+        os_system_synch("sed -i s/musttail/tail/g exe-linked.ll")
+        os_system_synch("opt -O3 exe-linked.ll -o exe-linked-o3.ll")
+        os_system_synch("mv exe-linked-o3.ll exe-linked.ll")
+        print("@@@ HACK: converting muttail to tail because of llc miscompile@@@")
+        os_system_synch("sed -i s/musttail/tail/g exe-linked.ll")
+        os_system_synch("llc -O3 -march=x86-64 -filetype=obj exe-linked.ll -o exe.o")
+        os_system_synch(f"c++ -O3 -D LEAN_MULTI_THREAD -I/home/bollu/work/lean4/build/stage1/include \
+            exe.o \
+            /home/bollu/work/lz/lean-linking-incantations/lean-shell.o \
+            -no-pie -Wl,--start-group -lleancpp -lInit -lStd -lLean -Wl,--end-group \
+            -L/home/bollu/work/lean4/build/stage1/lib/lean -lgmp -ldl -pthread \
+            -Wno-unused-command-line-argument -o exe-mlir.out")
+        datum["none-out"] = []
+        datum["none-perf"] = []
+        for _ in range(ARGS.nruns):
+           out, perf = sh("perf stat ./exe-mlir.out")
+           datum["none-out"].append(out)
+           datum["none-perf"].append(perf)
 
         ds.append(datum)
     with open(ARGS.out, "w") as f:
@@ -160,7 +217,7 @@ def autolabel(ax, rects):
     for rect in rects:
         height = rect.get_height()
         ax.annotate('{}'.format(height),
-                    xy=(rect.get_x() + rect.get_width() / 2, height),
+                    xy=(rect.get_x(), height),
                     xytext=(0, 1),  # 1 points vertical offset
                     textcoords="offset points",
                     fontsize="smaller",
@@ -180,6 +237,7 @@ def plot():
   baselines = []
   optims = []
   speedups = []
+  nones = []
   for i, data in enumerate(datapoints):
       # mark = "Y" if data['success'] else 'n'
       log(f"[{i+1:3}/{len(datapoints)}]|{data['file']:80}|")
@@ -188,11 +246,16 @@ def plot():
       labels.append(data["file"].split(".lean")[0])
       N = len(data["theirs-perf"])
       assert N == len(data["ours-perf"])
+      assert N == len(data["none-perf"])
 
       theirs = np.median([perf_stat_to_time(data["file"], t) for t in data["theirs-perf"] ])
       ours = np.median([perf_stat_to_time(data["file"], t) for t in data["ours-perf"] ])
+      none = np.median([perf_stat_to_time(data["file"], t) for t in data["none-perf"] ])
       speedup = float("%4.2f" % (theirs/ours))
       speedups.append(speedup)
+
+      none_speedup = float("%4.2f" % (theirs/none))
+      nones.append(none_speedup)
       # baselines.append(baseline/baseline)
       optims.append(speedup)
 
@@ -200,6 +263,10 @@ def plot():
   print("average speedup: %4.2f" % (avg_speedup, ))
   baselines.append(1)
   optims.append(float("%4.2f" % (avg_speedup)))
+
+  avg_speedup = mstats.gmean(nones)
+  nones.append(float("%4.2f" % (avg_speedup)))
+
   labels.append("geomean")
 
   print(labels)
@@ -209,12 +276,15 @@ def plot():
 
 
   x = np.arange(len(labels))  # the label locations
-  width = 0.35  # the width of the bars
+  width = 0.6  # the width of the bars
 
   fig, ax = plt.subplots()
-  # rects1 = ax.bar(x - width/2, baselines, width, label='Baseline', color = light_blue)
-  rects2 = ax.bar(x + width/2, optims, width, label='Optimised', color = dark_blue)
-  rects2[-1].set_color(light_blue) # color geomean separately.
+  # rects1 = ax.bar(x - width/3, baselines, width/3, label='λpure simplifier', color = dark_blue)
+  rects2 = ax.bar(x - width/3, optims, width/3, label='rgn simplifier', color = dark_red)
+  rects3 = ax.bar(x, nones, width/3, label='none', color = dark_gray)
+  # rects1[-1].set_color(light_blue) # color geomean separately.
+  rects2[-1].set_color(light_red) # color geomean separately.
+  rects3[-1].set_color(light_gray) # color geomean separately.
 
 
 
@@ -223,14 +293,14 @@ def plot():
 
   # Y-Axis Label
   #
-  # Use a horizontal label for improved readability.
-  ax.set_ylabel('Speedup over leanc (via regions for optimization)', rotation='horizontal', position = (1, 1.1),
-      horizontalalignment='left', verticalalignment='bottom', fontsize=8)
+  # Use a horizontal label for improved readability.  
+  ax.set_ylabel('Speedup over λpure simplifier', rotation='horizontal', position = (1, 1.1),
+      horizontalalignment='left', verticalalignment='bottom', fontsize=7)
 
   # Add some text for labels, title and custom x-axis tick labels, etc.
   ax.set_xticks(x)
   ax.set_xticklabels(labels, rotation=15, fontsize=7)
-  # ax.legend(ncol=100, frameon=False, loc='lower right', bbox_to_anchor=(0, 1, 1, 0))
+  ax.legend(ncol=100, frameon=False, fontsize=6, loc='upper right', bbox_to_anchor=(0, 1.3, 1, 0))
 
   # Hide the right and top spines
   # This reduces the number of lines in the plot. Lines typically catch
@@ -249,6 +319,8 @@ def plot():
   filename = os.path.basename(__file__).replace(".py", ".pdf")
   fig.savefig(filename)
   subprocess.run(["xdg-open",  filename])
+  filename = os.path.basename(__file__).replace(".py", ".tex")
+  tikzplotlib.save(filename)
 
 
 
