@@ -335,4 +335,3 @@ public:
 std::unique_ptr<mlir::Pass> createRgnCSEPass();
 void registerRgnCSEPass();
 void registerLowerRgnPass();
-void registerOptimizeRgnPass();

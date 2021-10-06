@@ -2,7 +2,6 @@
 \begin{tikzpicture}
 
 \definecolor{color0}{rgb}{0.847058823529412,0.105882352941176,0.376470588235294}
-\definecolor{color1}{rgb}{0.984313725490196,0.603921568627451,0.6}
 
 \begin{axis}[
 legend cell align={left},
@@ -11,105 +10,31 @@ legend style={fill opacity=0.8, draw opacity=1, text opacity=1, at={(1,1.3)}, dr
 tick align=outside,
 tick pos=left,
 x grid style={white!69.0196078431373!black},
-xmin=-0.72, xmax=8.52,
+xmin=-0.32, xmax=0.12,
 xtick style={color=black},
-xtick={0,1,2,3,4,5,6,7,8},
+xtick={0},
 xticklabel style={rotate=15.0},
-xticklabels={
-  binarytrees-int,
-  binarytrees,
-  const\_fold,
-  deriv,
-  filter,
-  qsort,
-  rbmap\_checkpoint,
-  unionfind,
-  geomean
-},
+xticklabels={binarytrees-int},
 y grid style={white!69.0196078431373!black},
 ylabel style={rotate=-90.0},
-ylabel={Speedup over λpure simplifier},
-ymin=0, ymax=1.2075,
+ylabel={Speedup over no simplifier},
+ymin=0, ymax=1.0395,
 ytick style={color=black}
 ]
-\draw[draw=none,fill=color0] (axis cs:-0.3,0) rectangle (axis cs:-0.1,1.15);
+\draw[draw=none,fill=color0] (axis cs:-0.3,0) rectangle (axis cs:-0.1,0.87);
 \addlegendimage{ybar,ybar legend,draw=none,fill=color0}
-\addlegendentry{rgn simplifier}
+\addlegendentry{λpure over none}
 
-\draw[draw=none,fill=color0] (axis cs:0.7,0) rectangle (axis cs:0.9,1);
-\draw[draw=none,fill=color0] (axis cs:1.7,0) rectangle (axis cs:1.9,0.92);
-\draw[draw=none,fill=color0] (axis cs:2.7,0) rectangle (axis cs:2.9,0.86);
-\draw[draw=none,fill=color0] (axis cs:3.7,0) rectangle (axis cs:3.9,0.99);
-\draw[draw=none,fill=color0] (axis cs:4.7,0) rectangle (axis cs:4.9,1);
-\draw[draw=none,fill=color0] (axis cs:5.7,0) rectangle (axis cs:5.9,0.99);
-\draw[draw=none,fill=color0] (axis cs:6.7,0) rectangle (axis cs:6.9,1.01);
-\draw[draw=color1,fill=color1] (axis cs:7.7,0) rectangle (axis cs:7.9,0.99);
-\draw[draw=none,fill=white!61.9607843137255!black] (axis cs:-0.1,0) rectangle (axis cs:0.1,1.12);
+\draw[draw=none,fill=white!61.9607843137255!black] (axis cs:-0.1,0) rectangle (axis cs:0.1,0.99);
 \addlegendimage{ybar,ybar legend,draw=none,fill=white!61.9607843137255!black}
-\addlegendentry{none}
+\addlegendentry{rgn over none}
 
-\draw[draw=none,fill=white!61.9607843137255!black] (axis cs:0.9,0) rectangle (axis cs:1.1,1);
-\draw[draw=none,fill=white!61.9607843137255!black] (axis cs:1.9,0) rectangle (axis cs:2.1,0.92);
-\draw[draw=none,fill=white!61.9607843137255!black] (axis cs:2.9,0) rectangle (axis cs:3.1,0.98);
-\draw[draw=none,fill=white!61.9607843137255!black] (axis cs:3.9,0) rectangle (axis cs:4.1,1.03);
-\draw[draw=none,fill=white!61.9607843137255!black] (axis cs:4.9,0) rectangle (axis cs:5.1,1.02);
-\draw[draw=none,fill=white!61.9607843137255!black] (axis cs:5.9,0) rectangle (axis cs:6.1,0.99);
-\draw[draw=none,fill=white!61.9607843137255!black] (axis cs:6.9,0) rectangle (axis cs:7.1,1);
-\draw[draw=white!79.2156862745098!black,fill=white!79.2156862745098!black] (axis cs:7.9,0) rectangle (axis cs:8.1,1.01);
-\draw (axis cs:-0.3,1.15) ++(0pt,1pt) node[
-  scale=0.4165,
+\draw (axis cs:-0.3,0.87) ++(0pt,1pt) node[
+  scale=0.347,
   anchor=south,
   text=black,
   rotate=0.0
-]{1.15};
-\draw (axis cs:0.7,1) ++(0pt,1pt) node[
-  scale=0.4165,
-  anchor=south,
-  text=black,
-  rotate=0.0
-]{1.0};
-\draw (axis cs:1.7,0.92) ++(0pt,1pt) node[
-  scale=0.4165,
-  anchor=south,
-  text=black,
-  rotate=0.0
-]{0.92};
-\draw (axis cs:2.7,0.86) ++(0pt,1pt) node[
-  scale=0.4165,
-  anchor=south,
-  text=black,
-  rotate=0.0
-]{0.86};
-\draw (axis cs:3.7,0.99) ++(0pt,1pt) node[
-  scale=0.4165,
-  anchor=south,
-  text=black,
-  rotate=0.0
-]{0.99};
-\draw (axis cs:4.7,1) ++(0pt,1pt) node[
-  scale=0.4165,
-  anchor=south,
-  text=black,
-  rotate=0.0
-]{1.0};
-\draw (axis cs:5.7,0.99) ++(0pt,1pt) node[
-  scale=0.4165,
-  anchor=south,
-  text=black,
-  rotate=0.0
-]{0.99};
-\draw (axis cs:6.7,1.01) ++(0pt,1pt) node[
-  scale=0.4165,
-  anchor=south,
-  text=black,
-  rotate=0.0
-]{1.01};
-\draw (axis cs:7.7,0.99) ++(0pt,1pt) node[
-  scale=0.4165,
-  anchor=south,
-  text=black,
-  rotate=0.0
-]{0.99};
+]{0.87};
 \end{axis}
 
 \end{tikzpicture}

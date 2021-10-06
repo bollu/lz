@@ -24,20 +24,21 @@ PARSER.add_argument("--plot", help="make the plot", action="store_true")
 PARSER.add_argument('--out', metavar='o', type=str,
                     help='path to dump output', default=os.path.basename(__file__).replace(".py", ".json"))
 PARSER.add_argument('--nruns', type=int,
-                    help='number of runs to average', default=10)
+                    # help='number of runs to average', default=10)
+                    help='number of runs to average', default=1)
 ARGS = PARSER.parse_args()
 
 G_BASELINE = "../baseline-lean.sh"
 G_OURS = "../run-lean.sh"
 G_FPATHS = []
 G_FPATHS.append("binarytrees-int.lean")
-G_FPATHS.append("binarytrees.lean")
-G_FPATHS.append("const_fold.lean")
-G_FPATHS.append("deriv.lean")
-G_FPATHS.append("filter.lean")
-G_FPATHS.append("qsort.lean") # miscompile because of jmp!
-G_FPATHS.append("rbmap_checkpoint.lean")
-G_FPATHS.append("unionfind.lean")
+# G_FPATHS.append("binarytrees.lean")
+# G_FPATHS.append("const_fold.lean")
+# G_FPATHS.append("deriv.lean")
+# G_FPATHS.append("filter.lean")
+# G_FPATHS.append("qsort.lean") # miscompile because of jmp!
+# G_FPATHS.append("rbmap_checkpoint.lean")
+# G_FPATHS.append("unionfind.lean")
 G_NFILES = len(G_FPATHS)
 
 
@@ -65,113 +66,160 @@ def sh(path):
     err = proc.stderr.read()
     return (output.decode(), err.decode())
 
+# returns datum
+def compile_and_run_with_option(case_simpl_enabled, rgn_optimization_enabled, fpath, out_index, perf_index):
+    # simpcase ENABLED: 850fd84e43407ed647837652b6442e143199abb0
+    LEAN_PATH="/home/bollu/work/lean4/build/stage1/bin/lean"
+    if case_simpl_enabled:
+        lean_opts = "-Dcompiler.caseSimpl=true"
+    else:
+        lean_opts = "-Dcompiler.caseSimpl=false"
+
+    os_system_synch(f"{LEAN_PATH} {fpath} {lean_opts}  -m exe.mlir")
+
+    if False:
+        os_system_synch("hask-opt exe.mlir --convert-scf-to-std --lean-lower-rgn  --rgn-cse --cse --convert-rgn-to-std --convert-std-to-llvm --ptr-lower | \
+               mlir-translate --mlir-to-llvmir -o exe.ll")
+    else:
+        os_system_synch("hask-opt exe.mlir --convert-scf-to-std --lean-lower-rgn --convert-rgn-to-std --convert-std-to-llvm --ptr-lower | \
+                mlir-translate --mlir-to-llvmir -o exe.ll")
+
+    os_system_synch("llvm-link " + 
+              "exe.ll " + 
+              "/home/bollu/work/lz/lean-linking-incantations/lib-includes/library.ll " + 
+              "/home/bollu/work/lz/lean-linking-incantations/lib-runtime/runtime.ll " +
+              "| opt -passes=bitcast-call-converter  | opt --always-inline -O3 -S -o exe-linked.ll")
+    os_system_synch("sed -i s/musttail/tail/g exe-linked.ll")
+    os_system_synch("opt -O3 exe-linked.ll -o exe-linked-o3.ll")
+    os_system_synch("mv exe-linked-o3.ll exe-linked.ll")
+    print("@@@ HACK: converting muttail to tail because of llc miscompile@@@")
+    os_system_synch("sed -i s/musttail/tail/g exe-linked.ll")
+    os_system_synch("llc -O2 -march=x86-64 -filetype=obj exe-linked.ll -o exe.o")
+    os_system_synch(f"c++ -O3 -D LEAN_MULTI_THREAD -I/home/bollu/work/lean4/build/stage1/include \
+        exe.o \
+        /home/bollu/work/lz/lean-linking-incantations/lean-shell.o \
+        -no-pie -Wl,--start-group -lleancpp -lInit -lStd -lLean -Wl,--end-group \
+        -L/home/bollu/work/lean4/build/stage1/lib/lean -lgmp -ldl -pthread \
+        -Wno-unused-command-line-argument -o exe-ref.out")
+    datum = {"file": str(fpath) }
+    datum[out_index] = []
+    datum[perf_index] = []
+    for _ in range(ARGS.nruns):
+      out, perf = sh("perf stat ./exe-ref.out")
+      datum[out_index].append(out)
+      datum[perf_index].append(perf)
+    return datum
+
 
 
 def run_data():
     ds = []
     for (i, fpath) in enumerate(G_FPATHS):
-        # with simpcase: 850fd84e43407ed647837652b6442e143199abb0
-        datum = {"file": str(fpath) }
-        LEAN_ENABLE_SIMPCASE_PATH="/home/bollu/work/lean4-contrib/build/stage1/bin/lean"
-        os_system_synch(f"{LEAN_ENABLE_SIMPCASE_PATH} {fpath} -m exe.mlir")
-        os_system_synch("hask-opt exe.mlir --convert-scf-to-std --lean-lower-rgn --convert-rgn-to-std --convert-std-to-llvm --ptr-lower | \
-                mlir-translate --mlir-to-llvmir -o exe.ll")
-        os_system_synch("llvm-link " + 
-                  "exe.ll " + 
-                  "/home/bollu/work/lz/lean-linking-incantations/lib-includes/library.ll " + 
-                  "/home/bollu/work/lz/lean-linking-incantations/lib-runtime/runtime.ll " +
-                  "| opt -passes=bitcast-call-converter  | opt --always-inline -O3 -S -o exe-linked.ll")
-        os_system_synch("sed -i s/musttail/tail/g exe-linked.ll")
-        os_system_synch("opt -O3 exe-linked.ll -o exe-linked-o3.ll")
-        os_system_synch("mv exe-linked-o3.ll exe-linked.ll")
-        print("@@@ HACK: converting muttail to tail because of llc miscompile@@@")
-        os_system_synch("sed -i s/musttail/tail/g exe-linked.ll")
-        os_system_synch("llc -O3 -march=x86-64 -filetype=obj exe-linked.ll -o exe.o")
-        os_system_synch(f"c++ -O3 -D LEAN_MULTI_THREAD -I/home/bollu/work/lean4/build/stage1/include \
-            exe.o \
-            /home/bollu/work/lz/lean-linking-incantations/lean-shell.o \
-            -no-pie -Wl,--start-group -lleancpp -lInit -lStd -lLean -Wl,--end-group \
-            -L/home/bollu/work/lean4/build/stage1/lib/lean -lgmp -ldl -pthread \
-            -Wno-unused-command-line-argument -o exe-ref.out")
-        datum["theirs-out"] = []
-        datum["theirs-perf"] = []
-        for _ in range(ARGS.nruns):
-          out, perf = sh("perf stat ./exe-ref.out")
-          datum["theirs-out"].append(out)
-          datum["theirs-perf"].append(perf)
+        # simpcase ENABLED: 850fd84e43407ed647837652b6442e143199abb0
+        # LEAN_PATH="/home/bollu/work/lean4/build/stage1/bin/lean"
+        # datum = {"file": str(fpath) }
+        # os_system_synch(f"{LEAN_PATH} {fpath} -Dcompiler.caseSimpl=true  -m exe.mlir")
+        # os_system_synch("hask-opt exe.mlir --convert-scf-to-std --lean-lower-rgn --convert-rgn-to-std --convert-std-to-llvm --ptr-lower | \
+        #         mlir-translate --mlir-to-llvmir -o exe.ll")
+        # os_system_synch("llvm-link " + 
+        #           "exe.ll " + 
+        #           "/home/bollu/work/lz/lean-linking-incantations/lib-includes/library.ll " + 
+        #           "/home/bollu/work/lz/lean-linking-incantations/lib-runtime/runtime.ll " +
+        #           "| opt -passes=bitcast-call-converter  | opt --always-inline -O3 -S -o exe-linked.ll")
+        # os_system_synch("sed -i s/musttail/tail/g exe-linked.ll")
+        # os_system_synch("opt -O3 exe-linked.ll -o exe-linked-o3.ll")
+        # os_system_synch("mv exe-linked-o3.ll exe-linked.ll")
+        # print("@@@ HACK: converting muttail to tail because of llc miscompile@@@")
+        # os_system_synch("sed -i s/musttail/tail/g exe-linked.ll")
+        # os_system_synch("llc -O2 -march=x86-64 -filetype=obj exe-linked.ll -o exe.o")
+        # os_system_synch(f"c++ -O3 -D LEAN_MULTI_THREAD -I/home/bollu/work/lean4/build/stage1/include \
+        #     exe.o \
+        #     /home/bollu/work/lz/lean-linking-incantations/lean-shell.o \
+        #     -no-pie -Wl,--start-group -lleancpp -lInit -lStd -lLean -Wl,--end-group \
+        #     -L/home/bollu/work/lean4/build/stage1/lib/lean -lgmp -ldl -pthread \
+        #     -Wno-unused-command-line-argument -o exe-ref.out")
+        # datum["theirs-out"] = []
+        # datum["theirs-perf"] = []
+        # for _ in range(ARGS.nruns):
+        #   out, perf = sh("perf stat ./exe-ref.out")
+        #   datum["theirs-out"].append(out)
+        #   datum["theirs-perf"].append(perf)
+        datum = {}
+        datum.update(compile_and_run_with_option(case_simpl_enabled=True, rgn_optimization_enabled=False, fpath=fpath, out_index="theirs-out", perf_index="theirs-perf"))
+        datum.update(compile_and_run_with_option(case_simpl_enabled=False, rgn_optimization_enabled=True, fpath=fpath, out_index="ours-out", perf_index="ours-perf"))
+        datum.update(compile_and_run_with_option(case_simpl_enabled=False, rgn_optimization_enabled=False, fpath=fpath, out_index="none-out", perf_index="none-perf"))
 
         # disabled simpcase + MLIR.rgn optimization passes: 55a63f500b23b8c0c180e43108c5f844839a693f
-        os_system_synch(f"rm exe-mlir.out || true")
-        os_system_synch(f"rm exe.ll  || true")
-        os_system_synch(f"rm exe-linked.ll  || true")
-        os_system_synch(f"rm exe.o  || true")
-        LEAN_DISABLE_SIMPCASE_PATH="/home/bollu/work/lean4/build/stage1/bin/lean"
-        os_system_synch(f"{LEAN_DISABLE_SIMPCASE_PATH} {fpath} -m exe.mlir")
-        # os_system_synch("hask-opt exe.mlir --convert-scf-to-std --lean-lower-rgn  --rgn-cse --cse --convert-rgn-to-std --convert-std-to-llvm --ptr-lower | \
-        #        mlir-translate --mlir-to-llvmir -o exe.ll")
-        os_system_synch("hask-opt exe.mlir --convert-scf-to-std --lean-lower-rgn --cse --convert-rgn-to-std --convert-std-to-llvm --ptr-lower | \
-                mlir-translate --mlir-to-llvmir -o exe.ll")
+        # NO simpcase (DISABLED): 850fd84e43407ed647837652b6442e143199abb0
+        # os_system_synch(f"rm exe-mlir.out || true")
+        # os_system_synch(f"rm exe.ll  || true")
+        # os_system_synch(f"rm exe-linked.ll  || true")
+        # os_system_synch(f"rm exe.o  || true")
+        # os_system_synch(f"{LEAN_PATH} -Dcompiler.caseSimpl=false {fpath} -m exe.mlir")
+        # # os_system_synch("hask-opt exe.mlir --convert-scf-to-std --lean-lower-rgn  --rgn-cse --cse --convert-rgn-to-std --convert-std-to-llvm --ptr-lower | \
+        # #        mlir-translate --mlir-to-llvmir -o exe.ll")
+        # os_system_synch("hask-opt exe.mlir --convert-scf-to-std --lean-lower-rgn --cse --convert-rgn-to-std --convert-std-to-llvm --ptr-lower | \
+        #         mlir-translate --mlir-to-llvmir -o exe.ll")
 
-        os_system_synch("llvm-link " + 
-                  "exe.ll " + 
-                  "/home/bollu/work/lz/lean-linking-incantations/lib-includes/library.ll " + 
-                  "/home/bollu/work/lz/lean-linking-incantations/lib-runtime/runtime.ll " +
-                  "| opt -passes=bitcast-call-converter  | opt --always-inline -O3 -S -o exe-linked.ll")
-        os_system_synch("sed -i s/musttail/tail/g exe-linked.ll")
-        os_system_synch("opt -O3 exe-linked.ll -o exe-linked-o3.ll")
-        os_system_synch("mv exe-linked-o3.ll exe-linked.ll")
-        print("@@@ HACK: converting muttail to tail because of llc miscompile@@@")
-        os_system_synch("sed -i s/musttail/tail/g exe-linked.ll")
-        os_system_synch("llc -O3 -march=x86-64 -filetype=obj exe-linked.ll -o exe.o")
-        os_system_synch(f"c++ -O3 -D LEAN_MULTI_THREAD -I/home/bollu/work/lean4/build/stage1/include \
-            exe.o \
-            /home/bollu/work/lz/lean-linking-incantations/lean-shell.o \
-            -no-pie -Wl,--start-group -lleancpp -lInit -lStd -lLean -Wl,--end-group \
-            -L/home/bollu/work/lean4/build/stage1/lib/lean -lgmp -ldl -pthread \
-            -Wno-unused-command-line-argument -o exe-mlir.out")
-        datum["ours-out"] = []
-        datum["ours-perf"] = []
-        for _ in range(ARGS.nruns):
-           out, perf = sh("perf stat ./exe-mlir.out")
-           datum["ours-out"].append(out)
-           datum["ours-perf"].append(perf)
+        # os_system_synch("llvm-link " + 
+        #           "exe.ll " + 
+        #           "/home/bollu/work/lz/lean-linking-incantations/lib-includes/library.ll " + 
+        #           "/home/bollu/work/lz/lean-linking-incantations/lib-runtime/runtime.ll " +
+        #           "| opt -passes=bitcast-call-converter  | opt --always-inline -O3 -S -o exe-linked.ll")
+        # # os_system_synch("sed -i s/musttail/tail/g exe-linked.ll")
+        # # os_system_synch("opt -O3 exe-linked.ll -o exe-linked-o3.ll")
+        # # os_system_synch("mv exe-linked-o3.ll exe-linked.ll")
+        # print("@@@ HACK: converting muttail to tail because of llc miscompile@@@")
+        # os_system_synch("sed -i s/musttail/tail/g exe-linked.ll")
+        # os_system_synch("llc -O2 -march=x86-64 -filetype=obj exe-linked.ll -o exe.o")
+        # os_system_synch(f"c++ -O3 -D LEAN_MULTI_THREAD -I/home/bollu/work/lean4/build/stage1/include \
+        #     exe.o \
+        #     /home/bollu/work/lz/lean-linking-incantations/lean-shell.o \
+        #     -no-pie -Wl,--start-group -lleancpp -lInit -lStd -lLean -Wl,--end-group \
+        #     -L/home/bollu/work/lean4/build/stage1/lib/lean -lgmp -ldl -pthread \
+        #     -Wno-unused-command-line-argument -o exe-mlir.out")
+        # datum["ours-out"] = []
+        # datum["ours-perf"] = []
+        # for _ in range(ARGS.nruns):
+        #    out, perf = sh("perf stat ./exe-mlir.out")
+        #    datum["ours-out"].append(out)
+        #    datum["ours-perf"].append(perf)
 
         # disabled simpcase and no MLIR.rgn optimization either: 55a63f500b23b8c0c180e43108c5f844839a693f
-        os_system_synch(f"rm exe-mlir.out || true")
-        os_system_synch(f"rm exe.ll  || true")
-        os_system_synch(f"rm exe-linked.ll  || true")
-        os_system_synch(f"rm exe.o  || true")
-        LEAN_DISABLE_SIMPCASE_PATH="/home/bollu/work/lean4/build/stage1/bin/lean"
-        os_system_synch(f"{LEAN_DISABLE_SIMPCASE_PATH} {fpath} -m exe.mlir")
-        # os_system_synch("hask-opt exe.mlir --convert-scf-to-std --lean-lower-rgn  --rgn-cse --cse --convert-rgn-to-std --convert-std-to-llvm --ptr-lower | \
-        #        mlir-translate --mlir-to-llvmir -o exe.ll")
-        os_system_synch("hask-opt exe.mlir --convert-scf-to-std --lean-lower-rgn --convert-rgn-to-std --convert-std-to-llvm --ptr-lower | \
-                mlir-translate --mlir-to-llvmir -o exe.ll")
+        # os_system_synch(f"rm exe-mlir.out || true")
+        # os_system_synch(f"rm exe.ll  || true")
+        # os_system_synch(f"rm exe-linked.ll  || true")
+        # os_system_synch(f"rm exe.o  || true")
+        # LEAN_DISABLE_SIMPCASE_PATH="/home/bollu/work/lean4/build/stage1/bin/lean"
+        # os_system_synch(f"{LEAN_DISABLE_SIMPCASE_PATH} {fpath} -m exe.mlir")
+        # # os_system_synch("hask-opt exe.mlir --convert-scf-to-std --lean-lower-rgn  --rgn-cse --cse --convert-rgn-to-std --convert-std-to-llvm --ptr-lower | \
+        # #        mlir-translate --mlir-to-llvmir -o exe.ll")
+        # os_system_synch("hask-opt exe.mlir --convert-scf-to-std --lean-lower-rgn --convert-rgn-to-std --convert-std-to-llvm --ptr-lower | \
+        #         mlir-translate --mlir-to-llvmir -o exe.ll")
 
-        os_system_synch("llvm-link " + 
-                  "exe.ll " + 
-                  "/home/bollu/work/lz/lean-linking-incantations/lib-includes/library.ll " + 
-                  "/home/bollu/work/lz/lean-linking-incantations/lib-runtime/runtime.ll " +
-                  "| opt -passes=bitcast-call-converter  | opt --always-inline -O3 -S -o exe-linked.ll")
-        os_system_synch("sed -i s/musttail/tail/g exe-linked.ll")
-        os_system_synch("opt -O3 exe-linked.ll -o exe-linked-o3.ll")
-        os_system_synch("mv exe-linked-o3.ll exe-linked.ll")
-        print("@@@ HACK: converting muttail to tail because of llc miscompile@@@")
-        os_system_synch("sed -i s/musttail/tail/g exe-linked.ll")
-        os_system_synch("llc -O3 -march=x86-64 -filetype=obj exe-linked.ll -o exe.o")
-        os_system_synch(f"c++ -O3 -D LEAN_MULTI_THREAD -I/home/bollu/work/lean4/build/stage1/include \
-            exe.o \
-            /home/bollu/work/lz/lean-linking-incantations/lean-shell.o \
-            -no-pie -Wl,--start-group -lleancpp -lInit -lStd -lLean -Wl,--end-group \
-            -L/home/bollu/work/lean4/build/stage1/lib/lean -lgmp -ldl -pthread \
-            -Wno-unused-command-line-argument -o exe-mlir.out")
-        datum["none-out"] = []
-        datum["none-perf"] = []
-        for _ in range(ARGS.nruns):
-           out, perf = sh("perf stat ./exe-mlir.out")
-           datum["none-out"].append(out)
-           datum["none-perf"].append(perf)
-
+        # os_system_synch("llvm-link " + 
+        #           "exe.ll " + 
+        #           "/home/bollu/work/lz/lean-linking-incantations/lib-includes/library.ll " + 
+        #           "/home/bollu/work/lz/lean-linking-incantations/lib-runtime/runtime.ll " +
+        #           "| opt -passes=bitcast-call-converter  | opt --always-inline -O3 -S -o exe-linked.ll")
+        # os_system_synch("sed -i s/musttail/tail/g exe-linked.ll")
+        # os_system_synch("opt -O3 exe-linked.ll -o exe-linked-o3.ll")
+        # os_system_synch("mv exe-linked-o3.ll exe-linked.ll")
+        # print("@@@ HACK: converting muttail to tail because of llc miscompile@@@")
+        # os_system_synch("sed -i s/musttail/tail/g exe-linked.ll")
+        # os_system_synch("llc -O3 -march=x86-64 -filetype=obj exe-linked.ll -o exe.o")
+        # os_system_synch(f"c++ -O3 -D LEAN_MULTI_THREAD -I/home/bollu/work/lean4/build/stage1/include \
+        #     exe.o \
+        #     /home/bollu/work/lz/lean-linking-incantations/lean-shell.o \
+        #     -no-pie -Wl,--start-group -lleancpp -lInit -lStd -lLean -Wl,--end-group \
+        #     -L/home/bollu/work/lean4/build/stage1/lib/lean -lgmp -ldl -pthread \
+        #     -Wno-unused-command-line-argument -o exe-mlir.out")
+        # datum["none-out"] = []
+        # datum["none-perf"] = []
+        # for _ in range(ARGS.nruns):
+        #    out, perf = sh("perf stat ./exe-mlir.out")
+        #    datum["none-out"].append(out)
+        #    datum["none-perf"].append(perf)
         ds.append(datum)
     with open(ARGS.out, "w") as f:
         json.dump(ds, f, indent=2)
@@ -220,7 +268,7 @@ def autolabel(ax, rects):
                     xy=(rect.get_x(), height),
                     xytext=(0, 1),  # 1 points vertical offset
                     textcoords="offset points",
-                    fontsize="smaller",
+                    fontsize="x-small",
                     ha='center', va='bottom')
 
 def plot():
@@ -234,10 +282,8 @@ def plot():
   matplotlib.rcParams['figure.figsize'] = 5, 2
 
   labels = []
-  baselines = []
-  optims = []
-  speedups = []
-  nones = []
+  ours_over_none = []
+  theirs_over_none = []
   for i, data in enumerate(datapoints):
       # mark = "Y" if data['success'] else 'n'
       log(f"[{i+1:3}/{len(datapoints)}]|{data['file']:80}|")
@@ -251,40 +297,27 @@ def plot():
       theirs = np.median([perf_stat_to_time(data["file"], t) for t in data["theirs-perf"] ])
       ours = np.median([perf_stat_to_time(data["file"], t) for t in data["ours-perf"] ])
       none = np.median([perf_stat_to_time(data["file"], t) for t in data["none-perf"] ])
-      speedup = float("%4.2f" % (theirs/ours))
-      speedups.append(speedup)
+      ours_over_none.append(float("%4.2f" % (none/ours)))
+      theirs_over_none.append(float("%4.2f" % (none/theirs)))
 
-      none_speedup = float("%4.2f" % (theirs/none))
-      nones.append(none_speedup)
-      # baselines.append(baseline/baseline)
-      optims.append(speedup)
+  # avg_speedup = mstats.gmean(speedups)
+  # print("average speedup: %4.2f" % (avg_speedup, ))
+  # optims.append(float("%4.2f" % (avg_speedup)))
 
-  avg_speedup = mstats.gmean(speedups)
-  print("average speedup: %4.2f" % (avg_speedup, ))
-  baselines.append(1)
-  optims.append(float("%4.2f" % (avg_speedup)))
+  # avg_speedup = mstats.gmean(nones)
+  # nones.append(float("%4.2f" % (avg_speedup)))
 
-  avg_speedup = mstats.gmean(nones)
-  nones.append(float("%4.2f" % (avg_speedup)))
-
-  labels.append("geomean")
-
-  print(labels)
-  print(baselines)
-  print(optims)
-
-
-
+  # labels.append("geomean")
   x = np.arange(len(labels))  # the label locations
   width = 0.6  # the width of the bars
 
   fig, ax = plt.subplots()
   # rects1 = ax.bar(x - width/3, baselines, width/3, label='λpure simplifier', color = dark_blue)
-  rects2 = ax.bar(x - width/3, optims, width/3, label='rgn simplifier', color = dark_red)
-  rects3 = ax.bar(x, nones, width/3, label='none', color = dark_gray)
+  rects2 = ax.bar(x - width/3, theirs_over_none, width/3, label='λpure over none', color = dark_red)
+  rects3 = ax.bar(x, ours_over_none, width/3, label='rgn over none', color = dark_gray)
   # rects1[-1].set_color(light_blue) # color geomean separately.
-  rects2[-1].set_color(light_red) # color geomean separately.
-  rects3[-1].set_color(light_gray) # color geomean separately.
+  # rects2[-1].set_color(light_red) # color geomean separately.
+  # rects3[-1].set_color(light_gray) # color geomean separately.
 
 
 
@@ -294,7 +327,7 @@ def plot():
   # Y-Axis Label
   #
   # Use a horizontal label for improved readability.  
-  ax.set_ylabel('Speedup over λpure simplifier', rotation='horizontal', position = (1, 1.1),
+  ax.set_ylabel('Speedup over no simplifier', rotation='horizontal', position = (1, 1.1),
       horizontalalignment='left', verticalalignment='bottom', fontsize=7)
 
   # Add some text for labels, title and custom x-axis tick labels, etc.

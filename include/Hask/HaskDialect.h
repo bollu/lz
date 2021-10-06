@@ -282,4 +282,7 @@ void registerFuseRefcountPass();
 } // namespace standalone
 } // namespace mlir
 
+void registerOptimizeLeanPass();
+void registerLeanPipelinePass();
+
 #endif // STANDALONE_STANDALONEDIALECT_H

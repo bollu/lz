@@ -210,8 +210,8 @@ def plot():
 
   fig, ax = plt.subplots()
   # rects1 = ax.bar(x - width/2, baselines, width, label='Baseline', color = light_blue)
-  rects2 = ax.bar(x + width/2, optims, width, label='Optimised', color = dark_blue)
-  rects2[-1].set_color(light_blue) # color geomean separately.
+  rects2 = ax.bar(x + width/2, optims, width, label='Optimised', color = light_blue)
+  rects2[-1].set_color(dark_blue) # color geomean separately.
 
 
 

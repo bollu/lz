@@ -23,6 +23,9 @@
 - [`fast-math` haskell library has some RULES limitations](https://github.com/liyang/fast-math/)
 - [Another example where fusion is bad for `Text`](https://github.com/haskell/text/pull/348)
 
+# LEAN wishlist
+- mlir.lean:246:17: error: unknown constant 'IO.readTextFile': Print possible solutions?
+
 # Thoughts on writing a new LEAN backend
 - Why only `closureMaxArgs` for `app` and not `pap`?
 - Also, I should generate `llvm.switch` for efficiency.
