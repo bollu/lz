@@ -58,6 +58,7 @@ def log(*ARGS, **kwargs):
     print(*ARGS, file=sys.stderr, **kwargs)
 
 def os_system_synch(path):
+    print(f"\t$ {path}")
     return subprocess.check_output(path, shell=True)
 
 def sh(path):
