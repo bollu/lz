@@ -25,20 +25,20 @@ PARSER.add_argument('--out', metavar='o', type=str,
                     help='path to dump output', default=os.path.basename(__file__).replace(".py", ".json"))
 PARSER.add_argument('--nruns', type=int,
                     # help='number of runs to average', default=10)
-                    help='number of runs to average', default=1)
+                    help='number of runs to average', default=10)
 ARGS = PARSER.parse_args()
 
 G_BASELINE = "../baseline-lean.sh"
 G_OURS = "../run-lean.sh"
 G_FPATHS = []
 G_FPATHS.append("binarytrees-int.lean")
-# G_FPATHS.append("binarytrees.lean")
+G_FPATHS.append("binarytrees.lean")
 # G_FPATHS.append("const_fold.lean")
 # G_FPATHS.append("deriv.lean")
-# G_FPATHS.append("filter.lean")
-# G_FPATHS.append("qsort.lean") # miscompile because of jmp!
-# G_FPATHS.append("rbmap_checkpoint.lean")
-# G_FPATHS.append("unionfind.lean")
+G_FPATHS.append("filter.lean")
+G_FPATHS.append("qsort.lean") # miscompile because of jmp!
+G_FPATHS.append("rbmap_checkpoint.lean")
+G_FPATHS.append("unionfind.lean")
 G_NFILES = len(G_FPATHS)
 
 
@@ -68,6 +68,7 @@ def sh(path):
 
 # returns datum
 def compile_and_run_with_option(case_simpl_enabled, rgn_optimization_enabled, fpath, out_index, perf_index):
+    print(f"running f{fpath} case_simpl_enabled={case_simpl_enabled} rgn_optimization_enabled={rgn_optimization_enabled}")
     # simpcase ENABLED: 850fd84e43407ed647837652b6442e143199abb0
     LEAN_PATH="/home/bollu/work/lean4/build/stage1/bin/lean"
     if case_simpl_enabled:
