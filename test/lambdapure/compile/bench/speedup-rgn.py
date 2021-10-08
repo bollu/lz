@@ -31,14 +31,14 @@ ARGS = PARSER.parse_args()
 G_BASELINE = "../baseline-lean.sh"
 G_OURS = "../run-lean.sh"
 G_FPATHS = []
-G_FPATHS.append("binarytrees-int.lean")
-# G_FPATHS.append("binarytrees.lean")
-G_FPATHS.append("const_fold.lean")
-G_FPATHS.append("deriv.lean")
-G_FPATHS.append("filter.lean")
-G_FPATHS.append("qsort.lean") # miscompile because of jmp!
-G_FPATHS.append("rbmap_checkpoint.lean")
-G_FPATHS.append("unionfind.lean")
+# G_FPATHS.append("binarytrees-int.lean")
+G_FPATHS.append("binarytrees.lean")
+# G_FPATHS.append("const_fold.lean")
+# G_FPATHS.append("deriv.lean")
+# G_FPATHS.append("filter.lean")
+# G_FPATHS.append("qsort.lean") # miscompile because of jmp!
+# G_FPATHS.append("rbmap_checkpoint.lean")
+# G_FPATHS.append("unionfind.lean")
 G_NFILES = len(G_FPATHS)
 
 
@@ -59,6 +59,7 @@ def log(*ARGS, **kwargs):
 
 def os_system_synch(path):
     print(f"\t$ {path}")
+    # input("continue>")
     return subprocess.check_output(path, shell=True)
 
 def sh(path):
@@ -90,14 +91,14 @@ def compile_and_run_with_option(case_simpl_enabled, rgn_optimization_enabled, fp
               "exe.ll " + 
               "/home/bollu/work/lz/lean-linking-incantations/lib-includes/library.ll " + 
               "/home/bollu/work/lz/lean-linking-incantations/lib-runtime/runtime.ll " +
-              "| opt -passes=bitcast-call-converter  | opt --always-inline -O1 -S -o exe-linked.ll")
+              "| opt -passes=bitcast-call-converter  | opt --always-inline -O0 -S -o exe-linked.ll")
     os_system_synch("sed -i s/musttail/tail/g exe-linked.ll")
-    os_system_synch("opt -O1 exe-linked.ll -o exe-linked-o3.ll")
+    os_system_synch("opt -O0 exe-linked.ll -o exe-linked-o3.ll")
     os_system_synch("mv exe-linked-o3.ll exe-linked.ll")
     print("@@@ HACK: converting muttail to tail because of llc miscompile@@@")
     os_system_synch("sed -i s/musttail/tail/g exe-linked.ll")
-    os_system_synch("llc -O1 -march=x86-64 -filetype=obj exe-linked.ll -o exe.o")
-    os_system_synch(f"c++ -O1 -D LEAN_MULTI_THREAD -I/home/bollu/work/lean4/build/stage1/include \
+    os_system_synch("llc -O0 -march=x86-64 -filetype=obj exe-linked.ll -o exe.o")
+    os_system_synch(f"c++ -O0 -D LEAN_MULTI_THREAD -I/home/bollu/work/lean4/build/stage1/include \
         exe.o \
         /home/bollu/work/lz/lean-linking-incantations/lean-shell.o \
         -no-pie -Wl,--start-group -lleancpp -lInit -lStd -lLean -Wl,--end-group \
