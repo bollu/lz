@@ -56,5 +56,4 @@ add_subdirectory(hask-opt)
 add_subdirectory(frontend)
 add_subdirectory(lambdapure-translate)
 
-
-
+# TODO: use ccache

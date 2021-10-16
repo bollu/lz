@@ -63,6 +63,17 @@
 
 # Log:  [newest] to [oldest]
 
+# Oct 10
+
+- Configuring `elan` for `lean` development:
+
+```
+/home/bollu/work/lean4-contrib/tests/bench$ elan toolchain link lean-contrib /home/bollu/work/lean4-contrib/build/release/stage2/
+/home/bollu/work/lean4-contrib/tests/bench$ elan override set lean-contrib
+info: override toolchain for '/home/bollu/work/lean4-contrib/tests/bench' set to 'lean-contrib'
+/home/bollu/work/lean4-contrib/tests/bench$ 
+```
+
 # Aug 08
 
 - Bump allocator should obey stack discipline!

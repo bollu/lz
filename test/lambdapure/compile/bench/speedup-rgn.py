@@ -31,11 +31,11 @@ ARGS = PARSER.parse_args()
 G_BASELINE = "../baseline-lean.sh"
 G_OURS = "../run-lean.sh"
 G_FPATHS = []
-# G_FPATHS.append("binarytrees-int.lean")
-G_FPATHS.append("binarytrees.lean")
+G_FPATHS.append(("binarytrees-int.lean", 20))
+# G_FPATHS.append(("binarytrees.lean", 20))
 # G_FPATHS.append("const_fold.lean")
 # G_FPATHS.append("deriv.lean")
-# G_FPATHS.append("filter.lean")
+# G_FPATHS.append(("filter.lean", 50000))
 # G_FPATHS.append("qsort.lean") # miscompile because of jmp!
 # G_FPATHS.append("rbmap_checkpoint.lean")
 # G_FPATHS.append("unionfind.lean")
@@ -69,10 +69,10 @@ def sh(path):
     return (output.decode(), err.decode())
 
 # returns datum
-def compile_and_run_with_option(case_simpl_enabled, rgn_optimization_enabled, fpath, out_index, perf_index):
+def compile_and_run_with_option(case_simpl_enabled, rgn_optimization_enabled, fpath, run_args, out_index, perf_index):
     print(f"running f{fpath} case_simpl_enabled={case_simpl_enabled} rgn_optimization_enabled={rgn_optimization_enabled}")
     # simpcase ENABLED: 850fd84e43407ed647837652b6442e143199abb0
-    LEAN_PATH="/home/bollu/work/lean4/build/stage1/bin/lean"
+    LEAN_PATH="/home/bollu/work/lean4/build/release/stage1/bin/lean"
     if case_simpl_enabled:
         lean_opts = "-Dcompiler.caseSimpl=true"
     else:
@@ -98,17 +98,20 @@ def compile_and_run_with_option(case_simpl_enabled, rgn_optimization_enabled, fp
     print("@@@ HACK: converting muttail to tail because of llc miscompile@@@")
     os_system_synch("sed -i s/musttail/tail/g exe-linked.ll")
     os_system_synch("llc -O0 -march=x86-64 -filetype=obj exe-linked.ll -o exe.o")
+    os_system_synch("rm exe-ref.out")
     os_system_synch(f"c++ -O0 -D LEAN_MULTI_THREAD -I/home/bollu/work/lean4/build/stage1/include \
         exe.o \
         /home/bollu/work/lz/lean-linking-incantations/lean-shell.o \
         -no-pie -Wl,--start-group -lleancpp -lInit -lStd -lLean -Wl,--end-group \
-        -L/home/bollu/work/lean4/build/stage1/lib/lean -lgmp -ldl -pthread \
+        -L/home/bollu/work/lean4/build/release/stage1/lib/lean -lgmp -ldl -pthread \
         -Wno-unused-command-line-argument -o exe-ref.out")
-    datum = {"file": str(fpath) }
+
+    datum = {}
+    datum["file"] = fpath
     datum[out_index] = []
     datum[perf_index] = []
     for _ in range(ARGS.nruns):
-      out, perf = sh("perf stat ./exe-ref.out")
+      out, perf = sh(f"perf stat ./exe-ref.out {run_args}")
       datum[out_index].append(out)
       datum[perf_index].append(perf)
     return datum
@@ -117,7 +120,7 @@ def compile_and_run_with_option(case_simpl_enabled, rgn_optimization_enabled, fp
 
 def run_data():
     ds = []
-    for (i, fpath) in enumerate(G_FPATHS):
+    for (i, (fpath, problemsize)) in enumerate(G_FPATHS):
         # simpcase ENABLED: 850fd84e43407ed647837652b6442e143199abb0
         # LEAN_PATH="/home/bollu/work/lean4/build/stage1/bin/lean"
         # datum = {"file": str(fpath) }
@@ -148,9 +151,22 @@ def run_data():
         #   datum["theirs-out"].append(out)
         #   datum["theirs-perf"].append(perf)
         datum = {}
-        datum.update(compile_and_run_with_option(case_simpl_enabled=True, rgn_optimization_enabled=False, fpath=fpath, out_index="theirs-out", perf_index="theirs-perf"))
-        datum.update(compile_and_run_with_option(case_simpl_enabled=False, rgn_optimization_enabled=True, fpath=fpath, out_index="ours-out", perf_index="ours-perf"))
-        datum.update(compile_and_run_with_option(case_simpl_enabled=False, rgn_optimization_enabled=False, fpath=fpath, out_index="none-out", perf_index="none-perf"))
+        datum.update(compile_and_run_with_option(case_simpl_enabled=True, 
+                rgn_optimization_enabled=False, 
+                fpath=fpath, 
+                run_args=str(problemsize),
+                out_index="theirs-out", 
+                perf_index="theirs-perf"))
+        datum.update(compile_and_run_with_option(case_simpl_enabled=False, 
+            rgn_optimization_enabled=True, 
+            fpath=fpath, 
+            run_args=str(problemsize),
+            out_index="ours-out", perf_index="ours-perf"))
+        datum.update(compile_and_run_with_option(case_simpl_enabled=False, 
+            rgn_optimization_enabled=False,
+            fpath=fpath, 
+            run_args=str(problemsize),
+            out_index="none-out", perf_index="none-perf"))
 
         # disabled simpcase + MLIR.rgn optimization passes: 55a63f500b23b8c0c180e43108c5f844839a693f
         # NO simpcase (DISABLED): 850fd84e43407ed647837652b6442e143199abb0
