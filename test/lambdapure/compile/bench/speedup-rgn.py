@@ -32,13 +32,14 @@ G_BASELINE = "../baseline-lean.sh"
 G_OURS = "../run-lean.sh"
 G_FPATHS = []
 G_FPATHS.append(("binarytrees-int.lean", 20))
-# G_FPATHS.append(("binarytrees.lean", 20))
-# G_FPATHS.append("const_fold.lean")
-# G_FPATHS.append("deriv.lean")
-# G_FPATHS.append(("filter.lean", 50000))
-# G_FPATHS.append("qsort.lean") # miscompile because of jmp!
-# G_FPATHS.append("rbmap_checkpoint.lean")
-# G_FPATHS.append("unionfind.lean")
+G_FPATHS.append(("binarytrees.lean", 20))
+# G_FPATHS.append(("const_fold.lean", 10))
+G_FPATHS.append(("const_fold.lean", 9)) # 10 miscompiles!
+G_FPATHS.append(("deriv.lean", 4))
+G_FPATHS.append(("filter.lean", 50000))
+# G_FPATHS.append(("qsort.lean", 100)) # miscompile because of jmp!
+G_FPATHS.append(("rbmap_checkpoint.lean", 400000))
+G_FPATHS.append(("unionfind.lean", 100000))
 G_NFILES = len(G_FPATHS)
 
 
@@ -111,6 +112,8 @@ def compile_and_run_with_option(case_simpl_enabled, rgn_optimization_enabled, fp
     datum[out_index] = []
     datum[perf_index] = []
     for _ in range(ARGS.nruns):
+      print(f"\t$ # {fpath}")
+      os_system_synch(f"./exe-ref.out {run_args}") # run once for correctness / check that stuff doesn't crash.
       out, perf = sh(f"perf stat ./exe-ref.out {run_args}")
       datum[out_index].append(out)
       datum[perf_index].append(perf)
@@ -282,13 +285,14 @@ def perf_stat_to_time(file, o):
 def autolabel(ax, rects):
     """Attach a text label above each bar in *rects*, displaying its height."""
     for rect in rects:
+        x0, y0 = rect.xy # bottom left
         height = rect.get_height()
         ax.annotate('{}'.format(height),
-                    xy=(rect.get_x(), height),
-                    xytext=(0, 1),  # 1 points vertical offset
+                    xy=(rect.get_x(), y0 + height),
+                    xytext=(0, 5),  # 1 points vertical offset
                     textcoords="offset points",
-                    fontsize="x-small",
-                    ha='center', va='bottom')
+                    fontsize="xx-small",
+                    ha='left', va='top')
 
 def plot():
   with open(ARGS.out, "r") as f:
@@ -301,8 +305,11 @@ def plot():
   matplotlib.rcParams['figure.figsize'] = 5, 2
 
   labels = []
-  ours_over_none = []
-  theirs_over_none = []
+  ours_time = []
+  theirs_time = []
+  none_time = []
+  # ours_over_none = []
+  # theirs_over_none = []
   for i, data in enumerate(datapoints):
       # mark = "Y" if data['success'] else 'n'
       log(f"[{i+1:3}/{len(datapoints)}]|{data['file']:80}|")
@@ -316,8 +323,16 @@ def plot():
       theirs = np.median([perf_stat_to_time(data["file"], t) for t in data["theirs-perf"] ])
       ours = np.median([perf_stat_to_time(data["file"], t) for t in data["ours-perf"] ])
       none = np.median([perf_stat_to_time(data["file"], t) for t in data["none-perf"] ])
-      ours_over_none.append(float("%4.2f" % (none/ours)))
-      theirs_over_none.append(float("%4.2f" % (none/theirs)))
+      ours_time.append(round(none / ours, 2))
+      theirs_time.append(round(none / theirs, 2))
+      # none_time.append(none/none)
+      # ours: x sec
+      # none: y sec
+      # our speedup is y/x.
+      # if we take 2y time, then our speedup is y/2y = 1/2.
+      # if we take y/2 time, then our speedup is y/(y/2) = y*2/y = 2
+      # ours_over_none.append(float("%4.2f" % (none/ours)))
+      # theirs_over_none.append(float("%4.2f" % (none/theirs)))
 
   # avg_speedup = mstats.gmean(speedups)
   # print("average speedup: %4.2f" % (avg_speedup, ))
@@ -331,9 +346,9 @@ def plot():
   width = 0.6  # the width of the bars
 
   fig, ax = plt.subplots()
-  # rects1 = ax.bar(x - width/3, baselines, width/3, label='λpure simplifier', color = dark_blue)
-  rects2 = ax.bar(x - width/3, theirs_over_none, width/3, label='λpure over none', color = dark_red)
-  rects3 = ax.bar(x, ours_over_none, width/3, label='rgn over none', color = dark_gray)
+  rects1 = ax.bar(x - width/3, theirs_time, width/3, label='λpure simplifier', color = dark_blue)
+  rects2 = ax.bar(x - 2*width/3, ours_time, width/3, label='rgn simplifier', color = dark_red)
+  # rects3 = ax.bar(x, none_time, width/3, label='no simplifier', color = dark_gray)
   # rects1[-1].set_color(light_blue) # color geomean separately.
   # rects2[-1].set_color(light_red) # color geomean separately.
   # rects3[-1].set_color(light_gray) # color geomean separately.
@@ -346,7 +361,7 @@ def plot():
   # Y-Axis Label
   #
   # Use a horizontal label for improved readability.  
-  ax.set_ylabel('Speedup over no simplifier', rotation='horizontal', position = (1, 1.1),
+  ax.set_ylabel('Runtimes', rotation='horizontal', position = (1, 1.1),
       horizontalalignment='left', verticalalignment='bottom', fontsize=7)
 
   # Add some text for labels, title and custom x-axis tick labels, etc.
@@ -361,7 +376,7 @@ def plot():
   # the figures in the graph.
   ax.spines['right'].set_visible(False)
   ax.spines['top'].set_visible(False)
-  # autolabel(ax, rects1)
+  autolabel(ax, rects1)
   autolabel(ax, rects2)
 
   fig.tight_layout()

@@ -15,7 +15,7 @@
 -- CHECK-INTERPRET: 4 count: 420
 
 
-set_option trace.compiler.ir.init true
+-- set_option trace.compiler.ir.init true
 
 
 /- Benchmark for new code generator -/
@@ -124,8 +124,8 @@ open Expr
 -- | _ => pure 1
 
 
-unsafe def main : IO Unit := do
-  let n := 4
+unsafe def main (xs: List String): IO Unit := do
+  let n := (xs.get! 0).toNat!
   let x := Var "x";
   let f := pow x x;
   _ ← nest deriv n f;
