@@ -33,11 +33,9 @@ G_OURS = "../run-lean.sh"
 G_FPATHS = []
 G_FPATHS.append(("binarytrees-int.lean", 20))
 G_FPATHS.append(("binarytrees.lean", 20))
-# G_FPATHS.append(("const_fold.lean", 10))
 G_FPATHS.append(("const_fold.lean", 9)) # 10 miscompiles!
 G_FPATHS.append(("deriv.lean", 4))
 G_FPATHS.append(("filter.lean", 50000))
-# G_FPATHS.append(("qsort.lean", 100)) # miscompile because of jmp!
 G_FPATHS.append(("rbmap_checkpoint.lean", 400000))
 G_FPATHS.append(("unionfind.lean", 100000))
 G_NFILES = len(G_FPATHS)
@@ -170,6 +168,10 @@ def run_data():
             fpath=fpath, 
             run_args=str(problemsize),
             out_index="none-out", perf_index="none-perf"))
+        ds.append(datum)
+        
+        assert datum["ours-out"] == datum["theirs-out"]
+        assert datum["none-out"] == datum["theirs-out"]
 
         # disabled simpcase + MLIR.rgn optimization passes: 55a63f500b23b8c0c180e43108c5f844839a693f
         # NO simpcase (DISABLED): 850fd84e43407ed647837652b6442e143199abb0
@@ -242,7 +244,6 @@ def run_data():
         #    out, perf = sh("perf stat ./exe-mlir.out")
         #    datum["none-out"].append(out)
         #    datum["none-perf"].append(perf)
-        ds.append(datum)
     with open(ARGS.out, "w") as f:
         json.dump(ds, f, indent=2)
     return ds
