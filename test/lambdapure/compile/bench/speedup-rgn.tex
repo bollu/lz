@@ -19,7 +19,7 @@ xticklabels={binarytrees-int,binarytrees,const\_fold,deriv,filter,rbmap\_checkpo
 y grid style={white!69.0196078431373!black},
 ylabel style={rotate=-90.0},
 ylabel={Runtimes},
-ymin=0, ymax=1.1865,
+ymin=0, ymax=1.197,
 ytick style={color=black}
 ]
 \draw[draw=none,fill=color0] (axis cs:-0.3,0) rectangle (axis cs:-0.1,1);
@@ -27,21 +27,21 @@ ytick style={color=black}
 \addlegendentry{λpure simplifier}
 
 \draw[draw=none,fill=color0] (axis cs:0.7,0) rectangle (axis cs:0.9,1);
-\draw[draw=none,fill=color0] (axis cs:1.7,0) rectangle (axis cs:1.9,1.01);
-\draw[draw=none,fill=color0] (axis cs:2.7,0) rectangle (axis cs:2.9,1);
-\draw[draw=none,fill=color0] (axis cs:3.7,0) rectangle (axis cs:3.9,1.03);
-\draw[draw=none,fill=color0] (axis cs:4.7,0) rectangle (axis cs:4.9,1.13);
+\draw[draw=none,fill=color0] (axis cs:1.7,0) rectangle (axis cs:1.9,0.88);
+\draw[draw=none,fill=color0] (axis cs:2.7,0) rectangle (axis cs:2.9,0.77);
+\draw[draw=none,fill=color0] (axis cs:3.7,0) rectangle (axis cs:3.9,1.07);
+\draw[draw=none,fill=color0] (axis cs:4.7,0) rectangle (axis cs:4.9,1.14);
 \draw[draw=none,fill=color0] (axis cs:5.7,0) rectangle (axis cs:5.9,0.86);
 \draw[draw=none,fill=color1] (axis cs:-0.5,0) rectangle (axis cs:-0.3,1);
 \addlegendimage{ybar,ybar legend,draw=none,fill=color1}
 \addlegendentry{rgn simplifier}
 
 \draw[draw=none,fill=color1] (axis cs:0.5,0) rectangle (axis cs:0.7,1);
-\draw[draw=none,fill=color1] (axis cs:1.5,0) rectangle (axis cs:1.7,1);
-\draw[draw=none,fill=color1] (axis cs:2.5,0) rectangle (axis cs:2.7,1);
-\draw[draw=none,fill=color1] (axis cs:3.5,0) rectangle (axis cs:3.7,1.01);
-\draw[draw=none,fill=color1] (axis cs:4.5,0) rectangle (axis cs:4.7,0.98);
-\draw[draw=none,fill=color1] (axis cs:5.5,0) rectangle (axis cs:5.7,0.99);
+\draw[draw=none,fill=color1] (axis cs:1.5,0) rectangle (axis cs:1.7,0.96);
+\draw[draw=none,fill=color1] (axis cs:2.5,0) rectangle (axis cs:2.7,0.93);
+\draw[draw=none,fill=color1] (axis cs:3.5,0) rectangle (axis cs:3.7,0.89);
+\draw[draw=none,fill=color1] (axis cs:4.5,0) rectangle (axis cs:4.7,1);
+\draw[draw=none,fill=color1] (axis cs:5.5,0) rectangle (axis cs:5.7,1);
 \draw (axis cs:-0.3,1) ++(0pt,5pt) node[
   scale=0.2895,
   anchor=north west,
@@ -54,30 +54,30 @@ ytick style={color=black}
   text=black,
   rotate=0.0
 ]{1.0};
-\draw (axis cs:1.7,1.01) ++(0pt,5pt) node[
+\draw (axis cs:1.7,0.88) ++(0pt,5pt) node[
   scale=0.2895,
   anchor=north west,
   text=black,
   rotate=0.0
-]{1.01};
-\draw (axis cs:2.7,1) ++(0pt,5pt) node[
+]{0.88};
+\draw (axis cs:2.7,0.77) ++(0pt,5pt) node[
   scale=0.2895,
   anchor=north west,
   text=black,
   rotate=0.0
-]{1.0};
-\draw (axis cs:3.7,1.03) ++(0pt,5pt) node[
+]{0.77};
+\draw (axis cs:3.7,1.07) ++(0pt,5pt) node[
   scale=0.2895,
   anchor=north west,
   text=black,
   rotate=0.0
-]{1.03};
-\draw (axis cs:4.7,1.13) ++(0pt,5pt) node[
+]{1.07};
+\draw (axis cs:4.7,1.14) ++(0pt,5pt) node[
   scale=0.2895,
   anchor=north west,
   text=black,
   rotate=0.0
-]{1.13};
+]{1.14};
 \draw (axis cs:5.7,0.86) ++(0pt,5pt) node[
   scale=0.2895,
   anchor=north west,
@@ -96,36 +96,36 @@ ytick style={color=black}
   text=black,
   rotate=0.0
 ]{1.0};
-\draw (axis cs:1.5,1) ++(0pt,5pt) node[
+\draw (axis cs:1.5,0.96) ++(0pt,5pt) node[
+  scale=0.2895,
+  anchor=north west,
+  text=black,
+  rotate=0.0
+]{0.96};
+\draw (axis cs:2.5,0.93) ++(0pt,5pt) node[
+  scale=0.2895,
+  anchor=north west,
+  text=black,
+  rotate=0.0
+]{0.93};
+\draw (axis cs:3.5,0.89) ++(0pt,5pt) node[
+  scale=0.2895,
+  anchor=north west,
+  text=black,
+  rotate=0.0
+]{0.89};
+\draw (axis cs:4.5,1) ++(0pt,5pt) node[
   scale=0.2895,
   anchor=north west,
   text=black,
   rotate=0.0
 ]{1.0};
-\draw (axis cs:2.5,1) ++(0pt,5pt) node[
+\draw (axis cs:5.5,1) ++(0pt,5pt) node[
   scale=0.2895,
   anchor=north west,
   text=black,
   rotate=0.0
 ]{1.0};
-\draw (axis cs:3.5,1.01) ++(0pt,5pt) node[
-  scale=0.2895,
-  anchor=north west,
-  text=black,
-  rotate=0.0
-]{1.01};
-\draw (axis cs:4.5,0.98) ++(0pt,5pt) node[
-  scale=0.2895,
-  anchor=north west,
-  text=black,
-  rotate=0.0
-]{0.98};
-\draw (axis cs:5.5,0.99) ++(0pt,5pt) node[
-  scale=0.2895,
-  anchor=north west,
-  text=black,
-  rotate=0.0
-]{0.99};
 \end{axis}
 
 \end{tikzpicture}
