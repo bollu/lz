@@ -60,6 +60,17 @@
 
 # Log:  [newest] to [oldest]
 
+# Aug 10
+
+```
+576 - leancomptest_expr.lean (Failed)
+587 - leancomptest_qsortBadLt.lean (Failed)
+638 - leanbenchtest_qsort.lean (Failed)
+642 - leanplugintest_SnakeLinter.lean (Failed)
+648 - leanpkgtest (Failed)
+```
+
+
 # Aug 08
 
 - Bump allocator should obey stack discipline!

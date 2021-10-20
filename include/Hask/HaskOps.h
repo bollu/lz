@@ -597,10 +597,12 @@ public:
                     mlir::Value v, int count);
 
   bool isCheckRef() {
+    assert(this->getOperation()->hasAttr("checkref"));
     return this->getOperation()->getAttrOfType<BoolAttr>("checkref").getValue();
   }
 
   int getIncCount() {
+    assert(this->getOperation()->hasAttr("value"));
     return this->getOperation()->getAttrOfType<IntegerAttr>("value").getInt();
   }
 };
