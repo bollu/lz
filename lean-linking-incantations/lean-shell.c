@@ -27,6 +27,7 @@ lean_object *initialize_Init(lean_object *); // forward declaration
 lean_object *init_lean_custom_entrypoint_hack(lean_object*);
 lean_object *main_lean_custom_entrypoint_hack(lean_object *argv, lean_object *world);
 void lean_initialize_runtime_module();
+void lean_initialize();
 
 #if defined(WIN32) || defined(_WIN32)
 #include <windows.h>
@@ -38,6 +39,7 @@ int main(int argc, char **argv) {
 #endif
   lean_object *in;
   lean_object *res;
+  lean_initialize();
   lean_initialize_runtime_module();
   // lean_init_task_manager();
 
