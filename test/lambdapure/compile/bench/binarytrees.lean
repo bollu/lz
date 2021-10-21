@@ -6,7 +6,7 @@
 
 -- CHECK: func @main
 
-set_option trace.compiler.ir.init true
+-- set_option trace.compiler.ir.init true
 
 
 inductive Tree
@@ -71,8 +71,8 @@ partial def depth : Nat -> Nat -> List (Nat × Nat × Task UInt32)
 --   pure 0
 -- | _ => pure 1
 
-def main : IO Unit := do
-  let n := 20;
+def main (xs: List String): IO Unit := do
+  let n := (xs.get! 0).toNat!
   let maxN := Nat.max (minN + 2) n;
   let stretchN := maxN + 1;
 

@@ -103,8 +103,8 @@ def myLen : List Tree → Nat → Nat
 -- IO.println (toString (myLen mList 0) ++ " " ++ toString v) *>
 -- pure 0
 
-def main : IO Unit := do
-let n     := 400000;
+def main (xs: List String): IO Unit := do
+let n     := (xs.get! 0).toNat!
 let freq  := 20;
 let freq  := if freq == 0 then 1 else freq;
 let mList := mkMap n freq;

@@ -30,14 +30,14 @@ ARGS = PARSER.parse_args()
 G_BASELINE = "../baseline-lean.sh"
 G_OURS = "../run-lean.sh"
 G_FPATHS = []
-G_FPATHS.append("binarytrees-int.lean")
-G_FPATHS.append("binarytrees.lean")
-G_FPATHS.append("const_fold.lean")
-G_FPATHS.append("deriv.lean")
-G_FPATHS.append("filter.lean")
-G_FPATHS.append("qsort.lean")
-G_FPATHS.append("rbmap_checkpoint.lean")
-G_FPATHS.append("unionfind.lean")
+G_FPATHS.append(("binarytrees-int.lean", 20))
+G_FPATHS.append(("binarytrees.lean", 20))
+# G_FPATHS.append("const_fold.lean")
+# G_FPATHS.append("deriv.lean")
+G_FPATHS.append(("filter.lean", 50000))
+# G_FPATHS.append("qsort.lean")
+# G_FPATHS.append("rbmap_checkpoint.lean")
+# G_FPATHS.append("unionfind.lean")
 G_NFILES = len(G_FPATHS)
 
 
@@ -56,6 +56,7 @@ def log(*ARGS, **kwargs):
     print(*ARGS, file=sys.stderr, **kwargs)
 
 def os_system_synch(path):
+    print(f"\t$ {path}")
     return subprocess.check_output(path, shell=True)
 
 def sh(path):
@@ -67,26 +68,28 @@ def sh(path):
 
 def run_data():
     ds = []
-    for (i, fpath) in enumerate(G_FPATHS):
+    LEAN_PATH="/home/bollu/work/lean4/build/release/stage1/bin/lean"
+    LEANC_PATH="/home/bollu/work/lean4/build/release/stage1/bin/leanc"
+    for (i, (fpath, problem_size)) in enumerate(G_FPATHS):
         datum = {"file": str(fpath) }
-        os_system_synch(f"rm exe-ref.out")
-        os_system_synch(f"lean {fpath} -c exe-ref.c")
-        os_system_synch(f"leanc exe-ref.c -O3 -o exe-ref.out")
+        os_system_synch(f"rm exe-ref.out || true")
+        os_system_synch(f"{LEAN_PATH} {fpath} -c exe-ref.c")
+        os_system_synch(f"{LEANC_PATH} exe-ref.c -O3 -o exe-ref.out")
         # x = run_with_output("perf stat ./exe-ref.out 1>/dev/null")
         # proc = subprocess.Popen("perf stat ./exe-ref.out", shell=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
         datum["theirs-out"] = []
         datum["theirs-perf"] = []
         for _ in range(ARGS.nruns):
-          out, perf = sh("perf stat ./exe-ref.out")
+          out, perf = sh(f"perf stat ./exe-ref.out {problem_size}")
           datum["theirs-out"].append(out)
           datum["theirs-perf"].append(perf)
 
-        os_system_synch(f"rm exe-mlir.out")
-        os_system_synch(f"rm exe.ll")
-        os_system_synch(f"rm exe-linked.ll")
-        os_system_synch(f"rm exe.o")
-        os_system_synch(f"lean {fpath} -m exe.mlir")
-        os_system_synch("hask-opt exe.mlir --convert-scf-to-std --lean-lower-rgn --ptr-lower | \
+        os_system_synch(f"rm exe-mlir.out || true")
+        os_system_synch(f"rm exe.ll || true")
+        os_system_synch(f"rm exe-linked.ll || true")
+        os_system_synch(f"rm exe.o || true")
+        os_system_synch(f"{LEAN_PATH} {fpath} -m exe.mlir")
+        os_system_synch("hask-opt exe.mlir --convert-scf-to-std --lean-lower-rgn --convert-rgn-to-std --convert-std-to-llvm --ptr-lower | \
                 mlir-translate --mlir-to-llvmir -o exe.ll")
         os_system_synch("llvm-link " + 
                   "exe.ll " + 
@@ -99,16 +102,16 @@ def run_data():
         print("@@@ HACK: converting muttail to tail because of llc miscompile@@@")
         os_system_synch("sed -i s/musttail/tail/g exe-linked.ll")
         os_system_synch("llc -O3 -march=x86-64 -filetype=obj exe-linked.ll -o exe.o")
-        os_system_synch(f"c++ -O3 -D LEAN_MULTI_THREAD -I/home/bollu/work/lean4/build/stage1/include \
+        os_system_synch(f"c++ -O3 -D LEAN_MULTI_THREAD -I/home/bollu/work/lean4/build/release/stage1/include \
             exe.o \
             /home/bollu/work/lz/lean-linking-incantations/lean-shell.o \
             -no-pie -Wl,--start-group -lleancpp -lInit -lStd -lLean -Wl,--end-group \
-            -L/home/bollu/work/lean4/build/stage1/lib/lean -lgmp -ldl -pthread \
+            -L/home/bollu/work/lean4/build/release/stage1/lib/lean -lgmp -ldl -pthread \
             -Wno-unused-command-line-argument -o exe-mlir.out")
         datum["ours-out"] = []
         datum["ours-perf"] = []
         for _ in range(ARGS.nruns):
-           out, perf = sh("perf stat ./exe-mlir.out")
+           out, perf = sh(f"perf stat ./exe-mlir.out {problem_size}")
            datum["ours-out"].append(out)
            datum["ours-perf"].append(perf)
 
@@ -210,8 +213,8 @@ def plot():
 
   fig, ax = plt.subplots()
   # rects1 = ax.bar(x - width/2, baselines, width, label='Baseline', color = light_blue)
-  rects2 = ax.bar(x + width/2, optims, width, label='Optimised', color = dark_blue)
-  rects2[-1].set_color(light_blue) # color geomean separately.
+  rects2 = ax.bar(x + width/2, optims, width, label='Optimised', color = light_blue)
+  rects2[-1].set_color(dark_blue) # color geomean separately.
 
 
 

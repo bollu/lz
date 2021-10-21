@@ -1,6 +1,6 @@
 -- RUN: ../validate-lean.sh %s
 
-set_option trace.compiler.ir.init true
+-- set_option trace.compiler.ir.init true
 
 
 inductive Expr
@@ -75,7 +75,6 @@ end Expr
 
 open Expr
 
--- unsafe def main : List String → IO UInt32
 -- | [s] => do
 --   let n := s.toNat!;
 --   let e  := (mkExpr n 1);
@@ -85,10 +84,10 @@ open Expr
 --   pure 0
 -- | _ => pure 1
 
-unsafe def main :  IO Unit := do
-  let n := 10;
+-- unsafe def main :  IO Unit := do
+unsafe def main (xs: List String): IO Unit := do
+  let n := (xs.get! 0).toNat!
   let e  := (mkExpr n 1);
   let v₁ := eval e;
   let v₂ := eval (constFolding (reassoc e));
   IO.println (toString v₁ ++ "  " ++ toString v₂);
-  -- pure 0

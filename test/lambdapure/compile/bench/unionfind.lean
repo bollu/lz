@@ -10,7 +10,7 @@
 -- these fail: lean %s 2>&1 1>/dev/null | hask-opt  --lz-canonicalize --lz-lambdapure-destructive-updates --lz-lambdapure-reference-rewriter | FileCheck %s
 
 
-set_option trace.compiler.ir.init true
+-- set_option trace.compiler.ir.init true
 
 def StateT' (m : Type → Type) (σ : Type) (α : Type) := σ → m (α × σ)
 namespace StateT'
@@ -140,8 +140,9 @@ else do
 -- | (Except.error e, s) => IO.println ("Error : " ++ e) *> pure 1
 
 
-def main : IO Unit := do
-  let n := 100000;
+-- def main : IO Unit := do
+def main (xs:List String): IO Unit := do
+  let n := (xs.get! 0).toNat!;
   match run (test n) with
   | (Except.ok v, s)    => IO.println ("ok " ++ toString v)
   | (Except.error e, s) => IO.println ("Error : " ++ e)
