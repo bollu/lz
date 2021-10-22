@@ -1744,13 +1744,17 @@ public:
       llvm::SmallVector<Value, 1> args = {rands[0]};
       rewriter.replaceOpWithNewOp<CallOp>(inc, f, args);
     } else {
-      assert(false && "unhandled lean_inc with n > 1");
+      // assert(false && "unhandled lean_inc with n > 1");
       // n > 1
       FuncOp f = inc.isCheckRef() ? getOrCreateLeanIncN(rewriter, mod)
                                   : getOrCreateLeanIncRefN(rewriter, mod);
       const int WIDTH = 32;
+
+      llvm::errs() << "found createLeanIncN: "; 
+      llvm::errs() << inc << "\n";
       ConstantIntOp n = rewriter.create<ConstantIntOp>(
           inc.getLoc(), inc.getIncCount(), WIDTH);
+      llvm::errs() << "inc constant int: " << n << "\n";
       llvm::SmallVector<Value, 2> args = {rands[0], n};
       rewriter.replaceOpWithNewOp<CallOp>(inc, f, args);
     }
