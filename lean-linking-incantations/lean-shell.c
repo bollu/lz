@@ -1,6 +1,7 @@
 // Lean compiler output
 // Module: main-print
 // Imports: Init
+#define LEAN_MULTI_THREAD
 #include <lean/lean.h>
 #if defined(__clang__)
 #pragma clang diagnostic ignored "-Wunused-parameter"
@@ -39,7 +40,9 @@ int main(int argc, char **argv) {
 #endif
   lean_object *in;
   lean_object *res;
-  lean_initialize();
+  // TODO: this is very expensive, so we should only call it if necessary! For example, it is necesary to get expr.lean
+  //  working.
+  // lean_initialize(); 
   lean_initialize_runtime_module();
   // lean_init_task_manager();
 
@@ -48,6 +51,7 @@ int main(int argc, char **argv) {
   if (lean_io_result_is_ok(res)) {
     lean_dec_ref(res);
     lean_init_task_manager();
+    // lean_init_task_manager_using(4); // HACK: set hardware concurrency manually
     in = lean_box(0);
     int i = argc;
     while (i > 1) {
