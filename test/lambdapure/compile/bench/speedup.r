@@ -1,12 +1,23 @@
+#!/usr/bin/env Rscript
+# https://hal.inria.fr/hal-00764454/document
+# The Speedup-Test: A Statistical Methodology for
+# Program Speedup Analysis and Computation
 library(tibble)
 library(pillar)
 library(stringr)
 library(purrr)
+library(readr)
 
+# library(magrittr)https://r4ds.had.co.nz/pipes.html. is imported by default.
+# https://moderndive.com/9-hypothesis-testing.html#understanding-ht
+library(infer) # https://www.tidymodels.org/learn/statistics/infer/
 setwd("/home/bollu/work/lz/test/lambdapure/compile/bench/")
 LEAN_PATH="/home/bollu/work/lean4/build/release/stage1/bin/lean"
 LEANC_PATH="/home/bollu/work/lean4/build/release/stage1/bin/leanc"
 NRUNS=1
+
+options(show.error.locations = TRUE)
+
 
 G_FPATHS = tribble(
    ~file.path, ~problem.size,
@@ -14,6 +25,9 @@ G_FPATHS = tribble(
    "const_fold.lean", 9
 )
 
+
+# levels for runner factors - theirs v/s ours
+RUNNER.LEVELS <- c("theirs", "ours")
 
 # G_FPATHS.append(("binarytrees-int.lean", 20))
 # G_FPATHS.append(("binarytrees.lean", 20))
@@ -24,26 +38,27 @@ G_FPATHS = tribble(
 # G_FPATHS.append(("unionfind.lean", 100000))
 # G_NFILES = len(G_FPATHS)
 
-read.str <- function(file.path) {
-  f <- file(file.path, open ="rb");
-  out <- readChar(f, file.info(file.path)$size);
-  close(f)
-  return(out)
-}
-
-do.bench.file <- function(file.path, problem.size) {
+#   df <- tribble(~path, ~runix, ~runner, ~stdout, ~stderr)
+do.bench.file <- function(df, file.path, problem.size) {
   system("rm exe-mlir.out || true")
   system("rm exe.ll || true")
   system("rm exe-linked.ll || true")
   system("rm exe.o || true")
 
-  system(str_glue("{LEAN_PATH} {fpath} -c exe-ref.c"))
+  system(str_glue("{LEAN_PATH} {file.path} -c exe-ref.c"))
   system(str_glue("{LEANC_PATH} exe-ref.c -O3 -o exe-ref.out"))
- 
+  # TODO: Write wrapper around system2 that logs the command to be run.
   for (i in 1:NRUNS) {
-    stdout <- tempfile("perf-out")
-    stderr <- tempfile("perf-err")
-    out = system2(str_glue("perf stat ./exe-mlir.out {problem_size}"), stdout=stdout, stderr=stderr);
+    stdout.path <- tempfile("perf-out")
+    stderr.path <- tempfile("perf-err")
+    out = system2("perf", str_glue("stat ./exe-ref.out ", problem.size), 
+                  stdout=stdout.path,
+                  stderr=stderr.path);
+    df %>% add_row(path=file.path, 
+                   runner=factor("theirs", levels=RUNNER.LEVELS),
+                   stdout=readr::read_file(stdout.path),
+                   stderr=readr::read_file(stderr.path),
+                   runix=i)
   }
 
 
@@ -75,11 +90,31 @@ do.bench.file <- function(file.path, problem.size) {
                     " -Wno-unused-command-line-argument -o exe-mlir.out"))
 
   for (i in 1:NRUNS) {
-    stdout <- tempfile("mlir-perf-out")
-    stderr <- tempfile("mlir-perf-err")
-    out = system2(str_glue("perf stat ./exe-mlir.out {problem_size}"));
+    stdout.path <- tempfile("mlir-perf-out")
+    stderr.path <- tempfile("mlir-perf-err")
+    system2("perf", str_glue("stat ./exe-mlir.out ", problem.size),
+                  stdout=stdout.path,
+                  stderr=stderr.path);
+    
+    df <- df %>% add_row(path=file.path, 
+                   runner=factor("ours", levels=RUNNER.LEVELS),
+                   stdout=readr::read_file(stdout.path),
+                   stderr=readr::read_file(stderr.path),
+                   runix=i)
   }
+  return(df)
 }
+
+df <- tribble(~path, ~runix, ~runner, ~stdout, ~stderr)
+for (i in 1:nrow(G_FPATHS)) {
+  df <- do.bench.file(df, G_FPATHS$file.path[i], G_FPATHS$problem.size[i])
+}
+
+print("data: ")
+print(df)
+
+save(df, file="speedup.Rdata")
+# on.exit(expr = file.copy(tempdir(), log_folder_path, recursive = TRUE))
 # datum["ours-out"] = []
 # datum["ours-perf"] = []
 # for _ in range(ARGS.nruns):
