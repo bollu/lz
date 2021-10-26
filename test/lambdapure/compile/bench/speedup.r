@@ -3,11 +3,12 @@
 # The Speedup-Test: A Statistical Methodology for
 # Program Speedup Analysis and Computation
 library(tibble)
-library(pillar)
+# library(pillar)
 library(stringr)
 library(purrr)
 library(readr)
-
+library(argparser)
+library(cli) # http://blog.sellorm.com/2018/01/02/command-line-utilities-in-r-pt-7/
 # library(magrittr)https://r4ds.had.co.nz/pipes.html. is imported by default.
 # https://moderndive.com/9-hypothesis-testing.html#understanding-ht
 library(infer) # https://www.tidymodels.org/learn/statistics/infer/
@@ -105,19 +106,31 @@ do.bench.file <- function(df, file.path, problem.size) {
   return(df)
 }
 
-df <- tribble(~path, ~runix, ~runner, ~stdout, ~stderr)
-for (i in 1:nrow(G_FPATHS)) {
-  df <- do.bench.file(df, G_FPATHS$file.path[i], G_FPATHS$problem.size[i])
+
+PARSER <- arg_parser("Gather speedup data and plot")
+PARSER <- add_argument(PARSER, "--data", help="generate data", flag=TRUE)
+PARSER <- add_argument(PARSER, "--plot", help="plot values", flag=TRUE)
+PARSER <- add_argument(PARSER, "--nruns", help="num runs", default=1)
+ARGV <- parse_args(PARSER)
+NRUNS <- ARGV$nruns
+
+if (isTRUE(ARGV$data)) {
+  df <- tribble(~path, ~runix, ~runner, ~stdout, ~stderr)
+  for (i in 1:nrow(G_FPATHS)) {
+    df <- do.bench.file(df, G_FPATHS$file.path[i], G_FPATHS$problem.size[i])
+  }
+  print("data: ")
+  print(df)
+  save(df, file="speedup.Rdata")
 }
 
-print("data: ")
-print(df)
+if (isTRUE(ARGV$plot)) {
+  print("plotting..")
+  load(file="speedup.Rdata")
+   # loaded df. now plot from df.
+  print(df)
+}
 
-save(df, file="speedup.Rdata")
-# on.exit(expr = file.copy(tempdir(), log_folder_path, recursive = TRUE))
-# datum["ours-out"] = []
-# datum["ours-perf"] = []
-# for _ in range(ARGS.nruns):
-#  out, perf = sh(f"perf stat ./exe-mlir.out {problem_size}")
-#datum["ours-out"].append(out)
-#datum["ours-perf"].append(perf)
+if (!isTRUE(ARGV$data) && !isTRUE(ARGV$plot)) {
+  print("ERROR: expected --data or --plot")
+}
