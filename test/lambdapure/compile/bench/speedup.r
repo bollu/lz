@@ -170,8 +170,14 @@ if (isTRUE(ARGV$plot)) {
   df["time"] <- df["stderr"] %>% unlist %>% map(parse.perf) %>% unlist
   # after parsing time
   print(df)
+  dodge <- position_dodge(width = 0.9)
+
   # Page 24: Data Visualization with ggplot2.
-  plot <- ggplot(data = df) + geom_bar(mapping = aes(x = path, y = time), stat="identity")
+  plot <- ggplot(data = df) +
+    geom_bar(mapping = aes(x = path, y = time, fill = factor(runner)),
+              stat="identity", position = "dodge") +
+    # geom_errorbar( aes(x=Species, ymin=mean-se, ymax=mean+se), width=0.4, colour="orange", alpha=0.9, size=1.5) +
+
 
   pdf("speedup.pdf")
   print(plot)
