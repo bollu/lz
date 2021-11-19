@@ -111,7 +111,7 @@ def run_data():
             exe.o \
             /code/lz/lean-linking-incantations/lean-shell.o \
             -no-pie -Wl,--start-group -lleancpp -lInit -lStd -lLean -Wl,--end-group \
-            -/code/lean4/build/release/stage1/lib/lean -lgmp -ldl -pthread \
+            /code/lean4/build/release/stage1/lib/lean -lgmp -ldl -pthread \
             -Wno-unused-command-line-argument -o exe-mlir.out")
         datum["ours-out"] = []
         datum["ours-perf"] = []
