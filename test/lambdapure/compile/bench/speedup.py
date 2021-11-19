@@ -90,8 +90,8 @@ def run_data():
                 mlir-translate --mlir-to-llvmir -o exe.ll")
         os_system_synch("llvm-link " + 
                   "exe.ll " + 
-                  "/home/bollu/work/lz/lean-linking-incantations/lib-includes/library.ll " + 
-                  "/home/bollu/work/lz/lean-linking-incantations/lib-runtime/runtime.ll " +
+                  "/code/lz/lean-linking-incantations/lib-includes/library.ll " + 
+                  "/code/lz/lean-linking-incantations/lib-runtime/runtime.ll " +
                   "| opt -passes=bitcast-call-converter  | opt --always-inline -O3 -S -o exe-linked.ll")
         os_system_synch("sed -i s/musttail/tail/g exe-linked.ll")
         os_system_synch("opt -O3 exe-linked.ll -o exe-linked-o3.ll")
@@ -99,11 +99,11 @@ def run_data():
         print("@@@ HACK: converting muttail to tail because of llc miscompile@@@")
         os_system_synch("sed -i s/musttail/tail/g exe-linked.ll")
         os_system_synch("llc -O3 -march=x86-64 -filetype=obj exe-linked.ll -o exe.o")
-        os_system_synch(f"c++ -O3 -D LEAN_MULTI_THREAD -I/home/bollu/work/lean4/build/release/stage1/include \
+        os_system_synch(f"c++ -O3 -D LEAN_MULTI_THREAD -I/code/lean4/build/release/stage1/include \
             exe.o \
-            /home/bollu/work/lz/lean-linking-incantations/lean-shell.o \
+            /code/lz/lean-linking-incantations/lean-shell.o \
             -no-pie -Wl,--start-group -lleancpp -lInit -lStd -lLean -Wl,--end-group \
-            -L/home/bollu/work/lean4/build/release/stage1/lib/lean -lgmp -ldl -pthread \
+            -L/code/lean4/build/release/stage1/lib/lean -lgmp -ldl -pthread \
             -Wno-unused-command-line-argument -o exe-mlir.out")
         datum["ours-out"] = []
         datum["ours-perf"] = []
