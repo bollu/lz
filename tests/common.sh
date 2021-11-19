@@ -29,11 +29,11 @@ function compile_lean {
       mlir-translate --mlir-to-llvmir -o "$f.ll"
     llvm-link "$f.ll" /code/lz/lean-linking-incantations/lib-includes/library.ll -S | opt -O3 -S  | \
     llc -O3 -march=x86-64 -filetype=obj  -o "$f.o"
-    g++ -D LEAN_MULTI_THREAD -I/code/lean4/build/stage1/include \
+    g++ -D LEAN_MULTI_THREAD -I/code/lean4/build/release/stage1/include \
             "$f.o" \
             /code/lz/lean-linking-incantations/lean-shell.o \
             -no-pie -Wl,--start-group -lleancpp -lInit -lStd -lLean -Wl,--end-group \
-            -L/code/lean4/build/stage1/lib/lean -lgmp -ldl -pthread \
+            -L/code/lean4/build/release/stage1/lib/lean -lgmp -ldl -pthread \
             -Wno-unused-command-line-argument -o "$@" "$f.out"
 }
 
