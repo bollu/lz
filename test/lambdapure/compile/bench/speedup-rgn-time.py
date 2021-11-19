@@ -141,6 +141,9 @@ def run_data():
 def perf_stat_to_time(file, o):
     print(f"===={file}===")
     print(o)
+    return float(o)
+    # print(f"===={file}===")
+    # print(o)
     # 0 ['',
     # 1 " Performance counter stats for './exe-mlir.out':",
     # 2 '',
@@ -160,7 +163,7 @@ def perf_stat_to_time(file, o):
     #   '',
     #   '']
     # 1,559.42 msec
-    return float(o.splitlines()[12].split()[0].replace(',',''))
+    # return float(o.splitlines()[12].split()[0].replace(',',''))
 
 def autolabel(ax, rects):
     """Attach a text label above each bar in *rects*, displaying its height."""
