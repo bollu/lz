@@ -6,7 +6,7 @@ set -e
 
 FILES=$(ls -1u *.cpp)
 LLFILES=""
-LEANCC="clang -O3 -DLEAN_MULTI_THREAD -I /code/lean4/build/release/stage0/include -I /code/lean4/src/"
+LEANCC="clang-12 -O3 -DLEAN_MULTI_THREAD -I /code/lean4/build/release/stage0/include -I /code/lean4/src/"
 
 for file in $FILES; do 
     i=$(basename $file .cpp)
