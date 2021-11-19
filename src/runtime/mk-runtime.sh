@@ -16,7 +16,9 @@ done
 
 echo $LLFILES
 
+
 # alwaysinline causes runtime to take infinite amounts of time.
+llvm-link $LLFILES -o runtime.ll
 sed -i s/noinline/alwaysinline/g runtime.ll
 sed -i s/optnone//g runtime.ll
 opt -S -O3 runtime.ll -o runtime-optimized.ll
