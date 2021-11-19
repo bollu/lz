@@ -13,11 +13,14 @@ RUN echo "git-clone-force-a"
 RUN git clone --depth 1 https://github.com/bollu/llvm-project.git  -b cgo-2021
 RUN cd /code/llvm-project && git checkout cgo-2021
 RUN apt-get install -y python3.7  python3-pip
+RUN apt-get install -y lld
 RUN mkdir -p /code/llvm-project/build && \
     cd /code/llvm-project/build &&  \
     cmake -GNinja ../llvm/ \
           -DLLVM_ENABLE_PROJECTS=mlir  \
-          -DCMAKE_BUILD_TYPE=RelWithDebInfo
+          -DBUILD_SHARED_LIBS=ON \
+          -DCMAKE_BUILD_TYPE=Release  \
+          -DLLVM_TARGETS_TO_BUILD="host"
 RUN cd /code/llvm-project/build && ninja mlir-opt
 RUN apt-get install -y libgmp3-dev
 RUN mkdir -p /code/lean4/build/release &&  \
@@ -46,7 +49,20 @@ RUN cd /code/lz/lean-linking-incantations/lib-includes && make
 RUN cd /code/lean4/tests/compiler/ && ./test_single.sh float.lean
 RUN apt-get install clang-12 -y
 RUN cd /code/lean4/src/runtime/ && ./mk-runtime.sh
-RUN apt-get install linux-tools-common linux-tools-generic linux-tools-cloud-amd64 linux-cloud-tools-cloud-amd64 -y
+RUN ls /code/
+RUN cd /code/lean4/build/release/ && make -j
+RUN git clone https://github.com/bollu/lean4 lean4-baseline
+RUN mkdir -p /code/lean4-baseline/build/release
+RUN mkdir -p /code/lean4-baseline/build/release &&  \
+    cd /code/lean4-baseline/build/release && \
+    git checkout master  && \
+    cmake /code/lean4-baseline/ && \
+    make -j 
+RUN echo "bump-git-13"
+RUN cd /code/lz && git remote update && git reset --hard origin/cgo-2021-artifact && cd build && ninja
+RUN cd /code/lean4/src/runtime/ && ./mk-runtime.sh
+RUN cd /code/lz/lean-linking-incantations && make clean && make && cd lib-includes && make clean && make
+RUN cd /code/lz && git remote update && git checkout origin/cgo-2021-artifact && cd build && ninja
 # ENV FLASK_APP=app.py
 # ENV FLASK_RUN_HOST=0.0.0.0
 # RUN apk add --no-cache gcc musl-dev linux-headers
