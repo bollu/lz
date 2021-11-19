@@ -258,7 +258,7 @@ def plot():
 
   filename = os.path.basename(__file__).replace(".py", ".pdf")
   fig.savefig(filename)
-  subprocess.run(["xdg-open",  filename])
+  # subprocess.run(["xdg-open",  filename])
 
 
 
