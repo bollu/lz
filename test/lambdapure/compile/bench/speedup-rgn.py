@@ -69,8 +69,8 @@ def run_data():
     ds = []
     for (i, fpath) in enumerate(G_FPATHS):
         datum = {"file": str(fpath) }
-        LEAN_OPTIMIZED_PATH="/home/bollu/work/lean4-contrib/build/stage1/bin/lean"
-        LEANC_OPTIMIZED_PATH="/home/bollu/work/lean4-contrib/build/stage1/bin/leanc"
+        LEAN_OPTIMIZED_PATH="/home/bollu/work/lean4-contrib/build/release/stage1/bin/lean"
+        LEANC_OPTIMIZED_PATH="/home/bollu/work/lean4-contrib/build/release/stage1/bin/leanc"
         os_system_synch(f"rm exe-ref.out || true")
         os_system_synch(f"{LEAN_OPTIMIZED_PATH} {fpath} -c exe-ref.c")
         os_system_synch(f"{LEANC_OPTIMIZED_PATH} exe-ref.c -O3 -o exe-ref.out")
@@ -87,7 +87,7 @@ def run_data():
         os_system_synch(f"rm exe.ll  || true")
         os_system_synch(f"rm exe-linked.ll  || true")
         os_system_synch(f"rm exe.o  || true")
-        LEAN_NOOPTIMIZE_PATH="/home/bollu/work/lean4/build/stage1/bin/lean"
+        LEAN_NOOPTIMIZE_PATH="/home/bollu/work/lean4/build/release/stage1/bin/lean"
         os_system_synch(f"{LEAN_NOOPTIMIZE_PATH} {fpath} -m exe.mlir")
         os_system_synch("hask-opt exe.mlir --convert-scf-to-std --lean-lower-rgn --convert-rgn-to-std --convert-std-to-llvm --ptr-lower | \
                 mlir-translate --mlir-to-llvmir -o exe.ll")
@@ -102,11 +102,11 @@ def run_data():
         print("@@@ HACK: converting muttail to tail because of llc miscompile@@@")
         os_system_synch("sed -i s/musttail/tail/g exe-linked.ll")
         os_system_synch("llc -O3 -march=x86-64 -filetype=obj exe-linked.ll -o exe.o")
-        os_system_synch(f"c++ -O3 -D LEAN_MULTI_THREAD -I/home/bollu/work/lean4/build/stage1/include \
+        os_system_synch(f"c++ -O3 -D LEAN_MULTI_THREAD -I/home/bollu/work/lean4/build/release/stage1/include \
             exe.o \
             /home/bollu/work/lz/lean-linking-incantations/lean-shell.o \
             -no-pie -Wl,--start-group -lleancpp -lInit -lStd -lLean -Wl,--end-group \
-            -L/home/bollu/work/lean4/build/stage1/lib/lean -lgmp -ldl -pthread \
+            -L/home/bollu/work/lean4/build/release/stage1/lib/lean -lgmp -ldl -pthread \
             -Wno-unused-command-line-argument -o exe-mlir.out")
         datum["ours-out"] = []
         datum["ours-perf"] = []
