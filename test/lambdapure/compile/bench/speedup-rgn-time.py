@@ -132,7 +132,7 @@ def run_data():
     for (i, fpath) in enumerate(G_FPATHS):
         # with simpcase: 850fd84e43407ed647837652b6442e143199abb0
         datum = {"file": str(fpath) }
-        LEAN_ENABLE_SIMPCASE_PATH="/code/lean4-baseline/build/stage1/bin/lean"
+        LEAN_ENABLE_SIMPCASE_PATH="/code/lean4-baseline/build/release/stage1/bin/lean"
         os_system_synch(f"{LEAN_ENABLE_SIMPCASE_PATH} {fpath} -m exe.mlir")
         os_system_synch("hask-opt exe.mlir --convert-scf-to-std --lean-lower-rgn --convert-rgn-to-std --convert-std-to-llvm --ptr-lower | \
                 mlir-translate --mlir-to-llvmir -o exe.ll")
@@ -147,11 +147,11 @@ def run_data():
         print("@@@ HACK: converting muttail to tail because of llc miscompile@@@")
         os_system_synch("sed -i s/musttail/tail/g exe-linked.ll")
         os_system_synch("llc -O3 -march=x86-64 -filetype=obj exe-linked.ll -o exe.o")
-        os_system_synch(f"c++ -O3 -D LEAN_MULTI_THREAD -I/code/lean4/build/stage1/include \
+        os_system_synch(f"c++ -O3 -D LEAN_MULTI_THREAD -I/code/lean4/build/release/stage1/include \
             exe.o \
             /code/lz/lean-linking-incantations/lean-shell.o \
             -no-pie -Wl,--start-group -lleancpp -lInit -lStd -lLean -Wl,--end-group \
-            -L/code/lean4/build/stage1/lib/lean -lgmp -ldl -pthread \
+            -L/code/lean4/build/release/stage1/lib/lean -lgmp -ldl -pthread \
             -Wno-unused-command-line-argument -o exe-ref.out")
         datum["theirs-out"] = []
         datum["theirs-perf"] = []
@@ -165,7 +165,7 @@ def run_data():
         os_system_synch(f"rm exe.ll  || true")
         os_system_synch(f"rm exe-linked.ll  || true")
         os_system_synch(f"rm exe.o  || true")
-        LEAN_DISABLE_SIMPCASE_PATH="/code/lean4/build/stage1/bin/lean"
+        LEAN_DISABLE_SIMPCASE_PATH="/code/lean4/build/release/stage1/bin/lean"
         os_system_synch(f"{LEAN_DISABLE_SIMPCASE_PATH} {fpath} -m exe.mlir")
         # os_system_synch("hask-opt exe.mlir --convert-scf-to-std --lean-lower-rgn  --rgn-cse --cse --convert-rgn-to-std --convert-std-to-llvm --ptr-lower | \
         #        mlir-translate --mlir-to-llvmir -o exe.ll")
@@ -183,11 +183,11 @@ def run_data():
         print("@@@ HACK: converting muttail to tail because of llc miscompile@@@")
         os_system_synch("sed -i s/musttail/tail/g exe-linked.ll")
         os_system_synch("llc -O3 -march=x86-64 -filetype=obj exe-linked.ll -o exe.o")
-        os_system_synch(f"c++ -O3 -D LEAN_MULTI_THREAD -I/code/lean4/build/stage1/include \
+        os_system_synch(f"c++ -O3 -D LEAN_MULTI_THREAD -I/code/lean4/build/release/stage1/include \
             exe.o \
             /code/lz/lean-linking-incantations/lean-shell.o \
             -no-pie -Wl,--start-group -lleancpp -lInit -lStd -lLean -Wl,--end-group \
-            -L/code/lean4/build/stage1/lib/lean -lgmp -ldl -pthread \
+            -L/code/lean4/build/release/stage1/lib/lean -lgmp -ldl -pthread \
             -Wno-unused-command-line-argument -o exe-mlir.out")
         datum["ours-out"] = []
         datum["ours-perf"] = []
@@ -201,7 +201,7 @@ def run_data():
         os_system_synch(f"rm exe.ll  || true")
         os_system_synch(f"rm exe-linked.ll  || true")
         os_system_synch(f"rm exe.o  || true")
-        LEAN_DISABLE_SIMPCASE_PATH="/code/lean4/build/stage1/bin/lean"
+        LEAN_DISABLE_SIMPCASE_PATH="/code/lean4/build/release/stage1/bin/lean"
         os_system_synch(f"{LEAN_DISABLE_SIMPCASE_PATH} {fpath} -m exe.mlir")
         # os_system_synch("hask-opt exe.mlir --convert-scf-to-std --lean-lower-rgn  --rgn-cse --cse --convert-rgn-to-std --convert-std-to-llvm --ptr-lower | \
         #        mlir-translate --mlir-to-llvmir -o exe.ll")
@@ -219,11 +219,11 @@ def run_data():
         print("@@@ HACK: converting muttail to tail because of llc miscompile@@@")
         os_system_synch("sed -i s/musttail/tail/g exe-linked.ll")
         os_system_synch("llc -O3 -march=x86-64 -filetype=obj exe-linked.ll -o exe.o")
-        os_system_synch(f"c++ -O3 -D LEAN_MULTI_THREAD -I/code/lean4/build/stage1/include \
+        os_system_synch(f"c++ -O3 -D LEAN_MULTI_THREAD -I/code/lean4/build/release/stage1/include \
             exe.o \
             /code/lz/lean-linking-incantations/lean-shell.o \
             -no-pie -Wl,--start-group -lleancpp -lInit -lStd -lLean -Wl,--end-group \
-            -L/code/lean4/build/stage1/lib/lean -lgmp -ldl -pthread \
+            -L/code/lean4/build/release/stage1/lib/lean -lgmp -ldl -pthread \
             -Wno-unused-command-line-argument -o exe-mlir.out")
         datum["none-out"] = []
         datum["none-perf"] = []
