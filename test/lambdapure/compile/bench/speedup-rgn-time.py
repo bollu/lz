@@ -32,13 +32,13 @@ G_BASELINE = "../baseline-lean.sh"
 G_OURS = "../run-lean.sh"
 G_FPATHS = []
 G_FPATHS.append("binarytrees-int.lean")
-G_FPATHS.append("binarytrees.lean")
-G_FPATHS.append("const_fold.lean")
-G_FPATHS.append("deriv.lean")
-G_FPATHS.append("filter.lean")
-G_FPATHS.append("qsort.lean") # miscompile because of jmp!
-G_FPATHS.append("rbmap_checkpoint.lean")
-G_FPATHS.append("unionfind.lean")
+# G_FPATHS.append("binarytrees.lean")
+# G_FPATHS.append("const_fold.lean")
+# G_FPATHS.append("deriv.lean")
+# G_FPATHS.append("filter.lean")
+# G_FPATHS.append("qsort.lean") # miscompile because of jmp!
+# G_FPATHS.append("rbmap_checkpoint.lean")
+# G_FPATHS.append("unionfind.lean")
 G_NFILES = len(G_FPATHS)
 
 
@@ -132,7 +132,7 @@ def run_data():
     for (i, fpath) in enumerate(G_FPATHS):
         # with simpcase: 850fd84e43407ed647837652b6442e143199abb0
         datum = {"file": str(fpath) }
-        LEAN_ENABLE_SIMPCASE_PATH="/code/lean4-baseline/build/release/stage1/bin/lean"
+        LEAN_ENABLE_SIMPCASE_PATH="/code/lean4/build/release/stage1/bin/lean"
         os_system_synch(f"{LEAN_ENABLE_SIMPCASE_PATH} {fpath} -m exe.mlir")
         os_system_synch("hask-opt exe.mlir --convert-scf-to-std --lean-lower-rgn --convert-rgn-to-std --convert-std-to-llvm --ptr-lower | \
                 mlir-translate --mlir-to-llvmir -o exe.ll")
@@ -156,9 +156,12 @@ def run_data():
         datum["theirs-out"] = []
         datum["theirs-perf"] = []
         for _ in range(ARGS.nruns):
-          out, perf = sh("perf stat ./exe-ref.out")
+          timeStarted = time.time_ns()
+          # out, perf = sh("perf stat ./exe-ref.out")
+          out, perf = sh("./exe-ref.out")
+          timeDelta = ns_to_milli(time.time_ns() - timeStarted)
           datum["theirs-out"].append(out)
-          datum["theirs-perf"].append(perf)
+          datum["theirs-perf"].append(timeDelta)
 
         # disabled simpcase + MLIR.rgn optimization passes: 55a63f500b23b8c0c180e43108c5f844839a693f
         os_system_synch(f"rm exe-mlir.out || true")
@@ -192,9 +195,12 @@ def run_data():
         datum["ours-out"] = []
         datum["ours-perf"] = []
         for _ in range(ARGS.nruns):
-           out, perf = sh("perf stat ./exe-mlir.out")
+           timeStarted = time.time_ns()
+           # out, perf = sh("perf stat ./exe-mlir.out")
+           out, perf = sh("./exe-mlir.out")
+           timeDelta = ns_to_milli(time.time_ns() - timeStarted)
            datum["ours-out"].append(out)
-           datum["ours-perf"].append(perf)
+           datum["ours-perf"].append(timeDelta)
 
         # disabled simpcase and no MLIR.rgn optimization either: 55a63f500b23b8c0c180e43108c5f844839a693f
         os_system_synch(f"rm exe-mlir.out || true")
@@ -228,9 +234,12 @@ def run_data():
         datum["none-out"] = []
         datum["none-perf"] = []
         for _ in range(ARGS.nruns):
-           out, perf = sh("perf stat ./exe-mlir.out")
+           timeStarted = time.time_ns()
+           # out, perf = sh("perf stat ./exe-mlir.out")
+           out, perf = sh("./exe-mlir.out")
+           timeDelta = ns_to_milli(time.time_ns() - timeStarted)
            datum["none-out"].append(out)
-           datum["none-perf"].append(perf)
+           datum["none-perf"].append(timeDelta)
 
         ds.append(datum)
     with open(ARGS.out, "w") as f:
@@ -250,8 +259,7 @@ def run_data():
 ### PLOTTING ###
 
 def perf_stat_to_time(file, o):
-    print(f"===={file}===")
-    print(o)
+    print(f"===={file} output:|{o}|===")
     return float(o)
     # print(f"===={file}===")
     # print(o)
@@ -400,9 +408,10 @@ def plot():
       none = np.median([perf_stat_to_time(data["file"], t) for t in data["none-perf"] ])
       ours_over_none.append(float("%4.2f" % (none/ours)))
       theirs_over_none.append(float("%4.2f" % (none/theirs)))
+      print("%20s | ours/none: %4.2f | theirs/none: %4.2f" % (data["file"], none/ours, none/theirs))
 
-  avg_speedup = mstats.gmean(speedups)
-  print("average speedup: %4.2f" % (avg_speedup, ))
+  # avg_speedup = mstats.gmean(speedups)
+  # print("average speedup: %4.2f" % (avg_speedup, ))
   # optims.append(float("%4.2f" % (avg_speedup)))
 
   # avg_speedup = mstats.gmean(nones)
@@ -452,9 +461,9 @@ def plot():
 
   filename = os.path.basename(__file__).replace(".py", ".pdf")
   fig.savefig(filename)
-  subprocess.run(["xdg-open",  filename])
-  filename = os.path.basename(__file__).replace(".py", ".tex")
-  tikzplotlib.save(filename)
+  # subprocess.run(["xdg-open",  filename])
+  # filename = os.path.basename(__file__).replace(".py", ".tex")
+  # tikzplotlib.save(filename)
 
 
 if __name__ == "__main__":
