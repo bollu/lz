@@ -97,14 +97,14 @@ target triple = "x86_64-pc-linux-gnu"
 @.str.32 = private unnamed_addr constant [27 x i8] c"lean_io_result_is_error(r)\00", align 1
 @__PRETTY_FUNCTION__.lean_io_result_get_error = private unnamed_addr constant [56 x i8] c"b_lean_obj_res lean_io_result_get_error(b_lean_obj_arg)\00", align 1
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define zeroext i1 @lean_is_big_object_tag(i8 zeroext %0) local_unnamed_addr #0 {
   %2 = add i8 %0, 10
   %3 = icmp ult i8 %2, 4
   ret i1 %3
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define zeroext i1 @lean_is_scalar(%struct.lean_object* %0) local_unnamed_addr #0 {
   %2 = ptrtoint %struct.lean_object* %0 to i64
   %3 = and i64 %2, 1
@@ -112,7 +112,7 @@ define zeroext i1 @lean_is_scalar(%struct.lean_object* %0) local_unnamed_addr #0
   ret i1 %4
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define nonnull %struct.lean_object* @lean_box(i64 %0) local_unnamed_addr #0 {
   %2 = shl i64 %0, 1
   %3 = or i64 %2, 1
@@ -120,7 +120,7 @@ define nonnull %struct.lean_object* @lean_box(i64 %0) local_unnamed_addr #0 {
   ret %struct.lean_object* %4
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define nonnull %struct.lean_object* @lean_box_uint8(i8 zeroext %0) local_unnamed_addr #0 {
   %2 = zext i8 %0 to i64
   %3 = shl nuw nsw i64 %2, 1
@@ -129,14 +129,14 @@ define nonnull %struct.lean_object* @lean_box_uint8(i8 zeroext %0) local_unnamed
   ret %struct.lean_object* %5
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define i64 @lean_unbox(%struct.lean_object* %0) local_unnamed_addr #0 {
   %2 = ptrtoint %struct.lean_object* %0 to i64
   %3 = lshr i64 %2, 1
   ret i64 %3
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define zeroext i8 @lean_unbox_uint8(%struct.lean_object* %0) local_unnamed_addr #0 {
   %2 = ptrtoint %struct.lean_object* %0 to i64
   %3 = lshr i64 %2, 1
@@ -144,7 +144,7 @@ define zeroext i8 @lean_unbox_uint8(%struct.lean_object* %0) local_unnamed_addr 
   ret i8 %4
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define i64 @lean_align(i64 %0, i64 %1) local_unnamed_addr #0 {
   %3 = urem i64 %0, %1
   %4 = sub i64 %0, %3
@@ -154,7 +154,7 @@ define i64 @lean_align(i64 %0, i64 %1) local_unnamed_addr #0 {
   ret i64 %7
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define i32 @lean_get_slot_idx(i32 %0) local_unnamed_addr #1 {
   %2 = icmp eq i32 %0, 0
   br i1 %2, label %3, label %4
@@ -187,7 +187,7 @@ define i32 @lean_get_slot_idx(i32 %0) local_unnamed_addr #1 {
 ; Function Attrs: noreturn nounwind
 declare void @__assert_fail(i8*, i8*, i32, i8*) local_unnamed_addr #2
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_alloc_small_object(i32 %0) local_unnamed_addr #1 {
   %2 = and i32 %0, 7
   %3 = and i32 %0, -8
@@ -219,7 +219,7 @@ define %struct.lean_object* @lean_alloc_small_object(i32 %0) local_unnamed_addr 
 
 declare i8* @lean_alloc_small(i32, i32) local_unnamed_addr #3
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_alloc_ctor_memory(i32 %0) local_unnamed_addr #1 {
   %2 = zext i32 %0 to i64
   %3 = and i32 %0, 7
@@ -278,7 +278,7 @@ define %struct.lean_object* @lean_alloc_ctor_memory(i32 %0) local_unnamed_addr #
   ret %struct.lean_object* %35
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define i32 @lean_small_object_size(%struct.lean_object* %0) local_unnamed_addr #1 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = tail call i32 @lean_small_mem_size(i8* %2) #12
@@ -287,7 +287,7 @@ define i32 @lean_small_object_size(%struct.lean_object* %0) local_unnamed_addr #
 
 declare i32 @lean_small_mem_size(i8*) local_unnamed_addr #3
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define void @lean_free_small_object(%struct.lean_object* %0) local_unnamed_addr #1 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   tail call void @lean_free_small(i8* %2) #12
@@ -296,7 +296,7 @@ define void @lean_free_small_object(%struct.lean_object* %0) local_unnamed_addr 
 
 declare void @lean_free_small(i8*) local_unnamed_addr #3
 
-; Function Attrs: norecurse nounwind readonly sspstrong uwtable willreturn
+; Function Attrs: norecurse nounwind readonly uwtable willreturn
 define zeroext i8 @lean_ptr_tag(%struct.lean_object* nocapture readonly %0) local_unnamed_addr #4 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -304,7 +304,7 @@ define zeroext i8 @lean_ptr_tag(%struct.lean_object* nocapture readonly %0) loca
   ret i8 %4
 }
 
-; Function Attrs: norecurse nounwind readonly sspstrong uwtable willreturn
+; Function Attrs: norecurse nounwind readonly uwtable willreturn
 define i32 @lean_ptr_other(%struct.lean_object* nocapture readonly %0) local_unnamed_addr #4 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 6
@@ -313,7 +313,7 @@ define i32 @lean_ptr_other(%struct.lean_object* nocapture readonly %0) local_unn
   ret i32 %5
 }
 
-; Function Attrs: norecurse nounwind readonly sspstrong uwtable willreturn
+; Function Attrs: norecurse nounwind readonly uwtable willreturn
 define zeroext i1 @lean_is_mt(%struct.lean_object* nocapture readonly %0) local_unnamed_addr #4 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 5
@@ -322,7 +322,7 @@ define zeroext i1 @lean_is_mt(%struct.lean_object* nocapture readonly %0) local_
   ret i1 %5
 }
 
-; Function Attrs: norecurse nounwind readonly sspstrong uwtable willreturn
+; Function Attrs: norecurse nounwind readonly uwtable willreturn
 define zeroext i1 @lean_is_st(%struct.lean_object* nocapture readonly %0) local_unnamed_addr #4 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 5
@@ -331,7 +331,7 @@ define zeroext i1 @lean_is_st(%struct.lean_object* nocapture readonly %0) local_
   ret i1 %5
 }
 
-; Function Attrs: norecurse nounwind readonly sspstrong uwtable willreturn
+; Function Attrs: norecurse nounwind readonly uwtable willreturn
 define zeroext i1 @lean_is_persistent(%struct.lean_object* nocapture readonly %0) local_unnamed_addr #4 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 5
@@ -340,7 +340,7 @@ define zeroext i1 @lean_is_persistent(%struct.lean_object* nocapture readonly %0
   ret i1 %5
 }
 
-; Function Attrs: norecurse nounwind readonly sspstrong uwtable willreturn
+; Function Attrs: norecurse nounwind readonly uwtable willreturn
 define zeroext i1 @lean_has_rc(%struct.lean_object* nocapture readonly %0) local_unnamed_addr #4 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 5
@@ -349,13 +349,13 @@ define zeroext i1 @lean_has_rc(%struct.lean_object* nocapture readonly %0) local
   ret i1 %5
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define i64* @lean_get_rc_mt_addr(%struct.lean_object* readnone %0) local_unnamed_addr #0 {
   %2 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 0, i32 0
   ret i64* %2
 }
 
-; Function Attrs: nofree norecurse nounwind sspstrong uwtable willreturn
+; Function Attrs: nofree norecurse nounwind uwtable willreturn
 define void @lean_inc_ref(%struct.lean_object* nocapture %0) local_unnamed_addr #5 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 5
@@ -381,7 +381,7 @@ define void @lean_inc_ref(%struct.lean_object* nocapture %0) local_unnamed_addr 
   ret void
 }
 
-; Function Attrs: nofree norecurse nounwind sspstrong uwtable willreturn
+; Function Attrs: nofree norecurse nounwind uwtable willreturn
 define void @lean_inc_ref_n(%struct.lean_object* nocapture %0, i64 %1) local_unnamed_addr #5 {
   %3 = bitcast %struct.lean_object* %0 to i8*
   %4 = getelementptr inbounds i8, i8* %3, i64 5
@@ -407,7 +407,7 @@ define void @lean_inc_ref_n(%struct.lean_object* nocapture %0, i64 %1) local_unn
   ret void
 }
 
-; Function Attrs: nofree norecurse nounwind sspstrong uwtable willreturn
+; Function Attrs: nofree norecurse nounwind uwtable willreturn
 define zeroext i1 @lean_dec_ref_core(%struct.lean_object* nocapture %0) local_unnamed_addr #5 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 5
@@ -438,7 +438,7 @@ define zeroext i1 @lean_dec_ref_core(%struct.lean_object* nocapture %0) local_un
   ret i1 %17
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define void @lean_dec_ref(%struct.lean_object* %0) local_unnamed_addr #1 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 5
@@ -474,7 +474,7 @@ define void @lean_dec_ref(%struct.lean_object* %0) local_unnamed_addr #1 {
 
 declare void @lean_del(%struct.lean_object*) local_unnamed_addr #3
 
-; Function Attrs: nofree norecurse nounwind sspstrong uwtable willreturn
+; Function Attrs: nofree norecurse nounwind uwtable willreturn
 define void @lean_inc(%struct.lean_object* %0) local_unnamed_addr #5 {
   %2 = ptrtoint %struct.lean_object* %0 to i64
   %3 = and i64 %2, 1
@@ -506,7 +506,7 @@ define void @lean_inc(%struct.lean_object* %0) local_unnamed_addr #5 {
   ret void
 }
 
-; Function Attrs: nofree norecurse nounwind sspstrong uwtable willreturn
+; Function Attrs: nofree norecurse nounwind uwtable willreturn
 define void @lean_inc_n(%struct.lean_object* %0, i64 %1) local_unnamed_addr #5 {
   %3 = ptrtoint %struct.lean_object* %0 to i64
   %4 = and i64 %3, 1
@@ -538,7 +538,7 @@ define void @lean_inc_n(%struct.lean_object* %0, i64 %1) local_unnamed_addr #5 {
   ret void
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define void @lean_dec(%struct.lean_object* %0) local_unnamed_addr #1 {
   %2 = ptrtoint %struct.lean_object* %0 to i64
   %3 = and i64 %2, 1
@@ -578,7 +578,7 @@ define void @lean_dec(%struct.lean_object* %0) local_unnamed_addr #1 {
   ret void
 }
 
-; Function Attrs: norecurse nounwind readonly sspstrong uwtable willreturn
+; Function Attrs: norecurse nounwind readonly uwtable willreturn
 define zeroext i1 @lean_is_ctor(%struct.lean_object* nocapture readonly %0) local_unnamed_addr #4 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -587,7 +587,7 @@ define zeroext i1 @lean_is_ctor(%struct.lean_object* nocapture readonly %0) loca
   ret i1 %5
 }
 
-; Function Attrs: norecurse nounwind readonly sspstrong uwtable willreturn
+; Function Attrs: norecurse nounwind readonly uwtable willreturn
 define zeroext i1 @lean_is_closure(%struct.lean_object* nocapture readonly %0) local_unnamed_addr #4 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -596,7 +596,7 @@ define zeroext i1 @lean_is_closure(%struct.lean_object* nocapture readonly %0) l
   ret i1 %5
 }
 
-; Function Attrs: norecurse nounwind readonly sspstrong uwtable willreturn
+; Function Attrs: norecurse nounwind readonly uwtable willreturn
 define zeroext i1 @lean_is_array(%struct.lean_object* nocapture readonly %0) local_unnamed_addr #4 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -605,7 +605,7 @@ define zeroext i1 @lean_is_array(%struct.lean_object* nocapture readonly %0) loc
   ret i1 %5
 }
 
-; Function Attrs: norecurse nounwind readonly sspstrong uwtable willreturn
+; Function Attrs: norecurse nounwind readonly uwtable willreturn
 define zeroext i1 @lean_is_sarray(%struct.lean_object* nocapture readonly %0) local_unnamed_addr #4 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -614,7 +614,7 @@ define zeroext i1 @lean_is_sarray(%struct.lean_object* nocapture readonly %0) lo
   ret i1 %5
 }
 
-; Function Attrs: norecurse nounwind readonly sspstrong uwtable willreturn
+; Function Attrs: norecurse nounwind readonly uwtable willreturn
 define zeroext i1 @lean_is_string(%struct.lean_object* nocapture readonly %0) local_unnamed_addr #4 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -623,7 +623,7 @@ define zeroext i1 @lean_is_string(%struct.lean_object* nocapture readonly %0) lo
   ret i1 %5
 }
 
-; Function Attrs: norecurse nounwind readonly sspstrong uwtable willreturn
+; Function Attrs: norecurse nounwind readonly uwtable willreturn
 define zeroext i1 @lean_is_mpz(%struct.lean_object* nocapture readonly %0) local_unnamed_addr #4 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -632,7 +632,7 @@ define zeroext i1 @lean_is_mpz(%struct.lean_object* nocapture readonly %0) local
   ret i1 %5
 }
 
-; Function Attrs: norecurse nounwind readonly sspstrong uwtable willreturn
+; Function Attrs: norecurse nounwind readonly uwtable willreturn
 define zeroext i1 @lean_is_thunk(%struct.lean_object* nocapture readonly %0) local_unnamed_addr #4 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -641,7 +641,7 @@ define zeroext i1 @lean_is_thunk(%struct.lean_object* nocapture readonly %0) loc
   ret i1 %5
 }
 
-; Function Attrs: norecurse nounwind readonly sspstrong uwtable willreturn
+; Function Attrs: norecurse nounwind readonly uwtable willreturn
 define zeroext i1 @lean_is_task(%struct.lean_object* nocapture readonly %0) local_unnamed_addr #4 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -650,7 +650,7 @@ define zeroext i1 @lean_is_task(%struct.lean_object* nocapture readonly %0) loca
   ret i1 %5
 }
 
-; Function Attrs: norecurse nounwind readonly sspstrong uwtable willreturn
+; Function Attrs: norecurse nounwind readonly uwtable willreturn
 define zeroext i1 @lean_is_external(%struct.lean_object* nocapture readonly %0) local_unnamed_addr #4 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -659,7 +659,7 @@ define zeroext i1 @lean_is_external(%struct.lean_object* nocapture readonly %0) 
   ret i1 %5
 }
 
-; Function Attrs: norecurse nounwind readonly sspstrong uwtable willreturn
+; Function Attrs: norecurse nounwind readonly uwtable willreturn
 define zeroext i1 @lean_is_ref(%struct.lean_object* nocapture readonly %0) local_unnamed_addr #4 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -668,7 +668,7 @@ define zeroext i1 @lean_is_ref(%struct.lean_object* nocapture readonly %0) local
   ret i1 %5
 }
 
-; Function Attrs: norecurse nounwind readonly sspstrong uwtable willreturn
+; Function Attrs: norecurse nounwind readonly uwtable willreturn
 define i32 @lean_obj_tag(%struct.lean_object* %0) local_unnamed_addr #4 {
   %2 = ptrtoint %struct.lean_object* %0 to i64
   %3 = and i64 %2, 1
@@ -692,7 +692,7 @@ define i32 @lean_obj_tag(%struct.lean_object* %0) local_unnamed_addr #4 {
   ret i32 %14
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_ctor_object* @lean_to_ctor(%struct.lean_object* readonly %0) local_unnamed_addr #1 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -709,7 +709,7 @@ define %struct.lean_ctor_object* @lean_to_ctor(%struct.lean_object* readonly %0)
   ret %struct.lean_ctor_object* %8
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_closure_object* @lean_to_closure(%struct.lean_object* readonly %0) local_unnamed_addr #1 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -726,7 +726,7 @@ define %struct.lean_closure_object* @lean_to_closure(%struct.lean_object* readon
   ret %struct.lean_closure_object* %8
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_array_object* @lean_to_array(%struct.lean_object* readonly %0) local_unnamed_addr #1 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -743,7 +743,7 @@ define %struct.lean_array_object* @lean_to_array(%struct.lean_object* readonly %
   ret %struct.lean_array_object* %8
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_sarray_object* @lean_to_sarray(%struct.lean_object* readonly %0) local_unnamed_addr #1 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -760,7 +760,7 @@ define %struct.lean_sarray_object* @lean_to_sarray(%struct.lean_object* readonly
   ret %struct.lean_sarray_object* %8
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_string_object* @lean_to_string(%struct.lean_object* readonly %0) local_unnamed_addr #1 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -777,7 +777,7 @@ define %struct.lean_string_object* @lean_to_string(%struct.lean_object* readonly
   ret %struct.lean_string_object* %8
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_thunk_object* @lean_to_thunk(%struct.lean_object* readonly %0) local_unnamed_addr #1 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -794,7 +794,7 @@ define %struct.lean_thunk_object* @lean_to_thunk(%struct.lean_object* readonly %
   ret %struct.lean_thunk_object* %8
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_task* @lean_to_task(%struct.lean_object* readonly %0) local_unnamed_addr #1 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -811,7 +811,7 @@ define %struct.lean_task* @lean_to_task(%struct.lean_object* readonly %0) local_
   ret %struct.lean_task* %8
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_ref_object* @lean_to_ref(%struct.lean_object* readonly %0) local_unnamed_addr #1 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -828,7 +828,7 @@ define %struct.lean_ref_object* @lean_to_ref(%struct.lean_object* readonly %0) l
   ret %struct.lean_ref_object* %8
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_external_object* @lean_to_external(%struct.lean_object* readonly %0) local_unnamed_addr #1 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -845,13 +845,13 @@ define %struct.lean_external_object* @lean_to_external(%struct.lean_object* read
   ret %struct.lean_external_object* %8
 }
 
-; Function Attrs: norecurse nounwind readonly sspstrong uwtable willreturn
+; Function Attrs: norecurse nounwind readonly uwtable willreturn
 define zeroext i1 @lean_is_exclusive(%struct.lean_object* nocapture readonly %0) local_unnamed_addr #4 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 5
   %4 = load i8, i8* %3, align 1, !tbaa !7
   %5 = icmp eq i8 %4, 0
-  br i1 %5, label %6, label %11, !prof !11
+  br i1 %5, label %6, label %11, !prof !11, !misexpect !12
 
 6:                                                ; preds = %1
   %7 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 0, i32 0
@@ -865,13 +865,13 @@ define zeroext i1 @lean_is_exclusive(%struct.lean_object* nocapture readonly %0)
   ret i1 %12
 }
 
-; Function Attrs: norecurse nounwind readonly sspstrong uwtable willreturn
+; Function Attrs: norecurse nounwind readonly uwtable willreturn
 define zeroext i1 @lean_is_shared(%struct.lean_object* nocapture readonly %0) local_unnamed_addr #4 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 5
   %4 = load i8, i8* %3, align 1, !tbaa !7
   %5 = icmp eq i8 %4, 0
-  br i1 %5, label %6, label %11, !prof !11
+  br i1 %5, label %6, label %11, !prof !11, !misexpect !12
 
 6:                                                ; preds = %1
   %7 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 0, i32 0
@@ -885,7 +885,7 @@ define zeroext i1 @lean_is_shared(%struct.lean_object* nocapture readonly %0) lo
   ret i1 %12
 }
 
-; Function Attrs: nofree norecurse nounwind sspstrong uwtable willreturn
+; Function Attrs: nofree norecurse nounwind uwtable willreturn
 define zeroext i1 @lean_nonzero_rc(%struct.lean_object* nocapture readonly %0) local_unnamed_addr #5 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 5
@@ -914,7 +914,7 @@ define zeroext i1 @lean_nonzero_rc(%struct.lean_object* nocapture readonly %0) l
   ret i1 %16
 }
 
-; Function Attrs: nofree norecurse nounwind sspstrong uwtable willreturn writeonly
+; Function Attrs: nofree norecurse nounwind uwtable willreturn writeonly
 define void @lean_set_st_header(%struct.lean_object* nocapture %0, i32 %1, i32 %2) local_unnamed_addr #6 {
   %4 = zext i32 %1 to i64
   %5 = shl i64 %4, 56
@@ -927,7 +927,7 @@ define void @lean_set_st_header(%struct.lean_object* nocapture %0, i32 %1, i32 %
   ret void
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define void @lean_set_non_heap_header(%struct.lean_object* nocapture %0, i64 %1, i32 %2, i32 %3) local_unnamed_addr #1 {
   %5 = icmp eq i64 %1, 0
   br i1 %5, label %6, label %7
@@ -971,7 +971,7 @@ define void @lean_set_non_heap_header(%struct.lean_object* nocapture %0, i64 %1,
   ret void
 }
 
-; Function Attrs: nofree norecurse nounwind sspstrong uwtable willreturn writeonly
+; Function Attrs: nofree norecurse nounwind uwtable willreturn writeonly
 define void @lean_set_non_heap_header_for_big(%struct.lean_object* nocapture %0, i32 %1, i32 %2) local_unnamed_addr #6 {
   %4 = zext i32 %1 to i64
   %5 = shl i64 %4, 56
@@ -984,7 +984,7 @@ define void @lean_set_non_heap_header_for_big(%struct.lean_object* nocapture %0,
   ret void
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define i32 @lean_ctor_num_objs(%struct.lean_object* nocapture readonly %0) local_unnamed_addr #1 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -1003,7 +1003,7 @@ define i32 @lean_ctor_num_objs(%struct.lean_object* nocapture readonly %0) local
   ret i32 %10
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define nonnull %struct.lean_object** @lean_ctor_obj_cptr(%struct.lean_object* readonly %0) local_unnamed_addr #1 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -1021,7 +1021,7 @@ define nonnull %struct.lean_object** @lean_ctor_obj_cptr(%struct.lean_object* re
   ret %struct.lean_object** %9
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define nonnull i8* @lean_ctor_scalar_cptr(%struct.lean_object* readonly %0) local_unnamed_addr #1 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -1043,7 +1043,7 @@ define nonnull i8* @lean_ctor_scalar_cptr(%struct.lean_object* readonly %0) loca
   ret i8* %13
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_alloc_ctor(i32 %0, i32 %1, i32 %2) local_unnamed_addr #1 {
   %4 = icmp ult i32 %0, 245
   %5 = icmp ult i32 %1, 256
@@ -1072,7 +1072,7 @@ define %struct.lean_object* @lean_alloc_ctor(i32 %0, i32 %1, i32 %2) local_unnam
   ret %struct.lean_object* %14
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_ctor_get(%struct.lean_object* nocapture readonly %0, i32 %1) local_unnamed_addr #1 {
   %3 = bitcast %struct.lean_object* %0 to i8*
   %4 = getelementptr inbounds i8, i8* %3, i64 7
@@ -1100,11 +1100,11 @@ define %struct.lean_object* @lean_ctor_get(%struct.lean_object* nocapture readon
   %16 = zext i32 %1 to i64
   %17 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %15, i64 %16
   %18 = bitcast %struct.lean_object* %17 to %struct.lean_object**
-  %19 = load %struct.lean_object*, %struct.lean_object** %18, align 8, !tbaa !12
+  %19 = load %struct.lean_object*, %struct.lean_object** %18, align 8, !tbaa !13
   ret %struct.lean_object* %19
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define void @lean_ctor_set(%struct.lean_object* nocapture %0, i32 %1, %struct.lean_object* %2) local_unnamed_addr #1 {
   %4 = bitcast %struct.lean_object* %0 to i8*
   %5 = getelementptr inbounds i8, i8* %4, i64 7
@@ -1132,11 +1132,11 @@ define void @lean_ctor_set(%struct.lean_object* nocapture %0, i32 %1, %struct.le
   %17 = zext i32 %1 to i64
   %18 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %16, i64 %17
   %19 = bitcast %struct.lean_object* %18 to %struct.lean_object**
-  store %struct.lean_object* %2, %struct.lean_object** %19, align 8, !tbaa !12
+  store %struct.lean_object* %2, %struct.lean_object** %19, align 8, !tbaa !13
   ret void
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define void @lean_ctor_set_tag(%struct.lean_object* nocapture %0, i8 zeroext %1) local_unnamed_addr #1 {
   %3 = icmp ult i8 %1, -11
   br i1 %3, label %5, label %4
@@ -1152,7 +1152,7 @@ define void @lean_ctor_set_tag(%struct.lean_object* nocapture %0, i8 zeroext %1)
   ret void
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define void @lean_ctor_release(%struct.lean_object* nocapture %0, i32 %1) local_unnamed_addr #1 {
   %3 = bitcast %struct.lean_object* %0 to i8*
   %4 = getelementptr inbounds i8, i8* %3, i64 7
@@ -1180,7 +1180,7 @@ define void @lean_ctor_release(%struct.lean_object* nocapture %0, i32 %1) local_
   %16 = zext i32 %1 to i64
   %17 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %15, i64 %16
   %18 = bitcast %struct.lean_object* %17 to %struct.lean_object**
-  %19 = load %struct.lean_object*, %struct.lean_object** %18, align 8, !tbaa !12
+  %19 = load %struct.lean_object*, %struct.lean_object** %18, align 8, !tbaa !13
   %20 = ptrtoint %struct.lean_object* %19 to i64
   %21 = and i64 %20, 1
   %22 = icmp eq i64 %21, 0
@@ -1216,11 +1216,11 @@ define void @lean_ctor_release(%struct.lean_object* nocapture %0, i32 %1) local_
   br label %39
 
 39:                                               ; preds = %38, %33, %27, %23, %14
-  store %struct.lean_object* inttoptr (i64 1 to %struct.lean_object*), %struct.lean_object** %18, align 8, !tbaa !12
+  store %struct.lean_object* inttoptr (i64 1 to %struct.lean_object*), %struct.lean_object** %18, align 8, !tbaa !13
   ret void
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define i64 @lean_ctor_get_usize(%struct.lean_object* nocapture readonly %0, i32 %1) local_unnamed_addr #1 {
   %3 = bitcast %struct.lean_object* %0 to i8*
   %4 = getelementptr inbounds i8, i8* %3, i64 7
@@ -1252,7 +1252,7 @@ define i64 @lean_ctor_get_usize(%struct.lean_object* nocapture readonly %0, i32 
   ret i64 %19
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define zeroext i8 @lean_ctor_get_uint8(%struct.lean_object* nocapture readonly %0, i32 %1) local_unnamed_addr #1 {
   %3 = zext i32 %1 to i64
   %4 = bitcast %struct.lean_object* %0 to i8*
@@ -1285,7 +1285,7 @@ define zeroext i8 @lean_ctor_get_uint8(%struct.lean_object* nocapture readonly %
   ret i8 %20
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define zeroext i16 @lean_ctor_get_uint16(%struct.lean_object* nocapture readonly %0, i32 %1) local_unnamed_addr #1 {
   %3 = zext i32 %1 to i64
   %4 = bitcast %struct.lean_object* %0 to i8*
@@ -1315,11 +1315,11 @@ define zeroext i16 @lean_ctor_get_uint16(%struct.lean_object* nocapture readonly
   %18 = bitcast %struct.lean_object* %17 to i8*
   %19 = getelementptr inbounds i8, i8* %18, i64 %3
   %20 = bitcast i8* %19 to i16*
-  %21 = load i16, i16* %20, align 2, !tbaa !14
+  %21 = load i16, i16* %20, align 2, !tbaa !15
   ret i16 %21
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define i32 @lean_ctor_get_uint32(%struct.lean_object* nocapture readonly %0, i32 %1) local_unnamed_addr #1 {
   %3 = zext i32 %1 to i64
   %4 = bitcast %struct.lean_object* %0 to i8*
@@ -1349,11 +1349,11 @@ define i32 @lean_ctor_get_uint32(%struct.lean_object* nocapture readonly %0, i32
   %18 = bitcast %struct.lean_object* %17 to i8*
   %19 = getelementptr inbounds i8, i8* %18, i64 %3
   %20 = bitcast i8* %19 to i32*
-  %21 = load i32, i32* %20, align 4, !tbaa !16
+  %21 = load i32, i32* %20, align 4, !tbaa !17
   ret i32 %21
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define i64 @lean_ctor_get_uint64(%struct.lean_object* nocapture readonly %0, i32 %1) local_unnamed_addr #1 {
   %3 = zext i32 %1 to i64
   %4 = bitcast %struct.lean_object* %0 to i8*
@@ -1387,7 +1387,7 @@ define i64 @lean_ctor_get_uint64(%struct.lean_object* nocapture readonly %0, i32
   ret i64 %21
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define double @lean_ctor_get_float(%struct.lean_object* nocapture readonly %0, i32 %1) local_unnamed_addr #1 {
   %3 = zext i32 %1 to i64
   %4 = bitcast %struct.lean_object* %0 to i8*
@@ -1417,11 +1417,11 @@ define double @lean_ctor_get_float(%struct.lean_object* nocapture readonly %0, i
   %18 = bitcast %struct.lean_object* %17 to i8*
   %19 = getelementptr inbounds i8, i8* %18, i64 %3
   %20 = bitcast i8* %19 to double*
-  %21 = load double, double* %20, align 8, !tbaa !18
+  %21 = load double, double* %20, align 8, !tbaa !19
   ret double %21
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define void @lean_ctor_set_usize(%struct.lean_object* nocapture %0, i32 %1, i64 %2) local_unnamed_addr #1 {
   %4 = bitcast %struct.lean_object* %0 to i8*
   %5 = getelementptr inbounds i8, i8* %4, i64 7
@@ -1453,7 +1453,7 @@ define void @lean_ctor_set_usize(%struct.lean_object* nocapture %0, i32 %1, i64 
   ret void
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define void @lean_ctor_set_uint8(%struct.lean_object* nocapture %0, i32 %1, i8 zeroext %2) local_unnamed_addr #1 {
   %4 = zext i32 %1 to i64
   %5 = bitcast %struct.lean_object* %0 to i8*
@@ -1486,7 +1486,7 @@ define void @lean_ctor_set_uint8(%struct.lean_object* nocapture %0, i32 %1, i8 z
   ret void
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define void @lean_ctor_set_uint16(%struct.lean_object* nocapture %0, i32 %1, i16 zeroext %2) local_unnamed_addr #1 {
   %4 = zext i32 %1 to i64
   %5 = bitcast %struct.lean_object* %0 to i8*
@@ -1516,11 +1516,11 @@ define void @lean_ctor_set_uint16(%struct.lean_object* nocapture %0, i32 %1, i16
   %19 = bitcast %struct.lean_object* %18 to i8*
   %20 = getelementptr inbounds i8, i8* %19, i64 %4
   %21 = bitcast i8* %20 to i16*
-  store i16 %2, i16* %21, align 2, !tbaa !14
+  store i16 %2, i16* %21, align 2, !tbaa !15
   ret void
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define void @lean_ctor_set_uint32(%struct.lean_object* nocapture %0, i32 %1, i32 %2) local_unnamed_addr #1 {
   %4 = zext i32 %1 to i64
   %5 = bitcast %struct.lean_object* %0 to i8*
@@ -1550,11 +1550,11 @@ define void @lean_ctor_set_uint32(%struct.lean_object* nocapture %0, i32 %1, i32
   %19 = bitcast %struct.lean_object* %18 to i8*
   %20 = getelementptr inbounds i8, i8* %19, i64 %4
   %21 = bitcast i8* %20 to i32*
-  store i32 %2, i32* %21, align 4, !tbaa !16
+  store i32 %2, i32* %21, align 4, !tbaa !17
   ret void
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define void @lean_ctor_set_uint64(%struct.lean_object* nocapture %0, i32 %1, i64 %2) local_unnamed_addr #1 {
   %4 = zext i32 %1 to i64
   %5 = bitcast %struct.lean_object* %0 to i8*
@@ -1588,7 +1588,7 @@ define void @lean_ctor_set_uint64(%struct.lean_object* nocapture %0, i32 %1, i64
   ret void
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define void @lean_ctor_set_float(%struct.lean_object* nocapture %0, i32 %1, double %2) local_unnamed_addr #1 {
   %4 = zext i32 %1 to i64
   %5 = bitcast %struct.lean_object* %0 to i8*
@@ -1618,11 +1618,11 @@ define void @lean_ctor_set_float(%struct.lean_object* nocapture %0, i32 %1, doub
   %19 = bitcast %struct.lean_object* %18 to i8*
   %20 = getelementptr inbounds i8, i8* %19, i64 %4
   %21 = bitcast i8* %20 to double*
-  store double %2, double* %21, align 8, !tbaa !18
+  store double %2, double* %21, align 8, !tbaa !19
   ret void
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define i8* @lean_closure_fun(%struct.lean_object* nocapture readonly %0) local_unnamed_addr #1 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -1637,11 +1637,11 @@ define i8* @lean_closure_fun(%struct.lean_object* nocapture readonly %0) local_u
 7:                                                ; preds = %1
   %8 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 1
   %9 = bitcast %struct.lean_object* %8 to i8**
-  %10 = load i8*, i8** %9, align 8, !tbaa !20
+  %10 = load i8*, i8** %9, align 8, !tbaa !21
   ret i8* %10
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define i32 @lean_closure_arity(%struct.lean_object* nocapture readonly %0) local_unnamed_addr #1 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -1656,12 +1656,12 @@ define i32 @lean_closure_arity(%struct.lean_object* nocapture readonly %0) local
 7:                                                ; preds = %1
   %8 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 2
   %9 = bitcast %struct.lean_object* %8 to i16*
-  %10 = load i16, i16* %9, align 8, !tbaa !22
+  %10 = load i16, i16* %9, align 8, !tbaa !23
   %11 = zext i16 %10 to i32
   ret i32 %11
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define i32 @lean_closure_num_fixed(%struct.lean_object* nocapture readonly %0) local_unnamed_addr #1 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -1676,12 +1676,12 @@ define i32 @lean_closure_num_fixed(%struct.lean_object* nocapture readonly %0) l
 7:                                                ; preds = %1
   %8 = bitcast %struct.lean_object* %0 to %struct.lean_closure_object*
   %9 = getelementptr inbounds %struct.lean_closure_object, %struct.lean_closure_object* %8, i64 0, i32 3
-  %10 = load i16, i16* %9, align 2, !tbaa !23
+  %10 = load i16, i16* %9, align 2, !tbaa !24
   %11 = zext i16 %10 to i32
   ret i32 %11
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define nonnull %struct.lean_object** @lean_closure_arg_cptr(%struct.lean_object* readonly %0) local_unnamed_addr #1 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -1699,7 +1699,7 @@ define nonnull %struct.lean_object** @lean_closure_arg_cptr(%struct.lean_object*
   ret %struct.lean_object** %9
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_alloc_closure(i8* %0, i32 %1, i32 %2) local_unnamed_addr #1 {
   %4 = icmp eq i32 %1, 0
   br i1 %4, label %5, label %6
@@ -1743,19 +1743,19 @@ define %struct.lean_object* @lean_alloc_closure(i8* %0, i32 %1, i32 %2) local_un
   store i64 -792633534417207295, i64* %22, align 8, !tbaa !9
   %23 = getelementptr inbounds i8, i8* %20, i64 8
   %24 = bitcast i8* %23 to i8**
-  store i8* %0, i8** %24, align 8, !tbaa !20
+  store i8* %0, i8** %24, align 8, !tbaa !21
   %25 = trunc i32 %1 to i16
   %26 = getelementptr inbounds i8, i8* %20, i64 16
   %27 = bitcast i8* %26 to i16*
-  store i16 %25, i16* %27, align 8, !tbaa !22
+  store i16 %25, i16* %27, align 8, !tbaa !23
   %28 = trunc i32 %2 to i16
   %29 = getelementptr inbounds i8, i8* %20, i64 18
   %30 = bitcast i8* %29 to i16*
-  store i16 %28, i16* %30, align 2, !tbaa !23
+  store i16 %28, i16* %30, align 2, !tbaa !24
   ret %struct.lean_object* %21
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_closure_get(%struct.lean_object* nocapture readonly %0, i32 %1) local_unnamed_addr #1 {
   %3 = bitcast %struct.lean_object* %0 to i8*
   %4 = getelementptr inbounds i8, i8* %3, i64 7
@@ -1770,7 +1770,7 @@ define %struct.lean_object* @lean_closure_get(%struct.lean_object* nocapture rea
 8:                                                ; preds = %2
   %9 = bitcast %struct.lean_object* %0 to %struct.lean_closure_object*
   %10 = getelementptr inbounds %struct.lean_closure_object, %struct.lean_closure_object* %9, i64 0, i32 3
-  %11 = load i16, i16* %10, align 2, !tbaa !23
+  %11 = load i16, i16* %10, align 2, !tbaa !24
   %12 = zext i16 %11 to i32
   %13 = icmp ugt i32 %12, %1
   br i1 %13, label %15, label %14
@@ -1782,11 +1782,11 @@ define %struct.lean_object* @lean_closure_get(%struct.lean_object* nocapture rea
 15:                                               ; preds = %8
   %16 = zext i32 %1 to i64
   %17 = getelementptr inbounds %struct.lean_closure_object, %struct.lean_closure_object* %9, i64 0, i32 4, i64 %16
-  %18 = load %struct.lean_object*, %struct.lean_object** %17, align 8, !tbaa !12
+  %18 = load %struct.lean_object*, %struct.lean_object** %17, align 8, !tbaa !13
   ret %struct.lean_object* %18
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define void @lean_closure_set(%struct.lean_object* nocapture %0, i32 %1, %struct.lean_object* %2) local_unnamed_addr #1 {
   %4 = bitcast %struct.lean_object* %0 to i8*
   %5 = getelementptr inbounds i8, i8* %4, i64 7
@@ -1801,7 +1801,7 @@ define void @lean_closure_set(%struct.lean_object* nocapture %0, i32 %1, %struct
 9:                                                ; preds = %3
   %10 = bitcast %struct.lean_object* %0 to %struct.lean_closure_object*
   %11 = getelementptr inbounds %struct.lean_closure_object, %struct.lean_closure_object* %10, i64 0, i32 3
-  %12 = load i16, i16* %11, align 2, !tbaa !23
+  %12 = load i16, i16* %11, align 2, !tbaa !24
   %13 = zext i16 %12 to i32
   %14 = icmp ugt i32 %13, %1
   br i1 %14, label %16, label %15
@@ -1813,11 +1813,11 @@ define void @lean_closure_set(%struct.lean_object* nocapture %0, i32 %1, %struct
 16:                                               ; preds = %9
   %17 = zext i32 %1 to i64
   %18 = getelementptr inbounds %struct.lean_closure_object, %struct.lean_closure_object* %10, i64 0, i32 4, i64 %17
-  store %struct.lean_object* %2, %struct.lean_object** %18, align 8, !tbaa !12
+  store %struct.lean_object* %2, %struct.lean_object** %18, align 8, !tbaa !13
   ret void
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_alloc_array(i64 %0, i64 %1) local_unnamed_addr #1 {
   %3 = shl i64 %1, 3
   %4 = add i64 %3, 24
@@ -1825,15 +1825,15 @@ define %struct.lean_object* @lean_alloc_array(i64 %0, i64 %1) local_unnamed_addr
   %6 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %5, i64 0, i32 0
   store i64 -720575940379279359, i64* %6, align 8, !tbaa !9
   %7 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %5, i64 1, i32 0
-  store i64 %0, i64* %7, align 8, !tbaa !24
+  store i64 %0, i64* %7, align 8, !tbaa !25
   %8 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %5, i64 2, i32 0
-  store i64 %1, i64* %8, align 8, !tbaa !26
+  store i64 %1, i64* %8, align 8, !tbaa !27
   ret %struct.lean_object* %5
 }
 
 declare %struct.lean_object* @lean_alloc_object(i64) local_unnamed_addr #3
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define i64 @lean_array_size(%struct.lean_object* nocapture readonly %0) local_unnamed_addr #1 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -1847,11 +1847,11 @@ define i64 @lean_array_size(%struct.lean_object* nocapture readonly %0) local_un
 
 7:                                                ; preds = %1
   %8 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 1, i32 0
-  %9 = load i64, i64* %8, align 8, !tbaa !24
+  %9 = load i64, i64* %8, align 8, !tbaa !25
   ret i64 %9
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define i64 @lean_array_capacity(%struct.lean_object* nocapture readonly %0) local_unnamed_addr #1 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -1865,11 +1865,11 @@ define i64 @lean_array_capacity(%struct.lean_object* nocapture readonly %0) loca
 
 7:                                                ; preds = %1
   %8 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 2, i32 0
-  %9 = load i64, i64* %8, align 8, !tbaa !26
+  %9 = load i64, i64* %8, align 8, !tbaa !27
   ret i64 %9
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define i64 @lean_array_byte_size(%struct.lean_object* nocapture readonly %0) local_unnamed_addr #1 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -1883,13 +1883,13 @@ define i64 @lean_array_byte_size(%struct.lean_object* nocapture readonly %0) loc
 
 7:                                                ; preds = %1
   %8 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 2, i32 0
-  %9 = load i64, i64* %8, align 8, !tbaa !26
+  %9 = load i64, i64* %8, align 8, !tbaa !27
   %10 = shl i64 %9, 3
   %11 = add i64 %10, 24
   ret i64 %11
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define nonnull %struct.lean_object** @lean_array_cptr(%struct.lean_object* readonly %0) local_unnamed_addr #1 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -1907,7 +1907,7 @@ define nonnull %struct.lean_object** @lean_array_cptr(%struct.lean_object* reado
   ret %struct.lean_object** %9
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define void @lean_array_set_size(%struct.lean_object* nocapture %0, i64 %1) local_unnamed_addr #1 {
   %3 = bitcast %struct.lean_object* %0 to i8*
   %4 = getelementptr inbounds i8, i8* %3, i64 7
@@ -1923,7 +1923,7 @@ define void @lean_array_set_size(%struct.lean_object* nocapture %0, i64 %1) loca
   %9 = getelementptr inbounds i8, i8* %3, i64 5
   %10 = load i8, i8* %9, align 1, !tbaa !7
   %11 = icmp eq i8 %10, 0
-  br i1 %11, label %12, label %17, !prof !11
+  br i1 %11, label %12, label %17, !prof !11, !misexpect !12
 
 12:                                               ; preds = %8
   %13 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 0, i32 0
@@ -1938,7 +1938,7 @@ define void @lean_array_set_size(%struct.lean_object* nocapture %0, i64 %1) loca
 
 18:                                               ; preds = %12
   %19 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 2, i32 0
-  %20 = load i64, i64* %19, align 8, !tbaa !26
+  %20 = load i64, i64* %19, align 8, !tbaa !27
   %21 = icmp ult i64 %20, %1
   br i1 %21, label %22, label %23
 
@@ -1948,11 +1948,11 @@ define void @lean_array_set_size(%struct.lean_object* nocapture %0, i64 %1) loca
 
 23:                                               ; preds = %18
   %24 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 1, i32 0
-  store i64 %1, i64* %24, align 8, !tbaa !24
+  store i64 %1, i64* %24, align 8, !tbaa !25
   ret void
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_array_get_core(%struct.lean_object* nocapture readonly %0, i64 %1) local_unnamed_addr #1 {
   %3 = bitcast %struct.lean_object* %0 to i8*
   %4 = getelementptr inbounds i8, i8* %3, i64 7
@@ -1966,7 +1966,7 @@ define %struct.lean_object* @lean_array_get_core(%struct.lean_object* nocapture 
 
 8:                                                ; preds = %2
   %9 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 1, i32 0
-  %10 = load i64, i64* %9, align 8, !tbaa !24
+  %10 = load i64, i64* %9, align 8, !tbaa !25
   %11 = icmp ugt i64 %10, %1
   br i1 %11, label %13, label %12
 
@@ -1977,11 +1977,11 @@ define %struct.lean_object* @lean_array_get_core(%struct.lean_object* nocapture 
 13:                                               ; preds = %8
   %14 = bitcast %struct.lean_object* %0 to %struct.lean_array_object*
   %15 = getelementptr inbounds %struct.lean_array_object, %struct.lean_array_object* %14, i64 0, i32 3, i64 %1
-  %16 = load %struct.lean_object*, %struct.lean_object** %15, align 8, !tbaa !12
+  %16 = load %struct.lean_object*, %struct.lean_object** %15, align 8, !tbaa !13
   ret %struct.lean_object* %16
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define void @lean_array_set_core(%struct.lean_object* nocapture %0, i64 %1, %struct.lean_object* %2) local_unnamed_addr #1 {
   %4 = bitcast %struct.lean_object* %0 to i8*
   %5 = getelementptr inbounds i8, i8* %4, i64 5
@@ -1991,7 +1991,7 @@ define void @lean_array_set_core(%struct.lean_object* nocapture %0, i64 %1, %str
 
 8:                                                ; preds = %3
   %9 = icmp eq i8 %6, 0
-  br i1 %9, label %10, label %15, !prof !11
+  br i1 %9, label %10, label %15, !prof !11, !misexpect !12
 
 10:                                               ; preds = %8
   %11 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 0, i32 0
@@ -2016,7 +2016,7 @@ define void @lean_array_set_core(%struct.lean_object* nocapture %0, i64 %1, %str
 
 21:                                               ; preds = %16
   %22 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 1, i32 0
-  %23 = load i64, i64* %22, align 8, !tbaa !24
+  %23 = load i64, i64* %22, align 8, !tbaa !25
   %24 = icmp ugt i64 %23, %1
   br i1 %24, label %26, label %25
 
@@ -2027,11 +2027,11 @@ define void @lean_array_set_core(%struct.lean_object* nocapture %0, i64 %1, %str
 26:                                               ; preds = %21
   %27 = bitcast %struct.lean_object* %0 to %struct.lean_array_object*
   %28 = getelementptr inbounds %struct.lean_array_object, %struct.lean_array_object* %27, i64 0, i32 3, i64 %1
-  store %struct.lean_object* %2, %struct.lean_object** %28, align 8, !tbaa !12
+  store %struct.lean_object* %2, %struct.lean_object** %28, align 8, !tbaa !13
   ret void
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define nonnull %struct.lean_object* @lean_array_sz(%struct.lean_object* %0) local_unnamed_addr #1 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -2045,7 +2045,7 @@ define nonnull %struct.lean_object* @lean_array_sz(%struct.lean_object* %0) loca
 
 7:                                                ; preds = %1
   %8 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 1, i32 0
-  %9 = load i64, i64* %8, align 8, !tbaa !24
+  %9 = load i64, i64* %8, align 8, !tbaa !25
   %10 = ptrtoint %struct.lean_object* %0 to i64
   %11 = and i64 %10, 1
   %12 = icmp eq i64 %11, 0
@@ -2086,7 +2086,7 @@ define nonnull %struct.lean_object* @lean_array_sz(%struct.lean_object* %0) loca
   ret %struct.lean_object* %31
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define nonnull %struct.lean_object* @lean_array_get_size(%struct.lean_object* nocapture readonly %0) local_unnamed_addr #1 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -2100,14 +2100,14 @@ define nonnull %struct.lean_object* @lean_array_get_size(%struct.lean_object* no
 
 7:                                                ; preds = %1
   %8 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 1, i32 0
-  %9 = load i64, i64* %8, align 8, !tbaa !24
+  %9 = load i64, i64* %8, align 8, !tbaa !25
   %10 = shl i64 %9, 1
   %11 = or i64 %10, 1
   %12 = inttoptr i64 %11 to %struct.lean_object*
   ret %struct.lean_object* %12
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_mk_empty_array() local_unnamed_addr #1 {
   %1 = tail call %struct.lean_object* @lean_alloc_object(i64 24) #12
   %2 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %1, i64 0, i32 0
@@ -2118,7 +2118,7 @@ define %struct.lean_object* @lean_mk_empty_array() local_unnamed_addr #1 {
   ret %struct.lean_object* %1
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_mk_empty_array_with_capacity(%struct.lean_object* %0) local_unnamed_addr #1 {
   %2 = ptrtoint %struct.lean_object* %0 to i64
   %3 = and i64 %2, 1
@@ -2137,14 +2137,14 @@ define %struct.lean_object* @lean_mk_empty_array_with_capacity(%struct.lean_obje
   %11 = bitcast %struct.lean_object* %10 to <2 x i64>*
   store <2 x i64> <i64 -720575940379279359, i64 0>, <2 x i64>* %11, align 8, !tbaa !3
   %12 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %10, i64 2, i32 0
-  store i64 %7, i64* %12, align 8, !tbaa !26
+  store i64 %7, i64* %12, align 8, !tbaa !27
   ret %struct.lean_object* %10
 }
 
 ; Function Attrs: noreturn
 declare void @lean_internal_panic_out_of_memory(...) local_unnamed_addr #7
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_array_uget(%struct.lean_object* nocapture readonly %0, i64 %1) local_unnamed_addr #1 {
   %3 = bitcast %struct.lean_object* %0 to i8*
   %4 = getelementptr inbounds i8, i8* %3, i64 7
@@ -2158,7 +2158,7 @@ define %struct.lean_object* @lean_array_uget(%struct.lean_object* nocapture read
 
 8:                                                ; preds = %2
   %9 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 1, i32 0
-  %10 = load i64, i64* %9, align 8, !tbaa !24
+  %10 = load i64, i64* %9, align 8, !tbaa !25
   %11 = icmp ugt i64 %10, %1
   br i1 %11, label %13, label %12
 
@@ -2169,7 +2169,7 @@ define %struct.lean_object* @lean_array_uget(%struct.lean_object* nocapture read
 13:                                               ; preds = %8
   %14 = bitcast %struct.lean_object* %0 to %struct.lean_array_object*
   %15 = getelementptr inbounds %struct.lean_array_object, %struct.lean_array_object* %14, i64 0, i32 3, i64 %1
-  %16 = load %struct.lean_object*, %struct.lean_object** %15, align 8, !tbaa !12
+  %16 = load %struct.lean_object*, %struct.lean_object** %15, align 8, !tbaa !13
   %17 = ptrtoint %struct.lean_object* %16 to i64
   %18 = and i64 %17, 1
   %19 = icmp eq i64 %18, 0
@@ -2200,7 +2200,7 @@ define %struct.lean_object* @lean_array_uget(%struct.lean_object* nocapture read
   ret %struct.lean_object* %16
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_array_fget(%struct.lean_object* nocapture readonly %0, %struct.lean_object* %1) local_unnamed_addr #1 {
   %3 = ptrtoint %struct.lean_object* %1 to i64
   %4 = lshr i64 %3, 1
@@ -2216,7 +2216,7 @@ define %struct.lean_object* @lean_array_fget(%struct.lean_object* nocapture read
 
 10:                                               ; preds = %2
   %11 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 1, i32 0
-  %12 = load i64, i64* %11, align 8, !tbaa !24
+  %12 = load i64, i64* %11, align 8, !tbaa !25
   %13 = icmp ugt i64 %12, %4
   br i1 %13, label %15, label %14
 
@@ -2227,7 +2227,7 @@ define %struct.lean_object* @lean_array_fget(%struct.lean_object* nocapture read
 15:                                               ; preds = %10
   %16 = bitcast %struct.lean_object* %0 to %struct.lean_array_object*
   %17 = getelementptr inbounds %struct.lean_array_object, %struct.lean_array_object* %16, i64 0, i32 3, i64 %4
-  %18 = load %struct.lean_object*, %struct.lean_object** %17, align 8, !tbaa !12
+  %18 = load %struct.lean_object*, %struct.lean_object** %17, align 8, !tbaa !13
   %19 = ptrtoint %struct.lean_object* %18 to i64
   %20 = and i64 %19, 1
   %21 = icmp eq i64 %20, 0
@@ -2258,7 +2258,7 @@ define %struct.lean_object* @lean_array_fget(%struct.lean_object* nocapture read
   ret %struct.lean_object* %18
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_array_get(%struct.lean_object* %0, %struct.lean_object* nocapture readonly %1, %struct.lean_object* %2) local_unnamed_addr #1 {
   %4 = ptrtoint %struct.lean_object* %2 to i64
   %5 = and i64 %4, 1
@@ -2279,7 +2279,7 @@ define %struct.lean_object* @lean_array_get(%struct.lean_object* %0, %struct.lea
 
 14:                                               ; preds = %7
   %15 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %1, i64 1, i32 0
-  %16 = load i64, i64* %15, align 8, !tbaa !24
+  %16 = load i64, i64* %15, align 8, !tbaa !25
   %17 = icmp ult i64 %8, %16
   br i1 %17, label %18, label %64
 
@@ -2328,7 +2328,7 @@ define %struct.lean_object* @lean_array_get(%struct.lean_object* %0, %struct.lea
   unreachable
 
 42:                                               ; preds = %38
-  %43 = load i64, i64* %15, align 8, !tbaa !24
+  %43 = load i64, i64* %15, align 8, !tbaa !25
   %44 = icmp ugt i64 %43, %8
   br i1 %44, label %46, label %45
 
@@ -2339,7 +2339,7 @@ define %struct.lean_object* @lean_array_get(%struct.lean_object* %0, %struct.lea
 46:                                               ; preds = %42
   %47 = bitcast %struct.lean_object* %1 to %struct.lean_array_object*
   %48 = getelementptr inbounds %struct.lean_array_object, %struct.lean_array_object* %47, i64 0, i32 3, i64 %8
-  %49 = load %struct.lean_object*, %struct.lean_object** %48, align 8, !tbaa !12
+  %49 = load %struct.lean_object*, %struct.lean_object** %48, align 8, !tbaa !13
   %50 = ptrtoint %struct.lean_object* %49 to i64
   %51 = and i64 %50, 1
   %52 = icmp eq i64 %51, 0
@@ -2371,13 +2371,13 @@ define %struct.lean_object* @lean_array_get(%struct.lean_object* %0, %struct.lea
   br label %66
 
 66:                                               ; preds = %64, %61, %57, %53, %46
-  %67 = phi %struct.lean_object* [ %65, %64 ], [ %49, %61 ], [ %49, %57 ], [ %49, %53 ], [ %49, %46 ]
+  %67 = phi %struct.lean_object* [ %65, %64 ], [ %49, %46 ], [ %49, %53 ], [ %49, %57 ], [ %49, %61 ]
   ret %struct.lean_object* %67
 }
 
 declare %struct.lean_object* @lean_array_get_panic(%struct.lean_object*) local_unnamed_addr #3
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_copy_array(%struct.lean_object* %0) local_unnamed_addr #1 {
   %2 = tail call %struct.lean_object* @lean_copy_expand_array(%struct.lean_object* %0, i1 zeroext false) #12
   ret %struct.lean_object* %2
@@ -2385,13 +2385,13 @@ define %struct.lean_object* @lean_copy_array(%struct.lean_object* %0) local_unna
 
 declare %struct.lean_object* @lean_copy_expand_array(%struct.lean_object*, i1 zeroext) local_unnamed_addr #3
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_ensure_exclusive_array(%struct.lean_object* %0) local_unnamed_addr #1 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 5
   %4 = load i8, i8* %3, align 1, !tbaa !7
   %5 = icmp eq i8 %4, 0
-  br i1 %5, label %6, label %11, !prof !11
+  br i1 %5, label %6, label %11, !prof !11, !misexpect !12
 
 6:                                                ; preds = %1
   %7 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 0, i32 0
@@ -2409,13 +2409,13 @@ define %struct.lean_object* @lean_ensure_exclusive_array(%struct.lean_object* %0
   ret %struct.lean_object* %14
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_array_uset(%struct.lean_object* %0, i64 %1, %struct.lean_object* %2) local_unnamed_addr #1 {
   %4 = bitcast %struct.lean_object* %0 to i8*
   %5 = getelementptr inbounds i8, i8* %4, i64 5
   %6 = load i8, i8* %5, align 1, !tbaa !7
   %7 = icmp eq i8 %6, 0
-  br i1 %7, label %8, label %13, !prof !11
+  br i1 %7, label %8, label %13, !prof !11, !misexpect !12
 
 8:                                                ; preds = %3
   %9 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 0, i32 0
@@ -2445,7 +2445,7 @@ define %struct.lean_object* @lean_array_uset(%struct.lean_object* %0, i64 %1, %s
   %24 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %18, i64 3
   %25 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %24, i64 %1
   %26 = bitcast %struct.lean_object* %25 to %struct.lean_object**
-  %27 = load %struct.lean_object*, %struct.lean_object** %26, align 8, !tbaa !12
+  %27 = load %struct.lean_object*, %struct.lean_object** %26, align 8, !tbaa !13
   %28 = ptrtoint %struct.lean_object* %27 to i64
   %29 = and i64 %28, 1
   %30 = icmp eq i64 %29, 0
@@ -2481,11 +2481,11 @@ define %struct.lean_object* @lean_array_uset(%struct.lean_object* %0, i64 %1, %s
   br label %47
 
 47:                                               ; preds = %46, %41, %35, %31, %23
-  store %struct.lean_object* %2, %struct.lean_object** %26, align 8, !tbaa !12
+  store %struct.lean_object* %2, %struct.lean_object** %26, align 8, !tbaa !13
   ret %struct.lean_object* %18
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_array_fset(%struct.lean_object* %0, %struct.lean_object* %1, %struct.lean_object* %2) local_unnamed_addr #1 {
   %4 = ptrtoint %struct.lean_object* %1 to i64
   %5 = lshr i64 %4, 1
@@ -2493,7 +2493,7 @@ define %struct.lean_object* @lean_array_fset(%struct.lean_object* %0, %struct.le
   %7 = getelementptr inbounds i8, i8* %6, i64 5
   %8 = load i8, i8* %7, align 1, !tbaa !7
   %9 = icmp eq i8 %8, 0
-  br i1 %9, label %10, label %15, !prof !11
+  br i1 %9, label %10, label %15, !prof !11, !misexpect !12
 
 10:                                               ; preds = %3
   %11 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 0, i32 0
@@ -2523,7 +2523,7 @@ define %struct.lean_object* @lean_array_fset(%struct.lean_object* %0, %struct.le
   %26 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %20, i64 3
   %27 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %26, i64 %5
   %28 = bitcast %struct.lean_object* %27 to %struct.lean_object**
-  %29 = load %struct.lean_object*, %struct.lean_object** %28, align 8, !tbaa !12
+  %29 = load %struct.lean_object*, %struct.lean_object** %28, align 8, !tbaa !13
   %30 = ptrtoint %struct.lean_object* %29 to i64
   %31 = and i64 %30, 1
   %32 = icmp eq i64 %31, 0
@@ -2559,11 +2559,11 @@ define %struct.lean_object* @lean_array_fset(%struct.lean_object* %0, %struct.le
   br label %49
 
 49:                                               ; preds = %48, %43, %37, %33, %25
-  store %struct.lean_object* %2, %struct.lean_object** %28, align 8, !tbaa !12
+  store %struct.lean_object* %2, %struct.lean_object** %28, align 8, !tbaa !13
   ret %struct.lean_object* %20
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_array_set(%struct.lean_object* %0, %struct.lean_object* %1, %struct.lean_object* %2) local_unnamed_addr #1 {
   %4 = ptrtoint %struct.lean_object* %1 to i64
   %5 = and i64 %4, 1
@@ -2584,7 +2584,7 @@ define %struct.lean_object* @lean_array_set(%struct.lean_object* %0, %struct.lea
 
 14:                                               ; preds = %7
   %15 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 1, i32 0
-  %16 = load i64, i64* %15, align 8, !tbaa !24
+  %16 = load i64, i64* %15, align 8, !tbaa !25
   %17 = icmp ult i64 %8, %16
   br i1 %17, label %18, label %60
 
@@ -2592,7 +2592,7 @@ define %struct.lean_object* @lean_array_set(%struct.lean_object* %0, %struct.lea
   %19 = getelementptr inbounds i8, i8* %9, i64 5
   %20 = load i8, i8* %19, align 1, !tbaa !7
   %21 = icmp eq i8 %20, 0
-  br i1 %21, label %22, label %27, !prof !11
+  br i1 %21, label %22, label %27, !prof !11, !misexpect !12
 
 22:                                               ; preds = %18
   %23 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 0, i32 0
@@ -2618,7 +2618,7 @@ define %struct.lean_object* @lean_array_set(%struct.lean_object* %0, %struct.lea
   %36 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %35, i64 3
   %37 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %36, i64 %8
   %38 = bitcast %struct.lean_object* %37 to %struct.lean_object**
-  %39 = load %struct.lean_object*, %struct.lean_object** %38, align 8, !tbaa !12
+  %39 = load %struct.lean_object*, %struct.lean_object** %38, align 8, !tbaa !13
   %40 = ptrtoint %struct.lean_object* %39 to i64
   %41 = and i64 %40, 1
   %42 = icmp eq i64 %41, 0
@@ -2654,7 +2654,7 @@ define %struct.lean_object* @lean_array_set(%struct.lean_object* %0, %struct.lea
   br label %59
 
 59:                                               ; preds = %58, %53, %47, %43, %34
-  store %struct.lean_object* %2, %struct.lean_object** %38, align 8, !tbaa !12
+  store %struct.lean_object* %2, %struct.lean_object** %38, align 8, !tbaa !13
   br label %62
 
 60:                                               ; preds = %14, %3
@@ -2668,13 +2668,13 @@ define %struct.lean_object* @lean_array_set(%struct.lean_object* %0, %struct.lea
 
 declare %struct.lean_object* @lean_array_set_panic(%struct.lean_object*, %struct.lean_object*) local_unnamed_addr #3
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_array_pop(%struct.lean_object* %0) local_unnamed_addr #1 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 5
   %4 = load i8, i8* %3, align 1, !tbaa !7
   %5 = icmp eq i8 %4, 0
-  br i1 %5, label %6, label %11, !prof !11
+  br i1 %5, label %6, label %11, !prof !11, !misexpect !12
 
 6:                                                ; preds = %1
   %7 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 0, i32 0
@@ -2702,7 +2702,7 @@ define %struct.lean_object* @lean_array_pop(%struct.lean_object* %0) local_unnam
 
 21:                                               ; preds = %14
   %22 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %16, i64 1, i32 0
-  %23 = load i64, i64* %22, align 8, !tbaa !24
+  %23 = load i64, i64* %22, align 8, !tbaa !25
   %24 = icmp eq i64 %23, 0
   br i1 %24, label %50, label %25
 
@@ -2711,8 +2711,8 @@ define %struct.lean_object* @lean_array_pop(%struct.lean_object* %0) local_unnam
   %27 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %16, i64 3
   %28 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %27, i64 %26
   %29 = bitcast %struct.lean_object* %28 to %struct.lean_object**
-  store i64 %26, i64* %22, align 8, !tbaa !24
-  %30 = load %struct.lean_object*, %struct.lean_object** %29, align 8, !tbaa !12
+  store i64 %26, i64* %22, align 8, !tbaa !25
+  %30 = load %struct.lean_object*, %struct.lean_object** %29, align 8, !tbaa !13
   %31 = ptrtoint %struct.lean_object* %30 to i64
   %32 = and i64 %31, 1
   %33 = icmp eq i64 %32, 0
@@ -2751,13 +2751,13 @@ define %struct.lean_object* @lean_array_pop(%struct.lean_object* %0) local_unnam
   ret %struct.lean_object* %16
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_array_uswap(%struct.lean_object* %0, i64 %1, i64 %2) local_unnamed_addr #1 {
   %4 = bitcast %struct.lean_object* %0 to i8*
   %5 = getelementptr inbounds i8, i8* %4, i64 5
   %6 = load i8, i8* %5, align 1, !tbaa !7
   %7 = icmp eq i8 %6, 0
-  br i1 %7, label %8, label %13, !prof !11
+  br i1 %7, label %8, label %13, !prof !11, !misexpect !12
 
 8:                                                ; preds = %3
   %9 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 0, i32 0
@@ -2786,23 +2786,23 @@ define %struct.lean_object* @lean_array_uswap(%struct.lean_object* %0, i64 %1, i
 23:                                               ; preds = %16
   %24 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %18, i64 3
   %25 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %24, i64 %1
-  %26 = bitcast %struct.lean_object* %25 to %struct.lean_object**
-  %27 = load %struct.lean_object*, %struct.lean_object** %26, align 8, !tbaa !12
+  %26 = getelementptr %struct.lean_object, %struct.lean_object* %25, i64 0, i32 0
+  %27 = load i64, i64* %26, align 8, !tbaa !13
   %28 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %24, i64 %2
-  %29 = bitcast %struct.lean_object* %28 to %struct.lean_object**
-  %30 = load %struct.lean_object*, %struct.lean_object** %29, align 8, !tbaa !12
-  store %struct.lean_object* %30, %struct.lean_object** %26, align 8, !tbaa !12
-  store %struct.lean_object* %27, %struct.lean_object** %29, align 8, !tbaa !12
+  %29 = getelementptr %struct.lean_object, %struct.lean_object* %28, i64 0, i32 0
+  %30 = load i64, i64* %29, align 8, !tbaa !13
+  store i64 %30, i64* %26, align 8, !tbaa !13
+  store i64 %27, i64* %29, align 8, !tbaa !13
   ret %struct.lean_object* %18
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_array_fswap(%struct.lean_object* %0, %struct.lean_object* %1, %struct.lean_object* %2) local_unnamed_addr #1 {
   %4 = bitcast %struct.lean_object* %0 to i8*
   %5 = getelementptr inbounds i8, i8* %4, i64 5
   %6 = load i8, i8* %5, align 1, !tbaa !7
   %7 = icmp eq i8 %6, 0
-  br i1 %7, label %8, label %13, !prof !11
+  br i1 %7, label %8, label %13, !prof !11, !misexpect !12
 
 8:                                                ; preds = %3
   %9 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 0, i32 0
@@ -2835,17 +2835,17 @@ define %struct.lean_object* @lean_array_fswap(%struct.lean_object* %0, %struct.l
   %27 = lshr i64 %26, 1
   %28 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %18, i64 3
   %29 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %28, i64 %27
-  %30 = bitcast %struct.lean_object* %29 to %struct.lean_object**
-  %31 = load %struct.lean_object*, %struct.lean_object** %30, align 8, !tbaa !12
+  %30 = getelementptr %struct.lean_object, %struct.lean_object* %29, i64 0, i32 0
+  %31 = load i64, i64* %30, align 8, !tbaa !13
   %32 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %28, i64 %25
-  %33 = bitcast %struct.lean_object* %32 to %struct.lean_object**
-  %34 = load %struct.lean_object*, %struct.lean_object** %33, align 8, !tbaa !12
-  store %struct.lean_object* %34, %struct.lean_object** %30, align 8, !tbaa !12
-  store %struct.lean_object* %31, %struct.lean_object** %33, align 8, !tbaa !12
+  %33 = getelementptr %struct.lean_object, %struct.lean_object* %32, i64 0, i32 0
+  %34 = load i64, i64* %33, align 8, !tbaa !13
+  store i64 %34, i64* %30, align 8, !tbaa !13
+  store i64 %31, i64* %33, align 8, !tbaa !13
   ret %struct.lean_object* %18
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_array_swap(%struct.lean_object* %0, %struct.lean_object* %1, %struct.lean_object* %2) local_unnamed_addr #1 {
   %4 = ptrtoint %struct.lean_object* %1 to i64
   %5 = and i64 %4, 1
@@ -2873,7 +2873,7 @@ define %struct.lean_object* @lean_array_swap(%struct.lean_object* %0, %struct.le
 
 19:                                               ; preds = %11
   %20 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 1, i32 0
-  %21 = load i64, i64* %20, align 8, !tbaa !24
+  %21 = load i64, i64* %20, align 8, !tbaa !25
   %22 = icmp ult i64 %12, %21
   %23 = icmp ult i64 %13, %21
   %24 = and i1 %22, %23
@@ -2883,7 +2883,7 @@ define %struct.lean_object* @lean_array_swap(%struct.lean_object* %0, %struct.le
   %26 = getelementptr inbounds i8, i8* %14, i64 5
   %27 = load i8, i8* %26, align 1, !tbaa !7
   %28 = icmp eq i8 %27, 0
-  br i1 %28, label %29, label %34, !prof !11
+  br i1 %28, label %29, label %34, !prof !11, !misexpect !12
 
 29:                                               ; preds = %25
   %30 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 0, i32 0
@@ -2908,13 +2908,13 @@ define %struct.lean_object* @lean_array_swap(%struct.lean_object* %0, %struct.le
   %42 = phi %struct.lean_object* [ %35, %34 ], [ %0, %29 ]
   %43 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %42, i64 3
   %44 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %43, i64 %12
-  %45 = bitcast %struct.lean_object* %44 to %struct.lean_object**
-  %46 = load %struct.lean_object*, %struct.lean_object** %45, align 8, !tbaa !12
+  %45 = getelementptr %struct.lean_object, %struct.lean_object* %44, i64 0, i32 0
+  %46 = load i64, i64* %45, align 8, !tbaa !13
   %47 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %43, i64 %13
-  %48 = bitcast %struct.lean_object* %47 to %struct.lean_object**
-  %49 = load %struct.lean_object*, %struct.lean_object** %48, align 8, !tbaa !12
-  store %struct.lean_object* %49, %struct.lean_object** %45, align 8, !tbaa !12
-  store %struct.lean_object* %46, %struct.lean_object** %48, align 8, !tbaa !12
+  %48 = getelementptr %struct.lean_object, %struct.lean_object* %47, i64 0, i32 0
+  %49 = load i64, i64* %48, align 8, !tbaa !13
+  store i64 %49, i64* %45, align 8, !tbaa !13
+  store i64 %46, i64* %48, align 8, !tbaa !13
   br label %50
 
 50:                                               ; preds = %41, %19, %7, %3
@@ -2922,7 +2922,7 @@ define %struct.lean_object* @lean_array_swap(%struct.lean_object* %0, %struct.le
   ret %struct.lean_object* %51
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_alloc_sarray(i32 %0, i64 %1, i64 %2) local_unnamed_addr #1 {
   %4 = zext i32 %0 to i64
   %5 = mul i64 %4, %2
@@ -2933,13 +2933,13 @@ define %struct.lean_object* @lean_alloc_sarray(i32 %0, i64 %1, i64 %2) local_unn
   %10 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %7, i64 0, i32 0
   store i64 %9, i64* %10, align 8, !tbaa !9
   %11 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %7, i64 1, i32 0
-  store i64 %1, i64* %11, align 8, !tbaa !24
+  store i64 %1, i64* %11, align 8, !tbaa !25
   %12 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %7, i64 2, i32 0
-  store i64 %2, i64* %12, align 8, !tbaa !26
+  store i64 %2, i64* %12, align 8, !tbaa !27
   ret %struct.lean_object* %7
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define i32 @lean_sarray_elem_size(%struct.lean_object* nocapture readonly %0) local_unnamed_addr #1 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -2958,7 +2958,7 @@ define i32 @lean_sarray_elem_size(%struct.lean_object* nocapture readonly %0) lo
   ret i32 %10
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define i64 @lean_sarray_capacity(%struct.lean_object* nocapture readonly %0) local_unnamed_addr #1 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -2972,11 +2972,11 @@ define i64 @lean_sarray_capacity(%struct.lean_object* nocapture readonly %0) loc
 
 7:                                                ; preds = %1
   %8 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 2, i32 0
-  %9 = load i64, i64* %8, align 8, !tbaa !26
+  %9 = load i64, i64* %8, align 8, !tbaa !27
   ret i64 %9
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define i64 @lean_sarray_byte_size(%struct.lean_object* nocapture readonly %0) local_unnamed_addr #1 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -2993,13 +2993,13 @@ define i64 @lean_sarray_byte_size(%struct.lean_object* nocapture readonly %0) lo
   %9 = load i8, i8* %8, align 1, !tbaa !7
   %10 = zext i8 %9 to i64
   %11 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 2, i32 0
-  %12 = load i64, i64* %11, align 8, !tbaa !26
+  %12 = load i64, i64* %11, align 8, !tbaa !27
   %13 = mul i64 %12, %10
   %14 = add i64 %13, 24
   ret i64 %14
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define i64 @lean_sarray_size(%struct.lean_object* nocapture readonly %0) local_unnamed_addr #1 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -3013,17 +3013,17 @@ define i64 @lean_sarray_size(%struct.lean_object* nocapture readonly %0) local_u
 
 7:                                                ; preds = %1
   %8 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 1, i32 0
-  %9 = load i64, i64* %8, align 8, !tbaa !24
+  %9 = load i64, i64* %8, align 8, !tbaa !25
   ret i64 %9
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define void @lean_sarray_set_size(%struct.lean_object* nocapture %0, i64 %1) local_unnamed_addr #1 {
   %3 = bitcast %struct.lean_object* %0 to i8*
   %4 = getelementptr inbounds i8, i8* %3, i64 5
   %5 = load i8, i8* %4, align 1, !tbaa !7
   %6 = icmp eq i8 %5, 0
-  br i1 %6, label %7, label %12, !prof !11
+  br i1 %6, label %7, label %12, !prof !11, !misexpect !12
 
 7:                                                ; preds = %2
   %8 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 0, i32 0
@@ -3048,7 +3048,7 @@ define void @lean_sarray_set_size(%struct.lean_object* nocapture %0, i64 %1) loc
 
 18:                                               ; preds = %13
   %19 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 2, i32 0
-  %20 = load i64, i64* %19, align 8, !tbaa !26
+  %20 = load i64, i64* %19, align 8, !tbaa !27
   %21 = icmp ult i64 %20, %1
   br i1 %21, label %22, label %23
 
@@ -3058,11 +3058,11 @@ define void @lean_sarray_set_size(%struct.lean_object* nocapture %0, i64 %1) loc
 
 23:                                               ; preds = %18
   %24 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 1, i32 0
-  store i64 %1, i64* %24, align 8, !tbaa !24
+  store i64 %1, i64* %24, align 8, !tbaa !25
   ret void
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define nonnull i8* @lean_sarray_cptr(%struct.lean_object* readonly %0) local_unnamed_addr #1 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -3080,7 +3080,7 @@ define nonnull i8* @lean_sarray_cptr(%struct.lean_object* readonly %0) local_unn
   ret i8* %9
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_mk_empty_byte_array(%struct.lean_object* %0) local_unnamed_addr #1 {
   %2 = ptrtoint %struct.lean_object* %0 to i64
   %3 = and i64 %2, 1
@@ -3098,11 +3098,11 @@ define %struct.lean_object* @lean_mk_empty_byte_array(%struct.lean_object* %0) l
   %10 = bitcast %struct.lean_object* %9 to <2 x i64>*
   store <2 x i64> <i64 -576179277326712831, i64 0>, <2 x i64>* %10, align 8, !tbaa !3
   %11 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %9, i64 2, i32 0
-  store i64 %7, i64* %11, align 8, !tbaa !26
+  store i64 %7, i64* %11, align 8, !tbaa !27
   ret %struct.lean_object* %9
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define nonnull %struct.lean_object* @lean_byte_array_size(%struct.lean_object* nocapture readonly %0) local_unnamed_addr #1 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -3116,14 +3116,14 @@ define nonnull %struct.lean_object* @lean_byte_array_size(%struct.lean_object* n
 
 7:                                                ; preds = %1
   %8 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 1, i32 0
-  %9 = load i64, i64* %8, align 8, !tbaa !24
+  %9 = load i64, i64* %8, align 8, !tbaa !25
   %10 = shl i64 %9, 1
   %11 = or i64 %10, 1
   %12 = inttoptr i64 %11 to %struct.lean_object*
   ret %struct.lean_object* %12
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define zeroext i8 @lean_byte_array_get(%struct.lean_object* nocapture readonly %0, %struct.lean_object* %1) local_unnamed_addr #1 {
   %3 = ptrtoint %struct.lean_object* %1 to i64
   %4 = and i64 %3, 1
@@ -3144,7 +3144,7 @@ define zeroext i8 @lean_byte_array_get(%struct.lean_object* nocapture readonly %
 
 13:                                               ; preds = %6
   %14 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 1, i32 0
-  %15 = load i64, i64* %14, align 8, !tbaa !24
+  %15 = load i64, i64* %14, align 8, !tbaa !25
   %16 = icmp ult i64 %7, %15
   br i1 %16, label %17, label %22
 
@@ -3160,7 +3160,7 @@ define zeroext i8 @lean_byte_array_get(%struct.lean_object* nocapture readonly %
   ret i8 %23
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_byte_array_set(%struct.lean_object* %0, %struct.lean_object* %1, i8 zeroext %2) local_unnamed_addr #1 {
   %4 = ptrtoint %struct.lean_object* %1 to i64
   %5 = and i64 %4, 1
@@ -3181,7 +3181,7 @@ define %struct.lean_object* @lean_byte_array_set(%struct.lean_object* %0, %struc
 
 14:                                               ; preds = %7
   %15 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 1, i32 0
-  %16 = load i64, i64* %15, align 8, !tbaa !24
+  %16 = load i64, i64* %15, align 8, !tbaa !25
   %17 = icmp ult i64 %8, %16
   br i1 %17, label %18, label %39
 
@@ -3189,7 +3189,7 @@ define %struct.lean_object* @lean_byte_array_set(%struct.lean_object* %0, %struc
   %19 = getelementptr inbounds i8, i8* %9, i64 5
   %20 = load i8, i8* %19, align 1, !tbaa !7
   %21 = icmp eq i8 %20, 0
-  br i1 %21, label %22, label %27, !prof !11
+  br i1 %21, label %22, label %27, !prof !11, !misexpect !12
 
 22:                                               ; preds = %18
   %23 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 0, i32 0
@@ -3225,7 +3225,7 @@ define %struct.lean_object* @lean_byte_array_set(%struct.lean_object* %0, %struc
 
 declare %struct.lean_object* @lean_copy_byte_array(%struct.lean_object*) local_unnamed_addr #3
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_mk_empty_float_array(%struct.lean_object* %0) local_unnamed_addr #1 {
   %2 = ptrtoint %struct.lean_object* %0 to i64
   %3 = and i64 %2, 1
@@ -3244,11 +3244,11 @@ define %struct.lean_object* @lean_mk_empty_float_array(%struct.lean_object* %0) 
   %11 = bitcast %struct.lean_object* %10 to <2 x i64>*
   store <2 x i64> <i64 -574208952489738239, i64 0>, <2 x i64>* %11, align 8, !tbaa !3
   %12 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %10, i64 2, i32 0
-  store i64 %7, i64* %12, align 8, !tbaa !26
+  store i64 %7, i64* %12, align 8, !tbaa !27
   ret %struct.lean_object* %10
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define nonnull %struct.lean_object* @lean_float_array_size(%struct.lean_object* nocapture readonly %0) local_unnamed_addr #1 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -3262,14 +3262,14 @@ define nonnull %struct.lean_object* @lean_float_array_size(%struct.lean_object* 
 
 7:                                                ; preds = %1
   %8 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 1, i32 0
-  %9 = load i64, i64* %8, align 8, !tbaa !24
+  %9 = load i64, i64* %8, align 8, !tbaa !25
   %10 = shl i64 %9, 1
   %11 = or i64 %10, 1
   %12 = inttoptr i64 %11 to %struct.lean_object*
   ret %struct.lean_object* %12
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define nonnull double* @lean_float_array_cptr(%struct.lean_object* readonly %0) local_unnamed_addr #1 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -3287,7 +3287,7 @@ define nonnull double* @lean_float_array_cptr(%struct.lean_object* readonly %0) 
   ret double* %9
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define double @lean_float_array_get(%struct.lean_object* nocapture readonly %0, %struct.lean_object* %1) local_unnamed_addr #1 {
   %3 = ptrtoint %struct.lean_object* %1 to i64
   %4 = and i64 %3, 1
@@ -3308,7 +3308,7 @@ define double @lean_float_array_get(%struct.lean_object* nocapture readonly %0, 
 
 13:                                               ; preds = %6
   %14 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 1, i32 0
-  %15 = load i64, i64* %14, align 8, !tbaa !24
+  %15 = load i64, i64* %14, align 8, !tbaa !25
   %16 = icmp ult i64 %7, %15
   br i1 %16, label %17, label %22
 
@@ -3316,7 +3316,7 @@ define double @lean_float_array_get(%struct.lean_object* nocapture readonly %0, 
   %18 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 3
   %19 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %18, i64 %7
   %20 = bitcast %struct.lean_object* %19 to double*
-  %21 = load double, double* %20, align 8, !tbaa !18
+  %21 = load double, double* %20, align 8, !tbaa !19
   br label %22
 
 22:                                               ; preds = %17, %13, %2
@@ -3324,7 +3324,7 @@ define double @lean_float_array_get(%struct.lean_object* nocapture readonly %0, 
   ret double %23
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_float_array_set(%struct.lean_object* %0, %struct.lean_object* %1, double %2) local_unnamed_addr #1 {
   %4 = ptrtoint %struct.lean_object* %1 to i64
   %5 = and i64 %4, 1
@@ -3345,7 +3345,7 @@ define %struct.lean_object* @lean_float_array_set(%struct.lean_object* %0, %stru
 
 14:                                               ; preds = %7
   %15 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 1, i32 0
-  %16 = load i64, i64* %15, align 8, !tbaa !24
+  %16 = load i64, i64* %15, align 8, !tbaa !25
   %17 = icmp ult i64 %8, %16
   br i1 %17, label %18, label %39
 
@@ -3353,7 +3353,7 @@ define %struct.lean_object* @lean_float_array_set(%struct.lean_object* %0, %stru
   %19 = getelementptr inbounds i8, i8* %9, i64 5
   %20 = load i8, i8* %19, align 1, !tbaa !7
   %21 = icmp eq i8 %20, 0
-  br i1 %21, label %22, label %27, !prof !11
+  br i1 %21, label %22, label %27, !prof !11, !misexpect !12
 
 22:                                               ; preds = %18
   %23 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 0, i32 0
@@ -3379,7 +3379,7 @@ define %struct.lean_object* @lean_float_array_set(%struct.lean_object* %0, %stru
   %36 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %35, i64 3
   %37 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %36, i64 %8
   %38 = bitcast %struct.lean_object* %37 to double*
-  store double %2, double* %38, align 8, !tbaa !18
+  store double %2, double* %38, align 8, !tbaa !19
   br label %39
 
 39:                                               ; preds = %34, %14, %3
@@ -3389,7 +3389,7 @@ define %struct.lean_object* @lean_float_array_set(%struct.lean_object* %0, %stru
 
 declare %struct.lean_object* @lean_copy_float_array(%struct.lean_object*) local_unnamed_addr #3
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define double @lean_float_array_fget(%struct.lean_object* nocapture readonly %0, %struct.lean_object* %1) local_unnamed_addr #1 {
   %3 = bitcast %struct.lean_object* %0 to i8*
   %4 = getelementptr inbounds i8, i8* %3, i64 7
@@ -3407,17 +3407,17 @@ define double @lean_float_array_fget(%struct.lean_object* nocapture readonly %0,
   %11 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 3
   %12 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %11, i64 %10
   %13 = bitcast %struct.lean_object* %12 to double*
-  %14 = load double, double* %13, align 8, !tbaa !18
+  %14 = load double, double* %13, align 8, !tbaa !19
   ret double %14
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_float_array_fset(%struct.lean_object* %0, %struct.lean_object* %1, double %2) local_unnamed_addr #1 {
   %4 = bitcast %struct.lean_object* %0 to i8*
   %5 = getelementptr inbounds i8, i8* %4, i64 5
   %6 = load i8, i8* %5, align 1, !tbaa !7
   %7 = icmp eq i8 %6, 0
-  br i1 %7, label %8, label %13, !prof !11
+  br i1 %7, label %8, label %13, !prof !11, !misexpect !12
 
 8:                                                ; preds = %3
   %9 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 0, i32 0
@@ -3449,26 +3449,26 @@ define %struct.lean_object* @lean_float_array_fset(%struct.lean_object* %0, %str
   %26 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %18, i64 3
   %27 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %26, i64 %25
   %28 = bitcast %struct.lean_object* %27 to double*
-  store double %2, double* %28, align 8, !tbaa !18
+  store double %2, double* %28, align 8, !tbaa !19
   ret %struct.lean_object* %18
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_alloc_string(i64 %0, i64 %1, i64 %2) local_unnamed_addr #1 {
   %4 = add i64 %1, 32
   %5 = tail call %struct.lean_object* @lean_alloc_object(i64 %4) #12
   %6 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %5, i64 0, i32 0
   store i64 -504403158265495551, i64* %6, align 8, !tbaa !9
   %7 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %5, i64 1, i32 0
-  store i64 %0, i64* %7, align 8, !tbaa !27
+  store i64 %0, i64* %7, align 8, !tbaa !28
   %8 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %5, i64 2, i32 0
-  store i64 %1, i64* %8, align 8, !tbaa !29
+  store i64 %1, i64* %8, align 8, !tbaa !30
   %9 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %5, i64 3, i32 0
-  store i64 %2, i64* %9, align 8, !tbaa !30
+  store i64 %2, i64* %9, align 8, !tbaa !31
   ret %struct.lean_object* %5
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define i64 @lean_string_capacity(%struct.lean_object* nocapture readonly %0) local_unnamed_addr #1 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -3482,11 +3482,11 @@ define i64 @lean_string_capacity(%struct.lean_object* nocapture readonly %0) loc
 
 7:                                                ; preds = %1
   %8 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 2, i32 0
-  %9 = load i64, i64* %8, align 8, !tbaa !29
+  %9 = load i64, i64* %8, align 8, !tbaa !30
   ret i64 %9
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define i64 @lean_string_byte_size(%struct.lean_object* nocapture readonly %0) local_unnamed_addr #1 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -3500,17 +3500,17 @@ define i64 @lean_string_byte_size(%struct.lean_object* nocapture readonly %0) lo
 
 7:                                                ; preds = %1
   %8 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 2, i32 0
-  %9 = load i64, i64* %8, align 8, !tbaa !29
+  %9 = load i64, i64* %8, align 8, !tbaa !30
   %10 = add i64 %9, 32
   ret i64 %10
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define i32 @lean_char_default_value() local_unnamed_addr #0 {
   ret i32 65
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define nonnull i8* @lean_string_cstr(%struct.lean_object* readonly %0) local_unnamed_addr #1 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -3528,7 +3528,7 @@ define nonnull i8* @lean_string_cstr(%struct.lean_object* readonly %0) local_unn
   ret i8* %9
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define i64 @lean_string_size(%struct.lean_object* nocapture readonly %0) local_unnamed_addr #1 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -3542,11 +3542,11 @@ define i64 @lean_string_size(%struct.lean_object* nocapture readonly %0) local_u
 
 7:                                                ; preds = %1
   %8 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 1, i32 0
-  %9 = load i64, i64* %8, align 8, !tbaa !27
+  %9 = load i64, i64* %8, align 8, !tbaa !28
   ret i64 %9
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define i64 @lean_string_len(%struct.lean_object* nocapture readonly %0) local_unnamed_addr #1 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -3560,11 +3560,11 @@ define i64 @lean_string_len(%struct.lean_object* nocapture readonly %0) local_un
 
 7:                                                ; preds = %1
   %8 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 3, i32 0
-  %9 = load i64, i64* %8, align 8, !tbaa !30
+  %9 = load i64, i64* %8, align 8, !tbaa !31
   ret i64 %9
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define nonnull %struct.lean_object* @lean_string_length(%struct.lean_object* nocapture readonly %0) local_unnamed_addr #1 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -3578,14 +3578,14 @@ define nonnull %struct.lean_object* @lean_string_length(%struct.lean_object* noc
 
 7:                                                ; preds = %1
   %8 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 3, i32 0
-  %9 = load i64, i64* %8, align 8, !tbaa !30
+  %9 = load i64, i64* %8, align 8, !tbaa !31
   %10 = shl i64 %9, 1
   %11 = or i64 %10, 1
   %12 = inttoptr i64 %11 to %struct.lean_object*
   ret %struct.lean_object* %12
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define zeroext i8 @lean_string_utf8_at_end(%struct.lean_object* nocapture readonly %0, %struct.lean_object* %1) local_unnamed_addr #1 {
   %3 = ptrtoint %struct.lean_object* %1 to i64
   %4 = and i64 %3, 1
@@ -3606,7 +3606,7 @@ define zeroext i8 @lean_string_utf8_at_end(%struct.lean_object* nocapture readon
 12:                                               ; preds = %6
   %13 = lshr i64 %3, 1
   %14 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 1, i32 0
-  %15 = load i64, i64* %14, align 8, !tbaa !27
+  %15 = load i64, i64* %14, align 8, !tbaa !28
   %16 = add i64 %15, -1
   %17 = icmp uge i64 %13, %16
   %18 = zext i1 %17 to i8
@@ -3617,7 +3617,7 @@ define zeroext i8 @lean_string_utf8_at_end(%struct.lean_object* nocapture readon
   ret i8 %20
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define nonnull %struct.lean_object* @lean_string_utf8_byte_size(%struct.lean_object* nocapture readonly %0) local_unnamed_addr #1 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -3631,14 +3631,14 @@ define nonnull %struct.lean_object* @lean_string_utf8_byte_size(%struct.lean_obj
 
 7:                                                ; preds = %1
   %8 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 1, i32 0
-  %9 = load i64, i64* %8, align 8, !tbaa !27
+  %9 = load i64, i64* %8, align 8, !tbaa !28
   %10 = shl i64 %9, 1
   %11 = add i64 %10, -1
   %12 = inttoptr i64 %11 to %struct.lean_object*
   ret %struct.lean_object* %12
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define zeroext i1 @lean_string_eq(%struct.lean_object* readonly %0, %struct.lean_object* readonly %1) local_unnamed_addr #1 {
   %3 = icmp eq %struct.lean_object* %0, %1
   br i1 %3, label %29, label %4
@@ -3656,7 +3656,7 @@ define zeroext i1 @lean_string_eq(%struct.lean_object* readonly %0, %struct.lean
 
 10:                                               ; preds = %4
   %11 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 1, i32 0
-  %12 = load i64, i64* %11, align 8, !tbaa !27
+  %12 = load i64, i64* %11, align 8, !tbaa !28
   %13 = bitcast %struct.lean_object* %1 to i8*
   %14 = getelementptr inbounds i8, i8* %13, i64 7
   %15 = load i8, i8* %14, align 1, !tbaa !7
@@ -3669,7 +3669,7 @@ define zeroext i1 @lean_string_eq(%struct.lean_object* readonly %0, %struct.lean
 
 18:                                               ; preds = %10
   %19 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %1, i64 1, i32 0
-  %20 = load i64, i64* %19, align 8, !tbaa !27
+  %20 = load i64, i64* %19, align 8, !tbaa !28
   %21 = icmp eq i64 %12, %20
   br i1 %21, label %22, label %29
 
@@ -3687,7 +3687,7 @@ define zeroext i1 @lean_string_eq(%struct.lean_object* readonly %0, %struct.lean
   ret i1 %30
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define zeroext i1 @lean_string_ne(%struct.lean_object* readonly %0, %struct.lean_object* readonly %1) local_unnamed_addr #1 {
   %3 = icmp eq %struct.lean_object* %0, %1
   br i1 %3, label %29, label %4
@@ -3705,7 +3705,7 @@ define zeroext i1 @lean_string_ne(%struct.lean_object* readonly %0, %struct.lean
 
 10:                                               ; preds = %4
   %11 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 1, i32 0
-  %12 = load i64, i64* %11, align 8, !tbaa !27
+  %12 = load i64, i64* %11, align 8, !tbaa !28
   %13 = bitcast %struct.lean_object* %1 to i8*
   %14 = getelementptr inbounds i8, i8* %13, i64 7
   %15 = load i8, i8* %14, align 1, !tbaa !7
@@ -3718,7 +3718,7 @@ define zeroext i1 @lean_string_ne(%struct.lean_object* readonly %0, %struct.lean
 
 18:                                               ; preds = %10
   %19 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %1, i64 1, i32 0
-  %20 = load i64, i64* %19, align 8, !tbaa !27
+  %20 = load i64, i64* %19, align 8, !tbaa !28
   %21 = icmp eq i64 %12, %20
   br i1 %21, label %22, label %29
 
@@ -3736,7 +3736,7 @@ define zeroext i1 @lean_string_ne(%struct.lean_object* readonly %0, %struct.lean
   ret i1 %30
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define zeroext i8 @lean_string_dec_eq(%struct.lean_object* readonly %0, %struct.lean_object* readonly %1) local_unnamed_addr #1 {
   %3 = icmp eq %struct.lean_object* %0, %1
   br i1 %3, label %30, label %4
@@ -3754,7 +3754,7 @@ define zeroext i8 @lean_string_dec_eq(%struct.lean_object* readonly %0, %struct.
 
 10:                                               ; preds = %4
   %11 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 1, i32 0
-  %12 = load i64, i64* %11, align 8, !tbaa !27
+  %12 = load i64, i64* %11, align 8, !tbaa !28
   %13 = bitcast %struct.lean_object* %1 to i8*
   %14 = getelementptr inbounds i8, i8* %13, i64 7
   %15 = load i8, i8* %14, align 1, !tbaa !7
@@ -3767,7 +3767,7 @@ define zeroext i8 @lean_string_dec_eq(%struct.lean_object* readonly %0, %struct.
 
 18:                                               ; preds = %10
   %19 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %1, i64 1, i32 0
-  %20 = load i64, i64* %19, align 8, !tbaa !27
+  %20 = load i64, i64* %19, align 8, !tbaa !28
   %21 = icmp eq i64 %12, %20
   br i1 %21, label %22, label %30
 
@@ -3786,7 +3786,7 @@ define zeroext i8 @lean_string_dec_eq(%struct.lean_object* readonly %0, %struct.
   ret i8 %31
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define zeroext i8 @lean_string_dec_lt(%struct.lean_object* %0, %struct.lean_object* %1) local_unnamed_addr #1 {
   %3 = tail call zeroext i1 @lean_string_lt(%struct.lean_object* %0, %struct.lean_object* %1) #12
   %4 = zext i1 %3 to i8
@@ -3795,7 +3795,7 @@ define zeroext i8 @lean_string_dec_lt(%struct.lean_object* %0, %struct.lean_obje
 
 declare zeroext i1 @lean_string_lt(%struct.lean_object*, %struct.lean_object*) local_unnamed_addr #3
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_mk_thunk(%struct.lean_object* %0) local_unnamed_addr #1 {
   %2 = tail call i8* @lean_alloc_small(i32 24, i32 2) #12
   %3 = bitcast i8* %2 to %struct.lean_object*
@@ -3803,15 +3803,15 @@ define %struct.lean_object* @lean_mk_thunk(%struct.lean_object* %0) local_unname
   store i64 -360287970189639679, i64* %4, align 8, !tbaa !9
   %5 = getelementptr inbounds i8, i8* %2, i64 8
   %6 = bitcast i8* %5 to i64*
-  store atomic i64 0, i64* %6 seq_cst, align 8, !tbaa !31
+  store atomic i64 0, i64* %6 seq_cst, align 8, !tbaa !32
   %7 = ptrtoint %struct.lean_object* %0 to i64
   %8 = getelementptr inbounds i8, i8* %2, i64 16
   %9 = bitcast i8* %8 to i64*
-  store atomic i64 %7, i64* %9 seq_cst, align 8, !tbaa !33
+  store atomic i64 %7, i64* %9 seq_cst, align 8, !tbaa !34
   ret %struct.lean_object* %3
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_thunk_pure(%struct.lean_object* %0) local_unnamed_addr #1 {
   %2 = tail call i8* @lean_alloc_small(i32 24, i32 2) #12
   %3 = bitcast i8* %2 to %struct.lean_object*
@@ -3820,14 +3820,14 @@ define %struct.lean_object* @lean_thunk_pure(%struct.lean_object* %0) local_unna
   %5 = ptrtoint %struct.lean_object* %0 to i64
   %6 = getelementptr inbounds i8, i8* %2, i64 8
   %7 = bitcast i8* %6 to i64*
-  store atomic i64 %5, i64* %7 seq_cst, align 8, !tbaa !31
+  store atomic i64 %5, i64* %7 seq_cst, align 8, !tbaa !32
   %8 = getelementptr inbounds i8, i8* %2, i64 16
   %9 = bitcast i8* %8 to i64*
-  store atomic i64 0, i64* %9 seq_cst, align 8, !tbaa !33
+  store atomic i64 0, i64* %9 seq_cst, align 8, !tbaa !34
   ret %struct.lean_object* %3
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_thunk_get(%struct.lean_object* %0) local_unnamed_addr #1 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -3841,7 +3841,7 @@ define %struct.lean_object* @lean_thunk_get(%struct.lean_object* %0) local_unnam
 
 7:                                                ; preds = %1
   %8 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 1, i32 0
-  %9 = load atomic i64, i64* %8 seq_cst, align 8, !tbaa !31
+  %9 = load atomic i64, i64* %8 seq_cst, align 8, !tbaa !32
   %10 = icmp eq i64 %9, 0
   br i1 %10, label %13, label %11
 
@@ -3860,7 +3860,7 @@ define %struct.lean_object* @lean_thunk_get(%struct.lean_object* %0) local_unnam
 
 declare %struct.lean_object* @lean_thunk_get_core(%struct.lean_object*) local_unnamed_addr #3
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_thunk_get_own(%struct.lean_object* %0) local_unnamed_addr #1 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -3874,7 +3874,7 @@ define %struct.lean_object* @lean_thunk_get_own(%struct.lean_object* %0) local_u
 
 7:                                                ; preds = %1
   %8 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 1, i32 0
-  %9 = load atomic i64, i64* %8 seq_cst, align 8, !tbaa !31
+  %9 = load atomic i64, i64* %8 seq_cst, align 8, !tbaa !32
   %10 = icmp eq i64 %9, 0
   br i1 %10, label %13, label %11
 
@@ -3918,7 +3918,7 @@ define %struct.lean_object* @lean_thunk_get_own(%struct.lean_object* %0) local_u
   ret %struct.lean_object* %16
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_task_spawn(%struct.lean_object* %0, %struct.lean_object* %1) local_unnamed_addr #1 {
   %3 = ptrtoint %struct.lean_object* %1 to i64
   %4 = lshr i64 %3, 1
@@ -3929,7 +3929,7 @@ define %struct.lean_object* @lean_task_spawn(%struct.lean_object* %0, %struct.le
 
 declare %struct.lean_object* @lean_task_spawn_core(%struct.lean_object*, i32, i1 zeroext) local_unnamed_addr #3
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_task_bind(%struct.lean_object* %0, %struct.lean_object* %1, %struct.lean_object* %2) local_unnamed_addr #1 {
   %4 = ptrtoint %struct.lean_object* %2 to i64
   %5 = lshr i64 %4, 1
@@ -3940,7 +3940,7 @@ define %struct.lean_object* @lean_task_bind(%struct.lean_object* %0, %struct.lea
 
 declare %struct.lean_object* @lean_task_bind_core(%struct.lean_object*, %struct.lean_object*, i32, i1 zeroext) local_unnamed_addr #3
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_task_map(%struct.lean_object* %0, %struct.lean_object* %1, %struct.lean_object* %2) local_unnamed_addr #1 {
   %4 = ptrtoint %struct.lean_object* %2 to i64
   %5 = lshr i64 %4, 1
@@ -3951,7 +3951,7 @@ define %struct.lean_object* @lean_task_map(%struct.lean_object* %0, %struct.lean
 
 declare %struct.lean_object* @lean_task_map_core(%struct.lean_object*, %struct.lean_object*, i32, i1 zeroext) local_unnamed_addr #3
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_task_get_own(%struct.lean_object* %0) local_unnamed_addr #1 {
   %2 = tail call %struct.lean_object* @lean_task_get(%struct.lean_object* %0) #12
   %3 = ptrtoint %struct.lean_object* %2 to i64
@@ -4021,7 +4021,7 @@ define %struct.lean_object* @lean_task_get_own(%struct.lean_object* %0) local_un
 
 declare %struct.lean_object* @lean_task_get(%struct.lean_object*) local_unnamed_addr #3
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_alloc_external(%struct.lean_external_class* %0, i8* %1) local_unnamed_addr #1 {
   %3 = tail call i8* @lean_alloc_small(i32 24, i32 2) #12
   %4 = bitcast i8* %3 to %struct.lean_object*
@@ -4029,14 +4029,14 @@ define %struct.lean_object* @lean_alloc_external(%struct.lean_external_class* %0
   store i64 -144115188075855871, i64* %5, align 8, !tbaa !9
   %6 = getelementptr inbounds i8, i8* %3, i64 8
   %7 = bitcast i8* %6 to %struct.lean_external_class**
-  store %struct.lean_external_class* %0, %struct.lean_external_class** %7, align 8, !tbaa !34
+  store %struct.lean_external_class* %0, %struct.lean_external_class** %7, align 8, !tbaa !35
   %8 = getelementptr inbounds i8, i8* %3, i64 16
   %9 = bitcast i8* %8 to i8**
-  store i8* %1, i8** %9, align 8, !tbaa !36
+  store i8* %1, i8** %9, align 8, !tbaa !37
   ret %struct.lean_object* %4
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_external_class* @lean_get_external_class(%struct.lean_object* nocapture readonly %0) local_unnamed_addr #1 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -4051,11 +4051,11 @@ define %struct.lean_external_class* @lean_get_external_class(%struct.lean_object
 7:                                                ; preds = %1
   %8 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 1
   %9 = bitcast %struct.lean_object* %8 to %struct.lean_external_class**
-  %10 = load %struct.lean_external_class*, %struct.lean_external_class** %9, align 8, !tbaa !34
+  %10 = load %struct.lean_external_class*, %struct.lean_external_class** %9, align 8, !tbaa !35
   ret %struct.lean_external_class* %10
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define i8* @lean_get_external_data(%struct.lean_object* nocapture readonly %0) local_unnamed_addr #1 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -4070,14 +4070,14 @@ define i8* @lean_get_external_data(%struct.lean_object* nocapture readonly %0) l
 7:                                                ; preds = %1
   %8 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 2
   %9 = bitcast %struct.lean_object* %8 to i8**
-  %10 = load i8*, i8** %9, align 8, !tbaa !36
+  %10 = load i8*, i8** %9, align 8, !tbaa !37
   ret i8* %10
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_usize_to_nat(i64 %0) local_unnamed_addr #1 {
-  %2 = icmp slt i64 %0, 0
-  br i1 %2, label %7, label %3, !prof !37
+  %2 = icmp sgt i64 %0, -1
+  br i1 %2, label %3, label %7, !prof !11, !misexpect !12
 
 3:                                                ; preds = %1
   %4 = shl nuw i64 %0, 1
@@ -4096,7 +4096,7 @@ define %struct.lean_object* @lean_usize_to_nat(i64 %0) local_unnamed_addr #1 {
 
 declare %struct.lean_object* @lean_big_usize_to_nat(i64) local_unnamed_addr #3
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define nonnull %struct.lean_object* @lean_unsigned_to_nat(i32 %0) local_unnamed_addr #0 {
   %2 = zext i32 %0 to i64
   %3 = shl nuw nsw i64 %2, 1
@@ -4105,10 +4105,10 @@ define nonnull %struct.lean_object* @lean_unsigned_to_nat(i32 %0) local_unnamed_
   ret %struct.lean_object* %5
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_uint64_to_nat(i64 %0) local_unnamed_addr #1 {
-  %2 = icmp slt i64 %0, 0
-  br i1 %2, label %7, label %3, !prof !37
+  %2 = icmp sgt i64 %0, -1
+  br i1 %2, label %3, label %7, !prof !11, !misexpect !12
 
 3:                                                ; preds = %1
   %4 = shl nuw i64 %0, 1
@@ -4127,18 +4127,18 @@ define %struct.lean_object* @lean_uint64_to_nat(i64 %0) local_unnamed_addr #1 {
 
 declare %struct.lean_object* @lean_big_uint64_to_nat(i64) local_unnamed_addr #3
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_nat_succ(%struct.lean_object* %0) local_unnamed_addr #1 {
   %2 = ptrtoint %struct.lean_object* %0 to i64
   %3 = and i64 %2, 1
   %4 = icmp eq i64 %3, 0
-  br i1 %4, label %15, label %5, !prof !37
+  br i1 %4, label %15, label %5, !prof !38, !misexpect !12
 
 5:                                                ; preds = %1
   %6 = lshr i64 %2, 1
   %7 = add nuw i64 %6, 1
-  %8 = icmp slt i64 %7, 0
-  br i1 %8, label %13, label %9, !prof !37
+  %8 = icmp sgt i64 %7, -1
+  br i1 %8, label %9, label %13, !prof !11, !misexpect !12
 
 9:                                                ; preds = %5
   %10 = shl nuw i64 %7, 1
@@ -4161,25 +4161,25 @@ define %struct.lean_object* @lean_nat_succ(%struct.lean_object* %0) local_unname
 
 declare %struct.lean_object* @lean_nat_big_succ(%struct.lean_object*) local_unnamed_addr #3
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_nat_add(%struct.lean_object* %0, %struct.lean_object* %1) local_unnamed_addr #1 {
   %3 = ptrtoint %struct.lean_object* %0 to i64
   %4 = and i64 %3, 1
   %5 = icmp eq i64 %4, 0
-  br i1 %5, label %21, label %6, !prof !37
+  br i1 %5, label %21, label %6, !prof !38
 
 6:                                                ; preds = %2
   %7 = ptrtoint %struct.lean_object* %1 to i64
   %8 = and i64 %7, 1
   %9 = icmp eq i64 %8, 0
-  br i1 %9, label %21, label %10, !prof !37
+  br i1 %9, label %21, label %10, !prof !38, !misexpect !12
 
 10:                                               ; preds = %6
   %11 = lshr i64 %3, 1
   %12 = lshr i64 %7, 1
   %13 = add nuw i64 %12, %11
-  %14 = icmp slt i64 %13, 0
-  br i1 %14, label %19, label %15, !prof !37
+  %14 = icmp sgt i64 %13, -1
+  br i1 %14, label %15, label %19, !prof !11, !misexpect !12
 
 15:                                               ; preds = %10
   %16 = shl nuw i64 %13, 1
@@ -4202,60 +4202,60 @@ define %struct.lean_object* @lean_nat_add(%struct.lean_object* %0, %struct.lean_
 
 declare %struct.lean_object* @lean_nat_big_add(%struct.lean_object*, %struct.lean_object*) local_unnamed_addr #3
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define zeroext i8 @lean_usize_eq(i64 %0, i64 %1) local_unnamed_addr #0 {
   %3 = icmp eq i64 %0, %1
   %4 = zext i1 %3 to i8
   ret i8 %4
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define zeroext i8 @lean_uint64_eq(i64 %0, i64 %1) local_unnamed_addr #0 {
   %3 = icmp eq i64 %0, %1
   %4 = zext i1 %3 to i8
   ret i8 %4
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define zeroext i8 @lean_uint32_eq(i32 %0, i32 %1) local_unnamed_addr #0 {
   %3 = icmp eq i32 %0, %1
   %4 = zext i1 %3 to i8
   ret i8 %4
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define zeroext i8 @lean_uint16_eq(i16 zeroext %0, i16 zeroext %1) local_unnamed_addr #0 {
   %3 = icmp eq i16 %0, %1
   %4 = zext i1 %3 to i8
   ret i8 %4
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define zeroext i8 @lean_uint8_eq(i8 zeroext %0, i8 zeroext %1) local_unnamed_addr #0 {
   %3 = icmp eq i8 %0, %1
   %4 = zext i1 %3 to i8
   ret i8 %4
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define zeroext i8 @lean_float_eq(double %0, double %1) local_unnamed_addr #0 {
   %3 = fcmp oeq double %0, %1
   %4 = zext i1 %3 to i8
   ret i8 %4
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_nat_sub(%struct.lean_object* %0, %struct.lean_object* %1) local_unnamed_addr #1 {
   %3 = ptrtoint %struct.lean_object* %0 to i64
   %4 = and i64 %3, 1
   %5 = icmp eq i64 %4, 0
-  br i1 %5, label %19, label %6, !prof !37
+  br i1 %5, label %19, label %6, !prof !38
 
 6:                                                ; preds = %2
   %7 = ptrtoint %struct.lean_object* %1 to i64
   %8 = and i64 %7, 1
   %9 = icmp eq i64 %8, 0
-  br i1 %9, label %19, label %10, !prof !37
+  br i1 %9, label %19, label %10, !prof !38, !misexpect !12
 
 10:                                               ; preds = %6
   %11 = lshr i64 %3, 1
@@ -4281,18 +4281,18 @@ define %struct.lean_object* @lean_nat_sub(%struct.lean_object* %0, %struct.lean_
 
 declare %struct.lean_object* @lean_nat_big_sub(%struct.lean_object*, %struct.lean_object*) local_unnamed_addr #3
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_nat_mul(%struct.lean_object* %0, %struct.lean_object* %1) local_unnamed_addr #1 {
   %3 = ptrtoint %struct.lean_object* %0 to i64
   %4 = and i64 %3, 1
   %5 = icmp eq i64 %4, 0
-  br i1 %5, label %26, label %6, !prof !37
+  br i1 %5, label %26, label %6, !prof !38
 
 6:                                                ; preds = %2
   %7 = ptrtoint %struct.lean_object* %1 to i64
   %8 = and i64 %7, 1
   %9 = icmp eq i64 %8, 0
-  br i1 %9, label %26, label %10, !prof !37
+  br i1 %9, label %26, label %10, !prof !38, !misexpect !12
 
 10:                                               ; preds = %6
   %11 = lshr i64 %3, 1
@@ -4333,18 +4333,18 @@ declare %struct.lean_object* @lean_nat_overflow_mul(i64, i64) local_unnamed_addr
 
 declare %struct.lean_object* @lean_nat_big_mul(%struct.lean_object*, %struct.lean_object*) local_unnamed_addr #3
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_nat_div(%struct.lean_object* %0, %struct.lean_object* %1) local_unnamed_addr #1 {
   %3 = ptrtoint %struct.lean_object* %0 to i64
   %4 = and i64 %3, 1
   %5 = icmp eq i64 %4, 0
-  br i1 %5, label %19, label %6, !prof !37
+  br i1 %5, label %19, label %6, !prof !38
 
 6:                                                ; preds = %2
   %7 = ptrtoint %struct.lean_object* %1 to i64
   %8 = and i64 %7, 1
   %9 = icmp eq i64 %8, 0
-  br i1 %9, label %19, label %10, !prof !37
+  br i1 %9, label %19, label %10, !prof !38, !misexpect !12
 
 10:                                               ; preds = %6
   %11 = lshr i64 %7, 1
@@ -4370,18 +4370,18 @@ define %struct.lean_object* @lean_nat_div(%struct.lean_object* %0, %struct.lean_
 
 declare %struct.lean_object* @lean_nat_big_div(%struct.lean_object*, %struct.lean_object*) local_unnamed_addr #3
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_nat_mod(%struct.lean_object* %0, %struct.lean_object* %1) local_unnamed_addr #1 {
   %3 = ptrtoint %struct.lean_object* %0 to i64
   %4 = and i64 %3, 1
   %5 = icmp eq i64 %4, 0
-  br i1 %5, label %22, label %6, !prof !37
+  br i1 %5, label %22, label %6, !prof !38
 
 6:                                                ; preds = %2
   %7 = ptrtoint %struct.lean_object* %1 to i64
   %8 = and i64 %7, 1
   %9 = icmp eq i64 %8, 0
-  br i1 %9, label %22, label %10, !prof !37
+  br i1 %9, label %22, label %10, !prof !38, !misexpect !12
 
 10:                                               ; preds = %6
   %11 = lshr i64 %7, 1
@@ -4412,18 +4412,18 @@ define %struct.lean_object* @lean_nat_mod(%struct.lean_object* %0, %struct.lean_
 
 declare %struct.lean_object* @lean_nat_big_mod(%struct.lean_object*, %struct.lean_object*) local_unnamed_addr #3
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define zeroext i1 @lean_nat_eq(%struct.lean_object* %0, %struct.lean_object* %1) local_unnamed_addr #1 {
   %3 = ptrtoint %struct.lean_object* %0 to i64
   %4 = and i64 %3, 1
   %5 = icmp eq i64 %4, 0
-  br i1 %5, label %12, label %6, !prof !37
+  br i1 %5, label %12, label %6, !prof !38
 
 6:                                                ; preds = %2
   %7 = ptrtoint %struct.lean_object* %1 to i64
   %8 = and i64 %7, 1
   %9 = icmp eq i64 %8, 0
-  br i1 %9, label %12, label %10, !prof !37
+  br i1 %9, label %12, label %10, !prof !38, !misexpect !12
 
 10:                                               ; preds = %6
   %11 = icmp eq %struct.lean_object* %0, %1
@@ -4440,18 +4440,18 @@ define zeroext i1 @lean_nat_eq(%struct.lean_object* %0, %struct.lean_object* %1)
 
 declare zeroext i1 @lean_nat_big_eq(%struct.lean_object*, %struct.lean_object*) local_unnamed_addr #3
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define zeroext i8 @lean_nat_dec_eq(%struct.lean_object* %0, %struct.lean_object* %1) local_unnamed_addr #1 {
   %3 = ptrtoint %struct.lean_object* %0 to i64
   %4 = and i64 %3, 1
   %5 = icmp eq i64 %4, 0
-  br i1 %5, label %12, label %6, !prof !37
+  br i1 %5, label %12, label %6, !prof !38
 
 6:                                                ; preds = %2
   %7 = ptrtoint %struct.lean_object* %1 to i64
   %8 = and i64 %7, 1
   %9 = icmp eq i64 %8, 0
-  br i1 %9, label %12, label %10, !prof !37
+  br i1 %9, label %12, label %10, !prof !38, !misexpect !12
 
 10:                                               ; preds = %6
   %11 = icmp eq %struct.lean_object* %0, %1
@@ -4467,18 +4467,18 @@ define zeroext i8 @lean_nat_dec_eq(%struct.lean_object* %0, %struct.lean_object*
   ret i8 %16
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define zeroext i1 @lean_nat_ne(%struct.lean_object* %0, %struct.lean_object* %1) local_unnamed_addr #1 {
   %3 = ptrtoint %struct.lean_object* %0 to i64
   %4 = and i64 %3, 1
   %5 = icmp eq i64 %4, 0
-  br i1 %5, label %12, label %6, !prof !37
+  br i1 %5, label %12, label %6, !prof !38
 
 6:                                                ; preds = %2
   %7 = ptrtoint %struct.lean_object* %1 to i64
   %8 = and i64 %7, 1
   %9 = icmp eq i64 %8, 0
-  br i1 %9, label %12, label %10, !prof !37
+  br i1 %9, label %12, label %10, !prof !38, !misexpect !12
 
 10:                                               ; preds = %6
   %11 = icmp eq %struct.lean_object* %0, %1
@@ -4494,18 +4494,18 @@ define zeroext i1 @lean_nat_ne(%struct.lean_object* %0, %struct.lean_object* %1)
   ret i1 %16
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define zeroext i1 @lean_nat_le(%struct.lean_object* %0, %struct.lean_object* %1) local_unnamed_addr #1 {
   %3 = ptrtoint %struct.lean_object* %0 to i64
   %4 = and i64 %3, 1
   %5 = icmp eq i64 %4, 0
-  br i1 %5, label %12, label %6, !prof !37
+  br i1 %5, label %12, label %6, !prof !38
 
 6:                                                ; preds = %2
   %7 = ptrtoint %struct.lean_object* %1 to i64
   %8 = and i64 %7, 1
   %9 = icmp eq i64 %8, 0
-  br i1 %9, label %12, label %10, !prof !37
+  br i1 %9, label %12, label %10, !prof !38, !misexpect !12
 
 10:                                               ; preds = %6
   %11 = icmp ule %struct.lean_object* %0, %1
@@ -4522,18 +4522,18 @@ define zeroext i1 @lean_nat_le(%struct.lean_object* %0, %struct.lean_object* %1)
 
 declare zeroext i1 @lean_nat_big_le(%struct.lean_object*, %struct.lean_object*) local_unnamed_addr #3
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define zeroext i8 @lean_nat_dec_le(%struct.lean_object* %0, %struct.lean_object* %1) local_unnamed_addr #1 {
   %3 = ptrtoint %struct.lean_object* %0 to i64
   %4 = and i64 %3, 1
   %5 = icmp eq i64 %4, 0
-  br i1 %5, label %12, label %6, !prof !37
+  br i1 %5, label %12, label %6, !prof !38
 
 6:                                                ; preds = %2
   %7 = ptrtoint %struct.lean_object* %1 to i64
   %8 = and i64 %7, 1
   %9 = icmp eq i64 %8, 0
-  br i1 %9, label %12, label %10, !prof !37
+  br i1 %9, label %12, label %10, !prof !38, !misexpect !12
 
 10:                                               ; preds = %6
   %11 = icmp ule %struct.lean_object* %0, %1
@@ -4549,18 +4549,18 @@ define zeroext i8 @lean_nat_dec_le(%struct.lean_object* %0, %struct.lean_object*
   ret i8 %16
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define zeroext i1 @lean_nat_lt(%struct.lean_object* %0, %struct.lean_object* %1) local_unnamed_addr #1 {
   %3 = ptrtoint %struct.lean_object* %0 to i64
   %4 = and i64 %3, 1
   %5 = icmp eq i64 %4, 0
-  br i1 %5, label %12, label %6, !prof !37
+  br i1 %5, label %12, label %6, !prof !38
 
 6:                                                ; preds = %2
   %7 = ptrtoint %struct.lean_object* %1 to i64
   %8 = and i64 %7, 1
   %9 = icmp eq i64 %8, 0
-  br i1 %9, label %12, label %10, !prof !37
+  br i1 %9, label %12, label %10, !prof !38, !misexpect !12
 
 10:                                               ; preds = %6
   %11 = icmp ult %struct.lean_object* %0, %1
@@ -4577,18 +4577,18 @@ define zeroext i1 @lean_nat_lt(%struct.lean_object* %0, %struct.lean_object* %1)
 
 declare zeroext i1 @lean_nat_big_lt(%struct.lean_object*, %struct.lean_object*) local_unnamed_addr #3
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define zeroext i8 @lean_nat_dec_lt(%struct.lean_object* %0, %struct.lean_object* %1) local_unnamed_addr #1 {
   %3 = ptrtoint %struct.lean_object* %0 to i64
   %4 = and i64 %3, 1
   %5 = icmp eq i64 %4, 0
-  br i1 %5, label %12, label %6, !prof !37
+  br i1 %5, label %12, label %6, !prof !38
 
 6:                                                ; preds = %2
   %7 = ptrtoint %struct.lean_object* %1 to i64
   %8 = and i64 %7, 1
   %9 = icmp eq i64 %8, 0
-  br i1 %9, label %12, label %10, !prof !37
+  br i1 %9, label %12, label %10, !prof !38, !misexpect !12
 
 10:                                               ; preds = %6
   %11 = icmp ult %struct.lean_object* %0, %1
@@ -4604,18 +4604,18 @@ define zeroext i8 @lean_nat_dec_lt(%struct.lean_object* %0, %struct.lean_object*
   ret i8 %16
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_nat_land(%struct.lean_object* %0, %struct.lean_object* %1) local_unnamed_addr #1 {
   %3 = ptrtoint %struct.lean_object* %0 to i64
   %4 = and i64 %3, 1
   %5 = icmp eq i64 %4, 0
-  br i1 %5, label %13, label %6, !prof !37
+  br i1 %5, label %13, label %6, !prof !38
 
 6:                                                ; preds = %2
   %7 = ptrtoint %struct.lean_object* %1 to i64
   %8 = and i64 %7, 1
   %9 = icmp eq i64 %8, 0
-  br i1 %9, label %13, label %10, !prof !37
+  br i1 %9, label %13, label %10, !prof !38, !misexpect !12
 
 10:                                               ; preds = %6
   %11 = and i64 %7, %3
@@ -4633,18 +4633,18 @@ define %struct.lean_object* @lean_nat_land(%struct.lean_object* %0, %struct.lean
 
 declare %struct.lean_object* @lean_nat_big_land(%struct.lean_object*, %struct.lean_object*) local_unnamed_addr #3
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_nat_lor(%struct.lean_object* %0, %struct.lean_object* %1) local_unnamed_addr #1 {
   %3 = ptrtoint %struct.lean_object* %0 to i64
   %4 = and i64 %3, 1
   %5 = icmp eq i64 %4, 0
-  br i1 %5, label %13, label %6, !prof !37
+  br i1 %5, label %13, label %6, !prof !38
 
 6:                                                ; preds = %2
   %7 = ptrtoint %struct.lean_object* %1 to i64
   %8 = and i64 %7, 1
   %9 = icmp eq i64 %8, 0
-  br i1 %9, label %13, label %10, !prof !37
+  br i1 %9, label %13, label %10, !prof !38, !misexpect !12
 
 10:                                               ; preds = %6
   %11 = or i64 %7, %3
@@ -4662,18 +4662,18 @@ define %struct.lean_object* @lean_nat_lor(%struct.lean_object* %0, %struct.lean_
 
 declare %struct.lean_object* @lean_nat_big_lor(%struct.lean_object*, %struct.lean_object*) local_unnamed_addr #3
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_nat_lxor(%struct.lean_object* %0, %struct.lean_object* %1) local_unnamed_addr #1 {
   %3 = ptrtoint %struct.lean_object* %0 to i64
   %4 = and i64 %3, 1
   %5 = icmp eq i64 %4, 0
-  br i1 %5, label %14, label %6, !prof !37
+  br i1 %5, label %14, label %6, !prof !38
 
 6:                                                ; preds = %2
   %7 = ptrtoint %struct.lean_object* %1 to i64
   %8 = and i64 %7, 1
   %9 = icmp eq i64 %8, 0
-  br i1 %9, label %14, label %10, !prof !37
+  br i1 %9, label %14, label %10, !prof !38, !misexpect !12
 
 10:                                               ; preds = %6
   %11 = xor i64 %7, %3
@@ -4692,7 +4692,7 @@ define %struct.lean_object* @lean_nat_lxor(%struct.lean_object* %0, %struct.lean
 
 declare %struct.lean_object* @lean_nat_big_xor(%struct.lean_object*, %struct.lean_object*) local_unnamed_addr #3
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define nonnull %struct.lean_object* @lean_int_to_int(i32 %0) local_unnamed_addr #0 {
   %2 = zext i32 %0 to i64
   %3 = shl nuw nsw i64 %2, 1
@@ -4701,11 +4701,11 @@ define nonnull %struct.lean_object* @lean_int_to_int(i32 %0) local_unnamed_addr 
   ret %struct.lean_object* %5
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_int64_to_int(i64 %0) local_unnamed_addr #1 {
   %2 = add i64 %0, 2147483648
   %3 = icmp ult i64 %2, 4294967296
-  br i1 %3, label %4, label %9, !prof !11
+  br i1 %3, label %4, label %9, !prof !11, !misexpect !12
 
 4:                                                ; preds = %1
   %5 = shl nsw i64 %0, 1
@@ -4725,7 +4725,7 @@ define %struct.lean_object* @lean_int64_to_int(i64 %0) local_unnamed_addr #1 {
 
 declare %struct.lean_object* @lean_big_int64_to_int(i64) local_unnamed_addr #3
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define i64 @lean_scalar_to_int64(%struct.lean_object* %0) local_unnamed_addr #1 {
   %2 = ptrtoint %struct.lean_object* %0 to i64
   %3 = and i64 %2, 1
@@ -4742,7 +4742,7 @@ define i64 @lean_scalar_to_int64(%struct.lean_object* %0) local_unnamed_addr #1 
   ret i64 %8
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define i32 @lean_scalar_to_int(%struct.lean_object* %0) local_unnamed_addr #1 {
   %2 = ptrtoint %struct.lean_object* %0 to i64
   %3 = and i64 %2, 1
@@ -4759,7 +4759,7 @@ define i32 @lean_scalar_to_int(%struct.lean_object* %0) local_unnamed_addr #1 {
   ret i32 %8
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_nat_to_int(%struct.lean_object* %0) local_unnamed_addr #1 {
   %2 = ptrtoint %struct.lean_object* %0 to i64
   %3 = and i64 %2, 1
@@ -4780,12 +4780,12 @@ define %struct.lean_object* @lean_nat_to_int(%struct.lean_object* %0) local_unna
 
 declare %struct.lean_object* @lean_big_size_t_to_int(i64) local_unnamed_addr #3
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_int_neg(%struct.lean_object* %0) local_unnamed_addr #1 {
   %2 = ptrtoint %struct.lean_object* %0 to i64
   %3 = and i64 %2, 1
   %4 = icmp eq i64 %3, 0
-  br i1 %4, label %18, label %5, !prof !37
+  br i1 %4, label %18, label %5, !prof !38, !misexpect !12
 
 5:                                                ; preds = %1
   %6 = shl i64 %2, 31
@@ -4793,7 +4793,7 @@ define %struct.lean_object* @lean_int_neg(%struct.lean_object* %0) local_unnamed
   %8 = sub nsw i64 0, %7
   %9 = sub nsw i64 2147483648, %7
   %10 = icmp ult i64 %9, 4294967296
-  br i1 %10, label %11, label %16, !prof !11
+  br i1 %10, label %11, label %16, !prof !11, !misexpect !12
 
 11:                                               ; preds = %5
   %12 = shl nsw i64 %8, 1
@@ -4817,18 +4817,18 @@ define %struct.lean_object* @lean_int_neg(%struct.lean_object* %0) local_unnamed
 
 declare %struct.lean_object* @lean_int_big_neg(%struct.lean_object*) local_unnamed_addr #3
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_int_neg_succ_of_nat(%struct.lean_object* %0) local_unnamed_addr #1 {
   %2 = ptrtoint %struct.lean_object* %0 to i64
   %3 = and i64 %2, 1
   %4 = icmp eq i64 %3, 0
-  br i1 %4, label %15, label %5, !prof !37
+  br i1 %4, label %15, label %5, !prof !38, !misexpect !12
 
 5:                                                ; preds = %1
   %6 = lshr i64 %2, 1
   %7 = add nuw i64 %6, 1
-  %8 = icmp slt i64 %7, 0
-  br i1 %8, label %13, label %9, !prof !37
+  %8 = icmp sgt i64 %7, -1
+  br i1 %8, label %9, label %13, !prof !11, !misexpect !12
 
 9:                                                ; preds = %5
   %10 = shl nuw i64 %7, 1
@@ -4921,7 +4921,7 @@ define %struct.lean_object* @lean_int_neg_succ_of_nat(%struct.lean_object* %0) l
   %61 = ptrtoint %struct.lean_object* %43 to i64
   %62 = and i64 %61, 1
   %63 = icmp eq i64 %62, 0
-  br i1 %63, label %77, label %64, !prof !37
+  br i1 %63, label %77, label %64, !prof !38, !misexpect !12
 
 64:                                               ; preds = %60
   %65 = shl i64 %61, 31
@@ -4929,7 +4929,7 @@ define %struct.lean_object* @lean_int_neg_succ_of_nat(%struct.lean_object* %0) l
   %67 = sub nsw i64 0, %66
   %68 = sub nsw i64 2147483648, %66
   %69 = icmp ult i64 %68, 4294967296
-  br i1 %69, label %70, label %75, !prof !11
+  br i1 %69, label %70, label %75, !prof !11, !misexpect !12
 
 70:                                               ; preds = %64
   %71 = shl nsw i64 %67, 1
@@ -4977,18 +4977,18 @@ define %struct.lean_object* @lean_int_neg_succ_of_nat(%struct.lean_object* %0) l
   ret %struct.lean_object* %95
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_int_add(%struct.lean_object* %0, %struct.lean_object* %1) local_unnamed_addr #1 {
   %3 = ptrtoint %struct.lean_object* %0 to i64
   %4 = and i64 %3, 1
   %5 = icmp eq i64 %4, 0
-  br i1 %5, label %25, label %6, !prof !37
+  br i1 %5, label %25, label %6, !prof !38
 
 6:                                                ; preds = %2
   %7 = ptrtoint %struct.lean_object* %1 to i64
   %8 = and i64 %7, 1
   %9 = icmp eq i64 %8, 0
-  br i1 %9, label %25, label %10, !prof !37
+  br i1 %9, label %25, label %10, !prof !38, !misexpect !12
 
 10:                                               ; preds = %6
   %11 = shl i64 %3, 31
@@ -4998,7 +4998,7 @@ define %struct.lean_object* @lean_int_add(%struct.lean_object* %0, %struct.lean_
   %15 = add nsw i64 %14, %12
   %16 = add nsw i64 %15, 2147483648
   %17 = icmp ult i64 %16, 4294967296
-  br i1 %17, label %18, label %23, !prof !11
+  br i1 %17, label %18, label %23, !prof !11, !misexpect !12
 
 18:                                               ; preds = %10
   %19 = shl nsw i64 %15, 1
@@ -5022,18 +5022,18 @@ define %struct.lean_object* @lean_int_add(%struct.lean_object* %0, %struct.lean_
 
 declare %struct.lean_object* @lean_int_big_add(%struct.lean_object*, %struct.lean_object*) local_unnamed_addr #3
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_int_sub(%struct.lean_object* %0, %struct.lean_object* %1) local_unnamed_addr #1 {
   %3 = ptrtoint %struct.lean_object* %0 to i64
   %4 = and i64 %3, 1
   %5 = icmp eq i64 %4, 0
-  br i1 %5, label %25, label %6, !prof !37
+  br i1 %5, label %25, label %6, !prof !38
 
 6:                                                ; preds = %2
   %7 = ptrtoint %struct.lean_object* %1 to i64
   %8 = and i64 %7, 1
   %9 = icmp eq i64 %8, 0
-  br i1 %9, label %25, label %10, !prof !37
+  br i1 %9, label %25, label %10, !prof !38, !misexpect !12
 
 10:                                               ; preds = %6
   %11 = shl i64 %3, 31
@@ -5043,7 +5043,7 @@ define %struct.lean_object* @lean_int_sub(%struct.lean_object* %0, %struct.lean_
   %15 = sub nsw i64 %12, %14
   %16 = add nsw i64 %15, 2147483648
   %17 = icmp ult i64 %16, 4294967296
-  br i1 %17, label %18, label %23, !prof !11
+  br i1 %17, label %18, label %23, !prof !11, !misexpect !12
 
 18:                                               ; preds = %10
   %19 = shl nsw i64 %15, 1
@@ -5067,18 +5067,18 @@ define %struct.lean_object* @lean_int_sub(%struct.lean_object* %0, %struct.lean_
 
 declare %struct.lean_object* @lean_int_big_sub(%struct.lean_object*, %struct.lean_object*) local_unnamed_addr #3
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_int_mul(%struct.lean_object* %0, %struct.lean_object* %1) local_unnamed_addr #1 {
   %3 = ptrtoint %struct.lean_object* %0 to i64
   %4 = and i64 %3, 1
   %5 = icmp eq i64 %4, 0
-  br i1 %5, label %25, label %6, !prof !37
+  br i1 %5, label %25, label %6, !prof !38
 
 6:                                                ; preds = %2
   %7 = ptrtoint %struct.lean_object* %1 to i64
   %8 = and i64 %7, 1
   %9 = icmp eq i64 %8, 0
-  br i1 %9, label %25, label %10, !prof !37
+  br i1 %9, label %25, label %10, !prof !38, !misexpect !12
 
 10:                                               ; preds = %6
   %11 = shl i64 %3, 31
@@ -5088,7 +5088,7 @@ define %struct.lean_object* @lean_int_mul(%struct.lean_object* %0, %struct.lean_
   %15 = mul nsw i64 %14, %12
   %16 = add nsw i64 %15, 2147483648
   %17 = icmp ult i64 %16, 4294967296
-  br i1 %17, label %18, label %23, !prof !11
+  br i1 %17, label %18, label %23, !prof !11, !misexpect !12
 
 18:                                               ; preds = %10
   %19 = shl nsw i64 %15, 1
@@ -5112,18 +5112,18 @@ define %struct.lean_object* @lean_int_mul(%struct.lean_object* %0, %struct.lean_
 
 declare %struct.lean_object* @lean_int_big_mul(%struct.lean_object*, %struct.lean_object*) local_unnamed_addr #3
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_int_div(%struct.lean_object* %0, %struct.lean_object* %1) local_unnamed_addr #1 {
   %3 = ptrtoint %struct.lean_object* %0 to i64
   %4 = and i64 %3, 1
   %5 = icmp eq i64 %4, 0
-  br i1 %5, label %29, label %6, !prof !37
+  br i1 %5, label %29, label %6, !prof !38
 
 6:                                                ; preds = %2
   %7 = ptrtoint %struct.lean_object* %1 to i64
   %8 = and i64 %7, 1
   %9 = icmp eq i64 %8, 0
-  br i1 %9, label %29, label %10, !prof !37
+  br i1 %9, label %29, label %10, !prof !38, !misexpect !12
 
 10:                                               ; preds = %6
   %11 = lshr i64 %7, 1
@@ -5139,7 +5139,7 @@ define %struct.lean_object* @lean_int_div(%struct.lean_object* %0, %struct.lean_
   %19 = sdiv i64 %18, %16
   %20 = add nsw i64 %19, 2147483648
   %21 = icmp ult i64 %20, 4294967296
-  br i1 %21, label %22, label %27, !prof !11
+  br i1 %21, label %22, label %27, !prof !11, !misexpect !12
 
 22:                                               ; preds = %14
   %23 = shl nsw i64 %19, 1
@@ -5163,58 +5163,59 @@ define %struct.lean_object* @lean_int_div(%struct.lean_object* %0, %struct.lean_
 
 declare %struct.lean_object* @lean_int_big_div(%struct.lean_object*, %struct.lean_object*) local_unnamed_addr #3
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_int_mod(%struct.lean_object* %0, %struct.lean_object* %1) local_unnamed_addr #1 {
   %3 = ptrtoint %struct.lean_object* %0 to i64
   %4 = and i64 %3, 1
   %5 = icmp eq i64 %4, 0
-  br i1 %5, label %22, label %6, !prof !37
+  br i1 %5, label %23, label %6, !prof !38
 
 6:                                                ; preds = %2
   %7 = ptrtoint %struct.lean_object* %1 to i64
   %8 = and i64 %7, 1
   %9 = icmp eq i64 %8, 0
-  br i1 %9, label %22, label %10, !prof !37
+  br i1 %9, label %23, label %10, !prof !38, !misexpect !12
 
 10:                                               ; preds = %6
   %11 = shl i64 %7, 31
-  %12 = ashr i64 %11, 32
+  %12 = and i64 %11, -4294967296
   %13 = icmp eq i64 %12, 0
-  br i1 %13, label %24, label %14
+  br i1 %13, label %25, label %14
 
 14:                                               ; preds = %10
   %15 = shl i64 %3, 31
   %16 = ashr i64 %15, 32
-  %17 = srem i64 %16, %12
-  %18 = shl nsw i64 %17, 1
-  %19 = and i64 %18, 8589934590
-  %20 = or i64 %19, 1
-  %21 = inttoptr i64 %20 to %struct.lean_object*
-  br label %24
+  %17 = ashr exact i64 %12, 32
+  %18 = srem i64 %16, %17
+  %19 = shl nsw i64 %18, 1
+  %20 = and i64 %19, 8589934590
+  %21 = or i64 %20, 1
+  %22 = inttoptr i64 %21 to %struct.lean_object*
+  br label %25
 
-22:                                               ; preds = %6, %2
-  %23 = tail call %struct.lean_object* @lean_int_big_mod(%struct.lean_object* %0, %struct.lean_object* %1) #12
-  br label %24
+23:                                               ; preds = %6, %2
+  %24 = tail call %struct.lean_object* @lean_int_big_mod(%struct.lean_object* %0, %struct.lean_object* %1) #12
+  br label %25
 
-24:                                               ; preds = %22, %14, %10
-  %25 = phi %struct.lean_object* [ %23, %22 ], [ %0, %10 ], [ %21, %14 ]
-  ret %struct.lean_object* %25
+25:                                               ; preds = %23, %14, %10
+  %26 = phi %struct.lean_object* [ %24, %23 ], [ %0, %10 ], [ %22, %14 ]
+  ret %struct.lean_object* %26
 }
 
 declare %struct.lean_object* @lean_int_big_mod(%struct.lean_object*, %struct.lean_object*) local_unnamed_addr #3
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define zeroext i1 @lean_int_eq(%struct.lean_object* %0, %struct.lean_object* %1) local_unnamed_addr #1 {
   %3 = ptrtoint %struct.lean_object* %0 to i64
   %4 = and i64 %3, 1
   %5 = icmp eq i64 %4, 0
-  br i1 %5, label %12, label %6, !prof !37
+  br i1 %5, label %12, label %6, !prof !38
 
 6:                                                ; preds = %2
   %7 = ptrtoint %struct.lean_object* %1 to i64
   %8 = and i64 %7, 1
   %9 = icmp eq i64 %8, 0
-  br i1 %9, label %12, label %10, !prof !37
+  br i1 %9, label %12, label %10, !prof !38, !misexpect !12
 
 10:                                               ; preds = %6
   %11 = icmp eq %struct.lean_object* %0, %1
@@ -5231,18 +5232,18 @@ define zeroext i1 @lean_int_eq(%struct.lean_object* %0, %struct.lean_object* %1)
 
 declare zeroext i1 @lean_int_big_eq(%struct.lean_object*, %struct.lean_object*) local_unnamed_addr #3
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define zeroext i1 @lean_int_ne(%struct.lean_object* %0, %struct.lean_object* %1) local_unnamed_addr #1 {
   %3 = ptrtoint %struct.lean_object* %0 to i64
   %4 = and i64 %3, 1
   %5 = icmp eq i64 %4, 0
-  br i1 %5, label %12, label %6, !prof !37
+  br i1 %5, label %12, label %6, !prof !38
 
 6:                                                ; preds = %2
   %7 = ptrtoint %struct.lean_object* %1 to i64
   %8 = and i64 %7, 1
   %9 = icmp eq i64 %8, 0
-  br i1 %9, label %12, label %10, !prof !37
+  br i1 %9, label %12, label %10, !prof !38, !misexpect !12
 
 10:                                               ; preds = %6
   %11 = icmp eq %struct.lean_object* %0, %1
@@ -5258,18 +5259,18 @@ define zeroext i1 @lean_int_ne(%struct.lean_object* %0, %struct.lean_object* %1)
   ret i1 %16
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define zeroext i1 @lean_int_le(%struct.lean_object* %0, %struct.lean_object* %1) local_unnamed_addr #1 {
   %3 = ptrtoint %struct.lean_object* %0 to i64
   %4 = and i64 %3, 1
   %5 = icmp eq i64 %4, 0
-  br i1 %5, label %16, label %6, !prof !37
+  br i1 %5, label %16, label %6, !prof !38
 
 6:                                                ; preds = %2
   %7 = ptrtoint %struct.lean_object* %1 to i64
   %8 = and i64 %7, 1
   %9 = icmp eq i64 %8, 0
-  br i1 %9, label %16, label %10, !prof !37
+  br i1 %9, label %16, label %10, !prof !38, !misexpect !12
 
 10:                                               ; preds = %6
   %11 = lshr i64 %3, 1
@@ -5290,18 +5291,18 @@ define zeroext i1 @lean_int_le(%struct.lean_object* %0, %struct.lean_object* %1)
 
 declare zeroext i1 @lean_int_big_le(%struct.lean_object*, %struct.lean_object*) local_unnamed_addr #3
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define zeroext i1 @lean_int_lt(%struct.lean_object* %0, %struct.lean_object* %1) local_unnamed_addr #1 {
   %3 = ptrtoint %struct.lean_object* %0 to i64
   %4 = and i64 %3, 1
   %5 = icmp eq i64 %4, 0
-  br i1 %5, label %16, label %6, !prof !37
+  br i1 %5, label %16, label %6, !prof !38
 
 6:                                                ; preds = %2
   %7 = ptrtoint %struct.lean_object* %1 to i64
   %8 = and i64 %7, 1
   %9 = icmp eq i64 %8, 0
-  br i1 %9, label %16, label %10, !prof !37
+  br i1 %9, label %16, label %10, !prof !38, !misexpect !12
 
 10:                                               ; preds = %6
   %11 = lshr i64 %3, 1
@@ -5322,12 +5323,12 @@ define zeroext i1 @lean_int_lt(%struct.lean_object* %0, %struct.lean_object* %1)
 
 declare zeroext i1 @lean_int_big_lt(%struct.lean_object*, %struct.lean_object*) local_unnamed_addr #3
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_int_to_nat(%struct.lean_object* %0) local_unnamed_addr #1 {
   %2 = ptrtoint %struct.lean_object* %0 to i64
   %3 = and i64 %2, 1
   %4 = icmp eq i64 %3, 0
-  br i1 %4, label %9, label %5, !prof !37
+  br i1 %4, label %9, label %5, !prof !38
 
 5:                                                ; preds = %1
   %6 = lshr i64 %2, 1
@@ -5354,12 +5355,12 @@ define %struct.lean_object* @lean_int_to_nat(%struct.lean_object* %0) local_unna
 
 declare %struct.lean_object* @lean_big_int_to_nat(%struct.lean_object*) local_unnamed_addr #3
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_nat_abs(%struct.lean_object* %0) local_unnamed_addr #1 {
   %2 = ptrtoint %struct.lean_object* %0 to i64
   %3 = and i64 %2, 1
   %4 = icmp eq i64 %3, 0
-  br i1 %4, label %9, label %5, !prof !37
+  br i1 %4, label %9, label %5, !prof !38
 
 5:                                                ; preds = %1
   %6 = lshr i64 %2, 1
@@ -5372,12 +5373,12 @@ define %struct.lean_object* @lean_nat_abs(%struct.lean_object* %0) local_unnamed
   br i1 %10, label %24, label %40
 
 11:                                               ; preds = %5
-  %12 = shl i64 %2, 31
-  %13 = ashr i64 %12, 32
+  %12 = shl i64 %6, 32
+  %13 = ashr exact i64 %12, 32
   %14 = sub nsw i64 0, %13
   %15 = sub nsw i64 2147483648, %13
   %16 = icmp ult i64 %15, 4294967296
-  br i1 %16, label %17, label %22, !prof !11
+  br i1 %16, label %17, label %22, !prof !11, !misexpect !12
 
 17:                                               ; preds = %11
   %18 = shl nsw i64 %14, 1
@@ -5399,7 +5400,7 @@ define %struct.lean_object* @lean_nat_abs(%struct.lean_object* %0) local_unnamed
   %28 = ptrtoint %struct.lean_object* %27 to i64
   %29 = and i64 %28, 1
   %30 = icmp eq i64 %29, 0
-  br i1 %30, label %35, label %31, !prof !37
+  br i1 %30, label %35, label %31, !prof !38
 
 31:                                               ; preds = %26
   %32 = lshr i64 %28, 1
@@ -5457,18 +5458,18 @@ define %struct.lean_object* @lean_nat_abs(%struct.lean_object* %0) local_unnamed
   ret %struct.lean_object* %57
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define zeroext i8 @lean_int_dec_eq(%struct.lean_object* %0, %struct.lean_object* %1) local_unnamed_addr #1 {
   %3 = ptrtoint %struct.lean_object* %0 to i64
   %4 = and i64 %3, 1
   %5 = icmp eq i64 %4, 0
-  br i1 %5, label %12, label %6, !prof !37
+  br i1 %5, label %12, label %6, !prof !38
 
 6:                                                ; preds = %2
   %7 = ptrtoint %struct.lean_object* %1 to i64
   %8 = and i64 %7, 1
   %9 = icmp eq i64 %8, 0
-  br i1 %9, label %12, label %10, !prof !37
+  br i1 %9, label %12, label %10, !prof !38, !misexpect !12
 
 10:                                               ; preds = %6
   %11 = icmp eq %struct.lean_object* %0, %1
@@ -5484,18 +5485,18 @@ define zeroext i8 @lean_int_dec_eq(%struct.lean_object* %0, %struct.lean_object*
   ret i8 %16
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define zeroext i8 @lean_int_dec_le(%struct.lean_object* %0, %struct.lean_object* %1) local_unnamed_addr #1 {
   %3 = ptrtoint %struct.lean_object* %0 to i64
   %4 = and i64 %3, 1
   %5 = icmp eq i64 %4, 0
-  br i1 %5, label %16, label %6, !prof !37
+  br i1 %5, label %16, label %6, !prof !38
 
 6:                                                ; preds = %2
   %7 = ptrtoint %struct.lean_object* %1 to i64
   %8 = and i64 %7, 1
   %9 = icmp eq i64 %8, 0
-  br i1 %9, label %16, label %10, !prof !37
+  br i1 %9, label %16, label %10, !prof !38, !misexpect !12
 
 10:                                               ; preds = %6
   %11 = lshr i64 %3, 1
@@ -5515,18 +5516,18 @@ define zeroext i8 @lean_int_dec_le(%struct.lean_object* %0, %struct.lean_object*
   ret i8 %20
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define zeroext i8 @lean_int_dec_lt(%struct.lean_object* %0, %struct.lean_object* %1) local_unnamed_addr #1 {
   %3 = ptrtoint %struct.lean_object* %0 to i64
   %4 = and i64 %3, 1
   %5 = icmp eq i64 %4, 0
-  br i1 %5, label %16, label %6, !prof !37
+  br i1 %5, label %16, label %6, !prof !38
 
 6:                                                ; preds = %2
   %7 = ptrtoint %struct.lean_object* %1 to i64
   %8 = and i64 %7, 1
   %9 = icmp eq i64 %8, 0
-  br i1 %9, label %16, label %10, !prof !37
+  br i1 %9, label %16, label %10, !prof !38, !misexpect !12
 
 10:                                               ; preds = %6
   %11 = lshr i64 %3, 1
@@ -5546,12 +5547,12 @@ define zeroext i8 @lean_int_dec_lt(%struct.lean_object* %0, %struct.lean_object*
   ret i8 %20
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define zeroext i8 @lean_int_dec_nonneg(%struct.lean_object* %0) local_unnamed_addr #1 {
   %2 = ptrtoint %struct.lean_object* %0 to i64
   %3 = and i64 %2, 1
   %4 = icmp eq i64 %3, 0
-  br i1 %4, label %10, label %5, !prof !37
+  br i1 %4, label %10, label %5, !prof !38, !misexpect !12
 
 5:                                                ; preds = %1
   %6 = lshr i64 %2, 32
@@ -5572,7 +5573,7 @@ define zeroext i8 @lean_int_dec_nonneg(%struct.lean_object* %0) local_unnamed_ad
 
 declare zeroext i1 @lean_int_big_nonneg(%struct.lean_object*) local_unnamed_addr #3
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define zeroext i8 @lean_uint8_of_nat(%struct.lean_object* %0) local_unnamed_addr #1 {
   %2 = ptrtoint %struct.lean_object* %0 to i64
   %3 = and i64 %2, 1
@@ -5595,7 +5596,7 @@ define zeroext i8 @lean_uint8_of_nat(%struct.lean_object* %0) local_unnamed_addr
 
 declare zeroext i8 @lean_uint8_of_big_nat(%struct.lean_object*) local_unnamed_addr #3
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define zeroext i8 @lean_uint8_of_nat_mk(%struct.lean_object* %0) local_unnamed_addr #1 {
   %2 = ptrtoint %struct.lean_object* %0 to i64
   %3 = and i64 %2, 1
@@ -5642,7 +5643,7 @@ define zeroext i8 @lean_uint8_of_nat_mk(%struct.lean_object* %0) local_unnamed_a
   ret i8 %26
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define nonnull %struct.lean_object* @lean_uint8_to_nat(i8 zeroext %0) local_unnamed_addr #0 {
   %2 = zext i8 %0 to i64
   %3 = shl nuw nsw i64 %2, 1
@@ -5651,25 +5652,25 @@ define nonnull %struct.lean_object* @lean_uint8_to_nat(i8 zeroext %0) local_unna
   ret %struct.lean_object* %5
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define zeroext i8 @lean_uint8_add(i8 zeroext %0, i8 zeroext %1) local_unnamed_addr #0 {
   %3 = add i8 %1, %0
   ret i8 %3
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define zeroext i8 @lean_uint8_sub(i8 zeroext %0, i8 zeroext %1) local_unnamed_addr #0 {
   %3 = sub i8 %0, %1
   ret i8 %3
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define zeroext i8 @lean_uint8_mul(i8 zeroext %0, i8 zeroext %1) local_unnamed_addr #0 {
   %3 = mul i8 %1, %0
   ret i8 %3
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define zeroext i8 @lean_uint8_div(i8 zeroext %0, i8 zeroext %1) local_unnamed_addr #0 {
   %3 = icmp eq i8 %1, 0
   br i1 %3, label %6, label %4
@@ -5683,7 +5684,7 @@ define zeroext i8 @lean_uint8_div(i8 zeroext %0, i8 zeroext %1) local_unnamed_ad
   ret i8 %7
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define zeroext i8 @lean_uint8_mod(i8 zeroext %0, i8 zeroext %1) local_unnamed_addr #0 {
   %3 = icmp eq i8 %1, 0
   br i1 %3, label %6, label %4
@@ -5697,12 +5698,12 @@ define zeroext i8 @lean_uint8_mod(i8 zeroext %0, i8 zeroext %1) local_unnamed_ad
   ret i8 %7
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define zeroext i8 @lean_uint8_modn(i8 zeroext %0, %struct.lean_object* %1) local_unnamed_addr #0 {
   %3 = ptrtoint %struct.lean_object* %1 to i64
   %4 = and i64 %3, 1
   %5 = icmp eq i64 %4, 0
-  br i1 %5, label %16, label %6, !prof !37
+  br i1 %5, label %16, label %6, !prof !38, !misexpect !12
 
 6:                                                ; preds = %2
   %7 = lshr i64 %3, 1
@@ -5725,28 +5726,28 @@ define zeroext i8 @lean_uint8_modn(i8 zeroext %0, %struct.lean_object* %1) local
   ret i8 %17
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define zeroext i8 @lean_uint8_dec_eq(i8 zeroext %0, i8 zeroext %1) local_unnamed_addr #0 {
   %3 = icmp eq i8 %0, %1
   %4 = zext i1 %3 to i8
   ret i8 %4
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define zeroext i8 @lean_uint8_dec_lt(i8 zeroext %0, i8 zeroext %1) local_unnamed_addr #0 {
   %3 = icmp ult i8 %0, %1
   %4 = zext i1 %3 to i8
   ret i8 %4
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define zeroext i8 @lean_uint8_dec_le(i8 zeroext %0, i8 zeroext %1) local_unnamed_addr #0 {
   %3 = icmp ule i8 %0, %1
   %4 = zext i1 %3 to i8
   ret i8 %4
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define zeroext i16 @lean_uint16_of_nat(%struct.lean_object* %0) local_unnamed_addr #1 {
   %2 = ptrtoint %struct.lean_object* %0 to i64
   %3 = and i64 %2, 1
@@ -5769,7 +5770,7 @@ define zeroext i16 @lean_uint16_of_nat(%struct.lean_object* %0) local_unnamed_ad
 
 declare zeroext i16 @lean_uint16_of_big_nat(%struct.lean_object*) local_unnamed_addr #3
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define zeroext i16 @lean_uint16_of_nat_mk(%struct.lean_object* %0) local_unnamed_addr #1 {
   %2 = ptrtoint %struct.lean_object* %0 to i64
   %3 = and i64 %2, 1
@@ -5816,7 +5817,7 @@ define zeroext i16 @lean_uint16_of_nat_mk(%struct.lean_object* %0) local_unnamed
   ret i16 %26
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define nonnull %struct.lean_object* @lean_uint16_to_nat(i16 zeroext %0) local_unnamed_addr #0 {
   %2 = zext i16 %0 to i64
   %3 = shl nuw nsw i64 %2, 1
@@ -5825,25 +5826,25 @@ define nonnull %struct.lean_object* @lean_uint16_to_nat(i16 zeroext %0) local_un
   ret %struct.lean_object* %5
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define zeroext i16 @lean_uint16_add(i16 zeroext %0, i16 zeroext %1) local_unnamed_addr #0 {
   %3 = add i16 %1, %0
   ret i16 %3
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define zeroext i16 @lean_uint16_sub(i16 zeroext %0, i16 zeroext %1) local_unnamed_addr #0 {
   %3 = sub i16 %0, %1
   ret i16 %3
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define zeroext i16 @lean_uint16_mul(i16 zeroext %0, i16 zeroext %1) local_unnamed_addr #0 {
   %3 = mul i16 %1, %0
   ret i16 %3
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define zeroext i16 @lean_uint16_div(i16 zeroext %0, i16 zeroext %1) local_unnamed_addr #0 {
   %3 = icmp eq i16 %1, 0
   br i1 %3, label %6, label %4
@@ -5857,7 +5858,7 @@ define zeroext i16 @lean_uint16_div(i16 zeroext %0, i16 zeroext %1) local_unname
   ret i16 %7
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define zeroext i16 @lean_uint16_mod(i16 zeroext %0, i16 zeroext %1) local_unnamed_addr #0 {
   %3 = icmp eq i16 %1, 0
   br i1 %3, label %6, label %4
@@ -5871,12 +5872,12 @@ define zeroext i16 @lean_uint16_mod(i16 zeroext %0, i16 zeroext %1) local_unname
   ret i16 %7
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define zeroext i16 @lean_uint16_modn(i16 zeroext %0, %struct.lean_object* %1) local_unnamed_addr #0 {
   %3 = ptrtoint %struct.lean_object* %1 to i64
   %4 = and i64 %3, 1
   %5 = icmp eq i64 %4, 0
-  br i1 %5, label %16, label %6, !prof !37
+  br i1 %5, label %16, label %6, !prof !38, !misexpect !12
 
 6:                                                ; preds = %2
   %7 = lshr i64 %3, 1
@@ -5899,28 +5900,28 @@ define zeroext i16 @lean_uint16_modn(i16 zeroext %0, %struct.lean_object* %1) lo
   ret i16 %17
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define zeroext i8 @lean_uint16_dec_eq(i16 zeroext %0, i16 zeroext %1) local_unnamed_addr #0 {
   %3 = icmp eq i16 %0, %1
   %4 = zext i1 %3 to i8
   ret i8 %4
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define zeroext i8 @lean_uint16_dec_lt(i16 zeroext %0, i16 zeroext %1) local_unnamed_addr #0 {
   %3 = icmp ult i16 %0, %1
   %4 = zext i1 %3 to i8
   ret i8 %4
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define zeroext i8 @lean_uint16_dec_le(i16 zeroext %0, i16 zeroext %1) local_unnamed_addr #0 {
   %3 = icmp ule i16 %0, %1
   %4 = zext i1 %3 to i8
   ret i8 %4
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define i32 @lean_uint32_of_nat(%struct.lean_object* %0) local_unnamed_addr #1 {
   %2 = ptrtoint %struct.lean_object* %0 to i64
   %3 = and i64 %2, 1
@@ -5943,7 +5944,7 @@ define i32 @lean_uint32_of_nat(%struct.lean_object* %0) local_unnamed_addr #1 {
 
 declare i32 @lean_uint32_of_big_nat(%struct.lean_object*) local_unnamed_addr #3
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define i32 @lean_uint32_of_nat_mk(%struct.lean_object* %0) local_unnamed_addr #1 {
   %2 = ptrtoint %struct.lean_object* %0 to i64
   %3 = and i64 %2, 1
@@ -5990,7 +5991,7 @@ define i32 @lean_uint32_of_nat_mk(%struct.lean_object* %0) local_unnamed_addr #1
   ret i32 %26
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define nonnull %struct.lean_object* @lean_uint32_to_nat(i32 %0) local_unnamed_addr #0 {
   %2 = zext i32 %0 to i64
   %3 = shl nuw nsw i64 %2, 1
@@ -5999,25 +6000,25 @@ define nonnull %struct.lean_object* @lean_uint32_to_nat(i32 %0) local_unnamed_ad
   ret %struct.lean_object* %5
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define i32 @lean_uint32_add(i32 %0, i32 %1) local_unnamed_addr #0 {
   %3 = add i32 %1, %0
   ret i32 %3
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define i32 @lean_uint32_sub(i32 %0, i32 %1) local_unnamed_addr #0 {
   %3 = sub i32 %0, %1
   ret i32 %3
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define i32 @lean_uint32_mul(i32 %0, i32 %1) local_unnamed_addr #0 {
   %3 = mul i32 %1, %0
   ret i32 %3
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define i32 @lean_uint32_div(i32 %0, i32 %1) local_unnamed_addr #0 {
   %3 = icmp eq i32 %1, 0
   br i1 %3, label %6, label %4
@@ -6031,7 +6032,7 @@ define i32 @lean_uint32_div(i32 %0, i32 %1) local_unnamed_addr #0 {
   ret i32 %7
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define i32 @lean_uint32_mod(i32 %0, i32 %1) local_unnamed_addr #0 {
   %3 = icmp eq i32 %1, 0
   br i1 %3, label %6, label %4
@@ -6045,12 +6046,12 @@ define i32 @lean_uint32_mod(i32 %0, i32 %1) local_unnamed_addr #0 {
   ret i32 %7
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define i32 @lean_uint32_modn(i32 %0, %struct.lean_object* %1) local_unnamed_addr #0 {
   %3 = ptrtoint %struct.lean_object* %1 to i64
   %4 = and i64 %3, 1
   %5 = icmp eq i64 %4, 0
-  br i1 %5, label %15, label %6, !prof !37
+  br i1 %5, label %15, label %6, !prof !38, !misexpect !12
 
 6:                                                ; preds = %2
   %7 = lshr i64 %3, 1
@@ -6072,28 +6073,28 @@ define i32 @lean_uint32_modn(i32 %0, %struct.lean_object* %1) local_unnamed_addr
   ret i32 %16
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define zeroext i8 @lean_uint32_dec_eq(i32 %0, i32 %1) local_unnamed_addr #0 {
   %3 = icmp eq i32 %0, %1
   %4 = zext i1 %3 to i8
   ret i8 %4
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define zeroext i8 @lean_uint32_dec_lt(i32 %0, i32 %1) local_unnamed_addr #0 {
   %3 = icmp ult i32 %0, %1
   %4 = zext i1 %3 to i8
   ret i8 %4
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define zeroext i8 @lean_uint32_dec_le(i32 %0, i32 %1) local_unnamed_addr #0 {
   %3 = icmp ule i32 %0, %1
   %4 = zext i1 %3 to i8
   ret i8 %4
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define i64 @lean_uint64_of_nat(%struct.lean_object* %0) local_unnamed_addr #1 {
   %2 = ptrtoint %struct.lean_object* %0 to i64
   %3 = and i64 %2, 1
@@ -6115,7 +6116,7 @@ define i64 @lean_uint64_of_nat(%struct.lean_object* %0) local_unnamed_addr #1 {
 
 declare i64 @lean_uint64_of_big_nat(%struct.lean_object*) local_unnamed_addr #3
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define i64 @lean_uint64_of_nat_mk(%struct.lean_object* %0) local_unnamed_addr #1 {
   %2 = ptrtoint %struct.lean_object* %0 to i64
   %3 = and i64 %2, 1
@@ -6161,25 +6162,25 @@ define i64 @lean_uint64_of_nat_mk(%struct.lean_object* %0) local_unnamed_addr #1
   ret i64 %25
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define i64 @lean_uint64_add(i64 %0, i64 %1) local_unnamed_addr #0 {
   %3 = add i64 %1, %0
   ret i64 %3
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define i64 @lean_uint64_sub(i64 %0, i64 %1) local_unnamed_addr #0 {
   %3 = sub i64 %0, %1
   ret i64 %3
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define i64 @lean_uint64_mul(i64 %0, i64 %1) local_unnamed_addr #0 {
   %3 = mul i64 %1, %0
   ret i64 %3
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define i64 @lean_uint64_div(i64 %0, i64 %1) local_unnamed_addr #0 {
   %3 = icmp eq i64 %1, 0
   br i1 %3, label %6, label %4
@@ -6193,7 +6194,7 @@ define i64 @lean_uint64_div(i64 %0, i64 %1) local_unnamed_addr #0 {
   ret i64 %7
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define i64 @lean_uint64_mod(i64 %0, i64 %1) local_unnamed_addr #0 {
   %3 = icmp eq i64 %1, 0
   br i1 %3, label %6, label %4
@@ -6207,12 +6208,12 @@ define i64 @lean_uint64_mod(i64 %0, i64 %1) local_unnamed_addr #0 {
   ret i64 %7
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define i64 @lean_uint64_modn(i64 %0, %struct.lean_object* %1) local_unnamed_addr #1 {
   %3 = ptrtoint %struct.lean_object* %1 to i64
   %4 = and i64 %3, 1
   %5 = icmp eq i64 %4, 0
-  br i1 %5, label %11, label %6, !prof !37
+  br i1 %5, label %11, label %6, !prof !38, !misexpect !12
 
 6:                                                ; preds = %2
   %7 = lshr i64 %3, 1
@@ -6234,28 +6235,28 @@ define i64 @lean_uint64_modn(i64 %0, %struct.lean_object* %1) local_unnamed_addr
 
 declare i64 @lean_uint64_big_modn(i64, %struct.lean_object*) local_unnamed_addr #3
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define zeroext i8 @lean_uint64_dec_eq(i64 %0, i64 %1) local_unnamed_addr #0 {
   %3 = icmp eq i64 %0, %1
   %4 = zext i1 %3 to i8
   ret i8 %4
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define zeroext i8 @lean_uint64_dec_lt(i64 %0, i64 %1) local_unnamed_addr #0 {
   %3 = icmp ult i64 %0, %1
   %4 = zext i1 %3 to i8
   ret i8 %4
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define zeroext i8 @lean_uint64_dec_le(i64 %0, i64 %1) local_unnamed_addr #0 {
   %3 = icmp ule i64 %0, %1
   %4 = zext i1 %3 to i8
   ret i8 %4
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define i64 @lean_usize_of_nat(%struct.lean_object* %0) local_unnamed_addr #1 {
   %2 = ptrtoint %struct.lean_object* %0 to i64
   %3 = and i64 %2, 1
@@ -6277,7 +6278,7 @@ define i64 @lean_usize_of_nat(%struct.lean_object* %0) local_unnamed_addr #1 {
 
 declare i64 @lean_usize_of_big_nat(%struct.lean_object*) local_unnamed_addr #3
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define i64 @lean_usize_of_nat_mk(%struct.lean_object* %0) local_unnamed_addr #1 {
   %2 = ptrtoint %struct.lean_object* %0 to i64
   %3 = and i64 %2, 1
@@ -6323,25 +6324,25 @@ define i64 @lean_usize_of_nat_mk(%struct.lean_object* %0) local_unnamed_addr #1 
   ret i64 %25
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define i64 @lean_usize_add(i64 %0, i64 %1) local_unnamed_addr #0 {
   %3 = add i64 %1, %0
   ret i64 %3
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define i64 @lean_usize_sub(i64 %0, i64 %1) local_unnamed_addr #0 {
   %3 = sub i64 %0, %1
   ret i64 %3
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define i64 @lean_usize_mul(i64 %0, i64 %1) local_unnamed_addr #0 {
   %3 = mul i64 %1, %0
   ret i64 %3
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define i64 @lean_usize_div(i64 %0, i64 %1) local_unnamed_addr #0 {
   %3 = icmp eq i64 %1, 0
   br i1 %3, label %6, label %4
@@ -6355,7 +6356,7 @@ define i64 @lean_usize_div(i64 %0, i64 %1) local_unnamed_addr #0 {
   ret i64 %7
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define i64 @lean_usize_mod(i64 %0, i64 %1) local_unnamed_addr #0 {
   %3 = icmp eq i64 %1, 0
   br i1 %3, label %6, label %4
@@ -6369,12 +6370,12 @@ define i64 @lean_usize_mod(i64 %0, i64 %1) local_unnamed_addr #0 {
   ret i64 %7
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define i64 @lean_usize_modn(i64 %0, %struct.lean_object* %1) local_unnamed_addr #1 {
   %3 = ptrtoint %struct.lean_object* %1 to i64
   %4 = and i64 %3, 1
   %5 = icmp eq i64 %4, 0
-  br i1 %5, label %11, label %6, !prof !37
+  br i1 %5, label %11, label %6, !prof !38, !misexpect !12
 
 6:                                                ; preds = %2
   %7 = lshr i64 %3, 1
@@ -6396,28 +6397,28 @@ define i64 @lean_usize_modn(i64 %0, %struct.lean_object* %1) local_unnamed_addr 
 
 declare i64 @lean_usize_big_modn(i64, %struct.lean_object*) local_unnamed_addr #3
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define zeroext i8 @lean_usize_dec_eq(i64 %0, i64 %1) local_unnamed_addr #0 {
   %3 = icmp eq i64 %0, %1
   %4 = zext i1 %3 to i8
   ret i8 %4
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define zeroext i8 @lean_usize_dec_lt(i64 %0, i64 %1) local_unnamed_addr #0 {
   %3 = icmp ult i64 %0, %1
   %4 = zext i1 %3 to i8
   ret i8 %4
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define zeroext i8 @lean_usize_dec_le(i64 %0, i64 %1) local_unnamed_addr #0 {
   %3 = icmp ule i64 %0, %1
   %4 = zext i1 %3 to i8
   ret i8 %4
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define nonnull %struct.lean_object* @lean_box_uint32(i32 %0) local_unnamed_addr #0 {
   %2 = zext i32 %0 to i64
   %3 = shl nuw nsw i64 %2, 1
@@ -6426,7 +6427,7 @@ define nonnull %struct.lean_object* @lean_box_uint32(i32 %0) local_unnamed_addr 
   ret %struct.lean_object* %5
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define i32 @lean_unbox_uint32(%struct.lean_object* %0) local_unnamed_addr #0 {
   %2 = ptrtoint %struct.lean_object* %0 to i64
   %3 = lshr i64 %2, 1
@@ -6434,19 +6435,19 @@ define i32 @lean_unbox_uint32(%struct.lean_object* %0) local_unnamed_addr #0 {
   ret i32 %4
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_box_uint64(i64 %0) local_unnamed_addr #1 {
   %2 = tail call i8* @lean_alloc_small(i32 16, i32 1) #12
-  %3 = bitcast i8* %2 to i64*
-  store i64 1, i64* %3, align 8, !tbaa !9
-  %4 = bitcast i8* %2 to %struct.lean_object*
+  %3 = bitcast i8* %2 to %struct.lean_object*
+  %4 = bitcast i8* %2 to i64*
+  store i64 1, i64* %4, align 8, !tbaa !9
   %5 = getelementptr inbounds i8, i8* %2, i64 8
   %6 = bitcast i8* %5 to i64*
   store i64 %0, i64* %6, align 8, !tbaa !3
-  ret %struct.lean_object* %4
+  ret %struct.lean_object* %3
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define i64 @lean_unbox_uint64(%struct.lean_object* nocapture readonly %0) local_unnamed_addr #1 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -6474,19 +6475,19 @@ define i64 @lean_unbox_uint64(%struct.lean_object* nocapture readonly %0) local_
   ret i64 %14
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_box_usize(i64 %0) local_unnamed_addr #1 {
   %2 = tail call i8* @lean_alloc_small(i32 16, i32 1) #12
-  %3 = bitcast i8* %2 to i64*
-  store i64 1, i64* %3, align 8, !tbaa !9
-  %4 = bitcast i8* %2 to %struct.lean_object*
+  %3 = bitcast i8* %2 to %struct.lean_object*
+  %4 = bitcast i8* %2 to i64*
+  store i64 1, i64* %4, align 8, !tbaa !9
   %5 = getelementptr inbounds i8, i8* %2, i64 8
   %6 = bitcast i8* %5 to i64*
   store i64 %0, i64* %6, align 8, !tbaa !3
-  ret %struct.lean_object* %4
+  ret %struct.lean_object* %3
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define i64 @lean_unbox_usize(%struct.lean_object* nocapture readonly %0) local_unnamed_addr #1 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -6514,19 +6515,19 @@ define i64 @lean_unbox_usize(%struct.lean_object* nocapture readonly %0) local_u
   ret i64 %14
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_box_float(double %0) local_unnamed_addr #1 {
   %2 = tail call i8* @lean_alloc_small(i32 16, i32 1) #12
-  %3 = bitcast i8* %2 to i64*
-  store i64 1, i64* %3, align 8, !tbaa !9
-  %4 = bitcast i8* %2 to %struct.lean_object*
+  %3 = bitcast i8* %2 to %struct.lean_object*
+  %4 = bitcast i8* %2 to i64*
+  store i64 1, i64* %4, align 8, !tbaa !9
   %5 = getelementptr inbounds i8, i8* %2, i64 8
   %6 = bitcast i8* %5 to double*
-  store double %0, double* %6, align 8, !tbaa !18
-  ret %struct.lean_object* %4
+  store double %0, double* %6, align 8, !tbaa !19
+  ret %struct.lean_object* %3
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define double @lean_unbox_float(%struct.lean_object* nocapture readonly %0) local_unnamed_addr #1 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -6551,16 +6552,16 @@ define double @lean_unbox_float(%struct.lean_object* nocapture readonly %0) loca
 12:                                               ; preds = %7
   %13 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 1
   %14 = bitcast %struct.lean_object* %13 to double*
-  %15 = load double, double* %14, align 8, !tbaa !18
+  %15 = load double, double* %14, align 8, !tbaa !19
   ret double %15
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define nonnull %struct.lean_object* @lean_io_mk_world() local_unnamed_addr #0 {
   ret %struct.lean_object* inttoptr (i64 1 to %struct.lean_object*)
 }
 
-; Function Attrs: norecurse nounwind readonly sspstrong uwtable willreturn
+; Function Attrs: norecurse nounwind readonly uwtable willreturn
 define zeroext i1 @lean_io_result_is_ok(%struct.lean_object* nocapture readonly %0) local_unnamed_addr #4 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -6569,7 +6570,7 @@ define zeroext i1 @lean_io_result_is_ok(%struct.lean_object* nocapture readonly 
   ret i1 %5
 }
 
-; Function Attrs: norecurse nounwind readonly sspstrong uwtable willreturn
+; Function Attrs: norecurse nounwind readonly uwtable willreturn
 define zeroext i1 @lean_io_result_is_error(%struct.lean_object* nocapture readonly %0) local_unnamed_addr #4 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -6578,7 +6579,7 @@ define zeroext i1 @lean_io_result_is_error(%struct.lean_object* nocapture readon
   ret i1 %5
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_io_result_get_value(%struct.lean_object* nocapture readonly %0) local_unnamed_addr #1 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -6603,11 +6604,11 @@ define %struct.lean_object* @lean_io_result_get_value(%struct.lean_object* nocap
 12:                                               ; preds = %7
   %13 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 1
   %14 = bitcast %struct.lean_object* %13 to %struct.lean_object**
-  %15 = load %struct.lean_object*, %struct.lean_object** %14, align 8, !tbaa !12
+  %15 = load %struct.lean_object*, %struct.lean_object** %14, align 8, !tbaa !13
   ret %struct.lean_object* %15
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_io_result_get_error(%struct.lean_object* nocapture readonly %0) local_unnamed_addr #1 {
   %2 = bitcast %struct.lean_object* %0 to i8*
   %3 = getelementptr inbounds i8, i8* %2, i64 7
@@ -6632,167 +6633,167 @@ define %struct.lean_object* @lean_io_result_get_error(%struct.lean_object* nocap
 12:                                               ; preds = %7
   %13 = getelementptr inbounds %struct.lean_object, %struct.lean_object* %0, i64 1
   %14 = bitcast %struct.lean_object* %13 to %struct.lean_object**
-  %15 = load %struct.lean_object*, %struct.lean_object** %14, align 8, !tbaa !12
+  %15 = load %struct.lean_object*, %struct.lean_object** %14, align 8, !tbaa !13
   ret %struct.lean_object* %15
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_io_result_mk_ok(%struct.lean_object* %0) local_unnamed_addr #1 {
   %2 = tail call i8* @lean_alloc_small(i32 24, i32 2) #12
-  %3 = bitcast i8* %2 to i64*
-  store i64 562949953421313, i64* %3, align 8, !tbaa !9
-  %4 = getelementptr inbounds i8, i8* %2, i64 8
-  %5 = bitcast i8* %4 to %struct.lean_object**
-  store %struct.lean_object* %0, %struct.lean_object** %5, align 8, !tbaa !12
-  %6 = bitcast i8* %2 to %struct.lean_object*
+  %3 = bitcast i8* %2 to %struct.lean_object*
+  %4 = bitcast i8* %2 to i64*
+  store i64 562949953421313, i64* %4, align 8, !tbaa !9
+  %5 = getelementptr inbounds i8, i8* %2, i64 8
+  %6 = bitcast i8* %5 to %struct.lean_object**
+  store %struct.lean_object* %0, %struct.lean_object** %6, align 8, !tbaa !13
   %7 = getelementptr inbounds i8, i8* %2, i64 16
   %8 = bitcast i8* %7 to %struct.lean_object**
-  store %struct.lean_object* inttoptr (i64 1 to %struct.lean_object*), %struct.lean_object** %8, align 8, !tbaa !12
-  ret %struct.lean_object* %6
+  store %struct.lean_object* inttoptr (i64 1 to %struct.lean_object*), %struct.lean_object** %8, align 8, !tbaa !13
+  ret %struct.lean_object* %3
 }
 
-; Function Attrs: nounwind sspstrong uwtable
+; Function Attrs: nounwind uwtable
 define %struct.lean_object* @lean_io_result_mk_error(%struct.lean_object* %0) local_unnamed_addr #1 {
   %2 = tail call i8* @lean_alloc_small(i32 24, i32 2) #12
-  %3 = bitcast i8* %2 to i64*
-  store i64 72620543991349249, i64* %3, align 8, !tbaa !9
-  %4 = getelementptr inbounds i8, i8* %2, i64 8
-  %5 = bitcast i8* %4 to %struct.lean_object**
-  store %struct.lean_object* %0, %struct.lean_object** %5, align 8, !tbaa !12
-  %6 = bitcast i8* %2 to %struct.lean_object*
+  %3 = bitcast i8* %2 to %struct.lean_object*
+  %4 = bitcast i8* %2 to i64*
+  store i64 72620543991349249, i64* %4, align 8, !tbaa !9
+  %5 = getelementptr inbounds i8, i8* %2, i64 8
+  %6 = bitcast i8* %5 to %struct.lean_object**
+  store %struct.lean_object* %0, %struct.lean_object** %6, align 8, !tbaa !13
   %7 = getelementptr inbounds i8, i8* %2, i64 16
   %8 = bitcast i8* %7 to %struct.lean_object**
-  store %struct.lean_object* inttoptr (i64 1 to %struct.lean_object*), %struct.lean_object** %8, align 8, !tbaa !12
-  ret %struct.lean_object* %6
+  store %struct.lean_object* inttoptr (i64 1 to %struct.lean_object*), %struct.lean_object** %8, align 8, !tbaa !13
+  ret %struct.lean_object* %3
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define i64 @lean_ptr_addr(%struct.lean_object* %0) local_unnamed_addr #0 {
   %2 = ptrtoint %struct.lean_object* %0 to i64
   ret i64 %2
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define zeroext i8 @lean_uint8_le(i8 zeroext %0, i8 zeroext %1) local_unnamed_addr #0 {
   %3 = icmp ule i8 %0, %1
   %4 = zext i1 %3 to i8
   ret i8 %4
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define zeroext i8 @lean_uint16_le(i16 zeroext %0, i16 zeroext %1) local_unnamed_addr #0 {
   %3 = icmp ule i16 %0, %1
   %4 = zext i1 %3 to i8
   ret i8 %4
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define zeroext i8 @lean_uint32_le(i32 %0, i32 %1) local_unnamed_addr #0 {
   %3 = icmp ule i32 %0, %1
   %4 = zext i1 %3 to i8
   ret i8 %4
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define zeroext i8 @lean_uint64_le(i64 %0, i64 %1) local_unnamed_addr #0 {
   %3 = icmp ule i64 %0, %1
   %4 = zext i1 %3 to i8
   ret i8 %4
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define zeroext i8 @lean_float_le(double %0, double %1) local_unnamed_addr #0 {
   %3 = fcmp ole double %0, %1
   %4 = zext i1 %3 to i8
   ret i8 %4
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define zeroext i8 @lean_usize_le(i64 %0, i64 %1) local_unnamed_addr #0 {
   %3 = icmp ule i64 %0, %1
   %4 = zext i1 %3 to i8
   ret i8 %4
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define zeroext i8 @lean_uint8_lt(i8 zeroext %0, i8 zeroext %1) local_unnamed_addr #0 {
   %3 = icmp ult i8 %0, %1
   %4 = zext i1 %3 to i8
   ret i8 %4
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define zeroext i8 @lean_uint16_lt(i16 zeroext %0, i16 zeroext %1) local_unnamed_addr #0 {
   %3 = icmp ult i16 %0, %1
   %4 = zext i1 %3 to i8
   ret i8 %4
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define zeroext i8 @lean_uint32_lt(i32 %0, i32 %1) local_unnamed_addr #0 {
   %3 = icmp ult i32 %0, %1
   %4 = zext i1 %3 to i8
   ret i8 %4
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define zeroext i8 @lean_uint64_lt(i64 %0, i64 %1) local_unnamed_addr #0 {
   %3 = icmp ult i64 %0, %1
   %4 = zext i1 %3 to i8
   ret i8 %4
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define zeroext i8 @lean_float_lt(double %0, double %1) local_unnamed_addr #0 {
   %3 = fcmp olt double %0, %1
   %4 = zext i1 %3 to i8
   ret i8 %4
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define zeroext i8 @lean_usize_lt(i64 %0, i64 %1) local_unnamed_addr #0 {
   %3 = icmp ult i64 %0, %1
   %4 = zext i1 %3 to i8
   ret i8 %4
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define zeroext i8 @lean_float_to_uint8(double %0) local_unnamed_addr #0 {
   %2 = fptoui double %0 to i8
   ret i8 %2
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define double @lean_float_add(double %0, double %1) local_unnamed_addr #0 {
   %3 = fadd double %0, %1
   ret double %3
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define double @lean_float_sub(double %0, double %1) local_unnamed_addr #0 {
   %3 = fsub double %0, %1
   ret double %3
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define double @lean_float_mul(double %0, double %1) local_unnamed_addr #0 {
   %3 = fmul double %0, %1
   ret double %3
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define double @lean_float_div(double %0, double %1) local_unnamed_addr #0 {
   %3 = fdiv double %0, %1
   ret double %3
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define double @lean_float_negate(double %0) local_unnamed_addr #0 {
   %2 = fneg double %0
   ret double %2
 }
 
-; Function Attrs: alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn
+; Function Attrs: alwaysinline norecurse nounwind readnone uwtable willreturn
 define %struct.lean_object* @unsafeCast(%struct.lean_object* readnone returned %0) local_unnamed_addr #0 {
   ret %struct.lean_object* %0
 }
@@ -6806,14 +6807,14 @@ declare { i64, i1 } @llvm.umul.with.overflow.i64(i64, i64) #9
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn writeonly
 declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1 immarg) #10
 
-attributes #0 = { alwaysinline norecurse nounwind readnone sspstrong uwtable willreturn "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nounwind sspstrong uwtable "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #2 = { noreturn nounwind "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #3 = { "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #4 = { norecurse nounwind readonly sspstrong uwtable willreturn "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #5 = { nofree norecurse nounwind sspstrong uwtable willreturn "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #6 = { nofree norecurse nounwind sspstrong uwtable willreturn writeonly "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #7 = { noreturn "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { alwaysinline norecurse nounwind readnone uwtable willreturn "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #1 = { nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #2 = { noreturn nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #3 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #4 = { norecurse nounwind readonly uwtable willreturn "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #5 = { nofree norecurse nounwind uwtable willreturn "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #6 = { nofree norecurse nounwind uwtable willreturn writeonly "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #7 = { noreturn "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #8 = { argmemonly nofree nounwind readonly willreturn }
 attributes #9 = { nofree nosync nounwind readnone speculatable willreturn }
 attributes #10 = { argmemonly nofree nosync nounwind willreturn writeonly }
@@ -6825,7 +6826,7 @@ attributes #12 = { nounwind }
 
 !0 = !{i32 1, !"wchar_size", i32 4}
 !1 = !{i32 7, !"PIC Level", i32 2}
-!2 = !{!"clang version 12.0.1"}
+!2 = !{!"clang version 10.0.0-4ubuntu1 "}
 !3 = !{!4, !4, i64 0}
 !4 = !{!"long", !5, i64 0}
 !5 = !{!"omnipotent char", !6, i64 0}
@@ -6835,29 +6836,30 @@ attributes #12 = { nounwind }
 !9 = !{!10, !4, i64 0}
 !10 = !{!"", !4, i64 0}
 !11 = !{!"branch_weights", i32 2000, i32 1}
-!12 = !{!13, !13, i64 0}
-!13 = !{!"any pointer", !5, i64 0}
-!14 = !{!15, !15, i64 0}
-!15 = !{!"short", !5, i64 0}
-!16 = !{!17, !17, i64 0}
-!17 = !{!"int", !5, i64 0}
-!18 = !{!19, !19, i64 0}
-!19 = !{!"double", !5, i64 0}
-!20 = !{!21, !13, i64 8}
-!21 = !{!"", !10, i64 0, !13, i64 8, !15, i64 16, !15, i64 18, !5, i64 24}
-!22 = !{!21, !15, i64 16}
-!23 = !{!21, !15, i64 18}
-!24 = !{!25, !4, i64 8}
-!25 = !{!"", !10, i64 0, !4, i64 8, !4, i64 16, !5, i64 24}
-!26 = !{!25, !4, i64 16}
-!27 = !{!28, !4, i64 8}
-!28 = !{!"", !10, i64 0, !4, i64 8, !4, i64 16, !4, i64 24, !5, i64 32}
-!29 = !{!28, !4, i64 16}
-!30 = !{!28, !4, i64 24}
-!31 = !{!32, !5, i64 8}
-!32 = !{!"", !10, i64 0, !5, i64 8, !5, i64 16}
-!33 = !{!32, !5, i64 16}
-!34 = !{!35, !13, i64 8}
-!35 = !{!"", !10, i64 0, !13, i64 8, !13, i64 16}
-!36 = !{!35, !13, i64 16}
-!37 = !{!"branch_weights", i32 1, i32 2000}
+!12 = !{!"misexpect", i64 0, i64 2000, i64 1}
+!13 = !{!14, !14, i64 0}
+!14 = !{!"any pointer", !5, i64 0}
+!15 = !{!16, !16, i64 0}
+!16 = !{!"short", !5, i64 0}
+!17 = !{!18, !18, i64 0}
+!18 = !{!"int", !5, i64 0}
+!19 = !{!20, !20, i64 0}
+!20 = !{!"double", !5, i64 0}
+!21 = !{!22, !14, i64 8}
+!22 = !{!"", !10, i64 0, !14, i64 8, !16, i64 16, !16, i64 18, !5, i64 24}
+!23 = !{!22, !16, i64 16}
+!24 = !{!22, !16, i64 18}
+!25 = !{!26, !4, i64 8}
+!26 = !{!"", !10, i64 0, !4, i64 8, !4, i64 16, !5, i64 24}
+!27 = !{!26, !4, i64 16}
+!28 = !{!29, !4, i64 8}
+!29 = !{!"", !10, i64 0, !4, i64 8, !4, i64 16, !4, i64 24, !5, i64 32}
+!30 = !{!29, !4, i64 16}
+!31 = !{!29, !4, i64 24}
+!32 = !{!33, !5, i64 8}
+!33 = !{!"", !10, i64 0, !5, i64 8, !5, i64 16}
+!34 = !{!33, !5, i64 16}
+!35 = !{!36, !14, i64 8}
+!36 = !{!"", !10, i64 0, !14, i64 8, !14, i64 16}
+!37 = !{!36, !14, i64 16}
+!38 = !{!"branch_weights", i32 1, i32 2000}
