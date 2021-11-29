@@ -132,7 +132,7 @@ def run_data():
     for (i, fpath) in enumerate(G_FPATHS):
         # with simpcase: 850fd84e43407ed647837652b6442e143199abb0
         datum = {"file": str(fpath) }
-        LEAN_ENABLE_SIMPCASE_PATH="/code/lean4-contrib/build/stage1/bin/lean"
+        LEAN_ENABLE_SIMPCASE_PATH="/code/lean4-baseline/build/stage1/bin/lean"
         os_system_synch(f"{LEAN_ENABLE_SIMPCASE_PATH} {fpath} -m exe.mlir")
         os_system_synch("hask-opt exe.mlir --convert-scf-to-std --lean-lower-rgn --convert-rgn-to-std --convert-std-to-llvm --ptr-lower | \
                 mlir-translate --mlir-to-llvmir -o exe.ll")
