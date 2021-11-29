@@ -331,6 +331,7 @@ def emitPreamble : M Unit := do
   
 
   emitLn "func private @lean_io_mk_world() -> (!lz.value)"
+  emitLn "func private @lean_initialize() -> ()"
   emitLn "func private @lean_io_result_get_value(!lz.value) -> (!lz.value)"
   emitLn "func private @lean_io_result_mk_ok(!lz.value) -> (!lz.value)"
   emitLn "func private @lean_mark_persistent(!lz.value) -> ()"
@@ -1441,6 +1442,9 @@ def emitInitFn : M Unit := do
 
   emit $ "func private @" ++ "init_lean_custom_entrypoint_hack";
      emitLn "(%w :!lz.value) -> !lz.value {"
+     let usesLeanAPI := usesModuleFrom env `Lean
+     if usesLeanAPI then
+       emitLn "call @lean_initialize() : () -> ()"
      let worldname <- gensym "world"
      emitLn $ "%" ++ worldname ++ " = call @lean_io_mk_world() : () -> (!lz.value)"
    
