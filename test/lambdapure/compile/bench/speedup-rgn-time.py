@@ -68,32 +68,72 @@ def sh(path):
 def ns_to_milli(ns):
     return ns / 1e6
 
+# def run_data():
+#     ds = []
+#     for (i, fpath) in enumerate(G_FPATHS):
+#         datum = {"file": str(fpath) }
+#         LEAN_OPTIMIZED_PATH="/code/lean4-baseline/build/release/stage1/bin/lean"
+#         LEANC_OPTIMIZED_PATH="/code/lean4-baseline/build/release/stage1/bin/leanc"
+#         os_system_synch(f"rm exe-ref.out || true")
+#         os_system_synch(f"{LEAN_OPTIMIZED_PATH} {fpath} -c exe-ref.c")
+#         os_system_synch(f"{LEANC_OPTIMIZED_PATH} exe-ref.c -O3 -o exe-ref.out")
+#         # x = run_with_output("perf stat ./exe-ref.out 1>/dev/null")
+#         # proc = subprocess.Popen("perf stat ./exe-ref.out", shell=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+#         datum["theirs-out"] = []
+#         datum["theirs-perf"] = []
+#         for _ in range(ARGS.nruns):
+#           timeStarted = time.time_ns()
+#           out, perf = sh("./exe-ref.out")
+#           datum["theirs-out"].append(out)
+#           timeDelta = ns_to_milli(time.time_ns() - timeStarted)
+#           datum["theirs-perf"].append(timeDelta)
+# 
+#         os_system_synch(f"rm exe-mlir.out || true")
+#         os_system_synch(f"rm exe.ll  || true")
+#         os_system_synch(f"rm exe-linked.ll  || true")
+#         os_system_synch(f"rm exe.o  || true")
+#         LEAN_NOOPTIMIZE_PATH="/code/lean4/build/release/stage1/bin/lean"
+#         os_system_synch(f"{LEAN_NOOPTIMIZE_PATH} {fpath} -m exe.mlir")
+#         os_system_synch("hask-opt exe.mlir --convert-scf-to-std --lean-lower-rgn --convert-rgn-to-std --convert-std-to-llvm --ptr-lower | \
+#                 mlir-translate --mlir-to-llvmir -o exe.ll")
+#         os_system_synch("llvm-link " + 
+#                   "exe.ll " + 
+#                   "/code/lz/lean-linking-incantations/lib-includes/library.ll " + 
+#                   "/code/lz/lean-linking-incantations/lib-runtime/runtime.ll " +
+#                   "| opt -passes=bitcast-call-converter  | opt --always-inline -O3 -S -o exe-linked.ll")
+#         os_system_synch("sed -i s/musttail/tail/g exe-linked.ll")
+#         os_system_synch("opt -O3 exe-linked.ll -o exe-linked-o3.ll")
+#         os_system_synch("mv exe-linked-o3.ll exe-linked.ll")
+#         print("@@@ HACK: converting muttail to tail because of llc miscompile@@@")
+#         os_system_synch("sed -i s/musttail/tail/g exe-linked.ll")
+#         os_system_synch("llc -O3 -march=x86-64 -filetype=obj exe-linked.ll -o exe.o")
+#         os_system_synch(f"clang++-12 -lstdc++ -O3 -D LEAN_MULTI_THREAD -I/code/lean4/build/release/stage1/include \
+#             exe.o \
+#             /code/lz/lean-linking-incantations/lean-shell.o \
+#             -no-pie -Wl,--start-group -lleancpp -lInit -lStd -lLean -Wl,--end-group \
+#             -L/code/lean4/build/release/stage1/lib/lean -lgmp -ldl -pthread \
+#             -Wno-unused-command-line-argument -o exe-mlir.out")
+#         datum["ours-out"] = []
+#         datum["ours-perf"] = []
+#         for _ in range(ARGS.nruns):
+#            timeStarted = time.time_ns()
+#            out, perf = sh("perf stat ./exe-mlir.out")
+#            timeDelta = ns_to_milli(time.time_ns() - timeStarted)
+#            datum["ours-out"].append(out)
+#            datum["ours-perf"].append(timeDelta)
+# 
+#         ds.append(datum)
+#     with open(ARGS.out, "w") as f:
+#         json.dump(ds, f, indent=2)
+#     return ds
+
 def run_data():
     ds = []
     for (i, fpath) in enumerate(G_FPATHS):
+        # with simpcase: 850fd84e43407ed647837652b6442e143199abb0
         datum = {"file": str(fpath) }
-        LEAN_OPTIMIZED_PATH="/code/lean4-baseline/build/release/stage1/bin/lean"
-        LEANC_OPTIMIZED_PATH="/code/lean4-baseline/build/release/stage1/bin/leanc"
-        os_system_synch(f"rm exe-ref.out || true")
-        os_system_synch(f"{LEAN_OPTIMIZED_PATH} {fpath} -c exe-ref.c")
-        os_system_synch(f"{LEANC_OPTIMIZED_PATH} exe-ref.c -O3 -o exe-ref.out")
-        # x = run_with_output("perf stat ./exe-ref.out 1>/dev/null")
-        # proc = subprocess.Popen("perf stat ./exe-ref.out", shell=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
-        datum["theirs-out"] = []
-        datum["theirs-perf"] = []
-        for _ in range(ARGS.nruns):
-          timeStarted = time.time_ns()
-          out, perf = sh("./exe-ref.out")
-          datum["theirs-out"].append(out)
-          timeDelta = ns_to_milli(time.time_ns() - timeStarted)
-          datum["theirs-perf"].append(timeDelta)
-
-        os_system_synch(f"rm exe-mlir.out || true")
-        os_system_synch(f"rm exe.ll  || true")
-        os_system_synch(f"rm exe-linked.ll  || true")
-        os_system_synch(f"rm exe.o  || true")
-        LEAN_NOOPTIMIZE_PATH="/code/lean4/build/release/stage1/bin/lean"
-        os_system_synch(f"{LEAN_NOOPTIMIZE_PATH} {fpath} -m exe.mlir")
+        LEAN_ENABLE_SIMPCASE_PATH="/code/lean4-contrib/build/stage1/bin/lean"
+        os_system_synch(f"{LEAN_ENABLE_SIMPCASE_PATH} {fpath} -m exe.mlir")
         os_system_synch("hask-opt exe.mlir --convert-scf-to-std --lean-lower-rgn --convert-rgn-to-std --convert-std-to-llvm --ptr-lower | \
                 mlir-translate --mlir-to-llvmir -o exe.ll")
         os_system_synch("llvm-link " + 
@@ -107,25 +147,96 @@ def run_data():
         print("@@@ HACK: converting muttail to tail because of llc miscompile@@@")
         os_system_synch("sed -i s/musttail/tail/g exe-linked.ll")
         os_system_synch("llc -O3 -march=x86-64 -filetype=obj exe-linked.ll -o exe.o")
-        os_system_synch(f"clang++-12 -lstdc++ -O3 -D LEAN_MULTI_THREAD -I/code/lean4/build/release/stage1/include \
+        os_system_synch(f"c++ -O3 -D LEAN_MULTI_THREAD -I/code/lean4/build/stage1/include \
             exe.o \
             /code/lz/lean-linking-incantations/lean-shell.o \
             -no-pie -Wl,--start-group -lleancpp -lInit -lStd -lLean -Wl,--end-group \
-            -L/code/lean4/build/release/stage1/lib/lean -lgmp -ldl -pthread \
+            -L/code/lean4/build/stage1/lib/lean -lgmp -ldl -pthread \
+            -Wno-unused-command-line-argument -o exe-ref.out")
+        datum["theirs-out"] = []
+        datum["theirs-perf"] = []
+        for _ in range(ARGS.nruns):
+          out, perf = sh("perf stat ./exe-ref.out")
+          datum["theirs-out"].append(out)
+          datum["theirs-perf"].append(perf)
+
+        # disabled simpcase + MLIR.rgn optimization passes: 55a63f500b23b8c0c180e43108c5f844839a693f
+        os_system_synch(f"rm exe-mlir.out || true")
+        os_system_synch(f"rm exe.ll  || true")
+        os_system_synch(f"rm exe-linked.ll  || true")
+        os_system_synch(f"rm exe.o  || true")
+        LEAN_DISABLE_SIMPCASE_PATH="/code/lean4/build/stage1/bin/lean"
+        os_system_synch(f"{LEAN_DISABLE_SIMPCASE_PATH} {fpath} -m exe.mlir")
+        # os_system_synch("hask-opt exe.mlir --convert-scf-to-std --lean-lower-rgn  --rgn-cse --cse --convert-rgn-to-std --convert-std-to-llvm --ptr-lower | \
+        #        mlir-translate --mlir-to-llvmir -o exe.ll")
+        os_system_synch("hask-opt exe.mlir --convert-scf-to-std --lean-lower-rgn --cse --convert-rgn-to-std --convert-std-to-llvm --ptr-lower | \
+                mlir-translate --mlir-to-llvmir -o exe.ll")
+
+        os_system_synch("llvm-link " + 
+                  "exe.ll " + 
+                  "/code/lz/lean-linking-incantations/lib-includes/library.ll " + 
+                  "/code/lz/lean-linking-incantations/lib-runtime/runtime.ll " +
+                  "| opt -passes=bitcast-call-converter  | opt --always-inline -O3 -S -o exe-linked.ll")
+        os_system_synch("sed -i s/musttail/tail/g exe-linked.ll")
+        os_system_synch("opt -O3 exe-linked.ll -o exe-linked-o3.ll")
+        os_system_synch("mv exe-linked-o3.ll exe-linked.ll")
+        print("@@@ HACK: converting muttail to tail because of llc miscompile@@@")
+        os_system_synch("sed -i s/musttail/tail/g exe-linked.ll")
+        os_system_synch("llc -O3 -march=x86-64 -filetype=obj exe-linked.ll -o exe.o")
+        os_system_synch(f"c++ -O3 -D LEAN_MULTI_THREAD -I/code/lean4/build/stage1/include \
+            exe.o \
+            /code/lz/lean-linking-incantations/lean-shell.o \
+            -no-pie -Wl,--start-group -lleancpp -lInit -lStd -lLean -Wl,--end-group \
+            -L/code/lean4/build/stage1/lib/lean -lgmp -ldl -pthread \
             -Wno-unused-command-line-argument -o exe-mlir.out")
         datum["ours-out"] = []
         datum["ours-perf"] = []
         for _ in range(ARGS.nruns):
-           timeStarted = time.time_ns()
            out, perf = sh("perf stat ./exe-mlir.out")
-           timeDelta = ns_to_milli(time.time_ns() - timeStarted)
            datum["ours-out"].append(out)
-           datum["ours-perf"].append(timeDelta)
+           datum["ours-perf"].append(perf)
+
+        # disabled simpcase and no MLIR.rgn optimization either: 55a63f500b23b8c0c180e43108c5f844839a693f
+        os_system_synch(f"rm exe-mlir.out || true")
+        os_system_synch(f"rm exe.ll  || true")
+        os_system_synch(f"rm exe-linked.ll  || true")
+        os_system_synch(f"rm exe.o  || true")
+        LEAN_DISABLE_SIMPCASE_PATH="/code/lean4/build/stage1/bin/lean"
+        os_system_synch(f"{LEAN_DISABLE_SIMPCASE_PATH} {fpath} -m exe.mlir")
+        # os_system_synch("hask-opt exe.mlir --convert-scf-to-std --lean-lower-rgn  --rgn-cse --cse --convert-rgn-to-std --convert-std-to-llvm --ptr-lower | \
+        #        mlir-translate --mlir-to-llvmir -o exe.ll")
+        os_system_synch("hask-opt exe.mlir --convert-scf-to-std --lean-lower-rgn --convert-rgn-to-std --convert-std-to-llvm --ptr-lower | \
+                mlir-translate --mlir-to-llvmir -o exe.ll")
+
+        os_system_synch("llvm-link " + 
+                  "exe.ll " + 
+                  "/code/lz/lean-linking-incantations/lib-includes/library.ll " + 
+                  "/code/lz/lean-linking-incantations/lib-runtime/runtime.ll " +
+                  "| opt -passes=bitcast-call-converter  | opt --always-inline -O3 -S -o exe-linked.ll")
+        os_system_synch("sed -i s/musttail/tail/g exe-linked.ll")
+        os_system_synch("opt -O3 exe-linked.ll -o exe-linked-o3.ll")
+        os_system_synch("mv exe-linked-o3.ll exe-linked.ll")
+        print("@@@ HACK: converting muttail to tail because of llc miscompile@@@")
+        os_system_synch("sed -i s/musttail/tail/g exe-linked.ll")
+        os_system_synch("llc -O3 -march=x86-64 -filetype=obj exe-linked.ll -o exe.o")
+        os_system_synch(f"c++ -O3 -D LEAN_MULTI_THREAD -I/code/lean4/build/stage1/include \
+            exe.o \
+            /code/lz/lean-linking-incantations/lean-shell.o \
+            -no-pie -Wl,--start-group -lleancpp -lInit -lStd -lLean -Wl,--end-group \
+            -L/code/lean4/build/stage1/lib/lean -lgmp -ldl -pthread \
+            -Wno-unused-command-line-argument -o exe-mlir.out")
+        datum["none-out"] = []
+        datum["none-perf"] = []
+        for _ in range(ARGS.nruns):
+           out, perf = sh("perf stat ./exe-mlir.out")
+           datum["none-out"].append(out)
+           datum["none-perf"].append(perf)
 
         ds.append(datum)
     with open(ARGS.out, "w") as f:
         json.dump(ds, f, indent=2)
     return ds
+
 
 ### PLOTTING ###
 ### PLOTTING ###
