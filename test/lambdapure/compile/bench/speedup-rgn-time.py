@@ -137,8 +137,8 @@ def run_data():
         os_system_synch(f"rm exe.ll || true")
         os_system_synch(f"rm exe-linked.ll || true")
         os_system_synch(f"rm exe.o || true")
-        os_system_synch(f"{LEAN_ENABLE_SIMPCASE_PATH} {fpath} -m exe.mlir")
         os_system_synch(f"rm exe.mlir || true")
+        os_system_synch(f"{LEAN_ENABLE_SIMPCASE_PATH} {fpath} -m exe.mlir")
         os_system_synch("hask-opt exe.mlir --convert-scf-to-std --lean-lower-rgn --convert-rgn-to-std --convert-std-to-llvm --ptr-lower | \
                 mlir-translate --mlir-to-llvmir -o exe.ll")
         os_system_synch("llvm-link " + 
@@ -159,7 +159,6 @@ def run_data():
             -L/code/lean4/build/release/stage1/lib/lean -lgmp -ldl -pthread  \
             -Wno-unused-command-line-argument -o exe-ref.out")
         print ("ERROR: SUCCEEDED")
-        os.exit(1)
         # os_system_synch(f"clang++-12 -lstdc++ -O3 -D LEAN_MULTI_THREAD -I/code/lean4/build/release/stage1/include \
         #     exe.o \
         #     /code/lz/lean-linking-incantations/lean-shell.o \
