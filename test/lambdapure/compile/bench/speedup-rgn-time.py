@@ -176,6 +176,91 @@ def autolabel(ax, rects):
                     fontsize="smaller",
                     ha='center', va='bottom')
 
+# def plot():
+#   with open(ARGS.out, "r") as f:
+#       datapoints = json.load(f)
+#   assert datapoints is not None
+# 
+#   matplotlib.rcParams['pdf.fonttype'] = 42
+#   matplotlib.rcParams['ps.fonttype'] = 42
+# 
+#   matplotlib.rcParams['figure.figsize'] = 5, 2
+# 
+#   labels = []
+#   baselines = []
+#   optims = []
+#   speedups = []
+#   for i, data in enumerate(datapoints):
+#       # mark = "Y" if data['success'] else 'n'
+#       log(f"[{i+1:3}/{len(datapoints)}]|{data['file']:80}|")
+#       # if data["success"] == False:
+#       #     continue
+#       labels.append(data["file"].split(".lean")[0])
+#       N = len(data["theirs-perf"])
+#       assert N == len(data["ours-perf"])
+# 
+#       theirs = np.median([perf_stat_to_time(data["file"], t) for t in data["theirs-perf"] ])
+#       ours = np.median([perf_stat_to_time(data["file"], t) for t in data["ours-perf"] ])
+#       speedup = float("%4.2f" % (theirs/ours))
+#       speedups.append(speedup)
+#       # baselines.append(baseline/baseline)
+#       optims.append(speedup)
+# 
+#   avg_speedup = mstats.gmean(speedups)
+#   print("average speedup: %4.2f" % (avg_speedup, ))
+#   baselines.append(1)
+#   optims.append(float("%4.2f" % (avg_speedup)))
+#   labels.append("geomean")
+# 
+#   print(labels)
+#   print(baselines)
+#   print(optims)
+# 
+# 
+# 
+#   x = np.arange(len(labels))  # the label locations
+#   width = 0.35  # the width of the bars
+# 
+#   fig, ax = plt.subplots()
+#   # rects1 = ax.bar(x - width/2, baselines, width, label='Baseline', color = light_blue)
+#   rects2 = ax.bar(x + width/2, optims, width, label='Optimised', color = dark_blue)
+#   rects2[-1].set_color(light_blue) # color geomean separately.
+# 
+# 
+# 
+#   # straight line
+#   # plt.axhline(y=avg_speedup, color=light_red, linestyle='-', lw=1, label='Geomean speedup')
+# 
+#   # Y-Axis Label
+#   #
+#   # Use a horizontal label for improved readability.
+#   ax.set_ylabel('Speedup over leanc (via regions for optimization)', rotation='horizontal', position = (1, 1.1),
+#       horizontalalignment='left', verticalalignment='bottom', fontsize=8)
+# 
+#   # Add some text for labels, title and custom x-axis tick labels, etc.
+#   ax.set_xticks(x)
+#   ax.set_xticklabels(labels, rotation=15, fontsize=7)
+#   # ax.legend(ncol=100, frameon=False, loc='lower right', bbox_to_anchor=(0, 1, 1, 0))
+# 
+#   # Hide the right and top spines
+#   # This reduces the number of lines in the plot. Lines typically catch
+#   # a readers attention and distract the reader from the actual content.
+#   # By removing unnecessary spines, we help the reader to focus on
+#   # the figures in the graph.
+#   ax.spines['right'].set_visible(False)
+#   ax.spines['top'].set_visible(False)
+#   # autolabel(ax, rects1)
+#   autolabel(ax, rects2)
+# 
+#   fig.tight_layout()
+#   filename = os.path.basename(__file__).replace(".py", ".jpg")
+#   fig.savefig(filename)
+# 
+#   filename = os.path.basename(__file__).replace(".py", ".pdf")
+#   fig.savefig(filename)
+#   # subprocess.run(["xdg-open",  filename])
+
+
 def plot():
   with open(ARGS.out, "r") as f:
       datapoints = json.load(f)
@@ -187,9 +272,8 @@ def plot():
   matplotlib.rcParams['figure.figsize'] = 5, 2
 
   labels = []
-  baselines = []
-  optims = []
-  speedups = []
+  ours_over_none = []
+  theirs_over_none = []
   for i, data in enumerate(datapoints):
       # mark = "Y" if data['success'] else 'n'
       log(f"[{i+1:3}/{len(datapoints)}]|{data['file']:80}|")
@@ -198,33 +282,32 @@ def plot():
       labels.append(data["file"].split(".lean")[0])
       N = len(data["theirs-perf"])
       assert N == len(data["ours-perf"])
+      assert N == len(data["none-perf"])
 
       theirs = np.median([perf_stat_to_time(data["file"], t) for t in data["theirs-perf"] ])
       ours = np.median([perf_stat_to_time(data["file"], t) for t in data["ours-perf"] ])
-      speedup = float("%4.2f" % (theirs/ours))
-      speedups.append(speedup)
-      # baselines.append(baseline/baseline)
-      optims.append(speedup)
+      none = np.median([perf_stat_to_time(data["file"], t) for t in data["none-perf"] ])
+      ours_over_none.append(float("%4.2f" % (none/ours)))
+      theirs_over_none.append(float("%4.2f" % (none/theirs)))
 
   avg_speedup = mstats.gmean(speedups)
   print("average speedup: %4.2f" % (avg_speedup, ))
-  baselines.append(1)
-  optims.append(float("%4.2f" % (avg_speedup)))
-  labels.append("geomean")
+  # optims.append(float("%4.2f" % (avg_speedup)))
 
-  print(labels)
-  print(baselines)
-  print(optims)
+  # avg_speedup = mstats.gmean(nones)
+  # nones.append(float("%4.2f" % (avg_speedup)))
 
-
-
+  # labels.append("geomean")
   x = np.arange(len(labels))  # the label locations
-  width = 0.35  # the width of the bars
+  width = 0.6  # the width of the bars
 
   fig, ax = plt.subplots()
-  # rects1 = ax.bar(x - width/2, baselines, width, label='Baseline', color = light_blue)
-  rects2 = ax.bar(x + width/2, optims, width, label='Optimised', color = dark_blue)
-  rects2[-1].set_color(light_blue) # color geomean separately.
+  # rects1 = ax.bar(x - width/3, baselines, width/3, label='λpure simplifier', color = dark_blue)
+  rects2 = ax.bar(x - width/3, theirs_over_none, width/3, label='λpure over none', color = dark_red)
+  rects3 = ax.bar(x, ours_over_none, width/3, label='rgn over none', color = dark_gray)
+  # rects1[-1].set_color(light_blue) # color geomean separately.
+  # rects2[-1].set_color(light_red) # color geomean separately.
+  # rects3[-1].set_color(light_gray) # color geomean separately.
 
 
 
@@ -233,14 +316,14 @@ def plot():
 
   # Y-Axis Label
   #
-  # Use a horizontal label for improved readability.
-  ax.set_ylabel('Speedup over leanc (via regions for optimization)', rotation='horizontal', position = (1, 1.1),
-      horizontalalignment='left', verticalalignment='bottom', fontsize=8)
+  # Use a horizontal label for improved readability.  
+  ax.set_ylabel('Speedup over no simplifier', rotation='horizontal', position = (1, 1.1),
+      horizontalalignment='left', verticalalignment='bottom', fontsize=7)
 
   # Add some text for labels, title and custom x-axis tick labels, etc.
   ax.set_xticks(x)
   ax.set_xticklabels(labels, rotation=15, fontsize=7)
-  # ax.legend(ncol=100, frameon=False, loc='lower right', bbox_to_anchor=(0, 1, 1, 0))
+  ax.legend(ncol=100, frameon=False, fontsize=6, loc='upper right', bbox_to_anchor=(0, 1.3, 1, 0))
 
   # Hide the right and top spines
   # This reduces the number of lines in the plot. Lines typically catch
@@ -258,8 +341,9 @@ def plot():
 
   filename = os.path.basename(__file__).replace(".py", ".pdf")
   fig.savefig(filename)
-  # subprocess.run(["xdg-open",  filename])
-
+  subprocess.run(["xdg-open",  filename])
+  filename = os.path.basename(__file__).replace(".py", ".tex")
+  tikzplotlib.save(filename)
 
 
 if __name__ == "__main__":
