@@ -31,13 +31,13 @@ ARGS = PARSER.parse_args()
 G_BASELINE = "../baseline-lean.sh"
 G_OURS = "../run-lean.sh"
 G_FPATHS = []
-# G_FPATHS.append("binarytrees-int.lean")
-# G_FPATHS.append("binarytrees.lean")
-# G_FPATHS.append("const_fold.lean")
-# G_FPATHS.append("deriv.lean")
-# G_FPATHS.append("filter.lean")
-# G_FPATHS.append("qsort.lean") # miscompile because of jmp!
-# G_FPATHS.append("rbmap_checkpoint.lean")
+G_FPATHS.append("binarytrees-int.lean")
+G_FPATHS.append("binarytrees.lean")
+G_FPATHS.append("const_fold.lean")
+G_FPATHS.append("deriv.lean")
+G_FPATHS.append("filter.lean")
+G_FPATHS.append("qsort.lean") # miscompile because of jmp!
+G_FPATHS.append("rbmap_checkpoint.lean")
 G_FPATHS.append("unionfind.lean")
 G_NFILES = len(G_FPATHS)
 
@@ -158,7 +158,6 @@ def run_data():
             -no-pie -Wl,--start-group -lleancpp -lInit -lStd -lLean -Wl,--end-group \
             -L/code/lean4/build/release/stage1/lib/lean -lgmp -ldl -pthread  \
             -Wno-unused-command-line-argument -o exe-ref.out")
-        print ("ERROR: SUCCEEDED")
         # os_system_synch(f"clang++-12 -lstdc++ -O3 -D LEAN_MULTI_THREAD -I/code/lean4/build/release/stage1/include \
         #     exe.o \
         #     /code/lz/lean-linking-incantations/lean-shell.o \
@@ -180,7 +179,7 @@ def run_data():
         os_system_synch(f"rm exe.ll  || true")
         os_system_synch(f"rm exe-linked.ll  || true")
         os_system_synch(f"rm exe.o  || true")
-        LEAN_DISABLE_SIMPCASE_PATH="/code/lean4/build/release/stage1/bin/lean"
+        LEAN_DISABLE_SIMPCASE_PATH="/code/lean4-baseline/build/release/stage1/bin/lean"
         os_system_synch(f"{LEAN_DISABLE_SIMPCASE_PATH} {fpath} -m exe.mlir")
         # os_system_synch("hask-opt exe.mlir --convert-scf-to-std --lean-lower-rgn  --rgn-cse --cse --convert-rgn-to-std --convert-std-to-llvm --ptr-lower | \
         #        mlir-translate --mlir-to-llvmir -o exe.ll")
@@ -219,7 +218,7 @@ def run_data():
         os_system_synch(f"rm exe.ll  || true")
         os_system_synch(f"rm exe-linked.ll  || true")
         os_system_synch(f"rm exe.o  || true")
-        LEAN_DISABLE_SIMPCASE_PATH="/code/lean4/build/release/stage1/bin/lean"
+        LEAN_DISABLE_SIMPCASE_PATH="/code/lean4-baseline/build/release/stage1/bin/lean"
         os_system_synch(f"{LEAN_DISABLE_SIMPCASE_PATH} {fpath} -m exe.mlir")
         # os_system_synch("hask-opt exe.mlir --convert-scf-to-std --lean-lower-rgn  --rgn-cse --cse --convert-rgn-to-std --convert-std-to-llvm --ptr-lower | \
         #        mlir-translate --mlir-to-llvmir -o exe.ll")
