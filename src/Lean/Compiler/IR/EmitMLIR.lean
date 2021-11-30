@@ -1083,7 +1083,7 @@ partial def emitCaseObj (x : VarId) (xType : IRType) (alts : Array Alt)
     emit (if ix > 0 then ", " else "");
     match alt with 
      |  Alt.ctor info b => emitLn "{"; emitFnBody b tys EmitIrrelevant.no; emitLn "}"
-     |  Alt.default b => emitLn "{"; emitFnBody b tys EmitIrrelevant.no); emitLn "}"
+     |  Alt.default b => emitLn "{"; emitFnBody b tys EmitIrrelevant.no; emitLn "}")
  emit ")";
  emit "{";
   forMIx_ (as:= alts) (fun ix alt => do
@@ -1117,7 +1117,7 @@ partial def emitCaseInt (x : VarId) (xType : IRType) (alts : Array Alt)
     emit (if ix > 0 then ", " else "");
     match alt with 
      |  Alt.ctor info b => emitLn "{"; emitFnBody b tys EmitIrrelevant.no; emitLn "}";
-     |  Alt.default b => emitLn "{"; emitFnBody b tys EmitIrrelevant.no); emitLn "}";
+     |  Alt.default b => emitLn "{"; emitFnBody b tys EmitIrrelevant.no; emitLn "}";)
  emit ")";
  emitLn "";
  emit "{";
