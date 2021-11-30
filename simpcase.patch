@@ -1,0 +1,49 @@
+diff --git a/src/Lean/Compiler/IR/EmitMLIR.lean b/src/Lean/Compiler/IR/EmitMLIR.lean
+index 0848f79e45..f82dfdc02a 100644
+--- a/src/Lean/Compiler/IR/EmitMLIR.lean
++++ b/src/Lean/Compiler/IR/EmitMLIR.lean
+@@ -1083,7 +1083,7 @@ partial def emitCaseObj (x : VarId) (xType : IRType) (alts : Array Alt)
+     emit (if ix > 0 then ", " else "");
+     match alt with 
+      |  Alt.ctor info b => emitLn "{"; emitFnBody b tys EmitIrrelevant.no; emitLn "}"
+-     |  Alt.default b => emitLn "{"; emitFnBody b tys EmitIrrelevant.no); emitLn "}"
++     |  Alt.default b => emitLn "{"; emitFnBody b tys EmitIrrelevant.no; emitLn "}")
+  emit ")";
+  emit "{";
+   forMIx_ (as:= alts) (fun ix alt => do
+@@ -1117,7 +1117,7 @@ partial def emitCaseInt (x : VarId) (xType : IRType) (alts : Array Alt)
+     emit (if ix > 0 then ", " else "");
+     match alt with 
+      |  Alt.ctor info b => emitLn "{"; emitFnBody b tys EmitIrrelevant.no; emitLn "}";
+-     |  Alt.default b => emitLn "{"; emitFnBody b tys EmitIrrelevant.no); emitLn "}";
++     |  Alt.default b => emitLn "{"; emitFnBody b tys EmitIrrelevant.no; emitLn "}";)
+  emit ")";
+  emitLn "";
+  emit "{";
+diff --git a/src/Lean/Compiler/IR/SimpCase.lean b/src/Lean/Compiler/IR/SimpCase.lean
+index f8b36e0771..cfc782fd8b 100644
+--- a/src/Lean/Compiler/IR/SimpCase.lean
++++ b/src/Lean/Compiler/IR/SimpCase.lean
+@@ -44,14 +44,15 @@ private def addDefault (alts : Array Alt) : Array Alt :=
+       alts.push (Alt.default max.body)
+ 
+ private def mkSimpCase (tid : Name) (x : VarId) (xType : IRType) (alts : Array Alt) : FnBody :=
+-  let alts := alts.filter (fun alt => alt.body != FnBody.unreachable);
++  -- let alts := alts.filter (fun alt => alt.body != FnBody.unreachable);
+   let alts := addDefault alts;
+-  if alts.size == 0 then
+-    FnBody.unreachable
+-  else if alts.size == 1 then
+-    (alts.get! 0).body
+-  else
+-    FnBody.case tid x xType alts
++  -- if alts.size == 0 then
++  --   FnBody.unreachable
++  -- else if alts.size == 1 then
++  --   (alts.get! 0).body
++  -- else
++  --   FnBody.case tid x xType alts
++  FnBody.case tid x xType alts
+ 
+ partial def FnBody.simpCase (b : FnBody) : FnBody :=
+   let (bs, term) := b.flatten;
