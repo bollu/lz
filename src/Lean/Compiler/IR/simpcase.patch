@@ -1,25 +1,3 @@
-diff --git a/src/Lean/Compiler/IR/EmitMLIR.lean b/src/Lean/Compiler/IR/EmitMLIR.lean
-index 0848f79e45..f82dfdc02a 100644
---- a/src/Lean/Compiler/IR/EmitMLIR.lean
-+++ b/src/Lean/Compiler/IR/EmitMLIR.lean
-@@ -1083,7 +1083,7 @@ partial def emitCaseObj (x : VarId) (xType : IRType) (alts : Array Alt)
-     emit (if ix > 0 then ", " else "");
-     match alt with 
-      |  Alt.ctor info b => emitLn "{"; emitFnBody b tys EmitIrrelevant.no; emitLn "}"
--     |  Alt.default b => emitLn "{"; emitFnBody b tys EmitIrrelevant.no); emitLn "}"
-+     |  Alt.default b => emitLn "{"; emitFnBody b tys EmitIrrelevant.no; emitLn "}")
-  emit ")";
-  emit "{";
-   forMIx_ (as:= alts) (fun ix alt => do
-@@ -1117,7 +1117,7 @@ partial def emitCaseInt (x : VarId) (xType : IRType) (alts : Array Alt)
-     emit (if ix > 0 then ", " else "");
-     match alt with 
-      |  Alt.ctor info b => emitLn "{"; emitFnBody b tys EmitIrrelevant.no; emitLn "}";
--     |  Alt.default b => emitLn "{"; emitFnBody b tys EmitIrrelevant.no); emitLn "}";
-+     |  Alt.default b => emitLn "{"; emitFnBody b tys EmitIrrelevant.no; emitLn "}";)
-  emit ")";
-  emitLn "";
-  emit "{";
 diff --git a/src/Lean/Compiler/IR/SimpCase.lean b/src/Lean/Compiler/IR/SimpCase.lean
 index f8b36e0771..cfc782fd8b 100644
 --- a/src/Lean/Compiler/IR/SimpCase.lean
