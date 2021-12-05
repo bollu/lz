@@ -389,6 +389,7 @@ include_directories(${CMAKE_BINARY_DIR}/include)  # config.h etc., "public" head
 
 if(LEANCPP)
   add_library(leancpp STATIC IMPORTED)
+  set_property(TARGET leancpp PROPERTY POSITION_INDEPENDENT_CODE ON)
   set_target_properties(leancpp PROPERTIES
     IMPORTED_LOCATION "${CMAKE_BINARY_DIR}/lib/lean/libleancpp.a")
   add_custom_target(copy-leancpp
@@ -452,8 +453,10 @@ if(PREV_STAGE)
   add_dependencies(Std make_stdlib)
 
   add_library(Lean STATIC IMPORTED)
+  set_property(TARGET Lean PROPERTY POSITION_INDEPENDENT_CODE ON)
   set_target_properties(Lean PROPERTIES
-    IMPORTED_LOCATION ${CMAKE_BINARY_DIR}/lib/lean/libLean.a)
+    IMPORTED_LOCATION ${CMAKE_BINARY_DIR}/lib/lean/libLean.a
+    POSITION_INDEPENDENT_CODE ON)
   add_dependencies(Lean make_stdlib)
 
   # leancpp and the Lean libs are cyclically dependent

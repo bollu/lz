@@ -20,8 +20,8 @@ LIB_OUT = $(OUT)/lib
 BIN_NAME = $(PKG)
 STATIC_LIB_NAME = lib$(PKG).a
 LEAN_OPTS = @LEAN_EXTRA_MAKE_OPTS@
-LEANC_OPTS = -O3 -DNDEBUG
-LINK_OPTS =
+LEANC_OPTS = -O3 -DNDEBUG -fPIC
+LINK_OPTS = -fPIC
 
 SRCS = $(shell find $(PKG) -name '*.lean' 2> /dev/null || true; find $(PKG).lean 2> /dev/null)
 DEPS = $(addprefix $(TEMP_OUT)/,$(SRCS:.lean=.depend))
