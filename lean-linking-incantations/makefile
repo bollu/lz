@@ -2,7 +2,7 @@
 # export LEANPATH=${LEANPATH}/build/stage1/
 # compiler flags stolen from `which leanc` and then `cat /path/to/leanc`.
 #
-export LEANPATH=/home/bollu/work/lean4
+export LEANPATH=${LEAN4_PATH}
 
 .PHONY: all clean
 all: handlink.out main-print.out lean-shell.o use-lean-shell.o lean-shell.ll
