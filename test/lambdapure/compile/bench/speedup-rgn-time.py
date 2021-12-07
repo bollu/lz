@@ -44,13 +44,15 @@ G_NFILES = len(G_FPATHS)
 
 # Color palette
 light_gray = "#cacaca"
-dark_gray = "#827b7b"
+# dark_gray = "#827b7b"
+dark_gray = "#9E9E9E"
 light_blue = "#a6cee3"
 dark_blue = "#1f78b4"
 light_green = "#b2df8a"
 dark_green = "#33a02c"
 light_red = "#fb9a99"
-dark_red = "#e31a1c"
+# dark_red = "#e31a1c"
+dark_red = "#D81B60"
 
 
 def log(*ARGS, **kwargs):
