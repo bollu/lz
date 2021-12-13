@@ -62,7 +62,40 @@ RUN echo "bump-git-13"
 RUN cd /code/lz && git remote update && git reset --hard origin/cgo-2021-artifact && cd build && ninja
 RUN cd /code/lean4/src/runtime/ && ./mk-runtime.sh
 RUN cd /code/lz/lean-linking-incantations && make clean && make && cd lib-includes && make clean && make
+RUN echo "bump-git-18"
+RUN cd /code/lz && git remote update && git reset --hard origin/cgo-2021-artifact && cd build && ninja
+RUN cd /code/lean4-baseline/ && \
+    git remote update && \
+    git reset --hard origin/2021-cgo-artifact && \
+    (patch -f -p1 < simpcase.patch || echo "some hunks for EmitMLIR can indeed fail, it's fine! As long as we patch simpCase.lean")
+RUN cd /code/lean4-baseline && \
+    rm -rf build && \
+    mkdir -p build/release/ && \
+    cd build/release && CC=gcc-9 CXX=g++-9 cmake ../../ && \
+    make -j
+RUN echo "bump-git-24"
+RUN cd /code/lean4 && \
+    git remote update && \
+    git reset --hard origin/2021-cgo-artifact && \
+    rm -rf /code/lean4/build/release && \
+    mkdir -p /code/lean4/build/release && \
+    cd /code/lean4/build/release &&  \
+    cmake ../../ -DCMAKE_POSITION_INDEPENDENT_CODE=ON && \
+    make -j
+RUN useradd -ms /bin/bash nonroot
+RUN chown nonroot /code/lz -R
+RUN chown nonroot /code/lean4 -R
+RUN chown nonroot /code/llvm-project/build/ -R
+RUN apt-get install gdb curl wget -y
+USER nonroot
+ENV PATH /code/llvm-project/build/bin:$PATH
+ENV PATH /code/lean4/build/release/stage1/bin:$PATH
+ENV LD_LIBRARY_PATH /code/lean4/build/release/stage1/lib:$LD_LIBRARY_PATH
+ENV PATH /code/lz/build/bin:$PATH
+RUN echo "bump-git-26"
 RUN cd /code/lz && git remote update && git checkout origin/cgo-2021-artifact && cd build && ninja
+USER root
+
 # ENV FLASK_APP=app.py
 # ENV FLASK_RUN_HOST=0.0.0.0
 # RUN apk add --no-cache gcc musl-dev linux-headers
